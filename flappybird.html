@@ -258,6 +258,7 @@
     ];
     let boughtUpgrades;  // object: { id: level }
     let shieldLives = 0;
+    let invincFrames = 0;
 
     // --- Maps ---
     const MAP_BTN = { x: 10, y: H - 98, w: 105, h: 36 };
@@ -298,6 +299,7 @@
       if (unlockedSkins === undefined) unlockedSkins = [0];
       if (boughtUpgrades === undefined) boughtUpgrades = {};
       shieldLives = boughtUpgrades.shield || 0;
+      invincFrames = 0;
       // mapUnlocked, map2Unlocked, currentMap, unlockedSkins, boughtUpgrades persist — no reset needed
       frame = 0;
       state = 'waiting'; // 'waiting' | 'playing' | 'dead'
@@ -600,11 +602,15 @@
       }
       particles = particles.filter(p => p.life > 0);
 
+      // Invincibility countdown after shield absorbs a hit
+      if (invincFrames > 0) invincFrames--;
+
       // Collision
-      if (checkCollisions()) {
+      if (invincFrames === 0 && checkCollisions()) {
         if (shieldLives > 0) {
           shieldLives--;
-          bird.vy = JUMP_FORCE * 0.6; // bounce away
+          invincFrames = 45; // ~0.75s of invincibility so bird can escape the pipe
+          bird.vy = JUMP_FORCE * 0.5; // small bounce away
         } else {
         if (score > highScore) { highScore = score; coinsCollected += 5; }
         coinsCollected += Math.floor(score / 2);
@@ -879,11 +885,12 @@
       ctx.closePath();
       ctx.fill();
 
-      // Shield ring
-      if (shieldLives > 0) {
-        ctx.strokeStyle = 'rgba(100,200,255,0.85)';
-        ctx.lineWidth = 3;
-        ctx.shadowColor = '#4fc3f7';
+      // Shield ring (flashes white during invincibility)
+      if (shieldLives > 0 || invincFrames > 0) {
+        const flashing = invincFrames > 0 && Math.floor(invincFrames / 4) % 2 === 0;
+        ctx.strokeStyle = flashing ? 'rgba(255,255,255,0.95)' : 'rgba(100,200,255,0.85)';
+        ctx.lineWidth = flashing ? 4 : 3;
+        ctx.shadowColor = flashing ? 'white' : '#4fc3f7';
         ctx.shadowBlur = 14;
         ctx.beginPath();
         ctx.arc(0, 0, bird.radius + 6, 0, Math.PI * 2);
