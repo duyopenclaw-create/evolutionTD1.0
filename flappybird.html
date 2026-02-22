@@ -143,6 +143,25 @@
           [175,4],[131,4],[196,4],[220,4],
         ]},
       },
+      // Map 3 — Lava: intense, driving, minor key
+      { bpm: 148,
+        melody: { type: 'sawtooth', vol: 0.022, seq: [
+          [220,0.5],[196,0.5],[220,0.5],[247,0.5],
+          [220,1],[175,1],
+          [247,0.5],[220,0.5],[247,0.5],[277,0.5],
+          [247,1],[220,1],
+          [330,0.5],[311,0.5],[277,0.5],[247,0.5],
+          [220,0.5],[196,0.5],[175,0.5],[196,0.5],
+          [220,0.5],[247,0.5],[220,0.5],[196,0.5],
+          [175,2],
+        ]},
+        bass: { type: 'square', vol: 0.015, seq: [
+          [110,1],[110,1],[98,2],
+          [123,1],[110,1],[98,2],
+          [110,2],[123,2],
+          [98,2],[110,2],
+        ]},
+      },
     ];
 
     function scheduleTrack(ac, seq, type, vol, beat, startTime) {
@@ -242,9 +261,10 @@
 
     // --- Maps ---
     const MAP_BTN = { x: 10, y: H - 98, w: 105, h: 36 };
-    let currentMap = 0;       // 0 = night, 1 = day, 2 = space
+    let currentMap = 0;       // 0 = night, 1 = day, 2 = space, 3 = lava
     let mapUnlocked = false;
     let map2Unlocked = false;
+    let map3Unlocked = false;
 
     function getCanvasPos(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
@@ -410,6 +430,8 @@
           coinsCollected -= 40; mapUnlocked = true; currentMap = 1; restartMusic();
         } else if (currentMap === 1 && coinsCollected >= 100) {
           coinsCollected -= 70; map2Unlocked = true; currentMap = 2; restartMusic();
+        } else if (currentMap === 2 && coinsCollected >= 250) {
+          coinsCollected -= 240; map3Unlocked = true; currentMap = 3; restartMusic();
         }
         return;
       }
@@ -434,7 +456,8 @@
       const minH = 60;
       const maxH = H - gap - minH - 80;
       const topH = Math.floor(Math.random() * (maxH - minH) + minH);
-      pipes.push({ x: W, topH, gap, passed: false });
+      const pipeVy = currentMap === 3 ? (Math.random() < 0.5 ? 1.5 : -1.5) : 0;
+      pipes.push({ x: W, topH, gap, passed: false, vy: pipeVy, minTopH: minH, maxTopH: maxH });
 
       // 50% chance to place a coin just past this gap at a random height within it
       if (Math.random() < 0.5 && coins.length < 3) {
@@ -448,6 +471,7 @@
           spin: 0,
           attracted: false,
           type: (() => {
+            if (currentMap === 3) return 'green';
             const r = Math.random();
             if (currentMap === 2) {
               if (r < 0.30) return 'gold';
@@ -510,9 +534,16 @@
       // Move pipes & score
       for (const p of pipes) {
         p.x -= gameSpeed;
+        // Lava map: pipes move vertically, bouncing within bounds
+        if (p.vy) {
+          p.topH += p.vy;
+          if (p.topH <= p.minTopH) { p.topH = p.minTopH; p.vy = -p.vy; }
+          if (p.topH >= p.maxTopH) { p.topH = p.maxTopH; p.vy = -p.vy; }
+        }
         if (!p.passed && p.x + PIPE_WIDTH < bird.x) {
           p.passed = true;
           score++;
+          if (currentMap === 3) coinsCollected++;
         }
       }
       pipes = pipes.filter(p => p.x + PIPE_WIDTH > 0);
@@ -707,6 +738,46 @@
         ctx.fillRect(0, H - 60, W, 60);
         ctx.fillStyle = '#1f0f35';
         ctx.fillRect(0, H - 60, W, 12);
+
+      } else {
+        // --- Lava map ---
+        const sky = ctx.createLinearGradient(0, 0, 0, H - 60);
+        sky.addColorStop(0, '#1a0000');
+        sky.addColorStop(0.5, '#3d0000');
+        sky.addColorStop(1, '#7a1500');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, H - 60);
+
+        // Floating embers
+        const emberSeed = [23, 67, 113, 157, 199, 241, 37, 89, 131, 173, 211, 53, 97, 139, 181];
+        for (let i = 0; i < emberSeed.length; i++) {
+          const ex = (emberSeed[i] * 43 + i * 71) % W;
+          const ey = (emberSeed[i] * 61 + i * 37) % (H - 100);
+          ctx.globalAlpha = 0.4 + (i % 3) * 0.2;
+          ctx.fillStyle = i % 2 === 0 ? '#ff6600' : '#ffaa00';
+          ctx.beginPath();
+          ctx.arc(ex, ey, ((i % 3) + 1) * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Lava glow from ground
+        const lavaGlow = ctx.createLinearGradient(0, H - 130, 0, H - 60);
+        lavaGlow.addColorStop(0, 'rgba(255,80,0,0)');
+        lavaGlow.addColorStop(1, 'rgba(255,80,0,0.35)');
+        ctx.fillStyle = lavaGlow;
+        ctx.fillRect(0, H - 130, W, 70);
+
+        // Lava ground
+        const lavaGrad = ctx.createLinearGradient(0, H - 60, 0, H);
+        lavaGrad.addColorStop(0, '#ff4500');
+        lavaGrad.addColorStop(0.5, '#cc2200');
+        lavaGrad.addColorStop(1, '#7a0a00');
+        ctx.fillStyle = lavaGrad;
+        ctx.fillRect(0, H - 60, W, 60);
+        // Lava surface shine
+        ctx.fillStyle = 'rgba(255,180,0,0.55)';
+        ctx.fillRect(0, H - 60, W, 7);
       }
     }
 
@@ -725,10 +796,14 @@
           g.addColorStop(0, '#b0b0b0');
           g.addColorStop(0.4, '#888');
           g.addColorStop(1, '#505050');
-        } else {
+        } else if (currentMap === 2) {
           g.addColorStop(0, '#7e57c2');
           g.addColorStop(0.4, '#512da8');
           g.addColorStop(1, '#1a0050');
+        } else {
+          g.addColorStop(0, '#8b4513');
+          g.addColorStop(0.4, '#5c2a0a');
+          g.addColorStop(1, '#2d1000');
         }
         return g;
       };
@@ -1138,19 +1213,24 @@
       // Determine label and cost for next action
       let line1, line2, borderColor;
       if (currentMap === 0) {
-        if (coinsCollected >= 50) { line1 = 'Day Map';  line2 = '50 coins';   borderColor = '#FFD700'; }
-        else                      { line1 = 'Day Map';  line2 = '50 coins';   borderColor = 'rgba(100,100,100,0.5)'; }
+        if (coinsCollected >= 50)  { line1 = 'Day Map'; line2 = '50 coins';  borderColor = '#FFD700'; }
+        else                       { line1 = 'Day Map'; line2 = '50 coins';  borderColor = 'rgba(100,100,100,0.5)'; }
       } else if (currentMap === 1) {
-        if (coinsCollected >= 100) { line1 = 'Space';   line2 = '100 coins';  borderColor = '#FFD700'; }
-        else                       { line1 = 'Space';   line2 = '100 coins';  borderColor = 'rgba(100,100,100,0.5)'; }
+        if (coinsCollected >= 100) { line1 = 'Space';   line2 = '100 coins'; borderColor = '#FFD700'; }
+        else                       { line1 = 'Space';   line2 = '100 coins'; borderColor = 'rgba(100,100,100,0.5)'; }
+      } else if (currentMap === 2) {
+        if (coinsCollected >= 250) { line1 = 'Lava Map'; line2 = '250 coins'; borderColor = '#ff4500'; }
+        else                       { line1 = 'Lava Map'; line2 = '250 coins'; borderColor = 'rgba(100,100,100,0.5)'; }
       } else {
-        line1 = 'Max Map'; line2 = 'Space'; borderColor = 'rgba(179,136,255,0.7)';
+        line1 = 'Max Map'; line2 = 'Lava'; borderColor = 'rgba(255,69,0,0.7)';
       }
 
       const affordable = (currentMap === 0 && coinsCollected >= 50) ||
-                         (currentMap === 1 && coinsCollected >= 100);
+                         (currentMap === 1 && coinsCollected >= 100) ||
+                         (currentMap === 2 && coinsCollected >= 250);
       const locked = (currentMap === 0 && coinsCollected < 50) ||
-                     (currentMap === 1 && coinsCollected < 100);
+                     (currentMap === 1 && coinsCollected < 100) ||
+                     (currentMap === 2 && coinsCollected < 250);
 
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       roundRect(x, y, w, h, 6);
