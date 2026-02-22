@@ -454,7 +454,7 @@
 
     // --- Pipe spawning ---
     function spawnPipe() {
-      const gap = diff().gap;
+      const gap = diff().gap + (currentMap === 2 ? 75 : 0);
       const minH = 60;
       const maxH = H - gap - minH - 80;
       const topH = Math.floor(Math.random() * (maxH - minH) + minH);
@@ -525,7 +525,7 @@
       frame++;
 
       // Bird physics
-      bird.vy += GRAVITY;
+      bird.vy += currentMap === 2 ? GRAVITY * 0.45 : GRAVITY;
       bird.y += bird.vy;
       bird.angle = Math.min(Math.max(bird.vy * 3, -30), 90);
 
