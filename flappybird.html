@@ -443,6 +443,7 @@
           y: safeTop + Math.random() * (safeBot - safeTop),
           r: 9,
           spin: 0,
+          attracted: false,
           type: (() => {
             const r = Math.random();
             if (currentMap === 2) {
@@ -513,13 +514,23 @@
       pipes = pipes.filter(p => p.x + PIPE_WIDTH > 0);
 
       // Move & collect coins
+      const hasMagnet = boughtUpgrades.includes('magnet');
       for (const c of coins) {
-        c.x -= gameSpeed;
         c.spin += 0.05;
         const dx = bird.x - c.x;
         const dy = bird.y - c.y;
-        const pickupRange = bird.radius + c.r + (boughtUpgrades.includes('magnet') ? 24 : 0);
-        if (Math.sqrt(dx * dx + dy * dy) < pickupRange) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Magnet: attract coins within 90px, then suck them toward the bird
+        if (hasMagnet && dist < 90) c.attracted = true;
+        if (c.attracted) {
+          c.x += dx * 0.14;
+          c.y += dy * 0.14;
+        } else {
+          c.x -= gameSpeed;
+        }
+
+        if (dist < bird.radius + c.r) {
           // Collect — burst of particles
           const mult = boughtUpgrades.includes('coinx2') ? 2 : 1;
           coinsCollected += (c.type === 'green' ? 5 : c.type === 'blue' ? 3 : 1) * mult;
