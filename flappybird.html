@@ -539,12 +539,7 @@
       bird.angle = Math.min(Math.max(bird.vy * 3, -30), 90);
 
       // Spawn pipes
-      if (!tutorialDone) {
-        // Tutorial: spawn exactly one pipe after a short delay, no more
-        if (frame === 90 && pipes.length === 0) spawnPipe();
-      } else {
-        if (frame % diff().interval === 0) spawnPipe();
-      }
+      if (frame % diff().interval === 0) spawnPipe();
 
       // Apply slow-pipes upgrade
       const slowLevel = boughtUpgrades.slow || 0;
