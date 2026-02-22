@@ -864,17 +864,28 @@
       ctx.arc(7, -5, 7, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pupil
-      ctx.fillStyle = '#222';
-      ctx.beginPath();
-      ctx.arc(9, -4, 3.5, 0, Math.PI * 2);
-      ctx.fill();
+      if (state === 'dead') {
+        // X eyes
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(4, -8); ctx.lineTo(11, -1);
+        ctx.moveTo(11, -8); ctx.lineTo(4, -1);
+        ctx.stroke();
+      } else {
+        // Pupil
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(9, -4, 3.5, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Shine
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(10, -5, 1.2, 0, Math.PI * 2);
-      ctx.fill();
+        // Shine
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(10, -5, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Beak
       ctx.fillStyle = sk.beak;
