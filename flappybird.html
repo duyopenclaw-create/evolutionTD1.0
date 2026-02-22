@@ -221,7 +221,8 @@
       medium: { label: 'Medium', color: '#f5a623', speed: 3,   gap: 150, interval: 90  },
       hard:   { label: 'Hard',   color: '#e74c3c', speed: 4.5, gap: 115, interval: 70  },
     };
-    let difficulty = 'medium';
+    let difficulty = 'easy';
+    let tutorialDone = false;
     let menuOpen = false;
 
     // Difficulty button bounds (top-right)
@@ -626,6 +627,7 @@
         if (score > highScore) { highScore = score; coinsCollected += 5; }
         coinsCollected += Math.floor(score / 2);
         state = 'dead';
+        if (!tutorialDone) { tutorialDone = true; difficulty = 'medium'; }
         playGameOverSound();
         // Death burst
         for (let i = 0; i < 20; i++) {
