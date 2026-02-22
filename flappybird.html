@@ -458,8 +458,11 @@
       const minH = 60;
       const maxH = H - gap - minH - 80;
       const topH = Math.floor(Math.random() * (maxH - minH) + minH);
-      const pipeVy = currentMap === 3 ? (Math.random() < 0.5 ? 1.5 : -1.5) : 0;
-      pipes.push({ x: W, topH, gap, passed: false, vy: pipeVy, minTopH: minH, maxTopH: maxH });
+      if (currentMap === 3) {
+        pipes.push({ x: W, topH, gap, passed: false, phase: Math.random() * Math.PI * 2, centerH: topH, minTopH: minH, maxTopH: maxH });
+      } else {
+        pipes.push({ x: W, topH, gap, passed: false });
+      }
 
       // 50% chance to place a coin just past this gap at a random height within it
       if (Math.random() < 0.5 && coins.length < 3) {
@@ -537,10 +540,10 @@
       for (const p of pipes) {
         p.x -= gameSpeed;
         // Lava map: pipes move vertically, bouncing within bounds
-        if (p.vy) {
-          p.topH += p.vy;
-          if (p.topH <= p.minTopH) { p.topH = p.minTopH; p.vy = -p.vy; }
-          if (p.topH >= p.maxTopH) { p.topH = p.maxTopH; p.vy = -p.vy; }
+        // Lava map: smooth sine oscillation up and down
+        if (p.phase !== undefined) {
+          p.phase += 0.025;
+          p.topH = Math.max(p.minTopH, Math.min(p.maxTopH, Math.round(p.centerH + Math.sin(p.phase) * 55)));
         }
         if (!p.passed && p.x + PIPE_WIDTH < bird.x) {
           p.passed = true;
