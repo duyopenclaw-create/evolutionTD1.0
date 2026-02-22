@@ -986,6 +986,25 @@
 
         ctx.font = 'bold 20px Arial';
         outlineText('Click / Tap / Space to start', W / 2, H / 2 + 52, 'white', 'black', 4);
+
+        // Tutorial card
+        const pulse = 0.7 + 0.3 * Math.abs(Math.sin(frame * 0.05));
+        const cardW = 180, cardH = 36;
+        const cardX = W / 2 - cardW / 2;
+        const cardY = H / 2 + 78;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        roundRect(cardX, cardY, cardW, cardH, 10);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,230,100,0.7)';
+        ctx.lineWidth = 1.5;
+        roundRect(cardX, cardY, cardW, cardH, 10);
+        ctx.stroke();
+        ctx.font = 'bold 15px Arial';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 0;
+        outlineText('↑  Jump to Fly', W / 2, cardY + 24, '#ffe066', 'black', 3);
+        ctx.globalAlpha = 1;
       }
 
       if (state === 'dead') {
