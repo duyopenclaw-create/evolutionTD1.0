@@ -525,7 +525,7 @@
       frame++;
 
       // Bird physics
-      bird.vy += currentMap === 2 ? GRAVITY * 0.45 : GRAVITY;
+      bird.vy += currentMap === 2 ? GRAVITY * 0.62 : GRAVITY;
       bird.y += bird.vy;
       bird.angle = Math.min(Math.max(bird.vy * 3, -30), 90);
 
