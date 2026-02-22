@@ -375,6 +375,8 @@
           }
         }
         upgrsMenuOpen = false;
+        // If they didn't click the button itself, let the click also jump/start
+        if (!hitRect(pos.x, pos.y, UPGR_BTN.x, UPGR_BTN.y, UPGR_BTN.w, UPGR_BTN.h)) jump();
         return;
       }
 
