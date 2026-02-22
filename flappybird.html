@@ -275,6 +275,14 @@
       };
     }
 
+    function fmtCoins(n) {
+      if (n >= 1000) {
+        const k = Math.floor(n / 100) / 10;
+        return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+      }
+      return String(n);
+    }
+
     function hitRect(px, py, rx, ry, rw, rh) {
       return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
     }
@@ -952,7 +960,7 @@
       ctx.fillText('Coins', 12, 76);
       ctx.fillStyle = 'white';
       ctx.font = 'bold 20px Arial';
-      ctx.fillText(coinsCollected, 12, 98);
+      ctx.fillText(fmtCoins(coinsCollected), 12, 98);
 
       ctx.shadowBlur = 0;
     }
