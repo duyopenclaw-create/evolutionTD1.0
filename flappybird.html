@@ -692,7 +692,7 @@
         ctx.fillStyle = '#9b7040';
         ctx.fillRect(0, H - 60, W, 12);
 
-      } else {
+      } else if (currentMap === 2) {
         // --- Space map ---
         const sky = ctx.createLinearGradient(0, 0, 0, H - 60);
         sky.addColorStop(0, '#04001a');
