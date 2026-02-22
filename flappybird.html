@@ -232,13 +232,13 @@
     const UPGR_PANEL = { x: (W - 280) / 2, y: (H - 270) / 2, w: 280, h: 270 };
     let upgrsMenuOpen = false;
     const UPGRADES = [
-      { id: 'magnet',  name: 'Magnet',     desc: '2x coin range',    price: 40 },
-      { id: 'coinx2',  name: 'Coin x2',    desc: '2x coin value',    price: 50 },
-      { id: 'shield',  name: 'Shield',     desc: '1 life per game',  price: 60 },
-      { id: 'slow',    name: 'Slow Pipes', desc: 'Pipes 20% slower', price: 45 },
+      { id: 'magnet',  name: 'Magnet',     desc: 'Coin attraction',  price: 40, maxLevel: 3 },
+      { id: 'coinx2',  name: 'Coin Boost', desc: '+1x coin value',   price: 50, maxLevel: 3 },
+      { id: 'shield',  name: 'Shield',     desc: '+1 life per game', price: 60, maxLevel: 3 },
+      { id: 'slow',    name: 'Slow Pipes', desc: 'Pipes 12% slower', price: 45, maxLevel: 3 },
     ];
-    let boughtUpgrades;
-    let shieldActive = false;
+    let boughtUpgrades;  // object: { id: level }
+    let shieldLives = 0;
 
     // --- Maps ---
     const MAP_BTN = { x: 10, y: H - 98, w: 105, h: 36 };
@@ -276,8 +276,8 @@
       if (highScore === undefined) highScore = 0;
       if (coinsCollected === undefined) coinsCollected = 0;
       if (unlockedSkins === undefined) unlockedSkins = [0];
-      if (boughtUpgrades === undefined) boughtUpgrades = [];
-      shieldActive = boughtUpgrades.includes('shield');
+      if (boughtUpgrades === undefined) boughtUpgrades = {};
+      shieldLives = boughtUpgrades.shield || 0;
       // mapUnlocked, map2Unlocked, currentMap, unlockedSkins, boughtUpgrades persist — no reset needed
       frame = 0;
       state = 'waiting'; // 'waiting' | 'playing' | 'dead'
@@ -365,10 +365,11 @@
           const row = Math.floor(i / cols);
           if (hitRect(pos.x, pos.y, gx + col * cellW, gy + row * cellH + 5, cellW - 4, cellH - 10)) {
             const upg = UPGRADES[i];
-            if (!boughtUpgrades.includes(upg.id) && coinsCollected >= upg.price) {
-              coinsCollected -= upg.price;
-              boughtUpgrades.push(upg.id);
-              if (upg.id === 'shield') shieldActive = true;
+            const curLevel = boughtUpgrades[upg.id] || 0;
+            const nextPrice = upg.price * Math.pow(2, curLevel);
+            if (curLevel < upg.maxLevel && coinsCollected >= nextPrice) {
+              coinsCollected -= nextPrice;
+              boughtUpgrades[upg.id] = curLevel + 1;
             }
             return;
           }
@@ -501,7 +502,8 @@
       if (frame % diff().interval === 0) spawnPipe();
 
       // Apply slow-pipes upgrade
-      const gameSpeed = diff().speed * (boughtUpgrades.includes('slow') ? 0.8 : 1);
+      const slowLevel = boughtUpgrades.slow || 0;
+      const gameSpeed = diff().speed * (1 - slowLevel * 0.12);
 
       // Move pipes & score
       for (const p of pipes) {
@@ -514,25 +516,27 @@
       pipes = pipes.filter(p => p.x + PIPE_WIDTH > 0);
 
       // Move & collect coins
-      const hasMagnet = boughtUpgrades.includes('magnet');
+      const magnetLevel = boughtUpgrades.magnet || 0;
+      const magnetRange = magnetLevel * 55;          // 0 / 55 / 110 / 165 px
+      const magnetPull  = 0.10 + magnetLevel * 0.04; // 0.14 / 0.18 / 0.22
       for (const c of coins) {
         c.spin += 0.05;
         const dx = bird.x - c.x;
         const dy = bird.y - c.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Magnet: attract coins within 90px, then suck them toward the bird
-        if (hasMagnet && dist < 90) c.attracted = true;
+        // Magnet: attract coins within range, suck toward bird
+        if (magnetLevel > 0 && dist < magnetRange) c.attracted = true;
         if (c.attracted) {
-          c.x += dx * 0.14;
-          c.y += dy * 0.14;
+          c.x += dx * magnetPull;
+          c.y += dy * magnetPull;
         } else {
           c.x -= gameSpeed;
         }
 
         if (dist < bird.radius + c.r) {
           // Collect — burst of particles
-          const mult = boughtUpgrades.includes('coinx2') ? 2 : 1;
+          const mult = 1 + (boughtUpgrades.coinx2 || 0);
           coinsCollected += (c.type === 'green' ? 5 : c.type === 'blue' ? 3 : 1) * mult;
           playCoinSound();
           const burstColors = c.type === 'green'
@@ -565,8 +569,8 @@
 
       // Collision
       if (checkCollisions()) {
-        if (shieldActive) {
-          shieldActive = false;
+        if (shieldLives > 0) {
+          shieldLives--;
           bird.vy = JUMP_FORCE * 0.6; // bounce away
         } else {
         if (score > highScore) { highScore = score; coinsCollected += 5; }
@@ -799,7 +803,7 @@
       ctx.fill();
 
       // Shield ring
-      if (shieldActive) {
+      if (shieldLives > 0) {
         ctx.strokeStyle = 'rgba(100,200,255,0.85)';
         ctx.lineWidth = 3;
         ctx.shadowColor = '#4fc3f7';
@@ -1208,42 +1212,52 @@
         const row = Math.floor(i / cols);
         const cx = gx + col * cellW + cellW / 2;
         const cellY = gy + row * cellH + 5;
-        const owned = boughtUpgrades.includes(upg.id);
-        const canAfford = !owned && coinsCollected >= upg.price;
+        const curLevel = boughtUpgrades[upg.id] || 0;
+        const atMax = curLevel >= upg.maxLevel;
+        const nextPrice = upg.price * Math.pow(2, curLevel);
+        const canAfford = !atMax && coinsCollected >= nextPrice;
 
         // Cell background
-        ctx.fillStyle = owned ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.05)';
+        ctx.fillStyle = curLevel > 0 ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.05)';
         roundRect(gx + col * cellW, cellY, cellW - 4, cellH - 10, 8);
         ctx.fill();
-        ctx.strokeStyle = owned ? 'rgba(255,215,0,0.55)' : canAfford ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)';
-        ctx.lineWidth = owned ? 2 : 1.5;
+        ctx.strokeStyle = atMax ? 'rgba(76,175,80,0.7)' : curLevel > 0 ? 'rgba(255,215,0,0.5)' : canAfford ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = curLevel > 0 ? 2 : 1.5;
         roundRect(gx + col * cellW, cellY, cellW - 4, cellH - 10, 8);
         ctx.stroke();
 
-        // Name
+        // Name + level dots
         ctx.textAlign = 'center';
-        ctx.fillStyle = owned ? '#FFD700' : 'white';
+        ctx.fillStyle = atMax ? '#4caf50' : curLevel > 0 ? '#FFD700' : 'white';
         ctx.font = 'bold 13px Arial';
-        ctx.fillText(upg.name, cx, cellY + 22);
+        ctx.fillText(upg.name, cx, cellY + 20);
+
+        // Level pips
+        for (let lv = 0; lv < upg.maxLevel; lv++) {
+          ctx.fillStyle = lv < curLevel ? '#FFD700' : 'rgba(255,255,255,0.2)';
+          ctx.beginPath();
+          ctx.arc(cx - (upg.maxLevel - 1) * 7 + lv * 14, cellY + 32, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         // Description
         ctx.fillStyle = '#aaa';
         ctx.font = '11px Arial';
-        ctx.fillText(upg.desc, cx, cellY + 40);
+        ctx.fillText(upg.desc, cx, cellY + 48);
 
-        // Price / Owned
-        if (owned) {
+        // Price / MAX
+        if (atMax) {
           ctx.fillStyle = '#4caf50';
           ctx.font = 'bold 12px Arial';
-          ctx.fillText('Owned', cx, cellY + 66);
+          ctx.fillText('MAX', cx, cellY + 68);
         } else {
           ctx.fillStyle = canAfford ? '#FFD700' : '#555';
           ctx.beginPath();
-          ctx.arc(cx - 20, cellY + 62, 5, 0, Math.PI * 2);
+          ctx.arc(cx - 20, cellY + 64, 5, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = canAfford ? '#FFD700' : '#666';
           ctx.font = 'bold 12px Arial';
-          ctx.fillText(`${upg.price}`, cx + 4, cellY + 66);
+          ctx.fillText(`${nextPrice}`, cx + 4, cellY + 68);
         }
       });
     }
