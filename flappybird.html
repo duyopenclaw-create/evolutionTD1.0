@@ -289,7 +289,9 @@
     }
 
     // --- State ---
-    let bird, pipes, coins, score, highScore, coinsCollected, frame, state, particles;
+    let bird, pipes, coins, powerups, score, highScore, coinsCollected, frame, state, particles;
+    let magnetPowerActive = false;
+    let magnetPowerTimer  = 0;
 
     function init() {
       bird = {
@@ -301,6 +303,9 @@
       };
       pipes = [];
       coins = [];
+      powerups = [];
+      magnetPowerActive = false;
+      magnetPowerTimer  = 0;
       particles = [];
       score = 0;
       if (highScore === undefined) highScore = 0;
@@ -473,35 +478,32 @@
         pipes.push({ x: W, topH, gap, passed: false });
       }
 
-      // 50% chance to place a coin just past this gap at a random height within it
+      // 50% chance to place a coin (or magnet powerup) just past this gap
       if (Math.random() < 0.5 && coins.length < 3) {
-        const margin = 24; // keep coin clear of pipe edges
+        const margin = 24;
         const safeTop = topH + margin;
         const safeBot = topH + gap - margin;
-        coins.push({
-          x: W + PIPE_WIDTH + 20 + Math.random() * 40,
-          y: safeTop + Math.random() * (safeBot - safeTop),
-          r: 9,
-          spin: 0,
-          attracted: false,
-          type: (() => {
-            if (currentMap === 3) return 'green';
-            const r = Math.random();
-            if (currentMap === 2) {
-              if (r < 0.30) return 'gold';
-              if (r < 0.70) return 'blue';
-              return 'green';
-            } else if (currentMap === 1) {
-              if (r < 0.50) return 'gold';
-              if (r < 0.80) return 'blue';
-              return 'green';
-            } else {
-              if (r < 0.70) return 'gold';
-              if (r < 0.97) return 'blue';
-              return 'green';
-            }
-          })(),
-        });
+        const spawnX = W + PIPE_WIDTH + 20 + Math.random() * 40;
+        const spawnY = safeTop + Math.random() * (safeBot - safeTop);
+        if (Math.random() < 0.1 && powerups.length < 2) {
+          // Magnet power-up (10% chance)
+          powerups.push({ x: spawnX, y: spawnY, r: 12, spin: 0 });
+        } else {
+          coins.push({
+            x: spawnX, y: spawnY, r: 9, spin: 0, attracted: false,
+            type: (() => {
+              if (currentMap === 3) return 'green';
+              const r = Math.random();
+              if (currentMap === 2) {
+                if (r < 0.30) return 'gold'; if (r < 0.70) return 'blue'; return 'green';
+              } else if (currentMap === 1) {
+                if (r < 0.50) return 'gold'; if (r < 0.80) return 'blue'; return 'green';
+              } else {
+                if (r < 0.70) return 'gold'; if (r < 0.97) return 'blue'; return 'green';
+              }
+            })(),
+          });
+        }
       }
     }
 
@@ -581,7 +583,8 @@
           c.x -= gameSpeed;
         }
 
-        if (dist < bird.radius + c.r) {
+        const coinHitbox = (bird.radius + c.r) * (magnetPowerActive ? 3 : 1);
+        if (dist < coinHitbox) {
           // Collect — burst of particles
           const mult = 1 + (boughtUpgrades.coinx2 || 0);
           coinsCollected += (c.type === 'green' ? 5 : c.type === 'blue' ? 3 : 1) * mult;
@@ -605,6 +608,27 @@
         }
       }
       coins = coins.filter(c => c.r > 0 && c.x + c.r > 0);
+
+      // Magnet power-up timer
+      if (magnetPowerActive) {
+        magnetPowerTimer--;
+        if (magnetPowerTimer <= 0) { magnetPowerActive = false; magnetPowerTimer = 0; }
+      }
+
+      // Move & collect magnet power-ups
+      for (const pu of powerups) {
+        pu.x -= gameSpeed;
+        pu.spin += 0.03;
+        const dx = bird.x - pu.x;
+        const dy = bird.y - pu.y;
+        if (Math.sqrt(dx * dx + dy * dy) < bird.radius + pu.r) {
+          magnetPowerActive = true;
+          magnetPowerTimer  = 600; // 10 seconds at 60fps
+          playCoinSound();
+          pu.r = 0;
+        }
+      }
+      powerups = powerups.filter(pu => pu.r > 0 && pu.x + pu.r > 0);
 
       // Particles
       for (const p of particles) {
@@ -964,6 +988,21 @@
       ctx.font = 'bold 20px Arial';
       ctx.fillText(fmtCoins(coinsCollected), 12, 98);
 
+      // Magnet power-up active indicator
+      if (magnetPowerActive) {
+        const pct = magnetPowerTimer / 600;
+        ctx.font = 'bold 11px Arial';
+        ctx.fillStyle = '#42a5f5';
+        ctx.textAlign = 'left';
+        ctx.fillText('Coin Magnet', 12, 116);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        roundRect(12, 120, 78, 6, 3);
+        ctx.fill();
+        ctx.fillStyle = '#42a5f5';
+        roundRect(12, 120, 78 * pct, 6, 3);
+        ctx.fill();
+      }
+
       ctx.shadowBlur = 0;
     }
 
@@ -1119,6 +1158,40 @@
         ctx.arc(-2, -2, 3, 0, Math.PI * 2);
         ctx.fill();
 
+        ctx.restore();
+      }
+    }
+
+    function drawPowerups() {
+      for (const pu of powerups) {
+        ctx.save();
+        ctx.translate(pu.x, pu.y);
+        ctx.rotate(Math.sin(pu.spin) * 0.25); // gentle wobble
+
+        ctx.shadowColor = '#42a5f5';
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+
+        // U-shape arc (silver body) — opens downward
+        ctx.strokeStyle = '#bdbdbd';
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, Math.PI, 0); // top semicircle
+        ctx.stroke();
+
+        // Left arm — blue (N pole)
+        ctx.strokeStyle = '#42a5f5';
+        ctx.beginPath();
+        ctx.moveTo(-9, 0); ctx.lineTo(-9, 10);
+        ctx.stroke();
+
+        // Right arm — red (S pole)
+        ctx.strokeStyle = '#ef5350';
+        ctx.beginPath();
+        ctx.moveTo(9, 0); ctx.lineTo(9, 10);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
         ctx.restore();
       }
     }
@@ -1428,6 +1501,7 @@
       }
 
       drawCoins();
+      drawPowerups();
       drawParticles();
       drawBird();
       drawHUD();
