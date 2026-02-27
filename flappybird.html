@@ -566,16 +566,16 @@
 
       // Move & collect coins
       const magnetLevel = boughtUpgrades.magnet || 0;
-      const magnetRange = magnetLevel * 55;          // 0 / 55 / 110 / 165 px
-      const magnetPull  = 0.10 + magnetLevel * 0.04; // 0.14 / 0.18 / 0.22
+      const magnetRange = magnetPowerActive ? Math.max(magnetLevel * 55, 150) : magnetLevel * 55;
+      const magnetPull  = magnetPowerActive ? Math.max(0.10 + magnetLevel * 0.04, 0.16) : 0.10 + magnetLevel * 0.04;
       for (const c of coins) {
         c.spin += 0.05;
         const dx = bird.x - c.x;
         const dy = bird.y - c.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Magnet: attract coins within range, suck toward bird
-        if (magnetLevel > 0 && dist < magnetRange) c.attracted = true;
+        // Magnet upgrade or power-up: attract coins within range
+        if ((magnetLevel > 0 || magnetPowerActive) && dist < magnetRange) c.attracted = true;
         if (c.attracted) {
           c.x += dx * magnetPull;
           c.y += dy * magnetPull;
