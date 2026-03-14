@@ -78,7 +78,7 @@
   .tc .tcost{color:#ffe060;font-size:12px;font-weight:bold}
   .tc .tdesc{color:#706040;font-size:8px}
 
-  canvas{position:fixed;border:3px solid #5a3a1a;cursor:crosshair;display:none}
+  canvas{position:fixed;border:3px solid #5a3a1a;cursor:crosshair;display:none;z-index:1}
   #game-btns{position:fixed;bottom:10px;right:10px;z-index:20;display:none;
              flex-direction:row;gap:8px;align-items:center}
   #speed-btn,#pause-btn,#audio-btn{background:#1a1208;border:2px solid #5a3a1a;color:#a08040;
@@ -92,6 +92,8 @@
   #pause-label{color:#80c0ff;font-size:36px;font-weight:bold;letter-spacing:4px;
                text-shadow:0 0 20px #4080c0}
   #pause-menu{display:flex;flex-direction:column;align-items:center;gap:20px}
+  .vol-row{display:flex;align-items:center;gap:10px;font-family:monospace;font-size:13px;color:#a08040}
+  .vol-row input[type=range]{width:120px;accent-color:#c09020}
   #resume-btn{background:#0e1e0a;border:2px solid #2a7a20;color:#66ee44;
               font-family:monospace;font-size:15px;font-weight:bold;
               padding:10px 28px;border-radius:8px;cursor:pointer;touch-action:manipulation}
@@ -490,6 +492,8 @@
   <div id="pause-menu">
     <div id="pause-label">⏸ PAUSED</div>
     <button id="resume-btn" onclick="pauseBtn.dispatchEvent(new Event('pointerup'))">▶ Resume</button>
+    <div class="vol-row"><span>🎵 Music</span><input type="range" id="music-vol" min="0" max="100" value="22" oninput="setMusicVol(this.value)"></div>
+    <div class="vol-row"><span>🔊 SFX</span><input type="range" id="sfx-vol" min="0" max="100" value="50" oninput="setSfxVol(this.value)"></div>
     <button id="low-vis-btn" onclick="toggleLowVisuals()">🔆 Lower Visuals</button>
     <button id="exit-menu-btn" onclick="returnToMenu()">🏠 Exit to Menu</button>
   </div>
@@ -618,28 +622,53 @@ function sfxDamage(){
   tone(160,'sawtooth',0.12,0.35,t);noise(0.08,0.25,t);
 }
 
-// Background music
+// Background music — Warrior March (D natural minor, 132 BPM)
+// D4=294 E4=330 F4=349 G4=392 A4=440 Bb4=466 C5=523 D5=587
 const BGM=[
-  [392,1],[330,0.5],[294,0.5],[330,1],[392,1],[392,1.5],[392,0.5],
-  [330,1],[330,1],[330,2],
-  [392,1],[494,1],[523,1],[494,0.5],[440,0.5],[392,2],
-  [330,1],[294,0.5],[262,0.5],[294,1],[330,1],[262,2],
-];
-const BGM_BASS=[
-  [98,2],[110,2],[98,2],[87,2],
-  [98,2],[110,2],[123,2],[87,2],
-];
-const BGM_BPM=108,BGM_BEAT=60/BGM_BPM;
+  // Phrase 1: Call to arms — rising
+  [294,1.5],[294,0.5],[349,1],[392,1],
+  // Phrase 2: Build — tension
+  [440,1.5],[466,0.5],[440,1],[392,1],
+  // Phrase 3: Charge — ascending run
+  [392,1],[440,1],[466,1],[523,1],
+  // Phrase 4: Peak — descent from high
+  [587,1],[523,1],[466,1],[440,1],
+  // Phrase 5: Fury — fast descent
+  [440,0.5],[392,0.5],[349,0.5],[330,0.5],[294,1],[330,1],
+  // Phrase 6: Resolve — march home
+  [392,1.5],[294,0.5],[392,2],
+]; // 24 beats total
+// Harmony — thirds below in triangle for body
+const BGM_HARM=[
+  [147,2],[175,2],[220,2],[196,2],
+  [196,2],[220,2],[294,2],[220,2],
+  [220,2],[196,2],[163,2],[147,2],
+]; // 24 beats total
+// Power bass — D2=73 A2=110 E2=82 (each entry plays twice in loop)
+const BGM_BASS=[[73,4],[110,4],[82,4]]; // 3×2×4=24 beats
+const BGM_BPM=132,BGM_BEAT=60/BGM_BPM;
 let bgmNextTime=0;
 function scheduleBgm(){
   if(!bgmActive||!audioEnabled)return;
   const ctx=getACtx();
+  // Melody — square wave
   let t=bgmNextTime;
-  for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.75,0.15,t,musicGain);t+=b*BGM_BEAT;}
+  for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.14,t,musicGain);t+=b*BGM_BEAT;}
+  // Harmony — triangle wave (softer)
+  t=bgmNextTime;
+  for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.07,t,musicGain);t+=b*BGM_BEAT;}
+  // Bass — sawtooth (each note hit twice)
   t=bgmNextTime;
   for(const[f,b]of BGM_BASS){
-    tone(f,'sawtooth',b*BGM_BEAT*0.8,0.1,t,musicGain);t+=b*BGM_BEAT;
-    tone(f,'sawtooth',b*BGM_BEAT*0.8,0.1,t,musicGain);t+=b*BGM_BEAT;
+    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.12,t,musicGain);t+=b*BGM_BEAT;
+    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.12,t,musicGain);t+=b*BGM_BEAT;
+  }
+  // Percussion — kick + snare pattern over 24 beats (6 bars of 4)
+  for(let i=0;i<24;i++){
+    const bt=bgmNextTime+i*BGM_BEAT;
+    if(i%4===0){noise(0.06,0.18,bt,musicGain);tone(60,'sine',0.07,0.18,bt,musicGain);}  // kick
+    else if(i%4===2){noise(0.05,0.10,bt,musicGain);tone(80,'sine',0.05,0.10,bt,musicGain);}  // weak kick
+    else if(i%4===3){noise(0.04,0.06,bt,musicGain);}  // snare-ish
   }
   const totalBeats=BGM.reduce((s,[,b])=>s+b,0)*BGM_BEAT;
   bgmNextTime+=totalBeats;
@@ -662,11 +691,28 @@ function toggleAudio(){
   if(btn)btn.textContent=audioEnabled?'🔊':'🔇';
   if(masterGain)masterGain.gain.value=audioEnabled?1:0;
 }
+function setMusicVol(v){
+  getACtx();
+  if(musicGain) musicGain.gain.value=v/100*0.44;
+}
+function setSfxVol(v){
+  getACtx();
+  if(sfxGain) sfxGain.gain.value=v/100;
+}
 
 // ── Canvas / ctx ──────────────────────────────────────────────────────────────
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
+
+// ── Corner trees — block placement, drawn on all maps ─────────────────────────
+const TREES=[
+  {x:52, y:50},  // top-left
+  {x:848,y:50},  // top-right
+  {x:52, y:570}, // bottom-left
+  {x:848,y:570}, // bottom-right
+];
+const TREE_BLOCK_R=90; // radius around each tree that blocks tower placement
 
 // ── Permanent save / skin system ─────────────────────────────────────────────
 const SAVE_KEY='boneclubTD_v1';
@@ -1374,6 +1420,7 @@ function sellTower(){
 // ── Placement ─────────────────────────────────────────────────────────────────
 function validPlacement(wx,wy){
   if(wx<10||wx>W-10||wy<10||wy>H-10) return false;
+  for(const tr of TREES) if(Math.hypot(wx-tr.x,wy-tr.y)<TREE_BLOCK_R) return false;
   if(mapId==='loops'){
     if(inInner(wx,wy)) return true;
     if(!inOuter(wx,wy)) return true;
@@ -1606,6 +1653,60 @@ function updateTowers(dt){
   }
 }
 
+// ── Drawing: Trees ────────────────────────────────────────────────────────────
+function _treeAt(c,x,y,sc){
+  c.save();
+  // Ground shadow
+  c.fillStyle='rgba(0,0,0,0.22)';
+  c.beginPath();c.ellipse(x+6*sc,y+26*sc,22*sc,7*sc,0.15,0,Math.PI*2);c.fill();
+  // Trunk — tapered with gradient bark
+  const tg=c.createLinearGradient(x-6*sc,0,x+7*sc,0);
+  tg.addColorStop(0,'#2e1804');tg.addColorStop(0.35,'#6b3a10');
+  tg.addColorStop(0.7,'#4a2808');tg.addColorStop(1,'#1e0f02');
+  c.fillStyle=tg;
+  c.beginPath();
+  c.moveTo(x-6*sc,y+24*sc);c.lineTo(x+6*sc,y+24*sc);
+  c.lineTo(x+4*sc,y+4*sc);c.lineTo(x-4*sc,y+4*sc);
+  c.closePath();c.fill();
+  // Bark lines at larger scales
+  if(sc>0.45){
+    c.strokeStyle='rgba(0,0,0,0.30)';c.lineWidth=0.8;
+    for(let i=0;i<4;i++){
+      c.beginPath();c.moveTo(x-3*sc,y+(6+i*5)*sc);c.lineTo(x+3*sc,y+(7+i*5)*sc);c.stroke();
+    }
+  }
+  // Bottom canopy — widest, darkest
+  const c1=c.createRadialGradient(x-3*sc,y-10*sc,3*sc,x,y-8*sc,28*sc);
+  c1.addColorStop(0,'#2d6e20');c1.addColorStop(0.55,'#1a5012');c1.addColorStop(1,'#0d2e08');
+  c.fillStyle=c1;c.beginPath();c.ellipse(x,y-8*sc,26*sc,20*sc,0,0,Math.PI*2);c.fill();
+  // Mid canopy
+  const c2=c.createRadialGradient(x-4*sc,y-20*sc,2*sc,x,y-18*sc,22*sc);
+  c2.addColorStop(0,'#3d8e28');c2.addColorStop(0.5,'#266018');c2.addColorStop(1,'#123810');
+  c.fillStyle=c2;c.beginPath();c.ellipse(x,y-18*sc,20*sc,16*sc,0,0,Math.PI*2);c.fill();
+  // Top canopy
+  const c3=c.createRadialGradient(x-3*sc,y-32*sc,2*sc,x,y-30*sc,15*sc);
+  c3.addColorStop(0,'#52b035');c3.addColorStop(0.5,'#307822');c3.addColorStop(1,'#1a4a10');
+  c.fillStyle=c3;c.beginPath();c.ellipse(x,y-30*sc,14*sc,12*sc,0,0,Math.PI*2);c.fill();
+  // Top tuft
+  const c4=c.createRadialGradient(x-2*sc,y-42*sc,1*sc,x,y-40*sc,9*sc);
+  c4.addColorStop(0,'#6acc42');c4.addColorStop(1,'#287018');
+  c.fillStyle=c4;c.beginPath();c.ellipse(x,y-40*sc,8*sc,7*sc,0,0,Math.PI*2);c.fill();
+  // Sunlit highlight blobs
+  c.globalAlpha=0.18;c.fillStyle='#aaff66';
+  c.beginPath();c.ellipse(x+8*sc,y-22*sc,7*sc,5*sc,-0.4,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(x-5*sc,y-32*sc,5*sc,4*sc,0.3,0,Math.PI*2);c.fill();
+  c.beginPath();c.ellipse(x+4*sc,y-40*sc,4*sc,3*sc,0,0,Math.PI*2);c.fill();
+  // Shadow underside of canopy
+  c.globalAlpha=0.22;c.fillStyle='#000';
+  c.beginPath();c.ellipse(x+4*sc,y-4*sc,20*sc,7*sc,0.1,0,Math.PI*2);c.fill();
+  c.globalAlpha=1;c.restore();
+}
+function drawTree(x,y){ _treeAt(ctx,x,y,2.2); }
+function drawTrees(){ for(const tr of TREES) drawTree(tr.x,tr.y); }
+// Draw scaled trees onto a preview canvas (sx/sy = previewW/gameW, previewH/gameH)
+function drawPreviewTrees(c,sx,sy){
+  for(const tr of TREES) _treeAt(c,tr.x*sx,tr.y*sy,0.55);
+}
 // ── Drawing: backgrounds ──────────────────────────────────────────────────────
 function drawBackground(){
   const sk=getSkin();
@@ -2867,6 +2968,7 @@ function update(ts){
 
   if(mapId==='loops'){
     drawBackground();
+    drawTrees();
     drawEntryPath();
     drawRingBase();
     const farStrips =allStrips.filter(s=>s.depth<0.5);
@@ -2890,10 +2992,12 @@ function update(ts){
     for(const t of placedTowers) if(!inOuter(t.x,t.y)) drawTower(t);
   } else {
     drawWpBackground();
+    drawTrees();
     drawWaypointPath();
     const sortedCave=[...cavemen].sort((a,b)=>getEnemyPos(a).y-getEnemyPos(b).y);
     for(const c of sortedCave) drawCaveman(c);
     for(const t of placedTowers) drawTower(t);
+    drawTrees(); // redraw on top so towers behind trees look right
   }
 
   drawTargetSign();
@@ -2932,8 +3036,10 @@ function update(ts){
 // ── Input ─────────────────────────────────────────────────────────────────────
 function canvasToWorld(e){
   const rect=canvas.getBoundingClientRect();
-  const cx2=(e.clientX-rect.left)*(W/rect.width);
-  const cy2=(e.clientY-rect.top)*(H/rect.height);
+  const border=3;
+  const cw=rect.width-border*2,ch=rect.height-border*2;
+  const cx2=(e.clientX-rect.left-border)*(W/cw);
+  const cy2=(e.clientY-rect.top-border)*(H/ch);
   return{x:(cx2-W/2)/camScale+W/2,y:(cy2-H/2)/camScale+H/2};
 }
 function handleTap(e){
@@ -2963,7 +3069,7 @@ function handleTap(e){
   }
   // No enemy hit — check for tower click
   for(const t of placedTowers){
-    if(Math.hypot(x-t.x,y-t.y)<22){
+    if(Math.hypot(x-t.x,y-t.y)<28){
       if(selectedTower===t) deselectTower();
       else selectTower(t);
       return;
@@ -2986,6 +3092,7 @@ function drawLoopsPreview(){
   const pw=orx-irx; // path width on ring
   // Background radial gradient
   drawGrassBg(c,W,H);
+  drawPreviewTrees(c,W/900,H/620);
   // Entry path from top to ring — earthy realistic layers
   const botY=cy-ory;
   const sp=SKIN_PATH_COLS[activeSkinId]||SKIN_PATH_COLS.default;
@@ -3298,6 +3405,7 @@ function drawWpPreview(canvasId, rawPts, pathWidthGame, name){
   const pw=Math.max(4,Math.round(pathWidthGame*sx));
   // ── Grass background
   drawGrassBg(c,PW,PH);
+  drawPreviewTrees(c,PW/900,PH/620);
   const drawPath=()=>{c.beginPath();c.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);};
   // ── Realistic path layers
   const sp=SKIN_PATH_COLS[activeSkinId]||SKIN_PATH_COLS.default;
