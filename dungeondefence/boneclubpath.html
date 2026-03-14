@@ -330,7 +330,12 @@
   <button class="sb-btn" onclick="sbSpawn('m')">🚀 Missile</button>
   <button class="sb-btn" onclick="sbSpawn('r')">🤖 Robot</button>
   <button class="sb-btn" onclick="sbSpawn('BOSS')">💀 Boss</button>
-  <button class="sb-btn" onclick="cavemen=[]" style="border-color:#802020;color:#ff8080;margin-top:3px">🗑 Clear</button>
+  <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
+    <button class="sb-btn" onclick="sbChangeAmt(-1)" style="padding:4px 7px">−</button>
+    <span id="sb-amt-label" style="color:#80c0ff;font-family:monospace;font-size:11px;font-weight:bold;min-width:60px;text-align:center">×1 per</span>
+    <button class="sb-btn" onclick="sbChangeAmt(1)" style="padding:4px 7px">+</button>
+  </div>
+  <button class="sb-btn" onclick="cavemen=[]" style="border-color:#802020;color:#ff8080;margin-top:1px">🗑 Clear</button>
 </div>
 
 <!-- Shop modal -->
@@ -3694,11 +3699,16 @@ function returnToMenu(){
   showMapSelect();
 }
 
+let sbAmount=1;
+function sbChangeAmt(d){
+  sbAmount=Math.max(1,Math.min(25,sbAmount+d));
+  document.getElementById('sb-amt-label').textContent='×'+sbAmount+' per';
+}
 function sbSpawn(type){
   if(!sandboxMode) return;
   const saved=wave;
   wave=Math.max(wave,1);
-  spawnCaveman(type||undefined);
+  for(let i=0;i<sbAmount;i++) spawnCaveman(type||undefined);
   wave=saved;
 }
 function startGame(diff){
@@ -3719,6 +3729,7 @@ function startGame(diff){
   // Reset state
   coins=sandboxMode?999999:350; cavemen=[]; placedTowers=[]; projectiles=[]; particles=[];
   selectedDef=null; selectedTower=null; focusedEnemyId=null; lastTime=null; gameSpeed=1; gameOver=false; gameWon=false; endlessMode=false;
+  sbAmount=1; const _sbl=document.getElementById('sb-amt-label'); if(_sbl) _sbl.textContent='×1 per';
   _updateSpeedBtn();
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
