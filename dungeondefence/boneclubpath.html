@@ -356,6 +356,10 @@
     <button onclick="closeStats()" style="margin-top:8px;background:#1a0e04;border:2px solid #6a3010;color:#f08040;font-family:monospace;font-size:13px;font-weight:bold;padding:8px;border-radius:8px;cursor:pointer">✕ Close</button>
   </div>
 </div>
+<!-- Achievements overlay -->
+<div id="ach-overlay" style="position:fixed;inset:0;z-index:210;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.82)">
+  <div id="ach-box" style="background:#080e04;border:3px solid #4a9010;border-radius:16px;padding:20px 22px;width:340px;max-width:95vw;display:flex;flex-direction:column;gap:0"></div>
+</div>
 
 <!-- Map Select -->
 <div id="map-select">
@@ -387,6 +391,7 @@
     <button onclick="showTitleScreen()" style="background:#1a1208;border:2px solid #5a3a1a;color:#a08040;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">🏠 Menu</button>
     <button id="shop-btn" onclick="openShop()" style="font-size:12px;padding:7px 12px">🛍 Shop</button>
     <button id="stats-btn" onclick="openStats()" style="background:#1a1208;border:2px solid #4a7a30;color:#88cc44;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">📊 Stats</button>
+    <button onclick="openAchievements()" style="background:#0a1a04;border:2px solid #4a9010;color:#aeff66;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">🏅 Achievements</button>
     <button id="access-btn" onclick="openAccessibility()">♿ Access</button>
   </div>
   <h2>⚔ SELECT MAP</h2>
@@ -737,8 +742,10 @@ const MEDAL_NAME={easy:'bronze',medium:'silver',hard:'gold'};
 const MEDAL_EMOJI={bronze:'🥉',silver:'🥈',gold:'🥇'};
 let stats={
   kills:0, tankKills:0, missileKills:0, robotKills:0,
+  bossKills:0, explorerKills:0, knightKills:0, soldierKills:0,
   highestWave:0, gamesPlayed:0, wins:0, towersPlaced:0,
   coinsEarned:0, damageDealt:0, coinDropsUsed:0, superWashoutsUsed:0,
+  totalUpgrades:0, sandboxSpawns:0, hardWins:0, easyWins:0,
 };
 function loadSave(){
   try{
@@ -747,20 +754,191 @@ function loadSave(){
     permCoinDrops=d.permCoinDrops??1; permSuperWashouts=d.permSuperWashouts??1;
     if(d.stats) Object.assign(stats,d.stats);
     if(d.medals) Object.assign(medals,d.medals);
+    if(d.achievements) d.achievements.forEach(id=>earnedAchievements.add(id));
   }catch(e){}
 }
 function writeSave(){
-  localStorage.setItem(SAVE_KEY,JSON.stringify({cash:permCash,owned:ownedSkins,active:activeSkinId,permCoinDrops,permSuperWashouts,stats,medals}));
+  localStorage.setItem(SAVE_KEY,JSON.stringify({cash:permCash,owned:ownedSkins,active:activeSkinId,permCoinDrops,permSuperWashouts,stats,medals,achievements:[...earnedAchievements]}));
 }
 function trackKill(c){
   stats.kills++;
-  if(c.robot) stats.robotKills++;
-  else if(c.missile) stats.missileKills++;
-  else if(c.tank) stats.tankKills++;
+  if(c.boss)        stats.bossKills++;
+  if(c.robot)       stats.robotKills++;
+  else if(c.missile)stats.missileKills++;
+  else if(c.tank)   stats.tankKills++;
+  else if(c.soldier)stats.soldierKills++;
+  else if(c.knight) stats.knightKills++;
+  else if(c.heavy)  stats.explorerKills++;
   stats.coinsEarned+=(c.coins||10);
+  checkAchievements();
   writeSave();
 }
+let earnedAchievements=new Set();
+const ACHIEVEMENTS=[
+  // ── Kill milestones ──────────────────────────────────────────────────────────
+  {id:'k1', name:'First Blood',       desc:'Kill 1 enemy',                      check:()=>stats.kills>=1},
+  {id:'k2', name:'Headhunter',        desc:'Kill 10 enemies',                   check:()=>stats.kills>=10},
+  {id:'k3', name:'Slayer',            desc:'Kill 50 enemies',                   check:()=>stats.kills>=50},
+  {id:'k4', name:'Warrior',           desc:'Kill 100 enemies',                  check:()=>stats.kills>=100},
+  {id:'k5', name:'Veteran',           desc:'Kill 500 enemies',                  check:()=>stats.kills>=500},
+  {id:'k6', name:'Destroyer',         desc:'Kill 1,000 enemies',                check:()=>stats.kills>=1000},
+  {id:'k7', name:'Legend',            desc:'Kill 2,500 enemies',                check:()=>stats.kills>=2500},
+  {id:'k8', name:'Mythic',            desc:'Kill 5,000 enemies',                check:()=>stats.kills>=5000},
+  {id:'k9', name:'Godlike',           desc:'Kill 10,000 enemies',               check:()=>stats.kills>=10000},
+  {id:'k10',name:'Annihilator',       desc:'Kill 25,000 enemies',               check:()=>stats.kills>=25000},
+  // ── Tank kills ───────────────────────────────────────────────────────────────
+  {id:'t1', name:'Tank Buster',       desc:'Kill 5 tanks',                      check:()=>stats.tankKills>=5},
+  {id:'t2', name:'Armor Piercer',     desc:'Kill 25 tanks',                     check:()=>stats.tankKills>=25},
+  {id:'t3', name:'Iron Crusher',      desc:'Kill 100 tanks',                    check:()=>stats.tankKills>=100},
+  // ── Missile kills ────────────────────────────────────────────────────────────
+  {id:'m1', name:'Missile Hunter',    desc:'Shoot down 5 missiles',             check:()=>stats.missileKills>=5},
+  {id:'m2', name:'Air Defense',       desc:'Shoot down 25 missiles',            check:()=>stats.missileKills>=25},
+  {id:'m3', name:'Iron Curtain',      desc:'Shoot down 100 missiles',           check:()=>stats.missileKills>=100},
+  // ── Robot kills ──────────────────────────────────────────────────────────────
+  {id:'r1', name:'Circuit Breaker',   desc:'Kill 5 robots',                     check:()=>stats.robotKills>=5},
+  {id:'r2', name:'Bot Buster',        desc:'Kill 25 robots',                    check:()=>stats.robotKills>=25},
+  {id:'r3', name:'Machine Wrecker',   desc:'Kill 100 robots',                   check:()=>stats.robotKills>=100},
+  // ── Boss kills ───────────────────────────────────────────────────────────────
+  {id:'b1', name:'Giant Slayer',      desc:'Kill a boss',                       check:()=>stats.bossKills>=1},
+  {id:'b2', name:'Boss Hunter',       desc:'Kill 5 bosses',                     check:()=>stats.bossKills>=5},
+  {id:'b3', name:'Boss Master',       desc:'Kill 20 bosses',                    check:()=>stats.bossKills>=20},
+  // ── Specific enemy types ─────────────────────────────────────────────────────
+  {id:'e1', name:'Explorer Slayer',   desc:'Kill 25 explorers',                 check:()=>stats.explorerKills>=25},
+  {id:'e2', name:'Pathfinder',        desc:'Kill 100 explorers',                check:()=>stats.explorerKills>=100},
+  {id:'kn1',name:'Knight Crusher',    desc:'Kill 25 knights',                   check:()=>stats.knightKills>=25},
+  {id:'kn2',name:'King Slayer',       desc:'Kill 100 knights',                  check:()=>stats.knightKills>=100},
+  {id:'s1', name:'Soldier Buster',    desc:'Kill 25 soldiers',                  check:()=>stats.soldierKills>=25},
+  {id:'s2', name:'Army Crusher',      desc:'Kill 100 soldiers',                 check:()=>stats.soldierKills>=100},
+  // ── Wave milestones ──────────────────────────────────────────────────────────
+  {id:'w1', name:'Survivor',          desc:'Reach wave 5',                      check:()=>stats.highestWave>=5},
+  {id:'w2', name:'Defender',          desc:'Reach wave 10',                     check:()=>stats.highestWave>=10},
+  {id:'w3', name:'Endurance',         desc:'Reach wave 15',                     check:()=>stats.highestWave>=15},
+  {id:'w4', name:'Iron Will',         desc:'Reach wave 20',                     check:()=>stats.highestWave>=20},
+  {id:'w5', name:'Endless Runner',    desc:'Reach wave 30',                     check:()=>stats.highestWave>=30},
+  {id:'w6', name:'Immortal',          desc:'Reach wave 50',                     check:()=>stats.highestWave>=50},
+  {id:'w7', name:'God of War',        desc:'Reach wave 100',                    check:()=>stats.highestWave>=100},
+  // ── Win milestones ───────────────────────────────────────────────────────────
+  {id:'v1', name:'Victor',            desc:'Win 1 game',                        check:()=>stats.wins>=1},
+  {id:'v2', name:'Champion',          desc:'Win 5 games',                       check:()=>stats.wins>=5},
+  {id:'v3', name:'Conqueror',         desc:'Win 10 games',                      check:()=>stats.wins>=10},
+  {id:'v4', name:'Overlord',          desc:'Win 25 games',                      check:()=>stats.wins>=25},
+  {id:'v5', name:'Supreme',           desc:'Win 50 games',                      check:()=>stats.wins>=50},
+  {id:'v6', name:'Undefeated',        desc:'Win 100 games',                     check:()=>stats.wins>=100},
+  // ── Games played ─────────────────────────────────────────────────────────────
+  {id:'g1', name:'Newcomer',          desc:'Play 1 game',                       check:()=>stats.gamesPlayed>=1},
+  {id:'g2', name:'Regular',           desc:'Play 5 games',                      check:()=>stats.gamesPlayed>=5},
+  {id:'g3', name:'Dedicated',         desc:'Play 10 games',                     check:()=>stats.gamesPlayed>=10},
+  {id:'g4', name:'Addicted',          desc:'Play 25 games',                     check:()=>stats.gamesPlayed>=25},
+  {id:'g5', name:'Obsessed',          desc:'Play 50 games',                     check:()=>stats.gamesPlayed>=50},
+  {id:'g6', name:'No Life',           desc:'Play 100 games',                    check:()=>stats.gamesPlayed>=100},
+  // ── Towers placed ────────────────────────────────────────────────────────────
+  {id:'tp1',name:'Builder',           desc:'Place 5 towers',                    check:()=>stats.towersPlaced>=5},
+  {id:'tp2',name:'Engineer',          desc:'Place 25 towers',                   check:()=>stats.towersPlaced>=25},
+  {id:'tp3',name:'Architect',         desc:'Place 100 towers',                  check:()=>stats.towersPlaced>=100},
+  {id:'tp4',name:'Grand Architect',   desc:'Place 250 towers',                  check:()=>stats.towersPlaced>=250},
+  {id:'tp5',name:'Master Builder',    desc:'Place 500 towers',                  check:()=>stats.towersPlaced>=500},
+  // ── Coins earned ─────────────────────────────────────────────────────────────
+  {id:'c1', name:'Earner',            desc:'Earn 500 coins',                    check:()=>stats.coinsEarned>=500},
+  {id:'c2', name:'Saver',             desc:'Earn 2,500 coins',                  check:()=>stats.coinsEarned>=2500},
+  {id:'c3', name:'Rich',              desc:'Earn 5,000 coins',                  check:()=>stats.coinsEarned>=5000},
+  {id:'c4', name:'Wealthy',           desc:'Earn 10,000 coins',                 check:()=>stats.coinsEarned>=10000},
+  {id:'c5', name:'Tycoon',            desc:'Earn 25,000 coins',                 check:()=>stats.coinsEarned>=25000},
+  {id:'c6', name:'Mogul',             desc:'Earn 50,000 coins',                 check:()=>stats.coinsEarned>=50000},
+  // ── Damage dealt ─────────────────────────────────────────────────────────────
+  {id:'d1', name:'Sniper',            desc:'Deal 1,000 damage',                 check:()=>stats.damageDealt>=1000},
+  {id:'d2', name:'Gunner',            desc:'Deal 5,000 damage',                 check:()=>stats.damageDealt>=5000},
+  {id:'d3', name:'Heavy Hitter',      desc:'Deal 25,000 damage',                check:()=>stats.damageDealt>=25000},
+  {id:'d4', name:'Devastator',        desc:'Deal 100,000 damage',               check:()=>stats.damageDealt>=100000},
+  {id:'d5', name:'World Ender',       desc:'Deal 500,000 damage',               check:()=>stats.damageDealt>=500000},
+  {id:'d6', name:'Damage God',        desc:'Deal 1,000,000 damage',             check:()=>stats.damageDealt>=1000000},
+  // ── Upgrades ─────────────────────────────────────────────────────────────────
+  {id:'up1',name:'Upgrader',          desc:'Buy 5 tower upgrades',              check:()=>stats.totalUpgrades>=5},
+  {id:'up2',name:'Power Up',          desc:'Buy 25 tower upgrades',             check:()=>stats.totalUpgrades>=25},
+  {id:'up3',name:'Max Out',           desc:'Buy 100 tower upgrades',            check:()=>stats.totalUpgrades>=100},
+  {id:'up4',name:'Enhancement Addict',desc:'Buy 250 tower upgrades',            check:()=>stats.totalUpgrades>=250},
+  // ── Items used ───────────────────────────────────────────────────────────────
+  {id:'cd1',name:'Lucky',             desc:'Use 1 coin drop',                   check:()=>stats.coinDropsUsed>=1},
+  {id:'cd2',name:'Fortune',           desc:'Use 5 coin drops',                  check:()=>stats.coinDropsUsed>=5},
+  {id:'cd3',name:'Jackpot',           desc:'Use 10 coin drops',                 check:()=>stats.coinDropsUsed>=10},
+  {id:'sw1',name:'Cleanup',           desc:'Use 1 super washout',               check:()=>stats.superWashoutsUsed>=1},
+  {id:'sw2',name:'Exterminator',      desc:'Use 5 super washouts',              check:()=>stats.superWashoutsUsed>=5},
+  {id:'sw3',name:'Wipeout',           desc:'Use 10 super washouts',             check:()=>stats.superWashoutsUsed>=10},
+  // ── Medals ───────────────────────────────────────────────────────────────────
+  {id:'md1',name:'Medalist',          desc:'Earn any medal',                    check:()=>Object.keys(medals).length>=1},
+  {id:'md2',name:'Silver Lining',     desc:'Earn a silver medal',               check:()=>Object.values(medals).some(v=>v==='silver'||v==='gold')},
+  {id:'md3',name:'Gold Standard',     desc:'Earn a gold medal',                 check:()=>Object.values(medals).some(v=>v==='gold')},
+  {id:'md4',name:'Medal Hunter',      desc:'Earn medals on 5 maps',             check:()=>Object.keys(medals).length>=5},
+  {id:'md5',name:'Completionist',     desc:'Earn medals on 10 maps',            check:()=>Object.keys(medals).length>=10},
+  {id:'md6',name:'All Clear',         desc:'Earn a medal on all 12 maps',       check:()=>Object.keys(medals).length>=12},
+  // ── Difficulty wins ──────────────────────────────────────────────────────────
+  {id:'ew1',name:'Easy Win',          desc:'Win 1 game on Easy',                check:()=>stats.easyWins>=1},
+  {id:'ew2',name:'Easy Champion',     desc:'Win 5 games on Easy',               check:()=>stats.easyWins>=5},
+  {id:'hw1',name:'Hard Fought',       desc:'Win 1 game on Hard',                check:()=>stats.hardWins>=1},
+  {id:'hw2',name:'Hardcore',          desc:'Win 5 games on Hard',               check:()=>stats.hardWins>=5},
+  // ── Sandbox ──────────────────────────────────────────────────────────────────
+  {id:'sb1',name:'Lab Rat',           desc:'Spawn 1 enemy in Sandbox',          check:()=>stats.sandboxSpawns>=1},
+  {id:'sb2',name:'Mad Scientist',     desc:'Spawn 100 enemies in Sandbox',      check:()=>stats.sandboxSpawns>=100},
+  {id:'sb3',name:'Chaos Lord',        desc:'Spawn 500 enemies in Sandbox',      check:()=>stats.sandboxSpawns>=500},
+  // ── Gold medals ──────────────────────────────────────────────────────────────
+  {id:'gd1',name:'Golden Victory',    desc:'Earn 3 gold medals',                check:()=>Object.values(medals).filter(v=>v==='gold').length>=3},
+  {id:'gd2',name:'Golden Master',     desc:'Earn 6 gold medals',                check:()=>Object.values(medals).filter(v=>v==='gold').length>=6},
+  {id:'gd3',name:'All Gold',          desc:'Gold medal on all 12 maps',         check:()=>Object.values(medals).filter(v=>v==='gold').length>=12},
+  // ── Combo / special ──────────────────────────────────────────────────────────
+  {id:'sp1',name:'Expert Slayer',     desc:'Kill 100 tanks + missiles + robots combined',      check:()=>stats.tankKills+stats.missileKills+stats.robotKills>=100},
+  {id:'sp2',name:'Boss of Bosses',    desc:'Kill 25 bosses',                    check:()=>stats.bossKills>=25},
+  {id:'sp3',name:'Elite Hunter',      desc:'Kill a boss, 10 tanks, 10 missiles, and 10 robots',check:()=>stats.bossKills>=1&&stats.tankKills>=10&&stats.missileKills>=10&&stats.robotKills>=10},
+  {id:'sp4',name:'Versatile',         desc:'5 wins, 50 towers placed, 5,000 coins earned',    check:()=>stats.wins>=5&&stats.towersPlaced>=50&&stats.coinsEarned>=5000},
+  {id:'sp5',name:'War Machine',       desc:'1,000 kills and 50,000 damage dealt',              check:()=>stats.kills>=1000&&stats.damageDealt>=50000},
+  {id:'sp6',name:'True Champion',     desc:'10 wins and reached wave 20',                      check:()=>stats.wins>=10&&stats.highestWave>=20},
+  {id:'sp7',name:'Maximum Power',     desc:'100 upgrades and 500 kills',                       check:()=>stats.totalUpgrades>=100&&stats.kills>=500},
+  {id:'sp8',name:'Dedicated Master',  desc:'50 games played, 10 wins, and 1,000 kills',        check:()=>stats.gamesPlayed>=50&&stats.wins>=10&&stats.kills>=1000},
+  {id:'sp9',name:'Type Collector',    desc:'Kill at least 50 of each special enemy type',      check:()=>stats.tankKills>=50&&stats.missileKills>=50&&stats.robotKills>=50},
+  {id:'sp10',name:'True Legend',      desc:'25 wins, wave 30 reached, and 2,000 kills',        check:()=>stats.wins>=25&&stats.highestWave>=30&&stats.kills>=2000},
+];
+function checkAchievements(){
+  let newOnes=[];
+  for(const a of ACHIEVEMENTS){
+    if(!earnedAchievements.has(a.id)&&a.check()){
+      earnedAchievements.add(a.id);
+      newOnes.push(a.name);
+    }
+  }
+  if(newOnes.length) newOnes.forEach(showAchievementToast);
+}
+function showAchievementToast(name){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a2a0a;border:2px solid #66cc22;color:#aeff66;font-family:monospace;font-size:13px;font-weight:bold;padding:10px 18px;border-radius:10px;z-index:9999;pointer-events:none;text-align:center;white-space:nowrap;box-shadow:0 0 18px rgba(100,220,30,0.4)';
+  el.textContent='🏅 Achievement: '+name;
+  document.body.appendChild(el);
+  let op=1;const fade=setInterval(()=>{op-=0.04;el.style.opacity=op;if(op<=0){clearInterval(fade);el.remove();}},60);
+  setTimeout(()=>{clearInterval(fade);el.remove();},3200);
+}
+function openAchievements(){
+  const total=ACHIEVEMENTS.length,earned=earnedAchievements.size;
+  const box=document.getElementById('ach-box');
+  box.innerHTML=`<h2 style="color:#aeff66;font-size:16px;font-weight:bold;text-align:center;letter-spacing:2px;margin-bottom:6px">🏅 ACHIEVEMENTS <span style="color:#66aa22;font-size:13px">${earned}/${total}</span></h2>`;
+  const grid=document.createElement('div');
+  grid.style.cssText='display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:65vh;padding-right:4px';
+  const sorted=[...ACHIEVEMENTS].sort((a,b)=>earnedAchievements.has(b.id)-earnedAchievements.has(a.id));
+  for(const a of sorted){
+    const got=earnedAchievements.has(a.id);
+    const row=document.createElement('div');
+    row.style.cssText=`display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:${got?'rgba(80,160,20,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${got?'#3a8010':'#2a2a2a'}`;
+    row.innerHTML=`<span style="font-size:18px">${got?'🏅':'🔒'}</span><div style="flex:1"><div style="font-family:monospace;font-size:12px;font-weight:bold;color:${got?'#aeff66':'#888'}">${got?a.name:'???'}</div><div style="font-family:monospace;font-size:10px;color:${got?'#779944':'#555'}">${got?a.desc:'Locked'}</div></div>`;
+    grid.appendChild(row);
+  }
+  box.appendChild(grid);
+  const btn=document.createElement('button');
+  btn.style.cssText='margin-top:10px;background:#0a1a04;border:2px solid #3a7010;color:#88cc44;font-family:monospace;font-size:13px;font-weight:bold;padding:8px;border-radius:8px;cursor:pointer;width:100%';
+  btn.textContent='✕ Close';btn.onclick=closeAchievements;
+  box.appendChild(btn);
+  document.getElementById('ach-overlay').style.display='flex';
+}
+function closeAchievements(){
+  document.getElementById('ach-overlay').style.display='none';
+}
 loadSave();
+checkAchievements();
 // Apply saved skin theme to title/map-select backgrounds on load
 window.addEventListener('DOMContentLoaded',applyUiTheme);
 const FLAME_LAYOUT=[
@@ -1167,7 +1345,10 @@ function endWave(){
 function showWinScreen(){
   gameWon=true;
   sfxWin();
-  stats.wins++; if(wave>stats.highestWave){stats.highestWave=wave;}
+  stats.wins++;
+  if(diffConfig.name.toLowerCase()==='hard') stats.hardWins++;
+  if(diffConfig.name.toLowerCase()==='easy') stats.easyWins++;
+  if(wave>stats.highestWave){stats.highestWave=wave;}
   // Award medal — only upgrade, never downgrade
   const diffKey=diffConfig.name.toLowerCase();
   const newMedal=MEDAL_NAME[diffKey];
@@ -1179,7 +1360,7 @@ function showWinScreen(){
   }
   const WIN_REWARD={easy:10,medium:30,hard:50};
   const rewardAmt=WIN_REWARD[diffConfig.name.toLowerCase()]||10;
-  permCash+=rewardAmt; writeSave(); updatePermCashUI();
+  permCash+=rewardAmt; checkAchievements(); writeSave(); updatePermCashUI();
   document.getElementById('win-diff').textContent=diffConfig.name.toUpperCase();
   // Show medal earned
   const medalEl=document.getElementById('win-medal');
@@ -1407,6 +1588,7 @@ function buyUpgrade(path){
   const cost=upgradeCost(selectedTower,path);
   if(cost===Infinity||coins<cost) return;
   coins-=cost; selectedTower.upgrades[path]++;
+  stats.totalUpgrades++; checkAchievements(); writeSave();
   updateCoinsUI(); renderUpgradePanel();
 }
 function sellValue(tower){
@@ -3709,6 +3891,7 @@ function sbSpawn(type){
   const saved=wave;
   wave=Math.max(wave,1);
   for(let i=0;i<sbAmount;i++) spawnCaveman(type||undefined);
+  stats.sandboxSpawns+=sbAmount; checkAchievements(); writeSave();
   wave=saved;
 }
 function startGame(diff){
