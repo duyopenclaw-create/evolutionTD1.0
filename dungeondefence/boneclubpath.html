@@ -33,9 +33,41 @@
               touch-action:manipulation;letter-spacing:2px}
   #title-play:hover{background:#3a1a10;border-color:#ff6030;color:#ffb060}
 
+  /* ── Hero Select Panel ── */
+  #hero-view{display:none;flex-direction:column;align-items:center;gap:10px;
+    position:relative;z-index:5;background:#0a0408;color:#ffffff;
+    border:2px solid #7a40aa;border-radius:14px;padding:14px 16px;
+    box-shadow:0 0 30px rgba(120,50,200,0.35);
+    width:calc(100% - 32px);max-width:400px;
+    max-height:calc(100vh - 100px);overflow-y:auto;box-sizing:border-box}
+  #hero-cards-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:100%}
+  .hero-card{display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:8px 7px 7px;border-radius:9px;border:2px solid #6a30aa;background:#1a0a28;
+    cursor:pointer;touch-action:manipulation;transition:border-color 0.15s,background 0.15s,box-shadow 0.15s;
+    position:relative;user-select:none;-webkit-user-select:none;text-align:center;font-size:11px}
+  .hero-card:active{transform:scale(0.95)}
+  .hero-card:hover:not(.locked){border-color:#aa55dd;background:#220a34}
+  .hero-card.selected{border-color:#ffdd44;background:#1e0c30;box-shadow:0 0 10px rgba(255,220,80,0.4)}
+  .hero-card.selected::after{content:'✓';position:absolute;top:4px;right:7px;color:#ffdd44;font-size:11px;font-weight:bold}
+  .hero-card.locked{opacity:0.6;cursor:default}
+  .hero-card.locked::before{content:'🔒';position:absolute;top:4px;right:7px;font-size:11px}
+  .hero-card .hc-emoji{font-size:24px;line-height:1}
+  .hero-card .hc-name{color:#ffffff;font-size:12px;font-weight:bold;margin-top:1px}
+  .hero-card .hc-role{color:#ffffff;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.3px;opacity:0.75}
+  .hero-card .hc-desc{color:#ffffff !important;font-size:10px;line-height:1.4;margin-top:3px;padding:0 2px;word-break:break-word;white-space:normal;width:100%}
+  .hero-card .hc-costs{display:flex;flex-direction:column;gap:2px;margin-top:5px;align-items:center;width:100%;border-top:1px solid #3a1a50;padding-top:5px}
+  .hero-card .hc-deploy{color:#ffdd44;font-size:10px;font-weight:bold;font-family:monospace}
+  .hero-card .hc-cost{color:#ffffff;font-size:9px;font-weight:bold;font-family:monospace;opacity:0.8}
+  /* in-game hero card */
+  #hero-tower-card{background:#1a0828;border:2px solid #aa55dd;border-radius:8px;
+    padding:6px 8px;cursor:pointer;touch-action:manipulation;display:none;
+    flex-direction:column;gap:2px;flex-shrink:0;align-items:center}
+  #hero-tower-card:hover{border-color:#dd99ff}
+  #hero-tower-card.selected{border-color:#ffe060;background:#2a1040}
+  #hero-tower-card.cant-afford{opacity:.4;cursor:not-allowed}
   /* ── Map Select ── */
   #map-select{position:fixed;inset:0;z-index:190;display:none;flex-direction:column;
-              align-items:center;justify-content:flex-start;padding-top:30px;background:#0a0a06;gap:12px}
+              align-items:center;justify-content:flex-start;padding-top:16px;background:#0a0a06;gap:10px;overflow-y:auto}
   #map-select h2{color:#f0c040;font-size:26px;font-weight:bold;letter-spacing:3px}
   #map-cards{display:flex;gap:14px;flex-wrap:nowrap;justify-content:center;padding:0 16px}
   #map-page-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:195;
@@ -130,6 +162,29 @@
                  padding:11px 14px;backdrop-filter:blur(3px);min-width:295px;
                  pointer-events:none}
   #upgrade-panel.show{display:flex}
+  #hero-panel{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);
+              z-index:30;display:none;flex-direction:column;align-items:center;gap:7px;
+              background:rgba(8,3,18,0.96);border:2px solid #8a40cc;border-radius:12px;
+              padding:11px 14px;backdrop-filter:blur(3px);min-width:295px;pointer-events:none}
+  #hero-panel.show{display:flex}
+  #hp-header{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;pointer-events:auto}
+  #hp-title{color:#dd99ff;font-size:13px;font-weight:bold}
+  #hp-close{background:none;border:none;color:#7050a0;font-size:13px;cursor:pointer;font-family:monospace;padding:1px 5px;line-height:1;pointer-events:auto}
+  #hp-close:hover{color:#cc88ff}
+  #hp-level{color:#a080d0;font-size:10px;width:100%;text-align:center}
+  #hp-bar-wrap{width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden}
+  #hp-bar{height:100%;border-radius:4px;transition:width 0.3s}
+  #hp-stats{color:#c0a0e0;font-size:11px;text-align:center}
+  #hp-lvlup{background:#0e1e08;border:2px solid #44aa22;border-radius:8px;color:#88ff44;
+            font-family:monospace;font-size:12px;font-weight:bold;padding:6px 16px;
+            cursor:pointer;touch-action:manipulation;pointer-events:auto;width:100%}
+  #hp-lvlup:hover:not(:disabled){border-color:#88ff44;color:#ccff88}
+  #hp-lvlup:disabled{opacity:0.4;cursor:not-allowed}
+  #hp-sell{background:#1a0828;border:2px solid #6a2090;border-radius:8px;color:#dd99ff;
+           font-family:monospace;font-size:11px;font-weight:bold;padding:5px 14px;
+           cursor:pointer;touch-action:manipulation;pointer-events:auto}
+  #hp-sell:hover{border-color:#cc88ff;color:#fff}
+
   #up-header{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;pointer-events:auto}
   #up-title{color:#f0d080;font-size:13px;font-weight:bold}
   #up-close{background:none;border:none;color:#806040;font-size:13px;cursor:pointer;
@@ -138,9 +193,9 @@
   #up-stats{color:#a09060;font-size:10px;text-align:center}
   #up-btns{display:flex;gap:7px;pointer-events:auto}
   .up-btn{background:#1a1208;border:2px solid #4a3010;border-radius:8px;
-          padding:7px 8px;cursor:pointer;touch-action:manipulation;
+          padding:6px 5px;cursor:pointer;touch-action:manipulation;
           display:flex;flex-direction:column;align-items:center;gap:2px;
-          font-family:monospace;min-width:86px}
+          font-family:monospace;min-width:68px}
   .up-btn:hover:not(:disabled){border-color:#c0902a;background:#2a1a08}
   .up-btn:disabled{opacity:.4;cursor:not-allowed}
   .up-btn .up-name{color:#f0d080;font-size:10px;font-weight:bold}
@@ -393,6 +448,7 @@
     <button id="stats-btn" onclick="openStats()" style="background:#1a1208;border:2px solid #4a7a30;color:#88cc44;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">📊 Stats</button>
     <button onclick="openAchievements()" style="background:#0a1a04;border:2px solid #4a9010;color:#aeff66;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">🏅 Achievements</button>
     <button id="access-btn" onclick="openAccessibility()">♿ Access</button>
+    <button onclick="openHeroPanel()" style="background:#130820;border:2px solid #7a40aa;color:#dd99ff;font-family:monospace;font-size:12px;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;touch-action:manipulation">⚔ Heroes</button>
   </div>
   <h2>⚔ SELECT MAP</h2>
   <div id="map-cards">
@@ -461,6 +517,11 @@
       <div class="mdesc">Crossing diagonal paths.</div>
     </div>
   </div>
+  <div id="hero-view">
+    <div style="color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:2px;text-align:center">⚔ CHOOSE YOUR HERO</div>
+    <div id="hero-cards-list"></div>
+    <button onclick="closeHeroPanel()" style="background:#1e0a2a;border:2px solid #7a40aa;color:#ffffff;font-family:monospace;font-size:13px;font-weight:bold;padding:8px 28px;border-radius:8px;cursor:pointer;touch-action:manipulation">← Back to Maps</button>
+  </div>
 </div>
 <!-- Accessibility overlay — top-level so it covers fixed nav buttons -->
 <div id="access-overlay" onclick="if(event.target===this)closeAccessibility()">
@@ -500,6 +561,11 @@
   <div id="wstatus-el" style="color:#a0c0ff;font-size:9px;text-align:center;min-height:11px"></div>
   <div id="status-el"></div>
   <div id="cancel-btn" onpointerup="cancelPlacement()">✕ Cancel</div>
+  <div id="hero-tower-card" onpointerup="selectHeroForPlacement()">
+    <div id="htc-emoji" style="font-size:22px">⚔️</div>
+    <div id="htc-name" style="color:#e0c0ff;font-size:9px;font-weight:bold">Hero</div>
+    <div style="color:#ffdd44;font-size:11px;font-weight:bold">💰500</div>
+  </div>
   <hr id="side-divider">
   <div id="tower-cards"></div>
 </div>
@@ -529,6 +595,18 @@
   <div id="up-stats"></div>
   <div id="up-btns"></div>
   <button id="up-sell" onclick="sellTower()">🪙 Sell</button>
+</div>
+
+<div id="hero-panel">
+  <div id="hp-header">
+    <div id="hp-title">⚔ Hero</div>
+    <button id="hp-close" onclick="deselectHero()">✕ Close</button>
+  </div>
+  <div id="hp-level">Level 1 / 25</div>
+  <div id="hp-bar-wrap"><div id="hp-bar" style="width:4%;background:#ffdd22"></div></div>
+  <div id="hp-stats"></div>
+  <button id="hp-lvlup" onclick="buyHeroLevel()">⬆ +1 Lvl — 💰???</button>
+  <button id="hp-sell" onclick="sellHero()">🪙 Sell Hero</button>
 </div>
 
 <!-- Win screen -->
@@ -768,10 +846,12 @@ function loadSave(){
     if(d.medals) Object.assign(medals,d.medals);
     if(d.achievements) d.achievements.forEach(id=>earnedAchievements.add(id));
     if(d.paidAchievements) d.paidAchievements.forEach(id=>paidAchievements.add(id));
+    if(d.unlockedHeroes) d.unlockedHeroes.forEach(id=>unlockedHeroes.add(id));
+    if(d.activeHeroId) activeHeroId=d.activeHeroId;
   }catch(e){}
 }
 function writeSave(){
-  localStorage.setItem(SAVE_KEY,JSON.stringify({cash:permCash,owned:ownedSkins,active:activeSkinId,permCoinDrops,permSuperWashouts,stats,medals,achievements:[...earnedAchievements],paidAchievements:[...paidAchievements]}));
+  localStorage.setItem(SAVE_KEY,JSON.stringify({cash:permCash,owned:ownedSkins,active:activeSkinId,permCoinDrops,permSuperWashouts,stats,medals,achievements:[...earnedAchievements],paidAchievements:[...paidAchievements],unlockedHeroes:[...unlockedHeroes],activeHeroId}));
 }
 function payOutUnpaidAchievements(){
   let total=0;
@@ -1087,6 +1167,201 @@ function ringPoint(angle,t){
 function inInner(x,y){return((x-cx)/IN_RX)**2+((y-cy)/IN_RY)**2<1}
 function inOuter(x,y){return((x-cx)/OUT_RX)**2+((y-cy)/OUT_RY)**2<1}
 
+// ── Hero definitions ──────────────────────────────────────────────────────────
+const HERO_DEFS=[
+  {id:'warrior', name:'Brom',   title:'Warrior', permCost:0,   gameCost:500, emoji:'⚔️',  color:'#c08040', dotColor:'#f0c060', range:90,  fireRate:1.4, damage:12, projSpeed:300, projColor:'#f0c060', projSize:5,
+   role:'Melee Brawler', desc:'Close-range, hits hard. 3 blades at Lv 10.'},
+  {id:'archer',  name:'Lyra',   title:'Archer',  permCost:0,   gameCost:500, emoji:'🏹',  color:'#406030', dotColor:'#88ee44', range:220, fireRate:2.2, damage:6,  projSpeed:480, projColor:'#88ee44', projSize:4,
+   role:'Long-Range DPS', desc:'Fastest attack speed. Great vs swarms.'},
+  {id:'mage',    name:'Zephyr', title:'Mage',    permCost:250, gameCost:500, emoji:'🔮',  color:'#502080', dotColor:'#cc66ff', range:160, fireRate:0.9, damage:10, projSpeed:380, projColor:'#cc66ff', projSize:6,
+   role:'Magic Caster', desc:'Big slow blasts. 5 orbs at once at Lv 25.'},
+  {id:'knight',  name:'Gorn',   title:'Knight',  permCost:250, gameCost:500, emoji:'🛡️', color:'#204060', dotColor:'#6699dd', range:130, fireRate:0.5, damage:22, projSpeed:350, projColor:'#aabbee', projSize:8,
+   role:'Heavy Tank', desc:'Highest damage per hit. Best at choke points.'},
+  {id:'dragon',  name:'Vera',   title:'Dragon',  permCost:250, gameCost:500, emoji:'🐉',  color:'#601008', dotColor:'#ff6622', range:140, fireRate:0.8, damage:15, projSpeed:320, projColor:'#ff6622', projSize:10,
+   role:'Fire Specialist', desc:'Balanced all-rounder. Largest projectile.'},
+];
+let unlockedHeroes=new Set(['warrior','archer']);
+let activeHeroId='warrior';
+let placedHero=null;
+let heroPlaceMode=false;
+
+function renderHeroSelectPanel(){
+  const list=document.getElementById('hero-cards-list');
+  // Full rebuild only if card count doesn't match (first open or hero count changed)
+  if(list.children.length!==HERO_DEFS.length){
+    list.innerHTML='';
+    for(const h of HERO_DEFS){
+      const card=document.createElement('div');
+      card.dataset.heroId=h.id;
+      const unlockCostEl=h.permCost>0?`<div class="hc-cost">💵 $${h.permCost} cash</div>`:'<div class="hc-cost" style="color:#ffffff;opacity:0.7">✓ Free</div>';
+      card.innerHTML=`
+        <span class="hc-emoji">${h.emoji}</span>
+        <div class="hc-name">${h.title}</div>
+        <div class="hc-role">${h.role}</div>
+        <div class="hc-desc">${h.desc}</div>
+        <div class="hc-costs">
+          <div class="hc-deploy">💰 $${h.gameCost} gold</div>
+          ${unlockCostEl}
+        </div>`;
+      card.addEventListener('click',(e)=>{
+        e.stopPropagation();
+        const unlocked=unlockedHeroes.has(h.id);
+        if(!unlocked){
+          if(permCash<h.permCost) return;
+          permCash-=h.permCost; unlockedHeroes.add(h.id); writeSave(); updatePermCashUI();
+        }
+        activeHeroId=h.id; writeSave();
+        // Update classes in-place — no rebuild
+        list.querySelectorAll('.hero-card').forEach(c=>{
+          const cid=c.dataset.heroId;
+          const cu=unlockedHeroes.has(cid);
+          c.className='hero-card'+(cid===activeHeroId?' selected':'')+(cu?'':' locked');
+        });
+      });
+      list.appendChild(card);
+    }
+  }
+  // Always sync classes to current state
+  list.querySelectorAll('.hero-card').forEach(c=>{
+    const cid=c.dataset.heroId;
+    const cu=unlockedHeroes.has(cid);
+    c.className='hero-card'+(cid===activeHeroId?' selected':'')+(cu?'':' locked');
+  });
+}
+function updateHeroTowerCard(){
+  const card=document.getElementById('hero-tower-card');
+  if(!activeHeroId||placedHero){card.style.display='none';return;}
+  const h=HERO_DEFS.find(x=>x.id===activeHeroId);
+  if(!h){card.style.display='none';return;}
+  card.style.display='flex';
+  document.getElementById('htc-emoji').textContent=h.emoji;
+  document.getElementById('htc-name').textContent=h.title;
+  card.classList.toggle('cant-afford',coins<heroActualCost());
+  card.classList.toggle('selected',heroPlaceMode);
+}
+function heroActualCost(){
+  const h=HERO_DEFS.find(z=>z.id===activeHeroId);
+  if(!h) return 9999;
+  return sandboxMode?0:Math.round(h.gameCost*(diffConfig?diffConfig.costMult:1));
+}
+function selectHeroForPlacement(){
+  if(placedHero) return;
+  const h=HERO_DEFS.find(z=>z.id===activeHeroId);
+  if(!h||coins<heroActualCost()) return;
+  heroPlaceMode=!heroPlaceMode;
+  if(heroPlaceMode){ selectedDef=null; cancelPlacement(); heroPlaceMode=true; }
+  updateHeroTowerCard();
+}
+function cancelHeroPlacement(){ heroPlaceMode=false; updateHeroTowerCard(); }
+function heroStats(h){
+  const lv=h.level;
+  const lvMult=1+(lv-1)*0.25;
+  let dmg=h.def.damage*lvMult;
+  let range=h.def.range*lvMult;
+  let rate=h.def.fireRate*lvMult;
+  // Level 15+: per-level scaling
+  if(lv>=15){ const ex=lv-14; dmg*=(1+ex*0.2); range*=(1+ex*0.33333); }
+  // Level 25: 5× damage
+  if(lv>=25) dmg*=5;
+  // Crit: 8% base, 12% at level 5+
+  const critChance=lv>=5?0.12:0.08;
+  // Shots: 1 → 3 at lv10 → 5 at lv25
+  const shots=lv>=25?5:lv>=10?3:1;
+  return{dmg,range,rate,critChance,shots};
+}
+function updateHero(dt){
+  if(!placedHero) return;
+  const h=placedHero;
+  let{dmg,range,rate,critChance,shots}=heroStats(h);
+  // Apply supporter buffs
+  let _rb=0,_db=0,_rateb=0;
+  for(const sup of placedTowers){
+    if(!sup.def.supporterType) continue;
+    if(Math.hypot(sup.x-h.x,sup.y-h.y)<=sup.def.range){
+      const su=sup.upgrades||[0,0,0,0,0];
+      _rb=Math.max(_rb,SUP_RANGE_BOOST[su[0]]);
+      _db=Math.max(_db,SUP_DMG_BOOST[su[1]]);
+      _rateb=Math.max(_rateb,SUP_RATE_BOOST[su[2]]);
+    }
+  }
+  range*=(1+_rb); dmg*=(1+_db); rate*=(1+_rateb);
+  h.fireTimer=(h.fireTimer||0)+dt;
+  if(h.fireTimer<1/rate) return;
+  // find nearest enemy
+  let best=null,bestDist=Infinity;
+  for(const c of cavemen){
+    const pos=getEnemyPos(c);
+    const d=Math.hypot(pos.x-h.x,pos.y-h.y);
+    if(d<range&&d<bestDist){bestDist=d;best=c;}
+  }
+  if(!best) return;
+  h.fireTimer=0;
+  const pos=getEnemyPos(best);
+  h.aimAngle=Math.atan2(pos.y-h.y,pos.x-h.x);
+  // Fire 1, 3, or 5 projectiles in a fan
+  const baseAngle=Math.atan2(pos.y-h.y,pos.x-h.x);
+  const spread=shots>1?0.18:0;
+  const offsets=shots===1?[0]:shots===3?[-spread,0,spread]:[-spread*2,-spread,0,spread,spread*2];
+  for(const off of offsets){
+    projectiles.push({x:h.x,y:h.y,targetId:best.id,speed:h.def.projSpeed,
+      damage:dmg,color:h.def.projColor,size:h.def.projSize,
+      critChance,ox:h.x,oy:h.y,heroAngle:baseAngle+off,heroShot:true});
+  }
+}
+function drawHero(){
+  if(!placedHero) return;
+  const h=placedHero;
+  const lv=h.level;
+  const elite=lv>=10;
+  const max=lv>=25;
+  const r=elite?26:20;
+  ctx.save();
+  ctx.translate(h.x,h.y);
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.5)';ctx.beginPath();ctx.ellipse(6,r*0.5,r+2,r*0.3,0,0,Math.PI*2);ctx.fill();
+  // outer glow ring
+  const pulse=0.7+0.3*Math.sin(Date.now()/400);
+  const glowCol=max?`rgba(255,80,80,${0.8*pulse})`:elite?`rgba(160,80,255,${0.7*pulse})`:`rgba(255,210,50,${0.6*pulse})`;
+  ctx.strokeStyle=glowCol;ctx.lineWidth=(max?5:elite?4:3)*pulse;
+  ctx.beginPath();ctx.arc(0,0,r+3,0,Math.PI*2);ctx.stroke();
+  // extra star points for elite
+  if(elite){
+    const pts=max?8:6;
+    ctx.fillStyle=max?'rgba(255,120,40,0.5)':'rgba(180,100,255,0.4)';
+    for(let i=0;i<pts;i++){
+      const a=(i/pts)*Math.PI*2-Math.PI/2;
+      const x=(r+8)*Math.cos(a),y=(r+8)*Math.sin(a);
+      ctx.beginPath();ctx.arc(x,y,max?4:3,0,Math.PI*2);ctx.fill();
+    }
+  }
+  // base circle
+  const bg=ctx.createRadialGradient(-r*0.3,-r*0.35,1,0,0,r);
+  bg.addColorStop(0,'rgba(255,255,255,0.55)');
+  bg.addColorStop(0.3,h.def.color);
+  bg.addColorStop(1,max?'rgba(180,20,20,0.8)':elite?'rgba(60,0,120,0.8)':'rgba(0,0,0,0.6)');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+  const rimCol=max?'rgba(255,100,40,0.95)':elite?'rgba(200,100,255,0.95)':'rgba(255,210,50,0.9)';
+  ctx.strokeStyle=rimCol;ctx.lineWidth=elite?3:2;
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
+  // emoji (larger for elite)
+  ctx.rotate(h.aimAngle+Math.PI/2);
+  ctx.font=`${elite?22:16}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(h.def.emoji,0,-2);
+  ctx.rotate(-(h.aimAngle+Math.PI/2));
+  // level badge
+  const badgeCol=max?'#ff6644':elite?'#cc88ff':'#ffdd22';
+  ctx.fillStyle=badgeCol;ctx.font=`bold ${elite?10:9}px monospace`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('Lv'+lv,0,r*0.55);
+  // selected highlight ring
+  if(h.selected){
+    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2.5; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.arc(0,0,r+10,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
 // ── Tower definitions ─────────────────────────────────────────────────────────
 const TOWER_DEFS = [
   {id:8,name:'The Supporter',cost:120,upgBase:90,dotColor:'#ffdd22',baseCol:'#4a3c08',
@@ -1323,6 +1598,19 @@ function openAccessibility(){
 function closeAccessibility(){
   document.getElementById('access-overlay').style.display='none';
 }
+function openHeroPanel(){
+  renderHeroSelectPanel();
+  document.getElementById('map-cards').style.display='none';
+  document.getElementById('map-page-nav').style.display='none';
+  document.querySelector('#map-select h2').textContent='⚔ CHOOSE HERO';
+  document.getElementById('hero-view').style.display='flex';
+}
+function closeHeroPanel(){
+  document.getElementById('hero-view').style.display='none';
+  document.getElementById('map-cards').style.display='flex';
+  document.getElementById('map-page-nav').style.display='flex';
+  document.querySelector('#map-select h2').textContent='⚔ SELECT MAP';
+}
 function toggleAcc(key){
   accessibility[key]=!accessibility[key];
   applyAccessibility();
@@ -1356,6 +1644,7 @@ let lastTime=null, gameSpeed=1, gameOver=false, gamePaused=false, gameWon=false,
 const WAVE_DURATION=30;
 let wave=0, waveActive=false, waveTimer=0, betweenWaveTimer=3, spawnTimer=0;
 let bossSpawned=false;
+let waveEnemyCount={}; // tracks how many of each type spawned this wave (for debut ramp)
 let playerHp=250;
 function updateHpUI(){ document.getElementById('hp-el').textContent=playerHp; }
 function showGameOver(){
@@ -1390,6 +1679,8 @@ const WAVE_WEIGHTS=[
   [0.01,0.02, 0.03, 0.05, 0.16, 0.48, 0.25],  // 19
   [0.01,0.01, 0.03, 0.05, 0.13, 0.42, 0.35],  // 20
 ];
+// First wave each enemy type debuts → ramp: 1 on debut, 2 next wave, 4 the wave after, then unlimited
+const ENEMY_DEBUT={h:2,k:3,s:4,t:7,m:10,r:18};
 function pickEnemyType(w){
   const weights=WAVE_WEIGHTS[Math.min(w,20)-1];
   const types=['c','h','k','s','t','m','r'];
@@ -1399,7 +1690,7 @@ function pickEnemyType(w){
 }
 function getSpawnInterval(w){ return Math.max(0.7,3.0-(w-1)*0.26); }
 function startWave(n){
-  wave=n; waveActive=true; waveTimer=WAVE_DURATION; spawnTimer=0; bossSpawned=false;
+  wave=n; waveActive=true; waveTimer=WAVE_DURATION; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
   sfxWaveStart();
   const label=endlessMode&&n>diffConfig.maxWaves?`Wave ${n} ♾`:`Wave ${n}/${diffConfig.maxWaves}`;
   document.getElementById('wave-el').textContent=label;
@@ -1410,6 +1701,12 @@ function startWave(n){
 }
 function endWave(){
   waveActive=false;
+  // Hero levels up every wave, max 25
+  if(placedHero){
+    const prev=placedHero.level;
+    placedHero.level=Math.min(25,placedHero.level+1);
+    if(placedHero.level>prev) showFloatingMsg(`⚔ ${placedHero.def.name} → Lv${placedHero.level}!`,'#ffdd44');
+  }
   if(wave>=diffConfig.maxWaves&&!endlessMode){
     showWinScreen(); return;
   }
@@ -1588,21 +1885,27 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){cancelPlacement();d
 const UPG_MULT_DMG  =[1,1.35,1.8,2.4,3.2,4.2];
 const UPG_MULT_RATE =[1,1.3, 1.7,2.2,2.9,3.8];
 const UPG_MULT_RANGE=[1,1.2, 1.45,1.75,2.1,2.5];
+const UPG_CRIT      =[0,0.08,0.12,0.16,0.20,0.24]; // crit chance per level
+const UPG_SIZE      =[1,1.20,1.40,1.60,1.80,2.00]; // proj size mult per level
+// cost multipliers per path: Sharper+Faster cost 1.3x, Range normal, Crit 2x, Size 1.8x
+const UPG_COST_MULT =[1.3,1.3,1.0,2.0,1.8];
 // Supporter aura boost per upgrade level (additive multipliers applied to nearby towers)
 const SUP_RANGE_BOOST=[0,0.12,0.25,0.40,0.58,0.80];
 const SUP_DMG_BOOST  =[0,0.15,0.32,0.55,0.85,1.20];
 const SUP_RATE_BOOST =[0,0.12,0.25,0.40,0.58,0.80];
 function getTowerEffective(tower){
-  const u=tower.upgrades||[0,0,0];
+  const u=tower.upgrades||[0,0,0,0,0];
   let dmg=tower.def.damage*UPG_MULT_DMG[u[0]];
   let rate=tower.def.fireRate*UPG_MULT_RATE[u[1]];
   let range=tower.def.range*UPG_MULT_RANGE[u[2]];
+  const critChance=UPG_CRIT[u[3]||0];
+  const sizeMult=UPG_SIZE[u[4]||0];
   if(!tower.def.supporterType){
     let _rb=0,_db=0,_rateb=0;
     for(const sup of placedTowers){
       if(!sup.def.supporterType||sup===tower) continue;
       if(Math.hypot(sup.x-tower.x,sup.y-tower.y)<=sup.def.range){
-        const su=sup.upgrades||[0,0,0];
+        const su=sup.upgrades||[0,0,0,0,0];
         _rb=Math.max(_rb,SUP_RANGE_BOOST[su[0]]);
         _db=Math.max(_db,SUP_DMG_BOOST[su[1]]);
         _rateb=Math.max(_rateb,SUP_RATE_BOOST[su[2]]);
@@ -1610,21 +1913,84 @@ function getTowerEffective(tower){
     }
     range*=(1+_rb); dmg*=(1+_db); rate*=(1+_rateb);
   }
-  return{damage:dmg,fireRate:rate,range};
+  return{damage:dmg,fireRate:rate,range,critChance,sizeMult};
 }
 function upgradeCost(tower,path){
   const lv=tower.upgrades[path];
   if(lv>=5) return Infinity;
-  return Math.round(tower.def.upgBase*Math.pow(2,lv));
+  const cm=UPG_COST_MULT[path]||1;
+  return Math.round(tower.def.upgBase*Math.pow(1.5,lv)*cm/5)*5;
 }
 function selectTower(tower){
   selectedTower=tower;
+  deselectHero();
   renderUpgradePanel();
   document.getElementById('upgrade-panel').classList.add('show');
 }
 function deselectTower(){
   selectedTower=null;
   document.getElementById('upgrade-panel').classList.remove('show');
+}
+function heroLevelUpCost(lv){
+  if(!placedHero||lv>=25) return Infinity;
+  if(sandboxMode) return 0;
+  const base=placedHero.def.gameCost;
+  // starts at 1.5x, then alternates +0.3 / +0.2 (0.5 per pair)
+  // lv1→2: 1.5, lv2→3: 1.8, lv3→4: 2.0, lv4→5: 2.3, lv5→6: 2.5, lv6→7: 2.8 ...
+  let mult=1.5;
+  for(let i=1;i<lv;i++) mult+=i%2===1?0.3:0.2;
+  return Math.round(base*mult);
+}
+function buyHeroLevel(){
+  if(!placedHero) return;
+  const lv=placedHero.level;
+  if(lv>=25) return;
+  const cost=heroLevelUpCost(lv);
+  if(coins<cost) return;
+  coins-=cost; updateCoinsUI();
+  placedHero.level=lv+1;
+  showFloatingMsg(`⚔ ${placedHero.def.title} → Lv${placedHero.level}!`,'#88ff44');
+  renderHeroPanel(); writeSave();
+}
+function renderHeroPanel(){
+  if(!placedHero) return;
+  const h=placedHero;
+  const{dmg,range,rate,critChance,shots}=heroStats(h);
+  const lv=h.level;
+  const badgeCol=lv>=25?'#ff6644':lv>=10?'#cc88ff':'#ffdd22';
+  document.getElementById('hp-title').textContent=`${h.def.emoji} ${h.def.title}`;
+  document.getElementById('hp-level').textContent=`Level ${lv} / 25`;
+  document.getElementById('hp-bar').style.width=`${(lv/25)*100}%`;
+  document.getElementById('hp-bar').style.background=badgeCol;
+  document.getElementById('hp-stats').innerHTML=
+    `⚔ ${Math.round(dmg)} &nbsp; 📏 ${Math.round(range)} &nbsp; ⚡ ${rate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(critChance*100)}% &nbsp; 💥 ${shots} shot${shots>1?'s':''}`;
+  const lvBtn=document.getElementById('hp-lvlup');
+  if(lv>=25){
+    lvBtn.textContent='⭐ MAX LEVEL';
+    lvBtn.disabled=true;
+  } else {
+    const cost=heroLevelUpCost(lv);
+    const canAfford=coins>=cost||sandboxMode;
+    lvBtn.textContent=`⬆ +1 Lvl — 💰${sandboxMode?'FREE':cost}`;
+    lvBtn.disabled=!canAfford;
+  }
+  document.getElementById('hp-sell').textContent=`🪙 Sell  +💰${Math.floor(heroActualCost()*0.7)}`;
+}
+function showHeroPanel(){
+  renderHeroPanel();
+  document.getElementById('hero-panel').classList.add('show');
+}
+function deselectHero(){
+  if(placedHero) placedHero.selected=false;
+  document.getElementById('hero-panel').classList.remove('show');
+}
+function sellHero(){
+  if(!placedHero) return;
+  const refund=Math.floor(heroActualCost()*0.7);
+  coins+=refund; updateCoinsUI();
+  placedHero=null;
+  document.getElementById('hero-panel').classList.remove('show');
+  updateHeroTowerCard(); writeSave();
 }
 function renderUpgradePanel(){
   if(!selectedTower) return;
@@ -1633,7 +1999,7 @@ function renderUpgradePanel(){
   document.getElementById('up-title').textContent=t.def.name;
   const dmg=eff.damage%1===0?eff.damage:eff.damage.toFixed(1);
   document.getElementById('up-stats').innerHTML=
-    `⚔ ${dmg} &nbsp; ⚡ ${eff.fireRate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(eff.range)}`;
+    `⚔ ${dmg} &nbsp; ⚡ ${eff.fireRate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(eff.range)} &nbsp; 💥 ${Math.round(eff.critChance*100)}%`;
   document.getElementById('up-sell').textContent=`🪙 Sell  +💰${sellValue(t)}`;
   if(t.def.supporterType){
     const u=t.upgrades||[0,0,0];
@@ -1641,8 +2007,10 @@ function renderUpgradePanel(){
       `🎯 +${Math.round(SUP_RANGE_BOOST[u[0]]*100)}% &nbsp; ⚔ +${Math.round(SUP_DMG_BOOST[u[1]]*100)}% &nbsp; ⚡ +${Math.round(SUP_RATE_BOOST[u[2]]*100)}%`;
   }
   const paths=t.def.supporterType
-    ?[{icon:'🎯',name:'Longer Range',path:0},{icon:'⚔',name:'More Damage',path:1},{icon:'⚡',name:'Faster Fire',path:2}]
-    :[{icon:'⚔',name:'Sharper',path:0},{icon:'⚡',name:'Faster',path:1},{icon:'🎯',name:'Range',path:2}];
+    ?[{icon:'🎯',name:'Longer Range',path:0},{icon:'⚔',name:'More Damage',path:1},{icon:'⚡',name:'Faster Fire',path:2},
+      {icon:'💥',name:'Crit Hit',path:3},{icon:'🔮',name:'Big Shots',path:4}]
+    :[{icon:'⚔',name:'Sharper',path:0},{icon:'⚡',name:'Faster',path:1},{icon:'🎯',name:'Range',path:2},
+      {icon:'💥',name:'Crit Hit',path:3},{icon:'🔮',name:'Big Shots',path:4}];
   const btnsEl=document.getElementById('up-btns');
   btnsEl.innerHTML='';
   for(const{icon,name,path}of paths){
@@ -1669,8 +2037,8 @@ function buyUpgrade(path){
 }
 function sellValue(tower){
   let spent=towCost(tower.def);
-  for(let p=0;p<3;p++) for(let l=0;l<(tower.upgrades[p]||0);l++)
-    spent+=Math.round(tower.def.upgBase*Math.pow(2,l));
+  for(let p=0;p<5;p++) for(let l=0;l<(tower.upgrades[p]||0);l++)
+    spent+=Math.round(tower.def.upgBase*Math.pow(1.5,l)*(UPG_COST_MULT[p]||1)/5)*5;
   return Math.floor(spent*0.7);
 }
 function sellTower(){
@@ -1705,7 +2073,17 @@ function canPlace(wx,wy){
 
 // ── Spawn ──────────────────────────────────────────────────────────────────────
 function spawnCaveman(forcedType){
-  const type=forcedType||pickEnemyType(wave||1);
+  let type=forcedType||pickEnemyType(wave||1);
+  // Debut ramp: new enemy types are capped per wave (1 → 2 → 4 → unlimited)
+  if(!forcedType){
+    const debut=ENEMY_DEBUT[type];
+    if(debut!==undefined){
+      const wsd=wave-debut; // 0 = debut wave, 1 = one wave after, etc.
+      const cap=wsd<=0?1:wsd===1?2:wsd===2?4:999;
+      if((waveEnemyCount[type]||0)>=cap) return false; // skip, try again next interval
+    }
+    waveEnemyCount[type]=(waveEnemyCount[type]||0)+1;
+  }
   const heavy=type==='h',knight=type==='k',soldier=type==='s',tank=type==='t',boss=type==='BOSS',missile=type==='m',robot=type==='r';
   const ep=SKIN_ENEMY_PALETTE[activeSkinId]||SKIN_ENEMY_PALETTE.default;
   let hp,coins2,skin;
@@ -1763,9 +2141,11 @@ function removeMissileFreeze(c){
 
 // ── Projectiles ───────────────────────────────────────────────────────────────
 function fireProjectile(tower,target){
+  const _eff=getTowerEffective(tower);
   projectiles.push({x:tower.x,y:tower.y,targetId:target.id,
-    speed:tower.def.projSpeed,damage:tower.def.damage,
-    color:tower.def.projColor,size:tower.def.projSize,
+    speed:tower.def.projSpeed,damage:_eff.damage,
+    color:tower.def.projColor,size:tower.def.projSize*(_eff.sizeMult||1),
+    critChance:_eff.critChance||0,
     sniper:!!tower.def.sniperType,ox:tower.x,oy:tower.y});
 }
 function updateProjectiles(dt){
@@ -1804,7 +2184,7 @@ function updateProjectiles(dt){
         const pos=getEnemyPos(c);
         if(Math.hypot(pos.x-p.x,pos.y-p.y)<32){
           p.hitIds.add(c.id);
-          const _crit1=Math.random()<0.08;
+          const _crit1=Math.random()<(p.critChance||0.08);
           const _foc1=p.focused&&c.id===focusedEnemyId?1.2:1;
           const _dmg1=p.damage*(_crit1?2.5:1)*_foc1;
           c.hp-=_dmg1; c.hitFlash=0.18; stats.damageDealt+=_dmg1;
@@ -1815,10 +2195,39 @@ function updateProjectiles(dt){
             sfxEnemyDie(c.boss,c.tank,c.missile);sfxCoin();
             trackKill(c);clearFocusIfDead(c.id);
             cavemen=cavemen.filter(cc=>cc.id!==c.id);
-            coins+=c.coins; updateCoinsUI();
+            coins+=c.coins*(wave<=5?2:1); updateCoinsUI();
           }
         }
       }
+      continue;
+    }
+    // Hero fan shots travel in fixed direction until they hit anything
+    if(p.heroShot){
+      p.x+=Math.cos(p.heroAngle)*p.speed*dt;
+      p.y+=Math.sin(p.heroAngle)*p.speed*dt;
+      // out of range of origin → remove
+      if(Math.hypot(p.x-p.ox,p.y-p.oy)>600){projectiles.splice(i,1);continue;}
+      let hit=false;
+      for(const c of [...cavemen]){
+        const pos=getEnemyPos(c);
+        if(Math.hypot(pos.x-p.x,pos.y-p.y)<14){
+          const _crit=Math.random()<p.critChance;
+          const _dmg=p.damage*(_crit?2.5:1);
+          c.hp-=_dmg; c.hitFlash=0.18; stats.damageDealt+=_dmg;
+          spawnDmgNumber(pos.x,pos.y-20,_dmg,_crit);
+          if(c.hp<=0){
+            const ep=getEnemyPos(c);
+            spawnParticles(ep.x,ep.y,ep.scale);
+            removeMissileFreeze(c);
+            sfxEnemyDie(c.boss,c.tank,c.missile);sfxCoin();
+            trackKill(c);clearFocusIfDead(c.id);
+            cavemen=cavemen.filter(cc=>cc.id!==c.id);
+            coins+=c.coins*(wave<=5?2:1); updateCoinsUI();
+          }
+          projectiles.splice(i,1);hit=true;break;
+        }
+      }
+      if(hit) continue;
       continue;
     }
     const tgt=cavemen.find(c=>c.id===p.targetId);
@@ -1826,7 +2235,7 @@ function updateProjectiles(dt){
     const tp=getEnemyPos(tgt);
     const dx=tp.x-p.x,dy=tp.y-p.y,dist=Math.hypot(dx,dy);
     if(dist<10){
-      const _crit2=Math.random()<0.08;
+      const _crit2=Math.random()<(p.critChance||0.08);
       const _foc2=p.focused&&tgt.id===focusedEnemyId?1.2:1;
       const _dmg2=p.damage*(_crit2?2.5:1)*_foc2;
       tgt.hp-=_dmg2; tgt.hitFlash=0.18; stats.damageDealt+=_dmg2;
@@ -1838,7 +2247,7 @@ function updateProjectiles(dt){
         sfxEnemyDie(tgt.boss,tgt.tank,tgt.missile);sfxCoin();
         trackKill(tgt);clearFocusIfDead(tgt.id);
         cavemen=cavemen.filter(c=>c.id!==tgt.id);
-        coins+=tgt.coins; updateCoinsUI();
+        coins+=tgt.coins*(wave<=5?2:1); updateCoinsUI();
       }
       projectiles.splice(i,1);continue;
     }
@@ -1903,12 +2312,13 @@ function updateTowers(dt){
             projectiles.push({x:tower.x,y:tower.y,
               vx:Math.cos(ang)*tower.def.projSpeed,vy:Math.sin(ang)*tower.def.projSpeed,
               damage:Math.max(1,Math.round(eff.damage)),
-              color:tower.def.projColor,size:tower.def.projSize,
+              color:tower.def.projColor,size:tower.def.projSize*(eff.sizeMult||1),
               fireball:true,hitIds:new Set(),fbTargetId:nearest?nearest.id:null,fbLife:8,focused:_isFoc});
           } else {
             projectiles.push({x:tower.x,y:tower.y,targetId:nearest.id,
               speed:tower.def.projSpeed,damage:Math.max(1,Math.round(eff.damage)),
-              color:tower.def.projColor,size:tower.def.projSize,focused:_isFoc});
+              color:tower.def.projColor,size:tower.def.projSize*(eff.sizeMult||1),
+              critChance:eff.critChance||0,focused:_isFoc});
           }
         }
       }
@@ -2444,6 +2854,61 @@ function drawTower(tower,alpha){
       break;
     }
   }
+  // === Upgrade visual overlays ===
+  {
+    const upg=tower.upgrades||[0,0,0,0,0];
+    if(upg.some(v=>v>0)){
+      ctx.save();ctx.rotate(-aim);
+      // Path 0: Damage (Sharper) — red spikes radiating from base
+      if(upg[0]>0){
+        const n=3+upg[0];
+        ctx.fillStyle=`rgba(255,${180-upg[0]*18},30,${0.45+upg[0]*0.09})`;
+        for(let i=0;i<n;i++){
+          const a=i/n*Math.PI*2;
+          ctx.save();ctx.rotate(a);
+          ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(-2.5,-22-upg[0]*2);ctx.lineTo(2.5,-22-upg[0]*2);ctx.closePath();ctx.fill();
+          ctx.restore();
+        }
+      }
+      // Path 1: Fire Rate (Faster) — spinning cyan dashed ring
+      if(upg[1]>0){
+        ctx.save();ctx.rotate(Date.now()/180*upg[1]);
+        ctx.strokeStyle=`rgba(100,200,255,${0.35+upg[1]*0.1})`;
+        ctx.lineWidth=1+upg[1]*0.35;ctx.setLineDash([5,5]);
+        ctx.beginPath();ctx.arc(0,0,20+upg[1],0,Math.PI*2);ctx.stroke();
+        ctx.restore();ctx.setLineDash([]);
+      }
+      // Path 2: Range — green outer glow ring
+      if(upg[2]>0){
+        ctx.strokeStyle=`rgba(60,255,100,${0.25+upg[2]*0.1})`;
+        ctx.lineWidth=2+upg[2]*0.5;ctx.setLineDash([]);
+        ctx.beginPath();ctx.arc(0,0,18+upg[2],0,Math.PI*2);ctx.stroke();
+        if(upg[2]>=3){
+          ctx.strokeStyle='rgba(60,255,100,0.1)';ctx.lineWidth=6;
+          ctx.beginPath();ctx.arc(0,0,22+upg[2],0,Math.PI*2);ctx.stroke();
+        }
+      }
+      // Path 3: Crit Hit — gold star overlay
+      if(upg[3]>0){
+        const pts=5,or=8+upg[3]*2,ir=4+upg[3];
+        ctx.fillStyle=`rgba(255,215,0,${0.3+upg[3]*0.1})`;
+        ctx.beginPath();
+        for(let i=0;i<pts*2;i++){
+          const r=i%2===0?or:ir,a=i/(pts*2)*Math.PI*2-Math.PI/2;
+          if(i===0)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+          else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+        }
+        ctx.closePath();ctx.fill();
+      }
+      // Path 4: Big Shots — thick orange border ring
+      if(upg[4]>0){
+        ctx.strokeStyle=`rgba(255,${80+upg[4]*25},0,${0.5+upg[4]*0.1})`;
+        ctx.lineWidth=2+upg[4]*0.8;ctx.setLineDash([]);
+        ctx.beginPath();ctx.arc(0,0,16,0,Math.PI*2);ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
   // Supported buff icons
   if(!tower.def.supporterType){
     ctx.save();ctx.rotate(-aim);
@@ -2588,6 +3053,23 @@ function drawFlames(){
 
 // ── Drawing: Placement preview ────────────────────────────────────────────────
 function drawPlacementPreview(){
+  if(heroPlaceMode){
+    const{x,y}=mouseWorld;
+    const h=HERO_DEFS.find(z=>z.id===activeHeroId);
+    if(!h) return;
+    const ok=validPlacement(x,y)&&noTowerOverlap(x,y)&&coins>=heroActualCost();
+    ctx.save();ctx.translate(x,y);
+    ctx.strokeStyle=ok?'rgba(255,210,50,0.4)':'rgba(255,80,80,0.4)';
+    ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.arc(0,0,h.range,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=ok?'rgba(255,210,50,0.06)':'rgba(255,80,80,0.06)';
+    ctx.beginPath();ctx.arc(0,0,h.range,0,Math.PI*2);ctx.fill();
+    ctx.setLineDash([]);
+    ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.globalAlpha=ok?0.8:0.4;ctx.fillText(h.emoji,0,0);
+    ctx.restore();
+    return;
+  }
   if(!selectedDef) return;
   const{x,y}=mouseWorld;
   const ok=canPlace(x,y);
@@ -3480,6 +3962,7 @@ function update(ts){
 
   updateAnimals(dt);
   updateTowers(dt);
+  updateHero(dt);
   updateProjectiles(dt);
 
   ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
@@ -3512,6 +3995,7 @@ function update(ts){
     for(const s of nearStrips) drawStrip(s);
     for(const c of nearCave)   drawCaveman(c);
     for(const t of placedTowers) if(!inOuter(t.x,t.y)) drawTower(t);
+    drawHero();
   } else {
     drawWpBackground();
     drawAnimals();
@@ -3520,6 +4004,7 @@ function update(ts){
     const sortedCave=[...cavemen].sort((a,b)=>getEnemyPos(a).y-getEnemyPos(b).y);
     for(const c of sortedCave) drawCaveman(c);
     for(const t of placedTowers) drawTower(t);
+    drawHero();
     drawTrees(); // redraw on top so towers behind trees look right
   }
 
@@ -3567,11 +4052,27 @@ function canvasToWorld(e){
 }
 function handleTap(e){
   const{x,y}=canvasToWorld(e);
+  if(heroPlaceMode){
+    if(!validPlacement(x,y)||!noTowerOverlap(x,y)) return;
+    const h=HERO_DEFS.find(z=>z.id===activeHeroId);
+    const cost=heroActualCost();
+    if(!h||coins<cost) return;
+    coins-=cost; updateCoinsUI();
+    placedHero={x,y,def:h,level:1,fireTimer:0,aimAngle:0,selected:false};
+    heroPlaceMode=false; updateHeroTowerCard(); sfxPlace(); writeSave(); return;
+  }
+  // Click on placed hero
+  if(placedHero&&Math.hypot(x-placedHero.x,y-placedHero.y)<32){
+    placedHero.selected=!placedHero.selected;
+    if(placedHero.selected){ deselectTower(); showHeroPanel(); }
+    else deselectHero();
+    return;
+  } else if(placedHero){ placedHero.selected=false; deselectHero(); }
   if(selectedDef){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)||coins<towCost(selectedDef)) return;
     coins-=towCost(selectedDef); updateCoinsUI();
     sfxPlace(); stats.towersPlaced++; writeSave();
-    placedTowers.push({id:nextTowerId++,x,y,def:selectedDef,fireTimer:0,aimAngle:0,upgrades:[0,0,0],frozenTimer:0});
+    placedTowers.push({id:nextTowerId++,x,y,def:selectedDef,fireTimer:0,aimAngle:0,upgrades:[0,0,0,0,0],frozenTimer:0});
     cancelPlacement(); return;
   }
   // Check animal taps
@@ -4067,12 +4568,18 @@ function showTitleScreen(){
   document.getElementById('map-select').style.display='none';
   document.getElementById('diff-select').style.display='none';
   document.getElementById('map-page-nav').style.display='none';
+  canvas.style.display='none';
+  document.getElementById('side-panel').style.display='none';
+  document.getElementById('game-btns').style.display='none';
   document.getElementById('title-screen').style.display='flex';
 }
 function showMapSelect(){
   mapSelectVisits++;checkAchievements();
   document.getElementById('title-screen').style.display='none';
   document.getElementById('diff-select').style.display='none';
+  canvas.style.display='none';
+  document.getElementById('side-panel').style.display='none';
+  document.getElementById('game-btns').style.display='none';
   document.getElementById('map-select').style.display='flex';
   updatePermCashUI();
   mapPage=1;
@@ -4261,12 +4768,12 @@ function startGame(diff){
   // Reset state
   coins=sandboxMode?999999:350; cavemen=[]; placedTowers=[]; projectiles=[]; particles=[];
   selectedDef=null; selectedTower=null; focusedEnemyId=null; lastTime=null; gameSpeed=1; gameOver=false; gameWon=false; endlessMode=false;
-  sbAmount=1; enemiesLeakedThisGame=0; shopOpensSinceLastBuy=0; initAnimals();
+  sbAmount=1; enemiesLeakedThisGame=0; shopOpensSinceLastBuy=0; placedHero=null; heroPlaceMode=false; initAnimals();
   const _sbl=document.getElementById('sb-amt-label'); if(_sbl) _sbl.textContent='×1 per';
   _updateSpeedBtn();
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
-  wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false;
+  wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
   playerHp=diffConfig.hp;
   coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
   updateCoinsUI(); updateHpUI(); updateCoinDropUI(); updateSuperWashoutUI();
@@ -4277,11 +4784,14 @@ function startGame(diff){
   gamePaused=false;
   pauseBtn.textContent='⏸ Pause';pauseBtn.classList.remove('paused');
   document.getElementById('pause-overlay').classList.remove('show');
-  rebuildShop();
+  rebuildShop(); updateHeroTowerCard(); deselectHero();
 
   // Show game
   document.getElementById('diff-select').style.display='none';
   document.getElementById('map-select').style.display='none';
+  document.getElementById('hero-view').style.display='none';
+  document.getElementById('map-cards').style.display='flex';
+  document.querySelector('#map-select h2').textContent='⚔ SELECT MAP';
   document.getElementById('side-panel').style.display='flex';
   canvas.style.display='block';
   document.getElementById('game-btns').style.display='flex';
