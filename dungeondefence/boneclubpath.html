@@ -1818,7 +1818,7 @@ function endWave(){
   for(const h of placedHeroes){
     const prev=h.level;
     h.level=Math.min(25,h.level+1);
-    if(h.level>prev) showFloatingMsg(`⚔ ${h.def.name} → Lv${h.level}!`,'#ffdd44');
+    if(h.level>prev) showFloatingMsg(`${h.def.emoji} ${h.def.title} → Lv${h.level}!`,'#ffdd44');
   }
   if(wave>=diffConfig.maxWaves&&!endlessMode){
     showWinScreen(); return;
@@ -2384,31 +2384,28 @@ function updateProjectiles(dt){
     }
     // Hero fan shots travel in fixed direction until they hit anything
     if(p.heroShot){
-      p.x+=Math.cos(p.heroAngle)*p.speed*dt;
-      p.y+=Math.sin(p.heroAngle)*p.speed*dt;
-      // out of range of origin → remove
-      if(Math.hypot(p.x-p.ox,p.y-p.oy)>600){projectiles.splice(i,1);continue;}
-      let hit=false;
-      for(const c of [...cavemen]){
-        const pos=getEnemyPos(c);
-        if(Math.hypot(pos.x-p.x,pos.y-p.y)<14){
-          const _crit=Math.random()<p.critChance;
-          const _dmg=p.damage*(_crit?2.5:1);
-          c.hp-=_dmg; c.hitFlash=0.18; stats.damageDealt+=_dmg;
-          spawnDmgNumber(pos.x,pos.y-20,_dmg,_crit);
-          if(c.hp<=0){
-            const ep=getEnemyPos(c);
-            spawnParticles(ep.x,ep.y,ep.scale);
-            removeMissileFreeze(c);
-            sfxEnemyDie(c.boss,c.tank,c.missile);sfxCoin();
-            trackKill(c);clearFocusIfDead(c.id);
-            cavemen=cavemen.filter(cc=>cc.id!==c.id);
-            coins+=c.coins*(wave<=5?2:1); updateCoinsUI();
-          }
-          projectiles.splice(i,1);hit=true;break;
+      // Home toward target like normal projectiles
+      const htgt=cavemen.find(c=>c.id===p.targetId);
+      if(!htgt){projectiles.splice(i,1);continue;}
+      const htp=getEnemyPos(htgt);
+      const hdx=htp.x-p.x,hdy=htp.y-p.y,hdist=Math.hypot(hdx,hdy);
+      if(hdist<10){
+        const _crit=Math.random()<p.critChance;
+        const _dmg=p.damage*(_crit?2.5:1);
+        htgt.hp-=_dmg; htgt.hitFlash=0.18; stats.damageDealt+=_dmg;
+        spawnDmgNumber(htp.x,htp.y-20,_dmg,_crit);
+        if(htgt.hp<=0){
+          spawnParticles(htp.x,htp.y,htp.scale);
+          removeMissileFreeze(htgt);
+          sfxEnemyDie(htgt.boss,htgt.tank,htgt.missile);sfxCoin();
+          trackKill(htgt);clearFocusIfDead(htgt.id);
+          cavemen=cavemen.filter(cc=>cc.id!==htgt.id);
+          coins+=htgt.coins*(wave<=5?2:1); updateCoinsUI();
         }
+        projectiles.splice(i,1);continue;
       }
-      if(hit) continue;
+      const hspd=p.speed*dt;
+      p.x+=hdx/hdist*hspd; p.y+=hdy/hdist*hspd;
       continue;
     }
     const tgt=cavemen.find(c=>c.id===p.targetId);
