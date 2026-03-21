@@ -474,7 +474,9 @@
   <button class="sb-btn" onclick="sbSpawn('BOSS')">💀 Boss</button>
   <div style="display:flex;align-items:center;gap:4px;margin-top:3px">
     <button class="sb-btn" onclick="sbChangeAmt(-1)" style="padding:4px 7px">−</button>
-    <span id="sb-amt-label" style="color:#80c0ff;font-family:monospace;font-size:11px;font-weight:bold;min-width:60px;text-align:center">×1 per</span>
+    <input id="sb-amt-input" type="number" min="1" max="100" value="1"
+      style="width:46px;background:#0a1420;border:1px solid #406080;color:#80c0ff;font-family:monospace;font-size:12px;font-weight:bold;text-align:center;border-radius:4px;padding:3px 2px"
+      oninput="sbSetAmt(this.value)">
     <button class="sb-btn" onclick="sbChangeAmt(1)" style="padding:4px 7px">+</button>
   </div>
   <button class="sb-btn" onclick="cavemen=[]" style="border-color:#802020;color:#ff8080;margin-top:1px">🗑 Clear</button>
@@ -5067,9 +5069,17 @@ function returnToMenu(){
 }
 
 let sbAmount=1;
+function _syncSbInput(){
+  const el=document.getElementById('sb-amt-input');
+  if(el) el.value=sbAmount;
+}
+function sbSetAmt(v){
+  sbAmount=Math.max(1,Math.min(100,parseInt(v)||1));
+  _syncSbInput();
+}
 function sbChangeAmt(d){
   sbAmount=Math.max(1,Math.min(100,sbAmount+d));
-  document.getElementById('sb-amt-label').textContent='×'+sbAmount+' per';
+  _syncSbInput();
 }
 function sbSpawn(type){
   if(!sandboxMode) return;
@@ -5153,7 +5163,7 @@ function startGame(diff){
   coins=sandboxMode?999999:350; cavemen=[]; placedTowers=[]; projectiles=[]; particles=[];
   selectedDef=null; selectedTower=null; focusedEnemyId=null; lastTime=null; gameSpeed=1; gameOver=false; gameWon=false; endlessMode=false;
   sbAmount=1; enemiesLeakedThisGame=0; shopOpensSinceLastBuy=0; placedHeroes=[]; panelHero=null; heroPlaceMode=false; initAnimals();
-  const _sbl=document.getElementById('sb-amt-label'); if(_sbl) _sbl.textContent='×1 per';
+  sbAmount=1; _syncSbInput();
   _updateSpeedBtn();
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
