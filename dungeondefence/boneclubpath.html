@@ -47,8 +47,8 @@
     position:relative;user-select:none;-webkit-user-select:none;text-align:center;font-size:11px}
   .hero-card:active{transform:scale(0.95)}
   .hero-card:hover:not(.locked){border-color:#aa55dd;background:#220a34}
-  .hero-card.selected{border-color:#ffdd44;background:#1e0c30;box-shadow:0 0 10px rgba(255,220,80,0.4)}
-  .hero-card.selected::after{content:'✓';position:absolute;top:4px;right:7px;color:#ffdd44;font-size:11px;font-weight:bold}
+  .hero-card.selected{border-color:#ffdd44;background:#2a1040;box-shadow:0 0 16px rgba(255,220,80,0.6),inset 0 0 12px rgba(255,200,0,0.08)}
+  .hero-card.selected::after{content:'✓ SELECTED';position:absolute;top:5px;right:7px;color:#ffdd44;font-size:9px;font-weight:bold;font-family:monospace;background:#1a0a28;padding:1px 4px;border-radius:4px}
   .hero-card.locked{opacity:0.6;cursor:default}
   .hero-card.locked::before{content:'🔒';position:absolute;top:4px;right:7px;font-size:11px}
   .hero-card .hc-emoji{font-size:24px;line-height:1}
@@ -177,7 +177,7 @@
   #hp-stats{color:#c0a0e0;font-size:11px;text-align:center}
   #hp-lvlup{background:#0e1e08;border:2px solid #44aa22;border-radius:8px;color:#88ff44;
             font-family:monospace;font-size:12px;font-weight:bold;padding:6px 16px;
-            cursor:pointer;touch-action:manipulation;pointer-events:auto;width:100%}
+            cursor:pointer;touch-action:manipulation;pointer-events:auto !important;width:100%}
   #hp-lvlup:hover:not(:disabled){border-color:#88ff44;color:#ccff88}
   #hp-lvlup:disabled{opacity:0.4;cursor:not-allowed}
   #hp-sell{background:#1a0828;border:2px solid #6a2090;border-radius:8px;color:#dd99ff;
@@ -241,19 +241,69 @@
 
   /* ── Difficulty select ── */
   #diff-select{position:fixed;inset:0;z-index:195;display:none;flex-direction:column;
-               align-items:center;justify-content:center;background:#0a0a06;gap:22px}
-  #diff-map-name{color:#a08040;font-size:13px;letter-spacing:3px;text-transform:uppercase}
-  #diff-select h2{color:#f0c040;font-size:22px;font-weight:bold;letter-spacing:2px}
-  #diff-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;padding:0 12px}
-  .diff-card{border-radius:12px;padding:20px 14px;cursor:pointer;touch-action:manipulation;
-             display:flex;flex-direction:column;align-items:center;gap:10px;width:148px;
-             border:2px solid #4a3010;background:#1a1208}
-  .diff-card .dname{font-size:17px;font-weight:bold;color:#f0d080}
-  .diff-card .dstats{color:#a09060;font-size:11px;text-align:center;line-height:1.9}
-  .diff-card.easy{border-color:#2a7a20}.diff-card.easy:hover{border-color:#55ee22;background:#0e1e0a}
-  .diff-card.med{border-color:#8a7a10}.diff-card.med:hover{border-color:#ddbb22;background:#1a1808}
-  .diff-card.hard{border-color:#7a1a10}.diff-card.hard:hover{border-color:#ee2222;background:#1a0a08}
-  .diff-card.sandbox{border-color:#406080}.diff-card.sandbox:hover{border-color:#80c0ff;background:#080e18}
+               align-items:center;justify-content:center;background:#08080e;gap:18px;overflow-y:auto;padding:20px 0}
+  #diff-map-name{color:#8888cc;font-size:12px;letter-spacing:3px;text-transform:uppercase}
+  #diff-select>h2{color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:3px;margin:0}
+  #diff-cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;padding:0 16px;box-sizing:border-box}
+  /* BTD6-inspired difficulty banners */
+  .diff-card{border-radius:10px;padding:14px 16px;cursor:pointer;touch-action:manipulation;
+             display:flex;flex-direction:row;align-items:center;gap:14px;
+             border:2px solid transparent;position:relative;overflow:hidden;transition:all 0.15s}
+  .diff-card::before{content:'';position:absolute;inset:0;opacity:0.12;z-index:0;pointer-events:none}
+  .diff-card>*{position:relative;z-index:1}
+  .diff-card .d-icon{font-size:32px;flex-shrink:0;line-height:1}
+  .diff-card .d-body{display:flex;flex-direction:column;gap:2px;flex:1}
+  .diff-card .dname{font-size:15px;font-weight:bold;color:#ffffff}
+  .diff-card .d-sub{font-size:10px;color:rgba(255,255,255,0.55);font-style:italic}
+  .diff-card .dstats{color:rgba(255,255,255,0.75);font-size:10px;line-height:1.7;margin-top:2px}
+  .diff-card .d-arrow{color:rgba(255,255,255,0.4);font-size:18px;flex-shrink:0}
+  .diff-card.easy{border-color:#3a9a28;background:#0d1f0a}
+  .diff-card.easy::before{background:#44ff22}
+  .diff-card.easy:hover{border-color:#66ee44;background:#122a0e;box-shadow:0 0 14px rgba(80,220,40,0.3)}
+  .diff-card.med{border-color:#9a8818;background:#1a1608}
+  .diff-card.med::before{background:#ffdd22}
+  .diff-card.med:hover{border-color:#ddcc33;background:#221e08;box-shadow:0 0 14px rgba(220,200,40,0.3)}
+  .diff-card.hard{border-color:#9a2018;background:#1a0808}
+  .diff-card.hard::before{background:#ff3322}
+  .diff-card.hard:hover{border-color:#ee3333;background:#220c08;box-shadow:0 0 14px rgba(220,40,30,0.3)}
+  .diff-card.sandbox{border-color:#3060aa;background:#080e1c}
+  .diff-card.sandbox::before{background:#4488ff}
+  .diff-card.sandbox:hover{border-color:#6699ff;background:#0c1428;box-shadow:0 0 14px rgba(60,100,220,0.3)}
+  .diff-card.master{border-color:#aa6600;background:#120a00}
+  .diff-card.master::before{background:#ffaa00}
+  .diff-card.master:hover{border-color:#ffaa00;background:#1e1000;box-shadow:0 0 18px rgba(255,150,0,0.45)}
+  .sub-card.sc-master{border-color:#ffaa00;background:#1a0e00}
+  .sub-card.sc-master:hover{border-color:#ffcc44;background:#221400}
+  .sub-card.sc-grandmaster{border-color:#ff4400;background:#1a0400}
+  .sub-card.sc-grandmaster:hover{border-color:#ff7733;background:#220800}
+  /* Sub-difficulty panel */
+  #diff-sub{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;
+            align-items:center;justify-content:center;background:rgba(0,0,0,0.85);gap:12px;padding:20px}
+  #diff-sub-title{color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:2px;margin-bottom:4px}
+  .sub-card{border-radius:10px;padding:13px 16px;cursor:pointer;touch-action:manipulation;
+            display:flex;flex-direction:row;align-items:center;gap:12px;
+            width:100%;max-width:380px;border:2px solid;transition:all 0.15s;box-sizing:border-box}
+  .sub-card:active{transform:scale(0.97)}
+  .sub-card .sc-icon{font-size:28px;flex-shrink:0}
+  .sub-card .sc-body{display:flex;flex-direction:column;gap:2px;flex:1}
+  .sub-card .sc-name{font-size:14px;font-weight:bold;color:#ffffff}
+  .sub-card .sc-desc{font-size:10px;color:rgba(255,255,255,0.65)}
+  .sub-card.sc-normal{border-color:#3a9a28;background:#0d1f0a}
+  .sub-card.sc-normal:hover{border-color:#66ee44;background:#122a0e}
+  .sub-card.sc-chaos{border-color:#cc2288;background:#1a0414}
+  .sub-card.sc-chaos:hover{border-color:#ff44cc;background:#220818}
+  .sub-card.sc-choice{border-color:#8844cc;background:#0e0818}
+  .sub-card.sc-choice:hover{border-color:#cc88ff;background:#16102a}
+  .sub-card.sc-unstop{border-color:#ff6600;background:#1a0800}
+  .sub-card.sc-unstop:hover{border-color:#ff9933;background:#221008}
+  .sub-card.sc-iron{border-color:#aaaaaa;background:#111111}
+  .sub-card.sc-iron:hover{border-color:#ffffff;background:#1e1e1e}
+  .sub-card.sc-inferno{border-color:#ff2200;background:#1a0400}
+  .sub-card.sc-inferno:hover{border-color:#ff5522;background:#220800}
+  #diff-sub-cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:380px}
+  #diff-sub-back{background:none;border:1px solid #444;color:#aaa;font-family:monospace;font-size:12px;
+                 padding:6px 18px;border-radius:7px;cursor:pointer;touch-action:manipulation;margin-top:4px}
+  #diff-sub-back:hover{border-color:#aaa;color:#fff}
   #sandbox-panel{position:fixed;top:50%;left:10px;transform:translateY(-50%);z-index:30;
     display:none;flex-direction:column;gap:5px;background:rgba(0,0,0,0.82);
     border:2px solid #406080;border-radius:10px;padding:8px 6px}
@@ -354,24 +404,60 @@
   <div id="diff-map-name"></div>
   <h2>⚔ SELECT DIFFICULTY</h2>
   <div id="diff-cards">
-    <div class="diff-card easy" onclick="startGame('easy')">
-      <div class="dname">🟢 Easy</div>
-      <div class="dstats">❤️ 300 HP<br>🌊 10 Waves<br>💰 Cheaper towers</div>
+    <div class="diff-card easy" onclick="showDiffSub('easy')">
+      <span class="d-icon">🟢</span>
+      <div class="d-body">
+        <div class="dname">Easy</div>
+        <div class="d-sub">4 paths available</div>
+        <div class="dstats">❤️ 300 HP &nbsp;·&nbsp; 🌊 10 Waves &nbsp;·&nbsp; 💰 Cheaper</div>
+      </div>
+      <span class="d-arrow">›</span>
     </div>
-    <div class="diff-card med" onclick="startGame('medium')">
-      <div class="dname">🟡 Medium</div>
-      <div class="dstats">❤️ 250 HP<br>🌊 15 Waves<br>💰 Normal towers</div>
+    <div class="diff-card med" onclick="showDiffSub('medium')">
+      <span class="d-icon">🟡</span>
+      <div class="d-body">
+        <div class="dname">Medium</div>
+        <div class="d-sub">4 paths available</div>
+        <div class="dstats">❤️ 250 HP &nbsp;·&nbsp; 🌊 15 Waves &nbsp;·&nbsp; 💰 Normal</div>
+      </div>
+      <span class="d-arrow">›</span>
     </div>
-    <div class="diff-card hard" onclick="startGame('hard')">
-      <div class="dname">🔴 Hard</div>
-      <div class="dstats">❤️ 200 HP<br>🌊 20 Waves<br>💰 Pricier towers</div>
+    <div class="diff-card hard" onclick="showDiffSub('hard')">
+      <span class="d-icon">🔴</span>
+      <div class="d-body">
+        <div class="dname">Hard</div>
+        <div class="d-sub">4 paths available</div>
+        <div class="dstats">❤️ 200 HP &nbsp;·&nbsp; 🌊 20 Waves &nbsp;·&nbsp; 💰 Pricier</div>
+      </div>
+      <span class="d-arrow">›</span>
+    </div>
+    <div class="diff-card master" onclick="showDiffSub('master')">
+      <span class="d-icon">👑</span>
+      <div class="d-body">
+        <div class="dname">Master</div>
+        <div class="d-sub">2 paths available</div>
+        <div class="dstats">❤️ 1 HP &nbsp;·&nbsp; 🌊 30 Waves &nbsp;·&nbsp; ⚡ 1.2× Speed &nbsp;·&nbsp; 💰 1.5× Cost</div>
+      </div>
+      <span class="d-arrow">›</span>
     </div>
     <div class="diff-card sandbox" onclick="startGame('sandbox')">
-      <div class="dname">🧪 Sandbox</div>
-      <div class="dstats">∞ Coins<br>🎯 Spawn enemies<br>🔬 No game over</div>
+      <span class="d-icon">🧪</span>
+      <div class="d-body">
+        <div class="dname">Sandbox</div>
+        <div class="d-sub">Unlimited everything</div>
+        <div class="dstats">∞ Coins &nbsp;·&nbsp; ∞ Lives &nbsp;·&nbsp; 5 Heroes &nbsp;·&nbsp; Spawn enemies</div>
+      </div>
+      <span class="d-arrow">▶</span>
     </div>
   </div>
   <button id="diff-back" onclick="backToMapSelect()">← Back</button>
+</div>
+
+<!-- Sub-difficulty chooser -->
+<div id="diff-sub">
+  <div id="diff-sub-title">CHOOSE YOUR PATH</div>
+  <div id="diff-sub-cards"></div>
+  <button id="diff-sub-back" onclick="closeDiffSub()">← Back</button>
 </div>
 
 <!-- Sandbox spawn panel -->
@@ -594,6 +680,7 @@
   </div>
   <div id="up-stats"></div>
   <div id="up-btns"></div>
+  <button id="up-merge" onclick="mergeTowers()" style="display:none;background:#1a1800;border:2px solid #aacc00;border-radius:8px;color:#eeff44;font-family:monospace;font-size:11px;font-weight:bold;padding:5px 10px;cursor:pointer;touch-action:manipulation;pointer-events:auto;width:100%">⚡ MERGE</button>
   <button id="up-sell" onclick="sellTower()">🪙 Sell</button>
 </div>
 
@@ -615,6 +702,7 @@
     <div id="win-title">🏆</div>
     <div id="win-sub">YOU BEAT <span id="win-diff">MEDIUM</span>!</div>
     <div id="win-medal" style="font-size:22px;font-weight:bold;letter-spacing:2px;margin:4px 0"></div>
+    <div id="win-allmedals" style="font-size:13px;color:#aaddaa;margin:-8px 0 0"></div>
     <div id="win-cash">+10💵 earned</div>
     <button id="win-continue-btn" onclick="continueEndless()">▶ Continue Endless</button>
     <button id="win-back-btn" onclick="returnToMenu()">🗺 Map Selection</button>
@@ -824,10 +912,25 @@ const FIRE_COLS={
 };
 let permCoinDrops=1, permSuperWashouts=1; // permanent starting counts
 let coinDrops=0, superWashouts=0;         // in-game counts (reset each game)
-let medals={}; // {mapId: 'bronze'|'silver'|'gold'}
-const MEDAL_RANK={easy:1,medium:2,hard:3};
-const MEDAL_NAME={easy:'bronze',medium:'silver',hard:'gold'};
-const MEDAL_EMOJI={bronze:'🥉',silver:'🥈',gold:'🥇'};
+let medals={}; // {mapId: {pathId: true}}
+const MEDAL_DEFS={
+  easy:            {emoji:'🥉',name:'Easy',       tier:'bronze'},
+  easy_chaos:      {emoji:'🌀',name:'Chaos',       tier:'bronze'},
+  easy_goldrush:   {emoji:'💰',name:'Gold Rush',   tier:'bronze'},
+  easy_slow:       {emoji:'🐌',name:'Slow Mo',     tier:'bronze'},
+  medium:          {emoji:'🥈',name:'Medium',      tier:'silver'},
+  medium_overdrive:{emoji:'⚡',name:'Overdrive',   tier:'silver'},
+  medium_tide:     {emoji:'🌊',name:'Tide',        tier:'silver'},
+  medium_fort:     {emoji:'🏰',name:'Fortified',   tier:'silver'},
+  hard:            {emoji:'🥇',name:'Hard',        tier:'gold'},
+  hard_unstop:     {emoji:'🔥',name:'Unstoppable', tier:'gold'},
+  hard_iron:       {emoji:'🛡️',name:'Iron Will',  tier:'gold'},
+  hard_inferno:    {emoji:'🌋',name:'Inferno',     tier:'gold'},
+  master:          {emoji:'👑',name:'Master',      tier:'master'},
+  master_grand:    {emoji:'💀',name:'Grandmaster', tier:'master'},
+};
+function _mapsWithMedals(){return Object.keys(medals).filter(mid=>medals[mid]&&Object.keys(medals[mid]).length>0).length;}
+function _countMedalsByTier(tier){let n=0;for(const pm of Object.values(medals)){if(pm&&typeof pm==='object'){for(const pid of Object.keys(pm)){if(MEDAL_DEFS[pid]?.tier===tier)n++;}}}return n;}
 let mapSelectVisits=0,shopOpensSinceLastBuy=0,achOpenCount=0,enemiesLeakedThisGame=0;
 let stats={
   kills:0, tankKills:0, missileKills:0, robotKills:0,
@@ -840,10 +943,17 @@ let stats={
 function loadSave(){
   try{
     const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
-    permCash=d.cash??250; ownedSkins=d.owned??['default']; activeSkinId=d.active??'default';
+    permCash=d.cash??250; if(permCash<1250) permCash+=1000; ownedSkins=d.owned??['default']; activeSkinId=d.active??'default';
     permCoinDrops=d.permCoinDrops??1; permSuperWashouts=d.permSuperWashouts??1;
     if(d.stats) Object.assign(stats,d.stats);
     if(d.medals) Object.assign(medals,d.medals);
+    // Migrate old string-format medals {mapId:'bronze'} → {mapId:{pathId:true}}
+    for(const mid of Object.keys(medals)){
+      if(typeof medals[mid]==='string'){
+        const t=medals[mid];
+        medals[mid]={[t==='gold'?'hard':t==='silver'?'medium':'easy']:true};
+      }
+    }
     if(d.achievements) d.achievements.forEach(id=>earnedAchievements.add(id));
     if(d.paidAchievements) d.paidAchievements.forEach(id=>paidAchievements.add(id));
     if(d.unlockedHeroes) d.unlockedHeroes.forEach(id=>unlockedHeroes.add(id));
@@ -968,12 +1078,12 @@ const ACHIEVEMENTS=[
   {id:'sw2',name:'Exterminator',      desc:'Use 5 super washouts',              check:()=>stats.superWashoutsUsed>=5},
   {id:'sw3',name:'Wipeout',           desc:'Use 10 super washouts',             check:()=>stats.superWashoutsUsed>=10},
   // ── Medals ───────────────────────────────────────────────────────────────────
-  {id:'md1',name:'Medalist',          desc:'Earn any medal',                    check:()=>Object.keys(medals).length>=1},
-  {id:'md2',name:'Silver Lining',     desc:'Earn a silver medal',               check:()=>Object.values(medals).some(v=>v==='silver'||v==='gold')},
-  {id:'md3',name:'Gold Standard',     desc:'Earn a gold medal',                 check:()=>Object.values(medals).some(v=>v==='gold')},
-  {id:'md4',name:'Medal Hunter',      desc:'Earn medals on 5 maps',             check:()=>Object.keys(medals).length>=5},
-  {id:'md5',name:'Completionist',     desc:'Earn medals on 10 maps',            check:()=>Object.keys(medals).length>=10},
-  {id:'md6',name:'All Clear',         desc:'Earn a medal on all 12 maps',       check:()=>Object.keys(medals).length>=12},
+  {id:'md1',name:'Medalist',          desc:'Earn any medal',                    check:()=>_mapsWithMedals()>=1},
+  {id:'md2',name:'Silver Lining',     desc:'Earn a silver medal',               check:()=>_countMedalsByTier('silver')>=1||_countMedalsByTier('gold')>=1||_countMedalsByTier('master')>=1},
+  {id:'md3',name:'Gold Standard',     desc:'Earn a gold medal',                 check:()=>_countMedalsByTier('gold')>=1||_countMedalsByTier('master')>=1},
+  {id:'md4',name:'Medal Hunter',      desc:'Earn medals on 5 maps',             check:()=>_mapsWithMedals()>=5},
+  {id:'md5',name:'Completionist',     desc:'Earn medals on 10 maps',            check:()=>_mapsWithMedals()>=10},
+  {id:'md6',name:'All Clear',         desc:'Earn a medal on all 12 maps',       check:()=>_mapsWithMedals()>=12},
   // ── Difficulty wins ──────────────────────────────────────────────────────────
   {id:'ew1',name:'Easy Win',          desc:'Win 1 game on Easy',                check:()=>stats.easyWins>=1},
   {id:'ew2',name:'Easy Champion',     desc:'Win 5 games on Easy',               check:()=>stats.easyWins>=5},
@@ -984,9 +1094,9 @@ const ACHIEVEMENTS=[
   {id:'sb2',name:'Mad Scientist',     desc:'Spawn 100 enemies in Sandbox',      check:()=>stats.sandboxSpawns>=100},
   {id:'sb3',name:'Chaos Lord',        desc:'Spawn 500 enemies in Sandbox',      check:()=>stats.sandboxSpawns>=500},
   // ── Gold medals ──────────────────────────────────────────────────────────────
-  {id:'gd1',name:'Golden Victory',    desc:'Earn 3 gold medals',                check:()=>Object.values(medals).filter(v=>v==='gold').length>=3},
-  {id:'gd2',name:'Golden Master',     desc:'Earn 6 gold medals',                check:()=>Object.values(medals).filter(v=>v==='gold').length>=6},
-  {id:'gd3',name:'All Gold',          desc:'Gold medal on all 12 maps',         check:()=>Object.values(medals).filter(v=>v==='gold').length>=12},
+  {id:'gd1',name:'Golden Victory',    desc:'Earn 3 gold-tier medals',           check:()=>_countMedalsByTier('gold')>=3},
+  {id:'gd2',name:'Golden Master',     desc:'Earn 6 gold-tier medals',           check:()=>_countMedalsByTier('gold')>=6},
+  {id:'gd3',name:'All Gold',          desc:'Earn 12 gold-tier medals',          check:()=>_countMedalsByTier('gold')>=12},
   // ── Combo / special ──────────────────────────────────────────────────────────
   {id:'sp1',name:'Expert Slayer',     desc:'Kill 100 tanks + missiles + robots combined',      check:()=>stats.tankKills+stats.missileKills+stats.robotKills>=100},
   {id:'sp2',name:'Boss of Bosses',    desc:'Kill 25 bosses',                    check:()=>stats.bossKills>=25},
@@ -1182,7 +1292,7 @@ const HERO_DEFS=[
 ];
 let unlockedHeroes=new Set(['warrior','archer']);
 let activeHeroId='warrior';
-let placedHero=null;
+let placedHeroes=[]; let panelHero=null;
 let heroPlaceMode=false;
 
 function renderHeroSelectPanel(){
@@ -1192,6 +1302,7 @@ function renderHeroSelectPanel(){
     list.innerHTML='';
     for(const h of HERO_DEFS){
       const card=document.createElement('div');
+      card.className='hero-card';
       card.dataset.heroId=h.id;
       const unlockCostEl=h.permCost>0?`<div class="hc-cost">💵 $${h.permCost} cash</div>`:'<div class="hc-cost" style="color:#ffffff;opacity:0.7">✓ Free</div>';
       card.innerHTML=`
@@ -1230,7 +1341,7 @@ function renderHeroSelectPanel(){
 }
 function updateHeroTowerCard(){
   const card=document.getElementById('hero-tower-card');
-  if(!activeHeroId||placedHero){card.style.display='none';return;}
+  if(!activeHeroId||(sandboxMode?placedHeroes.length>=5:placedHeroes.length>=1)){card.style.display='none';return;}
   const h=HERO_DEFS.find(x=>x.id===activeHeroId);
   if(!h){card.style.display='none';return;}
   card.style.display='flex';
@@ -1245,7 +1356,7 @@ function heroActualCost(){
   return sandboxMode?0:Math.round(h.gameCost*(diffConfig?diffConfig.costMult:1));
 }
 function selectHeroForPlacement(){
-  if(placedHero) return;
+  if(sandboxMode?placedHeroes.length>=5:placedHeroes.length>=1) return;
   const h=HERO_DEFS.find(z=>z.id===activeHeroId);
   if(!h||coins<heroActualCost()) return;
   heroPlaceMode=!heroPlaceMode;
@@ -1270,8 +1381,9 @@ function heroStats(h){
   return{dmg,range,rate,critChance,shots};
 }
 function updateHero(dt){
-  if(!placedHero) return;
-  const h=placedHero;
+  for(const h of placedHeroes) _updateSingleHero(h,dt);
+}
+function _updateSingleHero(h,dt){
   let{dmg,range,rate,critChance,shots}=heroStats(h);
   // Apply supporter buffs
   let _rb=0,_db=0,_rateb=0;
@@ -1309,8 +1421,9 @@ function updateHero(dt){
   }
 }
 function drawHero(){
-  if(!placedHero) return;
-  const h=placedHero;
+  for(const h of placedHeroes) _drawSingleHero(h);
+}
+function _drawSingleHero(h){
   const lv=h.level;
   const elite=lv>=10;
   const max=lv>=25;
@@ -1354,7 +1467,7 @@ function drawHero(){
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText('Lv'+lv,0,r*0.55);
   // selected highlight ring
-  if(h.selected){
+  if(panelHero===h){
     ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2.5; ctx.setLineDash([6,4]);
     ctx.beginPath(); ctx.arc(0,0,r+10,0,Math.PI*2); ctx.stroke();
     ctx.setLineDash([]);
@@ -1702,10 +1815,10 @@ function startWave(n){
 function endWave(){
   waveActive=false;
   // Hero levels up every wave, max 25
-  if(placedHero){
-    const prev=placedHero.level;
-    placedHero.level=Math.min(25,placedHero.level+1);
-    if(placedHero.level>prev) showFloatingMsg(`⚔ ${placedHero.def.name} → Lv${placedHero.level}!`,'#ffdd44');
+  for(const h of placedHeroes){
+    const prev=h.level;
+    h.level=Math.min(25,h.level+1);
+    if(h.level>prev) showFloatingMsg(`⚔ ${h.def.name} → Lv${h.level}!`,'#ffdd44');
   }
   if(wave>=diffConfig.maxWaves&&!endlessMode){
     showWinScreen(); return;
@@ -1716,28 +1829,39 @@ function showWinScreen(){
   gameWon=true;
   sfxWin();
   stats.wins++;
-  if(diffConfig.name.toLowerCase()==='hard') stats.hardWins++;
-  if(diffConfig.name.toLowerCase()==='easy') stats.easyWins++;
+  if(MEDAL_DEFS[diffConfig._pathId]?.tier==='gold') stats.hardWins++;
+  if(MEDAL_DEFS[diffConfig._pathId]?.tier==='bronze') stats.easyWins++;
   if(gameSpeed>1) stats.speedWins++;
   if(wave>stats.highestWave){stats.highestWave=wave;}
-  // Award medal — only upgrade, never downgrade
-  const diffKey=diffConfig.name.toLowerCase();
-  const newMedal=MEDAL_NAME[diffKey];
-  if(newMedal&&mapId){
-    const cur=medals[mapId];
-    if(!cur||(MEDAL_RANK[diffKey]>(MEDAL_RANK[Object.keys(MEDAL_NAME).find(k=>MEDAL_NAME[k]===cur)]||0))){
-      medals[mapId]=newMedal;
+  // Award path-specific medal
+  const _pathId=diffConfig._pathId;
+  if(_pathId&&mapId&&MEDAL_DEFS[_pathId]){
+    if(!medals[mapId]) medals[mapId]={};
+    medals[mapId][_pathId]=true;
+  }
+  const WIN_REWARD_TIER={bronze:10,silver:30,gold:50,master:100};
+  const _tier=MEDAL_DEFS[_pathId]?.tier||'bronze';
+  const rewardAmt=WIN_REWARD_TIER[_tier]||10;
+  permCash+=rewardAmt; checkAchievements(); writeSave(); updatePermCashUI();
+  const cashEl=document.getElementById('win-cash');
+  if(cashEl) cashEl.textContent=`+${rewardAmt}💵 earned`;
+  document.getElementById('win-diff').textContent=diffConfig.name.toUpperCase();
+  // Show medal earned (all medals for this map)
+  const medalEl=document.getElementById('win-medal');
+  const allMedalsEl=document.getElementById('win-allmedals');
+  if(medalEl){
+    const def=MEDAL_DEFS[_pathId];
+    medalEl.innerHTML=def?`<span style="font-size:1.4em">${def.emoji}</span> <b>${def.name.toUpperCase()}</b> medal earned!`:'';
+  }
+  if(allMedalsEl&&mapId){
+    const earned=medals[mapId]?Object.keys(medals[mapId]).filter(pid=>MEDAL_DEFS[pid]):[];
+    if(earned.length>1){
+      const icons=earned.map(pid=>`<span title="${MEDAL_DEFS[pid].name}">${MEDAL_DEFS[pid].emoji}</span>`).join(' ');
+      allMedalsEl.innerHTML=`All medals on this map: ${icons}`;
+    } else {
+      allMedalsEl.textContent='';
     }
   }
-  const WIN_REWARD={easy:10,medium:30,hard:50};
-  const rewardAmt=WIN_REWARD[diffConfig.name.toLowerCase()]||10;
-  permCash+=rewardAmt; checkAchievements(); writeSave(); updatePermCashUI();
-  document.getElementById('win-diff').textContent=diffConfig.name.toUpperCase();
-  // Show medal earned
-  const medalEl=document.getElementById('win-medal');
-  const _finalMedal=medals[mapId];
-  const _fr=_finalMedal==='gold'?3:_finalMedal==='silver'?2:_finalMedal==='bronze'?1:0;
-  if(medalEl) medalEl.textContent=_fr>=1?(['🥉','🥈','🥇'].slice(0,_fr).join(' ')+' '+_finalMedal.toUpperCase()):'';
   document.getElementById('win-screen').classList.add('show');
 }
 function continueEndless(){
@@ -1810,6 +1934,9 @@ function checkItemLock(){
 function useCoinDrop(){
   if(coinDrops<=0||gameOver||gameWon) return;
   if(checkItemLock()) return;
+  if((diffConfig?.name==='Master'||diffConfig?.name==='Grandmaster')&&wave<12){
+    showFloatingMsg('🔒 Coin Drop unlocks at Wave 12 in Master!','#ff6644'); return;
+  }
   coinDrops--; coins+=1000; stats.coinDropsUsed++; stats.coinsEarned+=1000;
   updateCoinsUI(); updateCoinDropUI();
   showFloatingMsg('+1000 💰 Coin Drop!','#f0c040');
@@ -1823,6 +1950,9 @@ function updateSuperWashoutUI(){
 function useSuperWashout(){
   if(superWashouts<=0||gameOver||gameWon) return;
   if(checkItemLock()) return;
+  if((diffConfig?.name==='Master'||diffConfig?.name==='Grandmaster')&&wave<12){
+    showFloatingMsg('🔒 Washout unlocks at Wave 12 in Master!','#ff6644'); return;
+  }
   superWashouts--; stats.superWashoutsUsed++;
   for(const c of cavemen) c.hp=Math.max(1,Math.floor(c.hp/2));
   updateSuperWashoutUI();
@@ -1887,6 +2017,7 @@ const UPG_MULT_RATE =[1,1.3, 1.7,2.2,2.9,3.8];
 const UPG_MULT_RANGE=[1,1.2, 1.45,1.75,2.1,2.5];
 const UPG_CRIT      =[0,0.08,0.12,0.16,0.20,0.24]; // crit chance per level
 const UPG_SIZE      =[1,1.20,1.40,1.60,1.80,2.00]; // proj size mult per level
+const MERGE_RADIUS=130;
 // cost multipliers per path: Sharper+Faster cost 1.3x, Range normal, Crit 2x, Size 1.8x
 const UPG_COST_MULT =[1.3,1.3,1.0,2.0,1.8];
 // Supporter aura boost per upgrade level (additive multipliers applied to nearby towers)
@@ -1899,7 +2030,7 @@ function getTowerEffective(tower){
   let rate=tower.def.fireRate*UPG_MULT_RATE[u[1]];
   let range=tower.def.range*UPG_MULT_RANGE[u[2]];
   const critChance=UPG_CRIT[u[3]||0];
-  const sizeMult=UPG_SIZE[u[4]||0];
+  let sizeMult=UPG_SIZE[u[4]||0];
   if(!tower.def.supporterType){
     let _rb=0,_db=0,_rateb=0;
     for(const sup of placedTowers){
@@ -1912,6 +2043,11 @@ function getTowerEffective(tower){
       }
     }
     range*=(1+_rb); dmg*=(1+_db); rate*=(1+_rateb);
+  }
+  if(tower.mergeLevel){
+    const mb=tower.mergeLevel>=2?4:2;
+    dmg*=mb; rate*=Math.sqrt(mb); range*=1+(tower.mergeLevel*0.25);
+    sizeMult*=1+(tower.mergeLevel*0.5);
   }
   return{damage:dmg,fireRate:rate,range,critChance,sizeMult};
 }
@@ -1932,9 +2068,9 @@ function deselectTower(){
   document.getElementById('upgrade-panel').classList.remove('show');
 }
 function heroLevelUpCost(lv){
-  if(!placedHero||lv>=25) return Infinity;
+  if(!panelHero||lv>=25) return Infinity;
   if(sandboxMode) return 0;
-  const base=placedHero.def.gameCost;
+  const base=panelHero.def.gameCost;
   // starts at 1.5x, then alternates +0.3 / +0.2 (0.5 per pair)
   // lv1→2: 1.5, lv2→3: 1.8, lv3→4: 2.0, lv4→5: 2.3, lv5→6: 2.5, lv6→7: 2.8 ...
   let mult=1.5;
@@ -1942,19 +2078,19 @@ function heroLevelUpCost(lv){
   return Math.round(base*mult);
 }
 function buyHeroLevel(){
-  if(!placedHero) return;
-  const lv=placedHero.level;
+  if(!panelHero) return;
+  const lv=panelHero.level;
   if(lv>=25) return;
   const cost=heroLevelUpCost(lv);
   if(coins<cost) return;
   coins-=cost; updateCoinsUI();
-  placedHero.level=lv+1;
-  showFloatingMsg(`⚔ ${placedHero.def.title} → Lv${placedHero.level}!`,'#88ff44');
+  panelHero.level=lv+1;
+  showFloatingMsg(`⚔ ${panelHero.def.title} → Lv${panelHero.level}!`,'#88ff44');
   renderHeroPanel(); writeSave();
 }
 function renderHeroPanel(){
-  if(!placedHero) return;
-  const h=placedHero;
+  if(!panelHero) return;
+  const h=panelHero;
   const{dmg,range,rate,critChance,shots}=heroStats(h);
   const lv=h.level;
   const badgeCol=lv>=25?'#ff6644':lv>=10?'#cc88ff':'#ffdd22';
@@ -1974,21 +2110,21 @@ function renderHeroPanel(){
     lvBtn.textContent=`⬆ +1 Lvl — 💰${sandboxMode?'FREE':cost}`;
     lvBtn.disabled=!canAfford;
   }
-  document.getElementById('hp-sell').textContent=`🪙 Sell  +💰${Math.floor(heroActualCost()*0.7)}`;
+  document.getElementById('hp-sell').textContent=`🪙 Sell  +💰${sandboxMode?0:Math.floor(h.def.gameCost*0.7)}`;
 }
 function showHeroPanel(){
   renderHeroPanel();
   document.getElementById('hero-panel').classList.add('show');
 }
 function deselectHero(){
-  if(placedHero) placedHero.selected=false;
+  panelHero=null;
   document.getElementById('hero-panel').classList.remove('show');
 }
 function sellHero(){
-  if(!placedHero) return;
-  const refund=Math.floor(heroActualCost()*0.7);
+  if(!panelHero) return;
+  const refund=sandboxMode?0:Math.floor(panelHero.def.gameCost*0.7);
   coins+=refund; updateCoinsUI();
-  placedHero=null;
+  placedHeroes=placedHeroes.filter(h=>h!==panelHero); panelHero=null;
   document.getElementById('hero-panel').classList.remove('show');
   updateHeroTowerCard(); writeSave();
 }
@@ -2026,6 +2162,22 @@ function renderUpgradePanel(){
     if(!maxed) btn.addEventListener('pointerup',()=>buyUpgrade(path));
     btnsEl.appendChild(btn);
   }
+  const mergeTargets=getMergeTargets(t);
+  const mergeBtn=document.getElementById('up-merge');
+  if(mergeBtn){
+    const ml=t.mergeLevel||0;
+    if(mergeTargets.length>=2&&ml<2){
+      mergeBtn.style.display='block';
+      mergeBtn.textContent=ml>=1?'⚡ MAX MERGE (3 towers)':'⚡ MERGE (3 towers)';
+      mergeBtn.disabled=false;
+    } else if(ml>=2){
+      mergeBtn.style.display='block';
+      mergeBtn.textContent='⭐ MAX MERGED';
+      mergeBtn.disabled=true;
+    } else {
+      mergeBtn.style.display='none';
+    }
+  }
 }
 function buyUpgrade(path){
   if(!selectedTower) return;
@@ -2047,6 +2199,32 @@ function sellTower(){
   placedTowers=placedTowers.filter(t=>t!==selectedTower);
   coins+=refund; updateCoinsUI();
   deselectTower();
+}
+function getMergeTargets(tower){
+  const ml=tower.mergeLevel||0;
+  if(ml>=2) return [];
+  return placedTowers.filter(t=>
+    t.id!==tower.id&&
+    t.def.id===tower.def.id&&
+    (t.mergeLevel||0)===ml&&
+    Math.hypot(t.x-tower.x,t.y-tower.y)<=MERGE_RADIUS
+  );
+}
+function mergeTowers(){
+  if(!selectedTower) return;
+  const targets=getMergeTargets(selectedTower);
+  if(targets.length<2) return;
+  const three=[selectedTower,targets[0],targets[1]];
+  const cx=three.reduce((s,t)=>s+t.x,0)/3;
+  const cy=three.reduce((s,t)=>s+t.y,0)/3;
+  const newML=(selectedTower.mergeLevel||0)+1;
+  const newTower={id:nextTowerId++,x:cx,y:cy,def:selectedTower.def,
+    fireTimer:0,aimAngle:0,upgrades:[0,0,0,0,0],frozenTimer:0,mergeLevel:newML};
+  for(let p=0;p<5;p++) newTower.upgrades[p]=Math.max(...three.map(t=>(t.upgrades||[])[p]||0));
+  placedTowers=placedTowers.filter(t=>!three.find(x=>x.id===t.id));
+  placedTowers.push(newTower);
+  deselectTower(); sfxPlace();
+  showFloatingMsg(newML>=2?'⚡ MAX MERGE! ×4 Power!':'⚡ MERGED! ×2 Power!','#ffcc00');
 }
 
 // ── Placement ─────────────────────────────────────────────────────────────────
@@ -2098,7 +2276,10 @@ function spawnCaveman(forcedType){
 
   const{speedMult,hpMult}=getEndlessBuff();
   const mapSpeedMult=getMapSpeedMult();
-  hp=Math.round(hp*hpMult);
+  const diffSpeedMod=diffConfig?.speedMod||1;
+  const diffHpMod=diffConfig?.hpMod||1;
+  hp=Math.round(hp*hpMult*diffHpMod);
+  coins2=Math.round(coins2*(diffConfig?.coinMod||1));
 
   if(mapId==='loops'){
     const spawnAngle=-Math.PI/2;
@@ -2116,7 +2297,7 @@ function spawnCaveman(forcedType){
     else if(knight) angSpeed=0.22 +Math.random()*0.1;
     else if(heavy)  angSpeed=0.18 +Math.random()*0.12;
     else            angSpeed=0.38 +Math.random()*0.25;
-    angSpeed*=speedMult*mapSpeedMult;
+    angSpeed*=speedMult*mapSpeedMult*diffSpeedMod;
     cavemen.push({id:nextCaveId++,angle:spawnAngle,roadT:0.4+Math.random()*0.2,
       angSpeed,bobPhase:Math.random()*Math.PI*2,skin,hitFlash:0,
       hp,maxHp:hp,heavy,knight,soldier,tank,boss,missile,robot,coins:coins2,totalAngle:0,
@@ -2124,7 +2305,7 @@ function spawnCaveman(forcedType){
   } else {
     if(cavemen.some(c=>c.pathDist>=0&&c.pathDist<60)) return false;
     cavemen.push({id:nextCaveId++,pathDist:0,roadT:0.4+Math.random()*0.2,
-      speed:getWpSpeed(type)*speedMult*mapSpeedMult,bobPhase:Math.random()*Math.PI*2,skin,hitFlash:0,
+      speed:getWpSpeed(type)*speedMult*mapSpeedMult*diffSpeedMod,bobPhase:Math.random()*Math.PI*2,skin,hitFlash:0,
       hp,maxHp:hp,heavy,knight,soldier,tank,boss,missile,robot,coins:coins2,
       freezeTimer:60,frozenTowerId:null});
   }
@@ -2319,6 +2500,19 @@ function updateTowers(dt){
               speed:tower.def.projSpeed,damage:Math.max(1,Math.round(eff.damage)),
               color:tower.def.projColor,size:tower.def.projSize*(eff.sizeMult||1),
               critChance:eff.critChance||0,focused:_isFoc});
+            if(tower.mergeLevel>0){
+              // Quad shot: fire at up to 3 more enemies
+              const eff2=getTowerEffective(tower);
+              const others=cavemen.filter(c=>c.id!==nearest.id&&Math.hypot(getEnemyPos(c).x-tower.x,getEnemyPos(c).y-tower.y)<eff2.range)
+                .sort((a,b)=>Math.hypot(getEnemyPos(a).x-tower.x,getEnemyPos(a).y-tower.y)-Math.hypot(getEnemyPos(b).x-tower.x,getEnemyPos(b).y-tower.y))
+                .slice(0,tower.mergeLevel>=2?3:2);
+              for(const extra of others){
+                projectiles.push({x:tower.x,y:tower.y,targetId:extra.id,speed:tower.def.projSpeed,
+                  damage:eff2.damage,color:tower.def.projColor,
+                  size:tower.def.projSize*(eff2.sizeMult||1),
+                  critChance:eff2.critChance||0});
+              }
+            }
           }
         }
       }
@@ -2724,6 +2918,22 @@ function drawTower(tower,alpha){
     _rg.addColorStop(1,'rgba(0,0,0,0.5)');
     ctx.fillStyle=_rg;
     ctx.beginPath();ctx.arc(_rx,_ry,2.3,0,Math.PI*2);ctx.fill();
+  }
+  // Merged tower: extra visual indicators
+  if(tower.mergeLevel){
+    const mc=tower.mergeLevel>=2?'rgba(255,200,0,0.7)':'rgba(100,220,255,0.6)';
+    ctx.strokeStyle=mc; ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.stroke();
+    // Corner marks for 4-direction shooting
+    for(let i=0;i<4;i++){
+      ctx.save();ctx.rotate(i*Math.PI/2);
+      ctx.fillStyle=mc;ctx.fillRect(-3,-20,6,5);ctx.restore();
+    }
+    if(tower.mergeLevel>=2){
+      ctx.fillStyle='rgba(255,220,0,0.5)';ctx.font='bold 8px monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('MAX',0,0);
+    }
   }
   ctx.rotate(aim);
   const c=def.dotColor;
@@ -3887,16 +4097,18 @@ function update(ts){
   requestAnimationFrame(update);
   const t=ts/1000,dt=(lastTime===null?0:Math.min(t-lastTime,0.1))*gameSpeed;
   lastTime=t;
+  if(sandboxMode) coins=Math.max(coins,999999);
 
   // Wave logic
   if(sandboxMode){/* no auto waves */} else
   if(!waveActive){
+    if(diffConfig?.noBetweenWaves) betweenWaveTimer=0;
     betweenWaveTimer-=dt;
     if(betweenWaveTimer<=0) startWave(wave+1);
   } else {
     waveTimer-=dt;
     spawnTimer+=dt;
-    const si=getSpawnInterval(wave);
+    const si=getSpawnInterval(wave)*(diffConfig?.spawnMod||1);
     if(spawnTimer>=si){ if(spawnCaveman()) spawnTimer=0; }
     if(wave===20&&!bossSpawned&&waveTimer<WAVE_DURATION-2){
       bossSpawned=true; spawnCaveman('BOSS');
@@ -3921,10 +4133,10 @@ function update(ts){
   for(const c of escaped){
     removeMissileFreeze(c);
     cavemen=cavemen.filter(x=>x.id!==c.id);
-    playerHp=Math.max(0,playerHp-Math.ceil(c.hp));
+    if(!sandboxMode){ playerHp=Math.max(0,playerHp-Math.ceil(c.hp));
     enemiesLeakedThisGame++;checkAchievements();
     sfxDamage();
-    updateHpUI();
+    updateHpUI(); }
     const ep=mapId==='loops'
       ?{x:cx,y:cy-OUT_RY}
       :(p=>{return{x:p[0],y:p[1]};})(wpData.points[wpData.points.length-1]);
@@ -4058,16 +4270,20 @@ function handleTap(e){
     const cost=heroActualCost();
     if(!h||coins<cost) return;
     coins-=cost; updateCoinsUI();
-    placedHero={x,y,def:h,level:1,fireTimer:0,aimAngle:0,selected:false};
+    placedHeroes.push({x,y,def:h,level:1,fireTimer:0,aimAngle:0,id:Date.now()});
     heroPlaceMode=false; updateHeroTowerCard(); sfxPlace(); writeSave(); return;
   }
   // Click on placed hero
-  if(placedHero&&Math.hypot(x-placedHero.x,y-placedHero.y)<32){
-    placedHero.selected=!placedHero.selected;
-    if(placedHero.selected){ deselectTower(); showHeroPanel(); }
-    else deselectHero();
-    return;
-  } else if(placedHero){ placedHero.selected=false; deselectHero(); }
+  let heroClicked=false;
+  for(const h of placedHeroes){
+    if(Math.hypot(x-h.x,y-h.y)<32){
+      heroClicked=true;
+      if(panelHero===h){ panelHero=null; deselectHero(); }
+      else { panelHero=h; deselectTower(); showHeroPanel(); }
+      return;
+    }
+  }
+  if(!heroClicked&&panelHero){ panelHero=null; deselectHero(); }
   if(selectedDef){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)||coins<towCost(selectedDef)) return;
     coins-=towCost(selectedDef); updateCoinsUI();
@@ -4530,11 +4746,15 @@ function refreshMapMedals(){
     const mid=card.dataset.mapid;
     let badge=card.querySelector('.map-medal');
     if(!badge){badge=document.createElement('div');badge.className='map-medal';
-      badge.style.cssText='position:absolute;top:4px;left:6px;font-size:18px;line-height:1';
+      badge.style.cssText='position:absolute;top:3px;left:4px;font-size:16px;line-height:1;max-width:92%;letter-spacing:1px';
       card.style.position='relative';card.appendChild(badge);}
-    const _m=medals[mid];
-    const _rank=_m==='gold'?3:_m==='silver'?2:_m==='bronze'?1:0;
-    badge.textContent=_rank>=1?['🥉','🥈','🥇'].slice(0,_rank).join(''):'';
+    const pm=medals[mid];
+    if(pm&&typeof pm==='object'){
+      const emojis=Object.keys(pm).filter(pid=>MEDAL_DEFS[pid]).map(pid=>MEDAL_DEFS[pid].emoji);
+      badge.textContent=emojis.join('');
+    } else {
+      badge.textContent='';
+    }
   });
 }
 function updateMapPageUI(){
@@ -4599,6 +4819,7 @@ function selectMap(id){
 }
 function backToMapSelect(){
   document.getElementById('diff-select').style.display='none';
+  document.getElementById('diff-sub').style.display='none';
   document.getElementById('map-select').style.display='flex';
   document.getElementById('map-page-nav').style.display='flex';
 }
@@ -4748,15 +4969,68 @@ function sbSpawn(type){
   stats.sandboxSpawns+=sbAmount; checkAchievements(); writeSave();
   wave=saved;
 }
+const DIFF_SUBS={
+  easy:[
+    {id:'easy',          cls:'sc-normal', icon:'🟢', name:'Easy',        desc:'Standard easy — 10 waves, cheaper towers, 300 HP. Great for learning.'},
+    {id:'easy_chaos',    cls:'sc-chaos',  icon:'🌀', name:'Chaos Mode',  desc:'1.8× enemy speed. Same HP & waves but everything moves fast. Stay sharp!'},
+    {id:'easy_goldrush', cls:'sc-choice', icon:'💰', name:'Gold Rush',   desc:'Enemies drop 3× coins but towers cost 2× more. Stack up and splurge.'},
+    {id:'easy_slow',     cls:'sc-unstop', icon:'🐌', name:'Slow Motion', desc:'Enemies crawl at 0.5× speed but have 2× HP. Relaxed pace, tanky foes.'},
+  ],
+  medium:[
+    {id:'medium',           cls:'sc-normal', icon:'🟡', name:'Medium',      desc:'Balanced challenge — 15 waves, normal costs, 250 HP.'},
+    {id:'medium_overdrive', cls:'sc-choice', icon:'🌪️', name:'Overdrive',   desc:'1.5× enemy speed and 1.5× coin drops. Faster waves, bigger rewards — can you keep up?'},
+    {id:'medium_tide',      cls:'sc-unstop', icon:'🌊', name:'Endless Tide',desc:'Enemies have only 0.7× HP but spawn intervals are 40% shorter. Pure volume.'},
+    {id:'medium_fort',      cls:'sc-iron',   icon:'🏰', name:'Fortified',   desc:'Enemies have 2× HP but player has 500 HP. Slow grind — outlast the siege.'},
+  ],
+  hard:[
+    {id:'hard',          cls:'sc-normal', icon:'🔴', name:'Hard',          desc:'Standard hard — 20 waves, pricier towers, 200 HP. No mercy.'},
+    {id:'hard_unstop',   cls:'sc-unstop', icon:'⚡', name:'Unstoppable',   desc:'Enemies never stop between waves. Constant pressure — kill or be overrun.'},
+    {id:'hard_iron',     cls:'sc-iron',   icon:'🛡', name:'Iron Will',     desc:'Only 1 HP. One leak = game over. Towers cost 25% less to compensate.'},
+    {id:'hard_inferno',  cls:'sc-inferno',icon:'🔥', name:'Inferno',       desc:'Enemies have 2× HP and 1.3× speed — but drop 2× coins. Survive the storm.'},
+  ],
+  master:[
+    {id:'master',        cls:'sc-master',       icon:'👑', name:'Master',        desc:'30 waves. 1.2× enemy speed, 0.9× enemy HP, 1.5× tower costs, 1 player HP. One mistake ends it.'},
+    {id:'master_grand',  cls:'sc-grandmaster',  icon:'💀', name:'Grandmaster',   desc:'Master rules + 1.5× enemy speed and no break between waves. Absolute endurance test.'},
+  ],
+};
+function showDiffSub(base){
+  const subs=DIFF_SUBS[base];
+  if(!subs) return;
+  const container=document.getElementById('diff-sub-cards');
+  container.innerHTML='';
+  subs.forEach(s=>{
+    const card=document.createElement('div');
+    card.className='sub-card '+s.cls;
+    card.innerHTML=`<span class="sc-icon">${s.icon}</span><div class="sc-body"><div class="sc-name">${s.name}</div><div class="sc-desc">${s.desc}</div></div>`;
+    card.addEventListener('pointerup',()=>{ closeDiffSub(); startGame(s.id); });
+    container.appendChild(card);
+  });
+  document.getElementById('diff-sub').style.display='flex';
+}
+function closeDiffSub(){
+  document.getElementById('diff-sub').style.display='none';
+}
 function startGame(diff){
   sandboxMode=diff==='sandbox';
   const DIFFS={
-    easy:  {hp:300, maxWaves:10, costMult:0.7,  name:'Easy'},
-    medium:{hp:250, maxWaves:15, costMult:1.0,  name:'Medium'},
-    hard:  {hp:200, maxWaves:20, costMult:1.5,  name:'Hard'},
-    sandbox:{hp:9999,maxWaves:9999,costMult:0.0,name:'Sandbox'},
+    easy:            {hp:300, maxWaves:10, costMult:0.7,  name:'Easy',        speedMod:1.0, hpMod:1.0, coinMod:1.0},
+    easy_chaos:      {hp:300, maxWaves:10, costMult:0.7,  name:'Chaos',       speedMod:1.8, hpMod:1.0, coinMod:1.0},
+    easy_goldrush:   {hp:300, maxWaves:10, costMult:1.4,  name:'Gold Rush',   speedMod:1.0, hpMod:1.0, coinMod:3.0},
+    easy_slow:       {hp:300, maxWaves:10, costMult:0.7,  name:'Slow Motion', speedMod:0.5, hpMod:2.0, coinMod:1.0},
+    medium:          {hp:250, maxWaves:15, costMult:1.0,  name:'Medium',      speedMod:1.0, hpMod:1.0, coinMod:1.0},
+    medium_overdrive:{hp:250, maxWaves:15, costMult:1.0,  name:'Overdrive',   speedMod:1.5, hpMod:1.0, coinMod:1.5},
+    medium_tide:     {hp:250, maxWaves:15, costMult:1.0,  name:'Endless Tide',speedMod:1.0, hpMod:0.7, coinMod:1.0, spawnMod:0.6},
+    medium_fort:     {hp:500, maxWaves:15, costMult:1.0,  name:'Fortified',   speedMod:1.0, hpMod:2.0, coinMod:1.0},
+    hard:         {hp:200, maxWaves:20, costMult:1.5,  name:'Hard',        speedMod:1.0, hpMod:1.0, coinMod:1.0},
+    hard_unstop:  {hp:200, maxWaves:20, costMult:1.5,  name:'Unstoppable', speedMod:1.0, hpMod:1.0, coinMod:1.0, noBetweenWaves:true},
+    hard_iron:    {hp:1,   maxWaves:20, costMult:1.1,  name:'Iron Will',   speedMod:1.0, hpMod:1.0, coinMod:1.0},
+    hard_inferno: {hp:200, maxWaves:20, costMult:1.5,  name:'Inferno',     speedMod:1.3, hpMod:2.0, coinMod:2.0},
+    master:       {hp:1,   maxWaves:30, costMult:1.5,  name:'Master',      speedMod:1.2, hpMod:0.9, coinMod:1.0},
+    master_grand: {hp:1,   maxWaves:30, costMult:1.5,  name:'Grandmaster', speedMod:1.5, hpMod:0.9, coinMod:1.0, noBetweenWaves:true},
+    sandbox:      {hp:9999,maxWaves:9999,costMult:0.0, name:'Sandbox',     speedMod:1.0, hpMod:1.0, coinMod:1.0},
   };
   diffConfig=DIFFS[diff]||DIFFS.medium;
+  diffConfig._pathId=diff;
   const id=pendingMapId;
   mapId=id;
   wpData=id!=='loops'?buildWpData(id):null;
@@ -4768,7 +5042,7 @@ function startGame(diff){
   // Reset state
   coins=sandboxMode?999999:350; cavemen=[]; placedTowers=[]; projectiles=[]; particles=[];
   selectedDef=null; selectedTower=null; focusedEnemyId=null; lastTime=null; gameSpeed=1; gameOver=false; gameWon=false; endlessMode=false;
-  sbAmount=1; enemiesLeakedThisGame=0; shopOpensSinceLastBuy=0; placedHero=null; heroPlaceMode=false; initAnimals();
+  sbAmount=1; enemiesLeakedThisGame=0; shopOpensSinceLastBuy=0; placedHeroes=[]; panelHero=null; heroPlaceMode=false; initAnimals();
   const _sbl=document.getElementById('sb-amt-label'); if(_sbl) _sbl.textContent='×1 per';
   _updateSpeedBtn();
   deselectTower();
