@@ -643,7 +643,10 @@
 <!-- Game UI -->
 <div id="side-panel">
   <div id="coins-display">💰 <span id="coins-el">350</span></div>
-  <div id="coin-drop-btn" onpointerup="useCoinDrop()" style="display:none;background:#1a1208;border:2px solid #c09020;border-radius:5px;color:#f0c040;font-family:monospace;font-size:11px;font-weight:bold;padding:3px 6px;cursor:pointer;text-align:center;touch-action:manipulation">💰 Drop <span id="coin-drop-count">0</span></div>
+  <div style="display:flex;gap:3px;justify-content:center">
+    <div id="coin-drop-btn" onpointerup="useCoinDrop()" style="display:none;background:#1a1208;border:2px solid #c09020;border-radius:5px;color:#f0c040;font-family:monospace;font-size:11px;font-weight:bold;padding:3px 6px;cursor:pointer;text-align:center;touch-action:manipulation">💰 Drop <span id="coin-drop-count">0</span></div>
+    <div id="coin-drop-all-btn" onpointerup="useCoinDropAll()" style="display:none;background:#1a1208;border:2px solid #f0c040;border-radius:5px;color:#ffe060;font-family:monospace;font-size:11px;font-weight:bold;padding:3px 6px;cursor:pointer;text-align:center;touch-action:manipulation">💰 All</div>
+  </div>
   <div id="super-washout-btn" onpointerup="useSuperWashout()" style="display:none;background:#1a0828;border:2px solid #aa22cc;border-radius:5px;color:#ee88ff;font-family:monospace;font-size:11px;font-weight:bold;padding:3px 6px;cursor:pointer;text-align:center;touch-action:manipulation">💥 Washout <span id="super-washout-count">0</span></div>
   <div id="hp-display" style="color:#ff4444;font-size:13px;font-weight:bold;text-align:center">❤️ <span id="hp-el">250</span></div>
   <div id="wave-el" style="color:#f0c040;font-size:12px;font-weight:bold;text-align:center">Wave 0/10</div>
@@ -1926,8 +1929,10 @@ function updateCoinsUI(){
 function updateCoinDropUI(){
   const btn=document.getElementById('coin-drop-btn');
   const cnt=document.getElementById('coin-drop-count');
+  const allBtn=document.getElementById('coin-drop-all-btn');
   if(btn) btn.style.display=coinDrops>0?'block':'none';
   if(cnt) cnt.textContent=coinDrops;
+  if(allBtn) allBtn.style.display=coinDrops>1?'block':'none';
 }
 function itemUnlockWave(){
   if(!diffConfig) return 0;
@@ -1952,6 +1957,18 @@ function useCoinDrop(){
   coinDrops--; coins+=1000; stats.coinDropsUsed++; stats.coinsEarned+=1000;
   updateCoinsUI(); updateCoinDropUI();
   showFloatingMsg('+1000 💰 Coin Drop!','#f0c040');
+}
+function useCoinDropAll(){
+  if(coinDrops<=0||gameOver||gameWon) return;
+  if(checkItemLock()) return;
+  if((diffConfig?.name==='Master'||diffConfig?.name==='Grandmaster')&&wave<12){
+    showFloatingMsg('🔒 Coin Drop unlocks at Wave 12 in Master!','#ff6644'); return;
+  }
+  const total=coinDrops*1000;
+  stats.coinDropsUsed+=coinDrops; stats.coinsEarned+=total;
+  coins+=total; coinDrops=0;
+  updateCoinsUI(); updateCoinDropUI();
+  showFloatingMsg(`+${total} 💰 All Coin Drops!`,'#f0c040');
 }
 function updateSuperWashoutUI(){
   const btn=document.getElementById('super-washout-btn');
