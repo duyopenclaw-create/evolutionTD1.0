@@ -34,13 +34,14 @@
   #title-play:hover{background:#3a1a10;border-color:#ff6030;color:#ffb060}
 
   /* ── Hero Select Panel ── */
-  #hero-view{display:none;flex-direction:column;align-items:center;gap:10px;
-    position:relative;z-index:5;background:#0a0408;color:#ffffff;
-    border:2px solid #7a40aa;border-radius:14px;padding:14px 16px;
-    box-shadow:0 0 30px rgba(120,50,200,0.35);
-    width:calc(100% - 32px);max-width:400px;
-    max-height:calc(100vh - 100px);overflow-y:auto;box-sizing:border-box}
-  #hero-cards-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;width:100%}
+  #hero-view{display:none;flex-direction:column;align-items:center;gap:14px;
+    position:fixed;inset:0;z-index:210;
+    background:rgba(0,0,0,0.82);backdrop-filter:blur(3px);
+    color:#ffffff;padding:20px 16px 16px;overflow-y:auto;box-sizing:border-box}
+  #hero-view-box{display:flex;flex-direction:column;align-items:center;gap:12px;
+    width:100%;max-width:520px;background:#0a0408;border:2px solid #7a40aa;
+    border-radius:16px;padding:18px 16px 16px;box-shadow:0 0 40px rgba(120,50,200,0.5)}
+  #hero-cards-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
   .hero-card{display:flex;flex-direction:column;align-items:center;gap:2px;
     padding:8px 7px 7px;border-radius:9px;border:2px solid #6a30aa;background:#1a0a28;
     cursor:pointer;touch-action:manipulation;transition:border-color 0.15s,background 0.15s,box-shadow 0.15s;
@@ -604,9 +605,11 @@
     </div>
   </div>
   <div id="hero-view">
-    <div style="color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:2px;text-align:center">⚔ CHOOSE YOUR HERO</div>
-    <div id="hero-cards-list"></div>
-    <button onclick="closeHeroPanel()" style="background:#1e0a2a;border:2px solid #7a40aa;color:#ffffff;font-family:monospace;font-size:13px;font-weight:bold;padding:8px 28px;border-radius:8px;cursor:pointer;touch-action:manipulation">← Back to Maps</button>
+    <div id="hero-view-box">
+      <div style="color:#dd88ff;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center">⚔ CHOOSE YOUR HERO</div>
+      <div id="hero-cards-list"></div>
+      <button onclick="closeHeroPanel()" style="background:#1e0a2a;border:2px solid #7a40aa;color:#ffffff;font-family:monospace;font-size:13px;font-weight:bold;padding:10px 36px;border-radius:8px;cursor:pointer;touch-action:manipulation;margin-top:4px">← Back to Maps</button>
+    </div>
   </div>
 </div>
 <!-- Accessibility overlay — top-level so it covers fixed nav buttons -->
