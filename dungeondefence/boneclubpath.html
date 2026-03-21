@@ -2925,21 +2925,22 @@ function drawTower(tower,alpha){
   if(alpha!==undefined) ctx.globalAlpha=alpha;
   const effRange=getTowerEffective(tower).range;
   // Selection highlight
-  const isSniper=tower.def.sniperType;
+  const isFullMap=tower.def.sniperType||tower.def.obliteratorType;
   if(tower===selectedTower){
     ctx.strokeStyle='rgba(255,220,60,0.55)';ctx.lineWidth=2.5;ctx.setLineDash([]);
     ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
-    if(!isSniper){
+    if(!isFullMap){
       ctx.strokeStyle='rgba(255,220,60,0.28)';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
       ctx.beginPath();ctx.arc(0,0,effRange,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
     } else {
-      // sniper: show "∞" label instead of range circle
       ctx.setLineDash([]);
-      ctx.fillStyle='rgba(68,221,170,0.7)';ctx.font='bold 11px monospace';
+      const lbl=tower.def.obliteratorType?'☠ FULL MAP':'∞ RANGE';
+      const lcol=tower.def.obliteratorType?'rgba(255,50,80,0.8)':'rgba(68,221,170,0.7)';
+      ctx.fillStyle=lcol;ctx.font='bold 11px monospace';
       ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('∞ RANGE',0,28);
+      ctx.fillText(lbl,0,28);
     }
-  } else if(!isSniper){
+  } else if(!isFullMap){
     ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.setLineDash([4,6]);
     ctx.beginPath();ctx.arc(0,0,effRange,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
   }
@@ -3377,11 +3378,12 @@ function drawPlacementPreview(){
   const{x,y}=mouseWorld;
   const ok=canPlace(x,y);
   ctx.save();ctx.translate(x,y);
-  if(selectedDef.sniperType){
-    // Don't draw a 9999-radius circle — just show ∞ label
+  if(selectedDef.sniperType||selectedDef.obliteratorType){
+    // Don't draw a 9999-radius circle — just show label
+    const lbl=selectedDef.obliteratorType?'☠ FULL MAP':'∞ RANGE';
     ctx.fillStyle=ok?'rgba(68,221,170,0.75)':'rgba(255,80,80,0.6)';
     ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('∞ RANGE',0,30);
+    ctx.fillText(lbl,0,30);
   } else {
     ctx.strokeStyle=ok?'rgba(100,255,100,0.35)':'rgba(255,80,80,0.35)';
     ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
