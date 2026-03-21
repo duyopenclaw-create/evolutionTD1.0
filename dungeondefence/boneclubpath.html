@@ -1332,11 +1332,20 @@ function renderHeroSelectPanel(){
       list.appendChild(card);
     }
   }
-  // Always sync classes to current state
+  // Always sync classes and unlock label to current state
   list.querySelectorAll('.hero-card').forEach(c=>{
     const cid=c.dataset.heroId;
     const cu=unlockedHeroes.has(cid);
     c.className='hero-card'+(cid===activeHeroId?' selected':'')+(cu?'':' locked');
+    const costEl=c.querySelector('.hc-cost');
+    if(costEl){
+      const hdef=HERO_DEFS.find(x=>x.id===cid);
+      if(hdef&&hdef.permCost>0){
+        costEl.style.color=cu?'#88ff88':'';
+        costEl.style.opacity=cu?'0.9':'';
+        costEl.textContent=cu?'✓ Unlocked':`💵 $${hdef.permCost} cash`;
+      }
+    }
   });
 }
 function updateHeroTowerCard(){
