@@ -3284,12 +3284,20 @@ function drawPlacementPreview(){
   const{x,y}=mouseWorld;
   const ok=canPlace(x,y);
   ctx.save();ctx.translate(x,y);
-  ctx.strokeStyle=ok?'rgba(100,255,100,0.35)':'rgba(255,80,80,0.35)';
-  ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
-  ctx.beginPath();ctx.arc(0,0,selectedDef.range,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle=ok?'rgba(100,255,100,0.07)':'rgba(255,80,80,0.07)';
-  ctx.beginPath();ctx.arc(0,0,selectedDef.range,0,Math.PI*2);ctx.fill();
-  ctx.setLineDash([]);ctx.restore();
+  if(selectedDef.sniperType){
+    // Don't draw a 9999-radius circle — just show ∞ label
+    ctx.fillStyle=ok?'rgba(68,221,170,0.75)':'rgba(255,80,80,0.6)';
+    ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('∞ RANGE',0,30);
+  } else {
+    ctx.strokeStyle=ok?'rgba(100,255,100,0.35)':'rgba(255,80,80,0.35)';
+    ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.arc(0,0,selectedDef.range,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=ok?'rgba(100,255,100,0.07)':'rgba(255,80,80,0.07)';
+    ctx.beginPath();ctx.arc(0,0,selectedDef.range,0,Math.PI*2);ctx.fill();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
   drawTower({x,y,def:selectedDef,aimAngle:0},ok?0.65:0.35);
 }
 
