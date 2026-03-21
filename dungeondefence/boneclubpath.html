@@ -5066,7 +5066,7 @@ function returnToMenu(){
 
 let sbAmount=1;
 function sbChangeAmt(d){
-  sbAmount=Math.max(1,Math.min(25,sbAmount+d));
+  sbAmount=Math.max(1,Math.min(100,sbAmount+d));
   document.getElementById('sb-amt-label').textContent='×'+sbAmount+' per';
 }
 function sbSpawn(type){
