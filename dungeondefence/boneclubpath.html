@@ -2475,36 +2475,30 @@ function updateTowers(dt){
       tower.fireTimer=(tower.fireTimer||0)+dt;
       // Count down active capture
       if(tower.capturedId!=null){
-        tower.captureTimer=(tower.captureTimer||0)-dt;
-        const vic=cavemen.find(c=>c.id===tower.capturedId);
-        if(!vic||tower.captureTimer<=0){
-          if(vic) vic._capturedBy=null;
-          tower.capturedId=null;
+        tower.captureTimer-=dt;
+        if(tower.captureTimer<=0||!cavemen.find(c=>c.id===tower.capturedId)){
+          tower.capturedId=null; tower.captureTimer=0;
         }
       }
-      // Fire every 10s if no active capture
-      if(tower.fireTimer>=10&&!tower.capturedId&&cavemen.length>0){
+      // Fire every 10s when no active capture and enemies exist
+      if(tower.fireTimer>=10&&tower.capturedId==null&&cavemen.length>0){
         tower.fireTimer=0;
         const vic=cavemen[Math.floor(Math.random()*cavemen.length)];
         const eff=getTowerEffective(tower);
-        vic._capturedBy=tower.id;
         tower.capturedId=vic.id;
         tower.captureTimer=1.5;
-        tower.aimAngle=Math.atan2(getEnemyPos(vic).y-tower.y,getEnemyPos(vic).x-tower.x)+Math.PI/2;
         vic.hp-=eff.damage; stats.damageDealt+=eff.damage;
-        vic.hitFlash=0.5;
+        vic.hitFlash=0.4;
         const vpos=getEnemyPos(vic);
         spawnDmgNumber(vpos.x,vpos.y-24,eff.damage,true);
-        showFloatingMsg('☠ OBLITERATED!','#ff2244');
         if(vic.hp<=0){
-          const ep=getEnemyPos(vic);
-          spawnParticles(ep.x,ep.y,ep.scale);
+          spawnParticles(vpos.x,vpos.y,vpos.scale);
           removeMissileFreeze(vic);
           sfxEnemyDie(vic.boss,vic.tank,vic.missile);sfxCoin();
           trackKill(vic);clearFocusIfDead(vic.id);
           cavemen=cavemen.filter(c=>c.id!==vic.id);
           coins+=vic.coins*(wave<=5?2:1); updateCoinsUI();
-          tower.capturedId=null;
+          tower.capturedId=null; tower.captureTimer=0;
         }
       }
       continue;
@@ -3228,27 +3222,29 @@ function drawTower(tower,alpha){
 function drawObliteratorBeams(){
   const now=Date.now()/1000;
   for(const tower of placedTowers){
-    if(!tower.def.obliteratorType||!tower.capturedId) continue;
+    if(!tower.def.obliteratorType||!tower.capturedId||tower.captureTimer<=0) continue;
     const vic=cavemen.find(c=>c.id===tower.capturedId);
     if(!vic) continue;
     const vpos=getEnemyPos(vic);
-    const pulse=0.5+0.5*Math.sin(now*18);
+    const pulse=0.5+0.5*Math.sin(now*3); // slow, steady pulse
     ctx.save();
-    // Beam
-    ctx.strokeStyle=`rgba(255,20,60,${0.7+0.3*pulse})`;
-    ctx.lineWidth=3+pulse*3;
+    ctx.globalAlpha=0.85;
+    // Beam line
+    ctx.strokeStyle='#ff2244';
+    ctx.lineWidth=2.5;
     ctx.lineCap='round';
-    if(!lowVisuals){ctx.shadowColor='#ff0033';ctx.shadowBlur=18;}
+    ctx.setLineDash([8,6]);
     ctx.beginPath();ctx.moveTo(tower.x,tower.y);ctx.lineTo(vpos.x,vpos.y);ctx.stroke();
-    // Pulsing ring on enemy
-    ctx.strokeStyle=`rgba(255,20,60,${0.9*pulse})`;
+    ctx.setLineDash([]);
+    // Ring around enemy
+    ctx.strokeStyle=`rgba(255,30,60,${0.5+0.4*pulse})`;
     ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(vpos.x,vpos.y,20+pulse*10,0,Math.PI*2);ctx.stroke();
-    if(!lowVisuals) ctx.shadowBlur=0;
-    // ☠ icon above enemy
-    ctx.fillStyle='#ff2244';ctx.font=`bold ${16+Math.round(pulse*4)}px monospace`;
+    ctx.beginPath();ctx.arc(vpos.x,vpos.y,18+pulse*6,0,Math.PI*2);ctx.stroke();
+    // ☠ label
+    ctx.globalAlpha=0.9;
+    ctx.fillStyle='#ff4466';ctx.font='bold 14px monospace';
     ctx.textAlign='center';ctx.textBaseline='bottom';
-    ctx.fillText('☠',vpos.x,vpos.y-30);
+    ctx.fillText('☠',vpos.x,vpos.y-24);
     ctx.restore();
   }
 }
@@ -4224,17 +4220,13 @@ function update(ts){
 
   // Move enemies
   const escaped=[];
+  // Build set of enemy IDs currently held by obliterators
+  const oblitHeld=new Set(placedTowers
+    .filter(t=>t.def.obliteratorType&&t.capturedId!=null&&t.captureTimer>0)
+    .map(t=>t.capturedId));
   for(const c of cavemen){
     if(c.hitFlash>0) c.hitFlash-=dt;
-    // Obliterator capture: freeze enemy in place
-    if(c._capturedBy!=null){
-      const capTower=placedTowers.find(t=>t.id===c._capturedBy);
-      if(!capTower||capTower.capturedId!==c.id||capTower.captureTimer<=0){
-        c._capturedBy=null;
-      } else {
-        continue; // skip movement
-      }
-    }
+    if(oblitHeld.has(c.id)) continue; // frozen by obliterator
     if(mapId==='loops'){
       const step=c.angSpeed*dt;
       c.angle+=step; c.totalAngle+=step;
