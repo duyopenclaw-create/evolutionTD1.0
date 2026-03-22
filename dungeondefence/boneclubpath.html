@@ -1533,6 +1533,9 @@ const TOWER_DEFS = [
    range:160,fireRate:5.0, damage:5, projSpeed:320,projColor:'#44ff66',projSize:4,
    desc:'Rapid fire, 5 dmg/shot'},
   // ── Electronic ──
+  {id:12,name:'Wind Bender', cost:550, upgBase:400, dotColor:'#aaeeff',baseCol:'#0a1e2a',
+   range:180,fireRate:1/5,damage:50,projSpeed:0,projColor:'#aaeeff',projSize:0,
+   desc:'Every 5s blasts up to 10 enemies: 50dmg + pushback',windType:true},
   {id:6,name:'Blue Flame',   cost:500, upgBase:350, dotColor:'#44aaff',baseCol:'#0e2a5a',
    range:130,fireRate:10,  damage:2, projSpeed:0,   projColor:'#44aaff',projSize:0,
    desc:'Constant blue fire, 2dmg',flameType:true},
@@ -2243,8 +2246,10 @@ function renderUpgradePanel(){
   const eff=getTowerEffective(t);
   document.getElementById('up-title').textContent=t.def.name;
   const dmg=eff.damage%1===0?eff.damage:eff.damage.toFixed(1);
+  const _pushback=t.def.windType?Math.round(80*UPG_SIZE[t.upgrades[4]||0]):'';
   document.getElementById('up-stats').innerHTML=
     `⚔ ${dmg} &nbsp; ⚡ ${eff.fireRate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(eff.range)} &nbsp; 💥 ${Math.round(eff.critChance*100)}%`+
+    (t.def.windType?` &nbsp; 💨 ${_pushback}px push`:'') +
     (t.totalDamage>0?`<br><span style="color:#ff8866;font-size:9px">Total Dmg: ${fmt(Math.round(t.totalDamage))}</span>`:'');
   document.getElementById('up-sell').textContent=`🪙 Sell  +💰${sellValue(t)}`;
   if(t.def.supporterType){
@@ -2659,6 +2664,46 @@ function updateTowers(dt){
           if(selectedTower===tower) renderUpgradePanel();
         }
       }
+      continue;
+    }
+    // ── Wind Bender ──
+    if(tower.def.windType){
+      tower.fireTimer=(tower.fireTimer||0)+dt;
+      const eff=getTowerEffective(tower);
+      if(tower.fireTimer>=1/eff.fireRate){
+        tower.fireTimer=0;
+        // Collect enemies in range, sorted closest first, up to 10
+        const inRange=cavemen
+          .map(c=>({c,d:Math.hypot(getEnemyPos(c).x-tower.x,getEnemyPos(c).y-tower.y)}))
+          .filter(({d})=>d<=eff.range)
+          .sort((a,b)=>a.d-b.d)
+          .slice(0,10).map(({c})=>c);
+        const pushback=80*UPG_SIZE[tower.upgrades[4]||0]; // Big Shots = bigger wind
+        for(const c of inRange){
+          const dmg=Math.round(eff.damage);
+          c.hp-=dmg; c.hitFlash=0.25; stats.damageDealt+=dmg;
+          tower.totalDamage=(tower.totalDamage||0)+dmg;
+          const pos=getEnemyPos(c);
+          spawnDmgNumber(pos.x,pos.y-20,dmg,false);
+          // Push back along path
+          if(mapId==='loops'){
+            c.angle=Math.max(0,c.angle-pushback/120);
+          } else {
+            c.pathDist=Math.max(0,c.pathDist-pushback);
+          }
+          if(c.hp<=0){
+            spawnParticles(pos.x,pos.y,pos.scale);
+            removeMissileFreeze(c); sfxEnemyDie(c.boss,c.tank,c.missile); sfxCoin();
+            trackKill(c); clearFocusIfDead(c.id);
+            cavemen=cavemen.filter(cc=>cc.id!==c.id);
+            coins+=c.coins*(wave<=5?2:1); updateCoinsUI();
+          }
+        }
+        // Wind burst visual
+        tower.windBurst=0.6;
+        tower.windBurstRadius=eff.range;
+      }
+      if(tower.windBurst>0) tower.windBurst-=dt;
       continue;
     }
     if((tower.frozenTimer||0)>0){ tower.frozenTimer-=dt; continue; }
@@ -3282,6 +3327,28 @@ function drawTower(tower,alpha){
       // glow ring
       ctx.strokeStyle=`rgba(255,100,0,${0.4*pulse})`;ctx.lineWidth=4*pulse;
       ctx.beginPath();ctx.arc(0,-24,13*pulse,0,Math.PI*2);ctx.stroke();
+      break;
+    }
+    case 12:{ // Wind Bender — spinning cyan arcs
+      const now12=Date.now()/1000;
+      const spin=now12*2.5;
+      // Burst flash when firing
+      if(tower.windBurst>0){
+        const ba=tower.windBurst/0.6;
+        ctx.strokeStyle=`rgba(170,238,255,${ba*0.55})`;ctx.lineWidth=3*ba;
+        ctx.beginPath();ctx.arc(0,0,tower.windBurstRadius*(1-ba*0.5),0,Math.PI*2);ctx.stroke();
+      }
+      // Spinning arcs
+      for(let ai=0;ai<3;ai++){
+        ctx.save();ctx.rotate(spin+ai*(Math.PI*2/3));
+        ctx.strokeStyle=`rgba(100,220,255,0.75)`;ctx.lineWidth=2.5;ctx.setLineDash([]);
+        ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*1.2);ctx.stroke();
+        ctx.restore();
+      }
+      // Center dot
+      const wg=ctx.createRadialGradient(0,0,0,0,0,7);
+      wg.addColorStop(0,'rgba(200,240,255,0.95)');wg.addColorStop(1,'rgba(40,130,180,0)');
+      ctx.fillStyle=wg;ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.fill();
       break;
     }
     case 10:{ // Obliterator — red pulsing vortex
