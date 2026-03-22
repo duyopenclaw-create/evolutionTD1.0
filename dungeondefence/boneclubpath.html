@@ -2238,10 +2238,10 @@ function renderUpgradePanel(){
     return;
   }
   const paths=t.def.supporterType
-    ?[{icon:'🎯',name:'Extended Range',path:0},{icon:'⚔',name:'Empowered Aura',path:1},{icon:'⚡',name:'Ultra Boost',path:2},
-      {icon:'💥',name:'Deadly Precision',path:3},{icon:'🔮',name:'Grand Mastery',path:4}]
-    :[{icon:'⚔',name:'Sharp Shots',path:0},{icon:'⚡',name:'Rapid Fire',path:1},{icon:'🎯',name:'Long Range',path:2},
-      {icon:'💥',name:'Deadly Precision',path:3},{icon:'🔮',name:'Grand Mastery',path:4}];
+    ?[{icon:'🎯',name:'Longer Range',path:0},{icon:'⚔',name:'More Damage',path:1},{icon:'⚡',name:'Faster Fire',path:2},
+      {icon:'💥',name:'Crit Hit',path:3},{icon:'🔮',name:'Big Shots',path:4}]
+    :[{icon:'⚔',name:'Sharper',path:0},{icon:'⚡',name:'Faster',path:1},{icon:'🎯',name:'Range',path:2},
+      {icon:'💥',name:'Crit Hit',path:3},{icon:'🔮',name:'Big Shots',path:4}];
   const btnsEl=document.getElementById('up-btns');
   btnsEl.innerHTML='';
   for(const{icon,name,path}of paths){
