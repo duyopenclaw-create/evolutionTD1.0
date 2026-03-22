@@ -239,6 +239,16 @@
                font-size:16px;font-weight:bold;padding:12px 28px;border-radius:8px;cursor:pointer;
                touch-action:manipulation}
   #restart-btn:hover{background:#5a1a10;border-color:#ff6030}
+  #continue-btn{background:#0a2a0a;border:2px solid #22aa22;color:#44ff44;font-family:monospace;
+                font-size:15px;font-weight:bold;padding:10px 24px;border-radius:8px;cursor:pointer;
+                touch-action:manipulation}
+  #continue-btn:hover{background:#0e3a0e;border-color:#44ff44}
+  #continue-btn:disabled{opacity:0.4;cursor:default}
+  #review-btn{background:#0a0a2a;border:2px solid #4466cc;color:#88aaff;font-family:monospace;
+              font-size:14px;font-weight:bold;padding:8px 20px;border-radius:8px;cursor:pointer;
+              touch-action:manipulation}
+  #review-btn:hover{background:#0e0e3a;border-color:#88aaff}
+  #review-timer{color:#6688cc;font-size:11px;min-height:14px}
 
   /* ── Difficulty select ── */
   #diff-select{position:fixed;inset:0;z-index:195;display:none;flex-direction:column;
@@ -723,6 +733,9 @@
     <div id="end-title">💀</div>
     <div id="end-sub">GAME OVER</div>
     <div id="end-wave"></div>
+    <button id="continue-btn" onclick="continueWithCash()">💰 Continue</button>
+    <button id="review-btn" onclick="reviewLastWave()">👁 Review</button>
+    <div id="review-timer"></div>
     <button id="restart-btn" onclick="returnToMenu()">▶ Try Again</button>
   </div>
 </div>
@@ -1800,13 +1813,49 @@ let bossSpawned=false;
 let waveEnemyCount={}; // tracks how many of each type spawned this wave (for debut ramp)
 let playerHp=250;
 function updateHpUI(){ document.getElementById('hp-el').textContent=playerHp; }
+let continueUses=0;
+let reviewCountdown=null;
+function continueCost(){ return Math.max(500, Math.floor(coins*0.5)+500*continueUses); }
 function showGameOver(){
   if(gameOver) return;
   gameOver=true;
   sfxGameOver();
   if(wave>stats.highestWave){stats.highestWave=wave;} writeSave();
   document.getElementById('end-wave').textContent=`Survived to Wave ${wave}/${diffConfig.maxWaves}`;
+  _updateContinueBtn();
+  document.getElementById('review-timer').textContent='';
   document.getElementById('end-screen').classList.add('show');
+}
+function _updateContinueBtn(){
+  const btn=document.getElementById('continue-btn');
+  const cost=continueCost();
+  const canAfford=coins>=cost&&continueUses<3&&!sandboxMode;
+  btn.textContent=continueUses>=3?'❌ No Continues Left':`💰 Continue  (-💰${fmt(cost)})`;
+  btn.disabled=!canAfford;
+}
+function continueWithCash(){
+  const cost=continueCost();
+  if(coins<cost||continueUses>=3) return;
+  coins-=cost; continueUses++;
+  playerHp=1; gameOver=false;
+  updateCoinsUI(); updateHpUI();
+  document.getElementById('end-screen').classList.remove('show');
+  showFloatingMsg('💰 Continued! 1 HP restored','#44ff44');
+}
+function reviewLastWave(){
+  document.getElementById('end-screen').classList.remove('show');
+  let secs=10;
+  document.getElementById('review-timer').textContent='';
+  const tick=setInterval(()=>{
+    secs--;
+    if(secs<=0){
+      clearInterval(tick);
+      document.getElementById('end-screen').classList.add('show');
+      document.getElementById('review-timer').textContent='';
+    } else {
+      document.getElementById('review-timer').textContent=`Returning in ${secs}s…`;
+    }
+  },1000);
 }
 
 const WAVE_WEIGHTS=[
@@ -2189,7 +2238,8 @@ function renderUpgradePanel(){
   document.getElementById('up-title').textContent=t.def.name;
   const dmg=eff.damage%1===0?eff.damage:eff.damage.toFixed(1);
   document.getElementById('up-stats').innerHTML=
-    `⚔ ${dmg} &nbsp; ⚡ ${eff.fireRate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(eff.range)} &nbsp; 💥 ${Math.round(eff.critChance*100)}%`;
+    `⚔ ${dmg} &nbsp; ⚡ ${eff.fireRate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(eff.range)} &nbsp; 💥 ${Math.round(eff.critChance*100)}%`+
+    (t.totalDamage>0?`<br><span style="color:#ff8866;font-size:9px">Total Dmg: ${fmt(Math.round(t.totalDamage))}</span>`:'');
   document.getElementById('up-sell').textContent=`🪙 Sell  +💰${sellValue(t)}`;
   if(t.def.supporterType){
     const u=t.upgrades||[0,0,0];
@@ -2433,7 +2483,7 @@ function fireProjectile(tower,target){
     speed:tower.def.projSpeed,damage:_eff.damage,
     color:tower.def.projColor,size:tower.def.projSize*(_eff.sizeMult||1),
     critChance:_eff.critChance||0,
-    sniper:!!tower.def.sniperType,ox:tower.x,oy:tower.y});
+    sniper:!!tower.def.sniperType,ox:tower.x,oy:tower.y,srcTower:tower});
 }
 function updateProjectiles(dt){
   for(let i=projectiles.length-1;i>=0;i--){
@@ -2475,6 +2525,7 @@ function updateProjectiles(dt){
           const _foc1=p.focused&&c.id===focusedEnemyId?1.2:1;
           const _dmg1=p.damage*(_crit1?2.5:1)*_foc1;
           c.hp-=_dmg1; c.hitFlash=0.18; stats.damageDealt+=_dmg1;
+          if(p.srcTower) p.srcTower.totalDamage=(p.srcTower.totalDamage||0)+_dmg1;
           spawnDmgNumber(pos.x,pos.y-20,_dmg1,_crit1);
           if(c.hp<=0){
             spawnParticles(pos.x,pos.y,pos.scale);
@@ -2523,6 +2574,7 @@ function updateProjectiles(dt){
       const _foc2=p.focused&&tgt.id===focusedEnemyId?1.2:1;
       const _dmg2=p.damage*(_crit2?2.5:1)*_foc2;
       tgt.hp-=_dmg2; tgt.hitFlash=0.18; stats.damageDealt+=_dmg2;
+      if(p.srcTower) p.srcTower.totalDamage=(p.srcTower.totalDamage||0)+_dmg2;
       spawnDmgNumber(tp.x,tp.y-20,_dmg2,_crit2);
       if(tgt.hp<=0){
         const pos=getEnemyPos(tgt);
@@ -2562,6 +2614,7 @@ function updateTowers(dt){
         tower.capturedId=vic.id;
         tower.captureTimer=1.5;
         vic.hp-=eff.damage; stats.damageDealt+=eff.damage;
+        tower.totalDamage=(tower.totalDamage||0)+eff.damage;
         vic.hitFlash=0.4;
         const vpos=getEnemyPos(vic);
         spawnDmgNumber(vpos.x,vpos.y-24,eff.damage,true);
@@ -2629,7 +2682,7 @@ function updateTowers(dt){
           sfxShoot(6);
           const _crit3=Math.random()<0.08;
           const _focMult=tower.isFocusing&&nearest.id===focusedEnemyId?1.2:1;
-          const flameDmg=Math.max(1,Math.round(eff.damage*(_crit3?2.5:1)*_focMult));nearest.hp-=flameDmg;stats.damageDealt+=flameDmg;
+          const flameDmg=Math.max(1,Math.round(eff.damage*(_crit3?2.5:1)*_focMult));nearest.hp-=flameDmg;stats.damageDealt+=flameDmg;tower.totalDamage=(tower.totalDamage||0)+flameDmg;
           const _fp=getEnemyPos(nearest);spawnDmgNumber(_fp.x,_fp.y-20,flameDmg,_crit3);
           nearest.hitFlash=0.08;
           if(nearest.hp<=0){
@@ -2654,12 +2707,12 @@ function updateTowers(dt){
               vx:Math.cos(ang)*tower.def.projSpeed,vy:Math.sin(ang)*tower.def.projSpeed,
               damage:Math.max(1,Math.round(eff.damage)),
               color:tower.def.projColor,size:tower.def.projSize*(eff.sizeMult||1),
-              fireball:true,hitIds:new Set(),fbTargetId:nearest?nearest.id:null,fbLife:8,focused:_isFoc});
+              fireball:true,hitIds:new Set(),fbTargetId:nearest?nearest.id:null,fbLife:8,focused:_isFoc,srcTower:tower});
           } else {
             projectiles.push({x:tower.x,y:tower.y,targetId:nearest.id,
               speed:tower.def.projSpeed,damage:Math.max(1,Math.round(eff.damage)),
               color:tower.def.projColor,size:tower.def.projSize*(eff.sizeMult||1),
-              critChance:eff.critChance||0,focused:_isFoc});
+              critChance:eff.critChance||0,focused:_isFoc,srcTower:tower});
             if(tower.mergeLevel>0){
               // Quad shot: fire at up to 3 more enemies
               const eff2=getTowerEffective(tower);
@@ -4542,7 +4595,7 @@ function handleTap(e){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)||coins<towCost(selectedDef)) return;
     coins-=towCost(selectedDef); updateCoinsUI();
     sfxPlace(); stats.towersPlaced++; writeSave();
-    placedTowers.push({id:nextTowerId++,x,y,def:selectedDef,fireTimer:0,aimAngle:0,upgrades:[0,0,0,0,0],frozenTimer:0});
+    placedTowers.push({id:nextTowerId++,x,y,def:selectedDef,fireTimer:0,aimAngle:0,upgrades:[0,0,0,0,0],frozenTimer:0,totalDamage:0});
     // Keep selected so player can keep tapping to place more; cancel if can't afford another
     if(coins<towCost(selectedDef)) cancelPlacement();
     else rebuildShop();
@@ -5326,7 +5379,7 @@ function startGame(diff){
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
   wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
-  playerHp=diffConfig.hp;
+  playerHp=diffConfig.hp; continueUses=0;
   coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
   updateCoinsUI(); updateHpUI(); updateCoinDropUI(); updateSuperWashoutUI();
   document.getElementById('wave-el').textContent=`Wave 0/${diffConfig.maxWaves}`;
