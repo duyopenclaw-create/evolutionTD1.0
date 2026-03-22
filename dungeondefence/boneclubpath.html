@@ -2144,7 +2144,7 @@ function renderHeroPanel(){
     lvBtn.textContent=`⬆ +1 Lvl — 💰${sandboxMode?'FREE':cost}`;
     lvBtn.disabled=!canAfford;
   }
-  document.getElementById('hp-sell').textContent=`🪙 Sell  +💰${sandboxMode?0:Math.floor(h.def.gameCost*0.7)}`;
+  document.getElementById('hp-sell').textContent=`🪙 Sell  +💰${sandboxMode?0:Math.floor(h.def.gameCost*0.7)+(h.level-1)*10}`;
 }
 function showHeroPanel(){
   renderHeroPanel();
@@ -2156,7 +2156,7 @@ function deselectHero(){
 }
 function sellHero(){
   if(!panelHero) return;
-  const refund=sandboxMode?0:Math.floor(panelHero.def.gameCost*0.7);
+  const refund=sandboxMode?0:Math.floor(panelHero.def.gameCost*0.7)+(panelHero.level-1)*10;
   coins+=refund; updateCoinsUI();
   placedHeroes=placedHeroes.filter(h=>h!==panelHero); panelHero=null;
   document.getElementById('hero-panel').classList.remove('show');
