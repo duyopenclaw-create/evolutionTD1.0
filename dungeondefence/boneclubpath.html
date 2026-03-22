@@ -1874,10 +1874,10 @@ function showWinScreen(){
     medalEl.innerHTML=def?`<span style="font-size:1.4em">${def.emoji}</span> <b>${def.name.toUpperCase()}</b> medal earned!`:'';
   }
   if(allMedalsEl&&mapId){
-    const earned=medals[mapId]?Object.keys(medals[mapId]).filter(pid=>MEDAL_DEFS[pid]):[];
+    const earned=MEDAL_ORDER.filter(pid=>medals[mapId]&&medals[mapId][pid]&&MEDAL_DEFS[pid]);
     if(earned.length>1){
-      const icons=earned.map(pid=>`<span title="${MEDAL_DEFS[pid].name}">${MEDAL_DEFS[pid].emoji}</span>`).join(' ');
-      allMedalsEl.innerHTML=`All medals on this map: ${icons}`;
+      const icons=earned.map(pid=>`<span title="${MEDAL_DEFS[pid].name}" style="filter:drop-shadow(0 0 3px ${MEDAL_TIER_COLOR[MEDAL_DEFS[pid].tier]})">${MEDAL_DEFS[pid].emoji}</span>`).join(' ');
+      allMedalsEl.innerHTML=`This map: ${icons}`;
     } else {
       allMedalsEl.textContent='';
     }
@@ -4853,19 +4853,32 @@ function goMapPage(dir){
   mapPage=Math.max(1,Math.min(4,mapPage+dir));
   updateMapPageUI();
 }
+// Fixed easy→master order for medal display
+const MEDAL_ORDER=['easy','easy_chaos','easy_goldrush','easy_slow',
+  'medium','medium_overdrive','medium_tide','medium_fort',
+  'hard','hard_unstop','hard_iron','hard_inferno',
+  'master','master_grand'];
+const MEDAL_TIER_COLOR={bronze:'#cd7f32',silver:'#c0c0c0',gold:'#ffd700',master:'#ff44aa'};
 function refreshMapMedals(){
   document.querySelectorAll('.map-card[data-mapid]').forEach(card=>{
     const mid=card.dataset.mapid;
     let badge=card.querySelector('.map-medal');
     if(!badge){badge=document.createElement('div');badge.className='map-medal';
-      badge.style.cssText='position:absolute;top:3px;left:4px;font-size:16px;line-height:1;max-width:92%;letter-spacing:1px';
+      badge.style.cssText='position:absolute;top:3px;left:4px;font-size:13px;line-height:1.2;max-width:92%;letter-spacing:0px;display:flex;flex-wrap:wrap;gap:1px;align-items:center';
       card.style.position='relative';card.appendChild(badge);}
     const pm=medals[mid];
+    badge.innerHTML='';
     if(pm&&typeof pm==='object'){
-      const emojis=Object.keys(pm).filter(pid=>MEDAL_DEFS[pid]).map(pid=>MEDAL_DEFS[pid].emoji);
-      badge.textContent=emojis.join('');
-    } else {
-      badge.textContent='';
+      // Show in fixed easy→master order
+      const earned=MEDAL_ORDER.filter(pid=>pm[pid]&&MEDAL_DEFS[pid]);
+      earned.forEach(pid=>{
+        const def=MEDAL_DEFS[pid];
+        const sp=document.createElement('span');
+        sp.title=def.name;
+        sp.textContent=def.emoji;
+        sp.style.cssText=`font-size:13px;line-height:1;filter:drop-shadow(0 0 2px ${MEDAL_TIER_COLOR[def.tier]||'#fff'})`;
+        badge.appendChild(sp);
+      });
     }
   });
 }
