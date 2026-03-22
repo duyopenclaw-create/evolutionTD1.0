@@ -1144,6 +1144,7 @@ const ACHIEVEMENTS=[
   {id:'sec7',name:'Broke',            desc:'You spent every last coin.',                       check:()=>stats.brokeMoments>=1},
   {id:'sec8',name:'Night Owl',        desc:'Playing games past midnight... go to sleep.',      check:()=>stats.playedAtNight>=1},
   {id:'sec9',name:'Pet Lover',        desc:'You clicked 15 animals. They appreciate it.',     check:()=>stats.animalsClicked>=15},
+  {id:'sec10',name:'Shadow Collector',desc:'You found the hidden money in the background.',   check:()=>(stats.bgMoneyTaps||0)>=1,shadow:true},
 ];
 function checkAchievements(){
   let newOnes=[];
@@ -1182,7 +1183,9 @@ function openAchievements(){
     const got=earnedAchievements.has(a.id);
     const row=document.createElement('div');
     row.style.cssText=`display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:${got?'rgba(80,160,20,0.18)':'rgba(255,255,255,0.04)'};border:1px solid ${got?'#3a8010':'#2a2a2a'}`;
-    row.innerHTML=`<span style="font-size:18px">${got?'🏅':'🔒'}</span><div style="flex:1"><div style="font-family:monospace;font-size:12px;font-weight:bold;color:${got?'#aeff66':'#888'}">${a.name}</div><div style="font-family:monospace;font-size:10px;color:${got?'#779944':'#555'}">${got?a.desc:'???'}</div></div>`;
+    const isShadow=a.shadow&&!got;
+    row.style.cssText=`display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:${got?'rgba(80,160,20,0.18)':isShadow?'rgba(30,20,50,0.4)':'rgba(255,255,255,0.04)'};border:1px solid ${got?'#3a8010':isShadow?'#44225a':'#2a2a2a'}`;
+    row.innerHTML=`<span style="font-size:18px">${got?'🏅':isShadow?'👻':'🔒'}</span><div style="flex:1"><div style="font-family:monospace;font-size:12px;font-weight:bold;color:${got?'#aeff66':isShadow?'#7744aa':'#888'}">${isShadow?'??? Shadow ???':a.name}</div><div style="font-family:monospace;font-size:10px;color:${got?'#779944':isShadow?'#553388':'#555'}">${got?a.desc:isShadow?'A secret lurks in the background…':'???'}</div></div>`;
     grid.appendChild(row);
   }
   box.appendChild(grid);
@@ -1735,6 +1738,68 @@ let placedTowers=[], nextTowerId=0;
 let projectiles=[];
 let particles=[];
 let dmgNumbers=[];
+// ── Background money icon ──────────────────────────────────────────────────────
+let bgMoneyIcon=null; // {x,y,taps,maxTaps,life,pulse}
+let bgMoneySpawnTimer=0;
+const BG_MONEY_SPAWN_INTERVAL=20; // check every 20s
+const BG_MONEY_CHANCE=0.10;       // 10% chance
+const BG_MONEY_MAX_TAPS=5;        // 5 taps × $10 = $50 max
+function updateBgMoney(dt){
+  if(gameOver||gamePaused||!waveActive) return;
+  bgMoneySpawnTimer+=dt;
+  if(bgMoneySpawnTimer>=BG_MONEY_SPAWN_INTERVAL){
+    bgMoneySpawnTimer=0;
+    if(!bgMoneyIcon&&Math.random()<BG_MONEY_CHANCE){
+      // Spawn at random position, away from edges
+      bgMoneyIcon={x:60+Math.random()*(W-120),y:60+Math.random()*(H-120),
+        taps:BG_MONEY_MAX_TAPS,maxTaps:BG_MONEY_MAX_TAPS,life:25,pulse:0};
+    }
+  }
+  if(bgMoneyIcon){
+    bgMoneyIcon.life-=dt;
+    bgMoneyIcon.pulse=(bgMoneyIcon.pulse||0)+dt;
+    if(bgMoneyIcon.life<=0) bgMoneyIcon=null;
+  }
+}
+function tapBgMoney(x,y){
+  if(!bgMoneyIcon) return false;
+  const d=Math.hypot(x-bgMoneyIcon.x,y-bgMoneyIcon.y);
+  if(d>28) return false;
+  coins+=10; updateCoinsUI();
+  stats.bgMoneyTaps=(stats.bgMoneyTaps||0)+1;
+  spawnDmgNumber(bgMoneyIcon.x,bgMoneyIcon.y-20,10,false);
+  spawnParticles(bgMoneyIcon.x,bgMoneyIcon.y,0.8);
+  checkAchievements();
+  bgMoneyIcon.taps--;
+  if(bgMoneyIcon.taps<=0){
+    bgMoneyIcon=null;
+    showFloatingMsg('💰 Shadow bonus!','#ffd700');
+  }
+  return true;
+}
+function drawBgMoney(){
+  if(!bgMoneyIcon) return;
+  const{x,y,life,taps,maxTaps,pulse}=bgMoneyIcon;
+  const fade=Math.min(1,life/3)*Math.min(1,(25-life+0.01)/2);
+  const bob=Math.sin(pulse*2.2)*4;
+  const sc=0.85+0.15*Math.sin(pulse*3.5);
+  ctx.save();
+  ctx.globalAlpha=fade*0.82;
+  ctx.translate(x,y+bob);ctx.scale(sc,sc);
+  // Glow
+  const grd=ctx.createRadialGradient(0,0,0,0,0,32);
+  grd.addColorStop(0,'rgba(255,215,0,0.35)');
+  grd.addColorStop(1,'rgba(255,215,0,0)');
+  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.fill();
+  // Coin
+  ctx.font='26px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle=`rgba(255,220,30,${fade})`;
+  ctx.fillText('💰',0,0);
+  // Tap counter
+  ctx.font='bold 10px monospace';ctx.fillStyle='rgba(255,255,200,0.9)';
+  ctx.fillText(`×${taps}`,0,18);
+  ctx.restore();
+}
 let lowVisuals=false;
 let accessibility={noParticles:false,noDmgNumbers:false,muteSounds:false,noBobbing:false,highContrast:false};
 const FONT_MAP={monospace:'monospace',sans:'sans-serif','sans-serif':'sans-serif',serif:'serif',cursive:'cursive',comic:'"Comic Sans MS",cursive'};
@@ -4492,6 +4557,7 @@ function update(ts){
   }
 
   updateAnimals(dt);
+  updateBgMoney(dt);
   updateTowers(dt);
   updateHero(dt);
   updateProjectiles(dt);
@@ -4605,6 +4671,7 @@ function update(ts){
   drawObliteratorBeams();
   if(!lowVisuals) drawFlames();
   if(!lowVisuals) drawParticles(dt);
+  drawBgMoney();
   drawDmgNumbers(dt);
   drawPlacementPreview();
   // Pre-wave countdown overlay
@@ -4645,6 +4712,7 @@ function canvasToWorld(e){
 }
 function handleTap(e){
   const{x,y}=canvasToWorld(e);
+  if(tapBgMoney(x,y)) return;
   if(heroPlaceMode){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)) return;
     const h=HERO_DEFS.find(z=>z.id===activeHeroId);
@@ -5462,7 +5530,7 @@ function startGame(diff){
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
   wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
-  playerHp=diffConfig.hp; continueUses=0;
+  playerHp=diffConfig.hp; continueUses=0; bgMoneyIcon=null; bgMoneySpawnTimer=0;
   coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
   updateCoinsUI(); updateHpUI(); updateCoinDropUI(); updateSuperWashoutUI();
   document.getElementById('wave-el').textContent=`Wave 0/${diffConfig.maxWaves}`;
