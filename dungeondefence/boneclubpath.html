@@ -4543,7 +4543,10 @@ function handleTap(e){
     coins-=towCost(selectedDef); updateCoinsUI();
     sfxPlace(); stats.towersPlaced++; writeSave();
     placedTowers.push({id:nextTowerId++,x,y,def:selectedDef,fireTimer:0,aimAngle:0,upgrades:[0,0,0,0,0],frozenTimer:0});
-    cancelPlacement(); return;
+    // Keep selected so player can keep tapping to place more; cancel if can't afford another
+    if(coins<towCost(selectedDef)) cancelPlacement();
+    else rebuildShop();
+    return;
   }
   // Check animal taps
   for(const a of animals){
