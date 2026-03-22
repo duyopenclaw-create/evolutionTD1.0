@@ -1494,6 +1494,9 @@ function _drawSingleHero(h){
 
 // ── Tower definitions ─────────────────────────────────────────────────────────
 const TOWER_DEFS = [
+  {id:11,name:'Bank',       cost:1200,upgBase:1200,dotColor:'#ffd700',baseCol:'#1a1400',
+   range:0,  fireRate:1/10,damage:100,projSpeed:0,  projColor:'#ffd700',projSize:0,
+   desc:'Generates 💰100 every 10s. Upgrades: income, speed, loans',bankType:true},
   {id:8,name:'The Supporter',cost:120,upgBase:90,dotColor:'#ffdd22',baseCol:'#4a3c08',
    range:185,fireRate:0,damage:0,projSpeed:0,projColor:'#ffdd22',projSize:0,
    desc:'Buffs towers in its aura',supporterType:true},
@@ -1527,9 +1530,6 @@ const TOWER_DEFS = [
   {id:10,name:'Obliterator',cost:1500,upgBase:900, dotColor:'#ff2244',baseCol:'#1a0008',
    range:9999,fireRate:1/10,damage:500,projSpeed:0,  projColor:'#ff0033',projSize:0,
    desc:'Every 10s grabs a random enemy, deals 500dmg, releases',obliteratorType:true},
-  {id:11,name:'Bank',       cost:600, upgBase:400, dotColor:'#ffd700',baseCol:'#1a1400',
-   range:0,  fireRate:1/10,damage:100,projSpeed:0,  projColor:'#ffd700',projSize:0,
-   desc:'Generates 💰100 every 10s. Upgrades: income, speed, loans',bankType:true},
 ];
 
 // ── Ring strips ───────────────────────────────────────────────────────────────
