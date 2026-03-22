@@ -11,7 +11,11 @@
   /* ── Title Screen ── */
   #title-screen{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
                 align-items:center;justify-content:center;background:#0a0a06;gap:22px}
-  #title-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+  #title-particles{position:absolute;inset:0;overflow:hidden;z-index:0}
+  .tp,.tpember{pointer-events:none}
+  @keyframes bgMoneyFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-10px)}}
+  @keyframes bgMoneyBurst{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-30px)}}
+  @keyframes bgMoneyPop{0%{transform:translateX(-50%) scale(1);opacity:1}100%{transform:translateX(-50%) scale(2.5);opacity:0}}
   .tp{position:absolute;top:-60px;font-size:22px;animation:tpfall linear infinite;opacity:0}
   @keyframes tpfall{0%{transform:translateY(0) rotate(0deg);opacity:0}
     10%{opacity:1} 90%{opacity:0.6} 100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
@@ -542,7 +546,7 @@
       <circle cx="860" cy="135" r="14"/><circle cx="860" cy="265" r="14"/><circle cx="860" cy="395" r="14"/>
     </g>
   </svg>
-  <div id="ms-particles" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.3"></div>
+  <div id="ms-particles" style="position:absolute;inset:0;overflow:hidden;z-index:0;opacity:0.3"></div>
   <div id="ms-fire" style="position:absolute;bottom:0;left:0;right:0;height:160px;pointer-events:none;z-index:0;overflow:hidden;opacity:0.3"></div>
   <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center">
     <div id="perm-cash-display">💵 <span id="perm-cash-el">50</span></div>
@@ -1738,68 +1742,52 @@ let placedTowers=[], nextTowerId=0;
 let projectiles=[];
 let particles=[];
 let dmgNumbers=[];
-// ── Background money icon ──────────────────────────────────────────────────────
-let bgMoneyIcon=null; // {x,y,taps,maxTaps,life,pulse}
-let bgMoneySpawnTimer=0;
-const BG_MONEY_SPAWN_INTERVAL=20; // check every 20s
-const BG_MONEY_CHANCE=0.10;       // 10% chance
-const BG_MONEY_MAX_TAPS=5;        // 5 taps × $10 = $50 max
-function updateBgMoney(dt){
-  if(gameOver||gamePaused||!waveActive) return;
-  bgMoneySpawnTimer+=dt;
-  if(bgMoneySpawnTimer>=BG_MONEY_SPAWN_INTERVAL){
-    bgMoneySpawnTimer=0;
-    if(!bgMoneyIcon&&Math.random()<BG_MONEY_CHANCE){
-      // Spawn at random position, away from edges
-      bgMoneyIcon={x:60+Math.random()*(W-120),y:60+Math.random()*(H-120),
-        taps:BG_MONEY_MAX_TAPS,maxTaps:BG_MONEY_MAX_TAPS,life:25,pulse:0};
+// ── Background money icon (title/map-select screens) ──────────────────────────
+let _bgMoneyInterval=null;
+function _spawnBgMoneyEl(container){
+  if(!container) return;
+  // Only one at a time per container
+  if(container.querySelector('.bg-money-icon')) return;
+  const el=document.createElement('div');
+  el.className='bg-money-icon';
+  let taps=5;
+  const updateLabel=()=>{ el.querySelector('.bm-count').textContent=`×${taps}`; };
+  el.style.cssText=`position:absolute;left:${10+Math.random()*80}%;top:${15+Math.random()*60}%;
+    cursor:pointer;pointer-events:auto;user-select:none;text-align:center;
+    animation:bgMoneyFloat 3s ease-in-out infinite;z-index:2;transform:translateX(-50%)`;
+  el.innerHTML=`<div style="font-size:30px;filter:drop-shadow(0 0 8px #ffd700);line-height:1">💰</div>
+    <div class="bm-count" style="font-family:monospace;font-size:11px;font-weight:bold;color:#fff7a0;text-shadow:0 0 6px #ffd700">×5</div>`;
+  el.addEventListener('pointerup',e=>{
+    e.stopPropagation();
+    permCash+=1; updatePermCashUI();
+    stats.bgMoneyTaps=(stats.bgMoneyTaps||0)+1;
+    checkAchievements(); writeSave();
+    // Burst effect
+    const burst=document.createElement('div');
+    burst.textContent='+💰1';
+    burst.style.cssText=`position:absolute;left:0;top:-20px;width:100%;text-align:center;
+      font-family:monospace;font-size:13px;font-weight:bold;color:#ffd700;
+      pointer-events:none;animation:bgMoneyBurst 0.7s ease-out forwards`;
+    el.appendChild(burst);
+    setTimeout(()=>burst.remove(),700);
+    taps--; updateLabel();
+    if(taps<=0){
+      el.style.animation='bgMoneyPop 0.3s ease-out forwards';
+      setTimeout(()=>el.remove(),300);
     }
-  }
-  if(bgMoneyIcon){
-    bgMoneyIcon.life-=dt;
-    bgMoneyIcon.pulse=(bgMoneyIcon.pulse||0)+dt;
-    if(bgMoneyIcon.life<=0) bgMoneyIcon=null;
-  }
+  });
+  container.appendChild(el);
 }
-function tapBgMoney(x,y){
-  if(!bgMoneyIcon) return false;
-  const d=Math.hypot(x-bgMoneyIcon.x,y-bgMoneyIcon.y);
-  if(d>28) return false;
-  coins+=10; updateCoinsUI();
-  stats.bgMoneyTaps=(stats.bgMoneyTaps||0)+1;
-  spawnDmgNumber(bgMoneyIcon.x,bgMoneyIcon.y-20,10,false);
-  spawnParticles(bgMoneyIcon.x,bgMoneyIcon.y,0.8);
-  checkAchievements();
-  bgMoneyIcon.taps--;
-  if(bgMoneyIcon.taps<=0){
-    bgMoneyIcon=null;
-    showFloatingMsg('💰 Shadow bonus!','#ffd700');
-  }
-  return true;
+function startBgMoneySpawner(){
+  if(_bgMoneyInterval) clearInterval(_bgMoneyInterval);
+  _bgMoneyInterval=setInterval(()=>{
+    if(Math.random()<0.10){
+      _spawnBgMoneyEl(document.getElementById('title-particles'));
+      _spawnBgMoneyEl(document.getElementById('ms-particles'));
+    }
+  },20000);
 }
-function drawBgMoney(){
-  if(!bgMoneyIcon) return;
-  const{x,y,life,taps,maxTaps,pulse}=bgMoneyIcon;
-  const fade=Math.min(1,life/3)*Math.min(1,(25-life+0.01)/2);
-  const bob=Math.sin(pulse*2.2)*4;
-  const sc=0.85+0.15*Math.sin(pulse*3.5);
-  ctx.save();
-  ctx.globalAlpha=fade*0.82;
-  ctx.translate(x,y+bob);ctx.scale(sc,sc);
-  // Glow
-  const grd=ctx.createRadialGradient(0,0,0,0,0,32);
-  grd.addColorStop(0,'rgba(255,215,0,0.35)');
-  grd.addColorStop(1,'rgba(255,215,0,0)');
-  ctx.fillStyle=grd;ctx.beginPath();ctx.arc(0,0,32,0,Math.PI*2);ctx.fill();
-  // Coin
-  ctx.font='26px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle=`rgba(255,220,30,${fade})`;
-  ctx.fillText('💰',0,0);
-  // Tap counter
-  ctx.font='bold 10px monospace';ctx.fillStyle='rgba(255,255,200,0.9)';
-  ctx.fillText(`×${taps}`,0,18);
-  ctx.restore();
-}
+startBgMoneySpawner();
 let lowVisuals=false;
 let accessibility={noParticles:false,noDmgNumbers:false,muteSounds:false,noBobbing:false,highContrast:false};
 const FONT_MAP={monospace:'monospace',sans:'sans-serif','sans-serif':'sans-serif',serif:'serif',cursive:'cursive',comic:'"Comic Sans MS",cursive'};
@@ -4557,7 +4545,6 @@ function update(ts){
   }
 
   updateAnimals(dt);
-  updateBgMoney(dt);
   updateTowers(dt);
   updateHero(dt);
   updateProjectiles(dt);
@@ -4671,7 +4658,6 @@ function update(ts){
   drawObliteratorBeams();
   if(!lowVisuals) drawFlames();
   if(!lowVisuals) drawParticles(dt);
-  drawBgMoney();
   drawDmgNumbers(dt);
   drawPlacementPreview();
   // Pre-wave countdown overlay
@@ -4712,7 +4698,6 @@ function canvasToWorld(e){
 }
 function handleTap(e){
   const{x,y}=canvasToWorld(e);
-  if(tapBgMoney(x,y)) return;
   if(heroPlaceMode){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)) return;
     const h=HERO_DEFS.find(z=>z.id===activeHeroId);
@@ -5530,7 +5515,7 @@ function startGame(diff){
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
   wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
-  playerHp=diffConfig.hp; continueUses=0; bgMoneyIcon=null; bgMoneySpawnTimer=0;
+  playerHp=diffConfig.hp; continueUses=0;
   coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
   updateCoinsUI(); updateHpUI(); updateCoinDropUI(); updateSuperWashoutUI();
   document.getElementById('wave-el').textContent=`Wave 0/${diffConfig.maxWaves}`;
