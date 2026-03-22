@@ -1139,16 +1139,16 @@ const ACHIEVEMENTS=[
   {id:'sp9',name:'Type Collector',    desc:'Kill at least 50 of each special enemy type',      check:()=>stats.tankKills>=50&&stats.missileKills>=50&&stats.robotKills>=50},
   {id:'sp10',name:'True Legend',      desc:'25 wins, wave 30 reached, and 2,000 kills',        check:()=>stats.wins>=25&&stats.highestWave>=30&&stats.kills>=2000},
   // Secret achievements — hidden until earned
-  {id:'sec1',name:'Mapper',           desc:'You really love browsing maps.',                   check:()=>mapSelectVisits>=10},
-  {id:'sec2',name:'Indecisive',       desc:'You opened the shop a lot without buying.',        check:()=>shopOpensSinceLastBuy>=15},
-  {id:'sec3',name:'Pause Addict',     desc:'You paused way too many times.',                   check:()=>stats.totalPauses>=30},
-  {id:'sec4',name:'Trophy Hunter',    desc:'You really like checking achievements.',           check:()=>achOpenCount>=10},
-  {id:'sec5',name:'Speed Freak',      desc:'Won a game at full throttle.',                     check:()=>stats.speedWins>=1},
-  {id:'sec6',name:'Leaky Defense',    desc:'Your base took a serious beating.',                check:()=>enemiesLeakedThisGame>=15},
-  {id:'sec7',name:'Broke',            desc:'You spent every last coin.',                       check:()=>stats.brokeMoments>=1},
-  {id:'sec8',name:'Night Owl',        desc:'Playing games past midnight... go to sleep.',      check:()=>stats.playedAtNight>=1},
-  {id:'sec9',name:'Pet Lover',        desc:'You clicked 15 animals. They appreciate it.',     check:()=>stats.animalsClicked>=15},
-  {id:'sec10',name:'Shadow Collector',desc:'You found the hidden money in the background.',   check:()=>(stats.bgMoneyTaps||0)>=1,shadow:true},
+  {id:'sec1',name:'Mapper',           desc:'You really love browsing maps.',                   check:()=>mapSelectVisits>=10,          shadow:true},
+  {id:'sec2',name:'Indecisive',       desc:'You opened the shop a lot without buying.',        check:()=>shopOpensSinceLastBuy>=15,    shadow:true},
+  {id:'sec3',name:'Pause Addict',     desc:'You paused way too many times.',                   check:()=>stats.totalPauses>=30,        shadow:true},
+  {id:'sec4',name:'Trophy Hunter',    desc:'You really like checking achievements.',           check:()=>achOpenCount>=10,             shadow:true},
+  {id:'sec5',name:'Speed Freak',      desc:'Won a game at full throttle.',                     check:()=>stats.speedWins>=1,           shadow:true},
+  {id:'sec6',name:'Leaky Defense',    desc:'Your base took a serious beating.',                check:()=>enemiesLeakedThisGame>=15,    shadow:true},
+  {id:'sec7',name:'Broke',            desc:'You spent every last coin.',                       check:()=>stats.brokeMoments>=1,        shadow:true},
+  {id:'sec8',name:'Night Owl',        desc:'Playing games past midnight... go to sleep.',      check:()=>stats.playedAtNight>=1,       shadow:true},
+  {id:'sec9',name:'Pet Lover',        desc:'You clicked 15 animals. They appreciate it.',     check:()=>stats.animalsClicked>=15,     shadow:true},
+  {id:'sec10',name:'Shadow Collector',desc:'You found the hidden money in the background.',   check:()=>(stats.bgMoneyTaps||0)>=1,   shadow:true},
 ];
 function checkAchievements(){
   let newOnes=[];
