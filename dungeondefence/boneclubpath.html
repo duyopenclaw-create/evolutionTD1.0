@@ -5183,6 +5183,33 @@ const MEDAL_ORDER=['easy','easy_chaos','easy_goldrush','easy_slow',
   'hard','hard_unstop','hard_iron','hard_inferno',
   'master','master_grand'];
 const MEDAL_TIER_COLOR={bronze:'#cd7f32',silver:'#c0c0c0',gold:'#ffd700',master:'#ff44aa'};
+const TIER_PATHS={
+  bronze:['easy','easy_chaos','easy_goldrush','easy_slow'],
+  silver:['medium','medium_overdrive','medium_tide','medium_fort'],
+  gold:  ['hard','hard_unstop','hard_iron','hard_inferno'],
+  master:['master','master_grand'],
+};
+const TIER_BORDER={
+  bronze:'#cd7f32',
+  silver:'#c0c0c0',
+  gold:  '#ffd700',
+  master:'#ff44aa',
+};
+const TIER_GLOW={
+  bronze:'rgba(205,127,50,0.55)',
+  silver:'rgba(192,192,192,0.55)',
+  gold:  'rgba(255,215,0,0.6)',
+  master:'rgba(255,68,170,0.7)',
+};
+function _mapBorderTier(mid){
+  const pm=medals[mid];
+  if(!pm||typeof pm!=='object') return null;
+  if(TIER_PATHS.master.every(p=>pm[p])) return 'master';
+  if(TIER_PATHS.gold.every(p=>pm[p]))   return 'gold';
+  if(TIER_PATHS.silver.every(p=>pm[p])) return 'silver';
+  if(TIER_PATHS.bronze.every(p=>pm[p])) return 'bronze';
+  return null;
+}
 function refreshMapMedals(){
   document.querySelectorAll('.map-card[data-mapid]').forEach(card=>{
     const mid=card.dataset.mapid;
@@ -5192,6 +5219,15 @@ function refreshMapMedals(){
       card.style.position='relative';card.appendChild(badge);}
     const pm=medals[mid];
     badge.innerHTML='';
+    // Tier border
+    const tier=_mapBorderTier(mid);
+    if(tier){
+      card.style.border=`2.5px solid ${TIER_BORDER[tier]}`;
+      card.style.boxShadow=`0 0 12px ${TIER_GLOW[tier]}, inset 0 0 8px ${TIER_GLOW[tier]}`;
+    } else {
+      card.style.border='';
+      card.style.boxShadow='';
+    }
     if(pm&&typeof pm==='object'){
       // Show in fixed easy→master order
       const earned=MEDAL_ORDER.filter(pid=>pm[pid]&&MEDAL_DEFS[pid]);
