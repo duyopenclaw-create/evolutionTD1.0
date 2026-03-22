@@ -1452,7 +1452,7 @@ function _updateSingleHero(h,dt){
   for(const off of offsets){
     projectiles.push({x:h.x,y:h.y,targetId:best.id,speed:h.def.projSpeed,
       damage:dmg,color:h.def.projColor,size:h.def.projSize,
-      critChance,ox:h.x,oy:h.y,heroAngle:baseAngle+off,heroShot:true});
+      critChance,ox:h.x,oy:h.y,heroAngle:baseAngle+off,heroShot:true,srcHero:h});
   }
 }
 function drawHero(){
@@ -2207,7 +2207,8 @@ function renderHeroPanel(){
   document.getElementById('hp-bar').style.width=`${(lv/100)*100}%`;
   document.getElementById('hp-bar').style.background=badgeCol;
   document.getElementById('hp-stats').innerHTML=
-    `⚔ ${Math.round(dmg)} &nbsp; 📏 ${Math.round(range)} &nbsp; ⚡ ${rate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(critChance*100)}% &nbsp; 💥 ${shots} shot${shots>1?'s':''}`;
+    `⚔ ${Math.round(dmg)} &nbsp; 📏 ${Math.round(range)} &nbsp; ⚡ ${rate.toFixed(1)}/s &nbsp; 🎯 ${Math.round(critChance*100)}% &nbsp; 💥 ${shots} shot${shots>1?'s':''}`+
+    (h.totalDamage>0?`<br><span style="color:#ff8866;font-size:9px">Total Dmg: ${fmt(Math.round(h.totalDamage))}</span>`:'');
   const lvBtn=document.getElementById('hp-lvlup');
   if(lv>=100){
     lvBtn.textContent='⭐ MAX LEVEL';
@@ -2555,6 +2556,7 @@ function updateProjectiles(dt){
         const _crit=Math.random()<p.critChance;
         const _dmg=p.damage*(_crit?2.5:1);
         htgt.hp-=_dmg; htgt.hitFlash=0.18; stats.damageDealt+=_dmg;
+        if(p.srcHero) p.srcHero.totalDamage=(p.srcHero.totalDamage||0)+_dmg;
         spawnDmgNumber(htp.x,htp.y-20,_dmg,_crit);
         if(htgt.hp<=0){
           spawnParticles(htp.x,htp.y,htp.scale);
