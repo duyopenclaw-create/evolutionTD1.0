@@ -1675,8 +1675,16 @@ function getWpSpeed(type){
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(n){
-  if(n>=1000000) return (n/1000000).toFixed(n%1000000===0?0:1).replace(/\.0$/,'')+'m';
-  if(n>=1000)    return (n/1000).toFixed(n%1000===0?0:1).replace(/\.0$/,'')+'k';
+  const tiers=[
+    [1e18,'Quintillion'],[1e15,'Quadrillion'],[1e12,'Trillion'],
+    [1e9,'Billion'],[1e6,'Million'],[1e3,'K']
+  ];
+  for(const[v,sfx]of tiers){
+    if(n>=v){
+      const d=(n/v);
+      return d.toFixed(d%1===0||d>=100?0:1).replace(/\.0$/,'')+' '+sfx;
+    }
+  }
   return String(Math.round(n));
 }
 function shade(hsl,amt){
