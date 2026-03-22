@@ -1527,6 +1527,9 @@ const TOWER_DEFS = [
   {id:10,name:'Obliterator',cost:1500,upgBase:900, dotColor:'#ff2244',baseCol:'#1a0008',
    range:9999,fireRate:1/10,damage:500,projSpeed:0,  projColor:'#ff0033',projSize:0,
    desc:'Every 10s grabs a random enemy, deals 500dmg, releases',obliteratorType:true},
+  {id:11,name:'Bank',       cost:600, upgBase:400, dotColor:'#ffd700',baseCol:'#1a1400',
+   range:0,  fireRate:1/10,damage:100,projSpeed:0,  projColor:'#ffd700',projSize:0,
+   desc:'Generates 💰100 every 10s. Upgrades: income, speed, loans',bankType:true},
 ];
 
 // ── Ring strips ───────────────────────────────────────────────────────────────
@@ -2176,6 +2179,47 @@ function renderUpgradePanel(){
     document.getElementById('up-stats').innerHTML=
       `🎯 +${Math.round(SUP_RANGE_BOOST[u[0]]*100)}% &nbsp; ⚔ +${Math.round(SUP_DMG_BOOST[u[1]]*100)}% &nbsp; ⚡ +${Math.round(SUP_RATE_BOOST[u[2]]*100)}%`;
   }
+  if(t.def.bankType){
+    const eff=getTowerEffective(t);
+    const interval=(1/eff.fireRate).toFixed(1);
+    document.getElementById('up-stats').innerHTML=
+      `💰 ${Math.round(eff.damage)}/tick &nbsp; ⏱ every ${interval}s`;
+    const btnsEl=document.getElementById('up-btns');
+    btnsEl.innerHTML='';
+    const bankPaths=[{icon:'💰',name:'More Money',path:0},{icon:'⚡',name:'Faster Income',path:1},{icon:'🏦',name:'Loan Tier',path:2}];
+    for(const{icon,name,path}of bankPaths){
+      const lv=t.upgrades[path];
+      const cost=upgradeCost(t,path);
+      const maxed=lv>=5;
+      const btn=document.createElement('button');
+      btn.className='up-btn'+(maxed?' maxed':'');
+      btn.disabled=maxed||coins<cost;
+      btn.innerHTML=`<div class="up-name">${icon} ${name}</div>
+        <div class="up-lv">${maxed?'MAX':`Lv ${lv}→${lv+1}`}</div>
+        <div class="up-cost">${maxed?'✓ MAX':`💰${cost}`}</div>`;
+      if(!maxed) btn.addEventListener('pointerup',()=>buyUpgrade(path));
+      btnsEl.appendChild(btn);
+    }
+    // Loan button
+    if(t.upgrades[2]>0){
+      const loanBtn=document.createElement('button');
+      const active=t.loanTimer>0;
+      loanBtn.className='up-btn'+(active?' maxed':'');
+      loanBtn.disabled=active;
+      if(active){
+        const repay=Math.round(t.loanAmount*1.5);
+        loanBtn.innerHTML=`<div class="up-name">⏳ Loan Active</div><div class="up-lv">Repays 💰${repay} in ${Math.ceil(t.loanTimer)}s</div>`;
+      } else {
+        const taken=Math.floor(coins*0.8);
+        loanBtn.innerHTML=`<div class="up-name">🏦 Take Loan</div><div class="up-lv">-💰${taken} now</div><div class="up-cost">+💰${Math.round(taken*1.5)} in 10s</div>`;
+        loanBtn.addEventListener('pointerup',takeLoan);
+      }
+      btnsEl.appendChild(loanBtn);
+    }
+    const mergeBtn=document.getElementById('up-merge');
+    if(mergeBtn) mergeBtn.style.display='none';
+    return;
+  }
   const paths=t.def.supporterType
     ?[{icon:'🎯',name:'Longer Range',path:0},{icon:'⚔',name:'More Damage',path:1},{icon:'⚡',name:'Faster Fire',path:2},
       {icon:'💥',name:'Crit Hit',path:3},{icon:'🔮',name:'Big Shots',path:4}]
@@ -2212,6 +2256,17 @@ function renderUpgradePanel(){
       mergeBtn.style.display='none';
     }
   }
+}
+function takeLoan(){
+  if(!selectedTower||!selectedTower.def.bankType) return;
+  const t=selectedTower;
+  if(t.loanTimer>0){showFloatingMsg('🏦 Loan already active!','#ff8844');return;}
+  if(coins<10){showFloatingMsg('Not enough coins!','#ff4444');return;}
+  const taken=Math.floor(coins*0.8);
+  t.loanAmount=taken; t.loanTimer=10;
+  coins-=taken; updateCoinsUI();
+  showFloatingMsg(`🏦 Loan taken! -💰${taken} — repays 💰${Math.round(taken*1.5)} in 10s`,'#ffd700');
+  renderUpgradePanel();
 }
 function buyUpgrade(path){
   if(!selectedTower) return;
@@ -2501,6 +2556,30 @@ function updateTowers(dt){
           cavemen=cavemen.filter(c=>c.id!==vic.id);
           coins+=vic.coins*(wave<=5?2:1); updateCoinsUI();
           tower.capturedId=null; tower.captureTimer=0;
+        }
+      }
+      continue;
+    }
+    // ── Bank ──
+    if(tower.def.bankType){
+      tower.fireTimer=(tower.fireTimer||0)+dt;
+      const eff=getTowerEffective(tower);
+      // Passive income tick
+      if(tower.fireTimer>=1/eff.fireRate){
+        tower.fireTimer=0;
+        const income=Math.round(eff.damage);
+        coins+=income; stats.coinsEarned+=income; updateCoinsUI();
+        spawnDmgNumber(tower.x,tower.y-20,income,false);
+      }
+      // Loan repayment countdown
+      if(tower.loanTimer>0){
+        tower.loanTimer-=dt;
+        if(tower.loanTimer<=0){
+          const repay=Math.round(tower.loanAmount*1.5);
+          coins+=repay; stats.coinsEarned+=repay; updateCoinsUI();
+          showFloatingMsg(`🏦 Loan repaid! +💰${repay}`,'#ffd700');
+          tower.loanAmount=0; tower.loanTimer=0;
+          if(selectedTower===tower) renderUpgradePanel();
         }
       }
       continue;
@@ -2927,7 +3006,7 @@ function drawTower(tower,alpha){
   if(alpha!==undefined) ctx.globalAlpha=alpha;
   const effRange=getTowerEffective(tower).range;
   // Selection highlight
-  const isFullMap=tower.def.sniperType||tower.def.obliteratorType;
+  const isFullMap=tower.def.sniperType||tower.def.obliteratorType||tower.def.bankType;
   if(tower===selectedTower){
     ctx.strokeStyle='rgba(255,220,60,0.55)';ctx.lineWidth=2.5;ctx.setLineDash([]);
     ctx.beginPath();ctx.arc(0,0,20,0,Math.PI*2);ctx.stroke();
@@ -2936,8 +3015,8 @@ function drawTower(tower,alpha){
       ctx.beginPath();ctx.arc(0,0,effRange,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
     } else {
       ctx.setLineDash([]);
-      const lbl=tower.def.obliteratorType?'☠ FULL MAP':'∞ RANGE';
-      const lcol=tower.def.obliteratorType?'rgba(255,50,80,0.8)':'rgba(68,221,170,0.7)';
+      const lbl=tower.def.obliteratorType?'☠ FULL MAP':tower.def.bankType?'🏦 PASSIVE':'∞ RANGE';
+      const lcol=tower.def.obliteratorType?'rgba(255,50,80,0.8)':tower.def.bankType?'rgba(255,215,0,0.8)':'rgba(68,221,170,0.7)';
       ctx.fillStyle=lcol;ctx.font='bold 11px monospace';
       ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText(lbl,0,28);
@@ -3126,6 +3205,52 @@ function drawTower(tower,alpha){
       // glow ring
       ctx.strokeStyle=`rgba(255,100,0,${0.4*pulse})`;ctx.lineWidth=4*pulse;
       ctx.beginPath();ctx.arc(0,-24,13*pulse,0,Math.PI*2);ctx.stroke();
+      break;
+    }
+    case 10:{ // Obliterator — red pulsing vortex
+      const pulse=0.7+0.3*Math.sin(Date.now()/333);
+      const now10=Date.now()/1000;
+      // Outer spinning ring
+      ctx.save();ctx.rotate(now10*1.5);
+      ctx.strokeStyle=`rgba(255,30,60,${0.55*pulse})`;ctx.lineWidth=3*pulse;ctx.setLineDash([6,4]);
+      ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.stroke();
+      ctx.restore();ctx.setLineDash([]);
+      // Core glow
+      const og=ctx.createRadialGradient(0,0,0,0,0,12);
+      og.addColorStop(0,`rgba(255,80,100,${0.9*pulse})`);
+      og.addColorStop(0.5,`rgba(180,0,30,${0.6*pulse})`);
+      og.addColorStop(1,'rgba(80,0,10,0)');
+      ctx.fillStyle=og;ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fill();
+      // Center skull
+      ctx.fillStyle=`rgba(255,180,190,${pulse})`;ctx.font='bold 11px monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('☠',0,1);
+      break;
+    }
+    case 11:{ // Bank — gold coin with $ symbol
+      const pulse=0.9+0.1*Math.sin(Date.now()/600);
+      // Coin body
+      const cg=ctx.createRadialGradient(-4,-5,1,0,0,13);
+      cg.addColorStop(0,'#fff7a0');
+      cg.addColorStop(0.35,'#ffd700');
+      cg.addColorStop(0.75,'#b8860b');
+      cg.addColorStop(1,'rgba(80,50,0,0)');
+      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(0,0,13*pulse,0,Math.PI*2);ctx.fill();
+      // Coin rim
+      ctx.strokeStyle='#c8a000';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.stroke();
+      // $ symbol
+      ctx.fillStyle='#6b4400';ctx.font='bold 12px monospace';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('$',0,1);
+      // Shine arc
+      ctx.strokeStyle='rgba(255,255,200,0.45)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(-3,-4,6,Math.PI*1.1,Math.PI*1.7);ctx.stroke();
+      // Active income pulse ring
+      if(tower.fireTimer!=null){
+        const eff=getTowerEffective(tower);
+        const prog=tower.fireTimer/(1/eff.fireRate);
+        ctx.strokeStyle=`rgba(255,215,0,${0.3+0.3*prog})`;ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(0,0,18+prog*4,0,Math.PI*2);ctx.stroke();
+      }
       break;
     }
   }
@@ -3380,10 +3505,10 @@ function drawPlacementPreview(){
   const{x,y}=mouseWorld;
   const ok=canPlace(x,y);
   ctx.save();ctx.translate(x,y);
-  if(selectedDef.sniperType||selectedDef.obliteratorType){
-    // Don't draw a 9999-radius circle — just show label
-    const lbl=selectedDef.obliteratorType?'☠ FULL MAP':'∞ RANGE';
-    ctx.fillStyle=ok?'rgba(68,221,170,0.75)':'rgba(255,80,80,0.6)';
+  if(selectedDef.sniperType||selectedDef.obliteratorType||selectedDef.bankType){
+    // Don't draw a large/zero-radius circle — just show label
+    const lbl=selectedDef.obliteratorType?'☠ FULL MAP':selectedDef.bankType?'🏦 PASSIVE':'∞ RANGE';
+    ctx.fillStyle=ok?(selectedDef.bankType?'rgba(255,215,0,0.85)':'rgba(68,221,170,0.75)'):'rgba(255,80,80,0.6)';
     ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(lbl,0,30);
   } else {
