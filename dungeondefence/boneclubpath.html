@@ -5436,6 +5436,8 @@ function pauseRestart(){
   const diff=diffConfig._pathId||'medium';
   pendingMapId=mapId;
   startGame(diff);
+  // Don't restore coin drops on restart — only on fresh game start from menu
+  coinDrops=0; updateCoinDropUI();
 }
 function returnToMenu(){
   // Stop game
