@@ -5433,12 +5433,9 @@ function pauseRestart(){
   gamePaused=false;
   const pauseBtn=document.getElementById('pause-btn');
   pauseBtn.textContent='⏸ Pause'; pauseBtn.classList.remove('paused');
-  const savedCoins=coins;
   const diff=diffConfig._pathId||'medium';
   pendingMapId=mapId;
   startGame(diff);
-  // Keep coins from before restart, but don't restore coin drops
-  coins=savedCoins; updateCoinsUI();
   coinDrops=0; updateCoinDropUI();
 }
 function returnToMenu(){
