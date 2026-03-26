@@ -5219,14 +5219,17 @@ function refreshMapMedals(){
       card.style.position='relative';card.appendChild(badge);}
     const pm=medals[mid];
     badge.innerHTML='';
-    // Tier border
+    // Tier border on the map preview canvas
     const tier=_mapBorderTier(mid);
-    if(tier){
-      card.style.border=`2.5px solid ${TIER_BORDER[tier]}`;
-      card.style.boxShadow=`0 0 12px ${TIER_GLOW[tier]}, inset 0 0 8px ${TIER_GLOW[tier]}`;
-    } else {
-      card.style.border='';
-      card.style.boxShadow='';
+    const cvs=card.querySelector('canvas');
+    if(cvs){
+      if(tier){
+        cvs.style.border=`3px solid ${TIER_BORDER[tier]}`;
+        cvs.style.boxShadow=`0 0 10px ${TIER_GLOW[tier]}, 0 0 4px ${TIER_GLOW[tier]}`;
+      } else {
+        cvs.style.border='2px solid #3a2808';
+        cvs.style.boxShadow='';
+      }
     }
     if(pm&&typeof pm==='object'){
       // Show in fixed easy→master order
