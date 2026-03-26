@@ -5558,7 +5558,7 @@ function startGame(diff){
   document.getElementById('win-screen').classList.remove('show');
   wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={};
   playerHp=diffConfig.hp; continueUses=0;
-  coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
+  coinDrops=5; superWashouts=permSuperWashouts;
   updateCoinsUI(); updateHpUI(); updateCoinDropUI(); updateSuperWashoutUI();
   document.getElementById('wave-el').textContent=`Wave 0/${diffConfig.maxWaves}`;
   document.getElementById('wstatus-el').textContent='';
