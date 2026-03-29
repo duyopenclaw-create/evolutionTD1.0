@@ -2648,6 +2648,7 @@ function toggleAcc(key){
   accessibility[key]=!accessibility[key];
   applyAccessibility();
   updateAccessUI();
+  if(key==='simplerMusic'&&bgmActive){ stopBgm(); startBgm(); }
 }
 function applyAccessibility(){
   const hide=accessibility.noParticles;
