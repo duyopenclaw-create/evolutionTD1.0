@@ -784,7 +784,6 @@
     <div class="acc-row"><span>No enemy bobbing</span><button class="acc-toggle" id="acc-noBobbing" onclick="toggleAcc('noBobbing')">OFF</button></div>
     <div class="acc-row"><span>High contrast path</span><button class="acc-toggle" id="acc-highContrast" onclick="toggleAcc('highContrast')">OFF</button></div>
     <div class="acc-row"><span>Short numbers (K, M, B…)</span><button class="acc-toggle on" id="acc-shortNumbers" onclick="toggleAcc('shortNumbers')">ON</button></div>
-    <div class="acc-row"><span>Simpler music (drums + melody only)</span><button class="acc-toggle" id="acc-simplerMusic" onclick="toggleAcc('simplerMusic')">OFF</button></div>
     <div class="acc-row" style="flex-direction:column;align-items:flex-start;gap:6px">
       <span>Font</span>
       <div style="display:flex;gap:5px;width:100%;flex-wrap:wrap" id="font-btn-row">
@@ -1208,47 +1207,47 @@ function scheduleBgm(){
   // Melody — square wave
   let t=bgmNextTime;
   for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.14,t,musicGain);t+=b*BGM_BEAT;}
-  if(!accessibility.simplerMusic){
-    // Harmony — triangle wave (softer)
-    t=bgmNextTime;
-    for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
-    // Violin — settling legato phrases
-    t=bgmNextTime;
-    for(const[f,b]of BGM_VIOLIN){violinTone(f,b*BGM_BEAT*0.95,0.07,t);t+=b*BGM_BEAT;}
-    // Piano — chord hit then broken notes after (root→5th→oct→5th)
-    t=bgmNextTime;
-    for(const[freqs,b]of BGM_PIANO){
-      const beatLen=b*BGM_BEAT;
-      const noteGap=beatLen*0.28;
-      for(const f of freqs) pianoTone(f,beatLen*0.5,0.13,t);
-      const run=[freqs[0],freqs[1],freqs[2],freqs[1]];
-      run.forEach((f,i)=>pianoTone(f,noteGap*0.85,0.07,t+beatLen*0.35+i*noteGap));
-      t+=beatLen;
-    }
-    // Arp — 16th-note sine sparkle
-    {
-      const S16=BGM_BEAT*0.25;
-      const beatsPerChord=6, notesPerChord=beatsPerChord*4;
-      const pat=[0,1,2,3,2,1];
-      for(let ci=0;ci<BGM_ARP_CHORDS.length;ci++){
-        const chord=BGM_ARP_CHORDS[ci];
-        const chordStart=bgmNextTime+ci*beatsPerChord*BGM_BEAT;
-        for(let n=0;n<notesPerChord;n++){
-          const f=chord[pat[n%pat.length]];
-          tone(f,'sine',S16*0.75,(n%4===0)?0.22:0.14,chordStart+n*S16,musicGain);
-        }
+  // Harmony — triangle wave (softer)
+  t=bgmNextTime;
+  for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
+  // Violin — settling legato phrases
+  t=bgmNextTime;
+  for(const[f,b]of BGM_VIOLIN){violinTone(f,b*BGM_BEAT*0.95,0.07,t);t+=b*BGM_BEAT;}
+  // Piano — chord hit then broken notes after (root→5th→oct→5th)
+  t=bgmNextTime;
+  for(const[freqs,b]of BGM_PIANO){
+    const beatLen=b*BGM_BEAT;
+    const noteGap=beatLen*0.28;
+    for(const f of freqs) pianoTone(f,beatLen*0.5,0.13,t);
+    const run=[freqs[0],freqs[1],freqs[2],freqs[1]];
+    run.forEach((f,i)=>pianoTone(f,noteGap*0.85,0.07,t+beatLen*0.35+i*noteGap));
+    t+=beatLen;
+  }
+  // Arp — 16th-note sine sparkle, up-down pattern over 4 chord blocks of 6 beats each
+  {
+    const S16=BGM_BEAT*0.25;
+    const beatsPerChord=6;
+    const notesPerChord=beatsPerChord*4;
+    const pat=[0,1,2,3,2,1];
+    for(let ci=0;ci<BGM_ARP_CHORDS.length;ci++){
+      const chord=BGM_ARP_CHORDS[ci];
+      const chordStart=bgmNextTime+ci*beatsPerChord*BGM_BEAT;
+      for(let n=0;n<notesPerChord;n++){
+        const f=chord[pat[n%pat.length]];
+        const vol=(n%4===0)?0.22:0.14;
+        tone(f,'sine',S16*0.75,vol,chordStart+n*S16,musicGain);
       }
     }
-    // Bass — sawtooth
-    t=bgmNextTime;
-    for(const[f,b]of BGM_BASS){
-      tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
-      tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
-    }
-    // Synth bass — punchy pluck
-    t=bgmNextTime;
-    for(const[f,b]of BGM_SYNTH_BASS) bassTone(f,b*BGM_BEAT*0.88,0.28,t),t+=b*BGM_BEAT;
   }
+  // Bass — sawtooth (each note hit twice)
+  t=bgmNextTime;
+  for(const[f,b]of BGM_BASS){
+    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
+    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
+  }
+  // Synth bass — punchy pluck following melody 2 octaves down
+  t=bgmNextTime;
+  for(const[f,b]of BGM_SYNTH_BASS) bassTone(f,b*BGM_BEAT*0.88,0.28,t),t+=b*BGM_BEAT;
   // Drums — 6 bars of 4/4
   for(let i=0;i<24;i++){
     const bt=bgmNextTime+i*BGM_BEAT;
@@ -2595,7 +2594,7 @@ function startShieldSpawner(){
 startShieldSpawner();
 
 let lowVisuals=false;
-let accessibility={noParticles:false,noDmgNumbers:false,muteSounds:false,noBobbing:false,highContrast:false,shortNumbers:true,simplerMusic:false};
+let accessibility={noParticles:false,noDmgNumbers:false,muteSounds:false,noBobbing:false,highContrast:false,shortNumbers:true};
 const FONT_MAP={monospace:'monospace',sans:'sans-serif','sans-serif':'sans-serif',serif:'serif',cursive:'cursive',comic:'"Comic Sans MS",cursive'};
 let activeFont='monospace';
 function setFont(key){
@@ -2648,7 +2647,6 @@ function toggleAcc(key){
   accessibility[key]=!accessibility[key];
   applyAccessibility();
   updateAccessUI();
-  if(key==='simplerMusic'&&bgmActive){ stopBgm(); startBgm(); }
 }
 function applyAccessibility(){
   const hide=accessibility.noParticles;
@@ -2660,7 +2658,7 @@ function applyAccessibility(){
   if(masterGain) masterGain.gain.value=accessibility.muteSounds?0:(audioEnabled?1:0);
 }
 function updateAccessUI(){
-  ['noParticles','noDmgNumbers','muteSounds','noBobbing','highContrast','shortNumbers','simplerMusic'].forEach(k=>{
+  ['noParticles','noDmgNumbers','muteSounds','noBobbing','highContrast','shortNumbers'].forEach(k=>{
     const btn=document.getElementById('acc-'+k);
     if(btn){btn.textContent=accessibility[k]?'ON':'OFF';btn.classList.toggle('on',accessibility[k]);}
   });
