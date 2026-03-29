@@ -1102,7 +1102,7 @@ const BGM_ARP_CHORDS=[
   [262,392,523,659],  // C:   C4 G4 C5 E5
 ];
 const BGM_BPM=132,BGM_BEAT=60/BGM_BPM;
-let bgmNextTime=0;
+let bgmNextTime=0, bgmLoopCount=0;
 
 function drumKick(t,vol=1){
   const ctx=getACtx();
@@ -1207,47 +1207,51 @@ function scheduleBgm(){
   // Melody — square wave
   let t=bgmNextTime;
   for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.14,t,musicGain);t+=b*BGM_BEAT;}
-  // Harmony — triangle wave (softer)
-  t=bgmNextTime;
-  for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
-  // Violin — settling legato phrases
-  t=bgmNextTime;
-  for(const[f,b]of BGM_VIOLIN){violinTone(f,b*BGM_BEAT*0.95,0.07,t);t+=b*BGM_BEAT;}
-  // Piano — chord hit then broken notes after (root→5th→oct→5th)
-  t=bgmNextTime;
-  for(const[freqs,b]of BGM_PIANO){
-    const beatLen=b*BGM_BEAT;
-    const noteGap=beatLen*0.28;
-    for(const f of freqs) pianoTone(f,beatLen*0.5,0.13,t);
-    const run=[freqs[0],freqs[1],freqs[2],freqs[1]];
-    run.forEach((f,i)=>pianoTone(f,noteGap*0.85,0.07,t+beatLen*0.35+i*noteGap));
-    t+=beatLen;
-  }
-  // Arp — 16th-note sine sparkle, up-down pattern over 4 chord blocks of 6 beats each
-  {
-    const S16=BGM_BEAT*0.25;
-    const beatsPerChord=6;
-    const notesPerChord=beatsPerChord*4;
-    const pat=[0,1,2,3,2,1];
-    for(let ci=0;ci<BGM_ARP_CHORDS.length;ci++){
-      const chord=BGM_ARP_CHORDS[ci];
-      const chordStart=bgmNextTime+ci*beatsPerChord*BGM_BEAT;
-      for(let n=0;n<notesPerChord;n++){
-        const f=chord[pat[n%pat.length]];
-        const vol=(n%4===0)?0.22:0.14;
-        tone(f,'sine',S16*0.75,vol,chordStart+n*S16,musicGain);
+  // Full arrangement: loops 0-2 (3 loops), then drops to drums+melody for loops 3-4 (2 loops), repeat
+  const _fullLoop = bgmLoopCount % 5 < 3;
+  if(_fullLoop){
+    // Harmony — triangle wave (softer)
+    t=bgmNextTime;
+    for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
+    // Violin — settling legato phrases
+    t=bgmNextTime;
+    for(const[f,b]of BGM_VIOLIN){violinTone(f,b*BGM_BEAT*0.95,0.07,t);t+=b*BGM_BEAT;}
+    // Piano — chord hit then broken notes after (root→5th→oct→5th)
+    t=bgmNextTime;
+    for(const[freqs,b]of BGM_PIANO){
+      const beatLen=b*BGM_BEAT;
+      const noteGap=beatLen*0.28;
+      for(const f of freqs) pianoTone(f,beatLen*0.5,0.13,t);
+      const run=[freqs[0],freqs[1],freqs[2],freqs[1]];
+      run.forEach((f,i)=>pianoTone(f,noteGap*0.85,0.07,t+beatLen*0.35+i*noteGap));
+      t+=beatLen;
+    }
+    // Arp — 16th-note sine sparkle, up-down pattern over 4 chord blocks of 6 beats each
+    {
+      const S16=BGM_BEAT*0.25;
+      const beatsPerChord=6;
+      const notesPerChord=beatsPerChord*4;
+      const pat=[0,1,2,3,2,1];
+      for(let ci=0;ci<BGM_ARP_CHORDS.length;ci++){
+        const chord=BGM_ARP_CHORDS[ci];
+        const chordStart=bgmNextTime+ci*beatsPerChord*BGM_BEAT;
+        for(let n=0;n<notesPerChord;n++){
+          const f=chord[pat[n%pat.length]];
+          const vol=(n%4===0)?0.22:0.14;
+          tone(f,'sine',S16*0.75,vol,chordStart+n*S16,musicGain);
+        }
       }
     }
+    // Bass — sawtooth (each note hit twice)
+    t=bgmNextTime;
+    for(const[f,b]of BGM_BASS){
+      tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
+      tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
+    }
+    // Synth bass — punchy pluck following melody 2 octaves down
+    t=bgmNextTime;
+    for(const[f,b]of BGM_SYNTH_BASS) bassTone(f,b*BGM_BEAT*0.88,0.28,t),t+=b*BGM_BEAT;
   }
-  // Bass — sawtooth (each note hit twice)
-  t=bgmNextTime;
-  for(const[f,b]of BGM_BASS){
-    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
-    tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
-  }
-  // Synth bass — punchy pluck following melody 2 octaves down
-  t=bgmNextTime;
-  for(const[f,b]of BGM_SYNTH_BASS) bassTone(f,b*BGM_BEAT*0.88,0.28,t),t+=b*BGM_BEAT;
   // Drums — 6 bars of 4/4
   for(let i=0;i<24;i++){
     const bt=bgmNextTime+i*BGM_BEAT;
@@ -1273,11 +1277,12 @@ function scheduleBgm(){
   }
   const totalBeats=BGM.reduce((s,[,b])=>s+b,0)*BGM_BEAT;
   bgmNextTime+=totalBeats;
+  bgmLoopCount++;
   bgmLoopId=setTimeout(scheduleBgm,(totalBeats-0.6)*1000);
 }
 function startBgm(){
   if(bgmActive)return;
-  bgmActive=true;
+  bgmActive=true; bgmLoopCount=0;
   const ctx=getACtx();
   bgmNextTime=ctx.currentTime+0.05;
   scheduleBgm();
