@@ -2670,6 +2670,9 @@ function updateAccessUI(){
 let selectedDef=null;
 let selectedTower=null;
 let mouseWorld={x:0,y:0};
+let mouseScreen={x:0,y:0};
+let weaponSwingAnim=0; // counts down, >0 = swinging
+let weaponCooldown=0; // counts down, must be 0 to deal damage again
 let focusedEnemyId=null; // id of tapped/targeted enemy
 function clearFocusIfDead(id){
   if(focusedEnemyId===id){focusedEnemyId=null;for(const t of placedTowers)t.isFocusing=false;}
@@ -2689,7 +2692,7 @@ let reviewCountdown=null;
 function continueCost(){ return Math.max(500, Math.floor(coins*0.5)+500*continueUses); }
 function showGameOver(){
   if(gameOver) return;
-  gameOver=true;
+  gameOver=true; canvas.style.cursor='default';
   sfxGameOver();
   clearResumeState();
   if(wave>stats.highestWave){stats.highestWave=wave;} writeSave();
@@ -2819,7 +2822,7 @@ function endWave(){
   saveGameState();
 }
 function showWinScreen(){
-  gameWon=true;
+  gameWon=true; canvas.style.cursor='default';
   sfxWin();
   stats.wins++;
   if(MEDAL_DEFS[diffConfig._pathId]?.tier==='gold') stats.hardWins++;
@@ -3746,6 +3749,157 @@ function drawTrees(){ for(const tr of TREES) drawTree(tr.x,tr.y); }
 function drawPreviewTrees(c,sx,sy){
   for(const tr of TREES) _treeAt(c,tr.x*sx,tr.y*sy,0.55);
 }
+// ── Cursor weapon system ──────────────────────────────────────────────────────
+function getWeaponTier(lvl){
+  if(lvl<10)  return null;
+  if(lvl<25)  return {id:'sword',      name:'Sharp Sword',  dmg:5,   range:55, aoe:false};
+  if(lvl<50)  return {id:'firesword',  name:'Fire Sword',   dmg:50,  range:60, aoe:false};
+  if(lvl<100) return {id:'triplesword',name:'Triple Sword', dmg:100, range:65, aoe:false};
+  return {id:'grenade',name:'Grenade', dmg:1000+Math.floor((lvl-100)/10)*250, range:80, aoe:true};
+}
+function _drawSharpSword(){
+  // Blade (tip at 0,0, handle downward)
+  const bg=ctx.createLinearGradient(-4,0,4,0);
+  bg.addColorStop(0,'#999');bg.addColorStop(0.45,'#fff');bg.addColorStop(1,'#777');
+  ctx.fillStyle=bg;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(4,52);ctx.lineTo(-4,52);ctx.closePath();ctx.fill();
+  // Red tip
+  ctx.fillStyle='#ff2200';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(3,14);ctx.lineTo(-3,14);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,80,0,0.55)';
+  ctx.beginPath();ctx.arc(0,4,5,0,Math.PI*2);ctx.fill();
+  // Edge lines
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=0.8;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(4,52);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-4,52);ctx.stroke();
+  // Guard
+  ctx.fillStyle='#aaa';ctx.strokeStyle='#555';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(-10,50,20,5,2);ctx.fill();ctx.stroke();
+  // Handle
+  const hg=ctx.createLinearGradient(-3,55,3,55);
+  hg.addColorStop(0,'#5a2d0c');hg.addColorStop(0.5,'#9c5a2a');hg.addColorStop(1,'#5a2d0c');
+  ctx.fillStyle=hg;ctx.fillRect(-3,55,6,20);
+  ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=0.5;
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-3,58+i*5);ctx.lineTo(3,58+i*5);ctx.stroke();}
+  // Pommel
+  ctx.fillStyle='#bbb';ctx.strokeStyle='#666';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(0,76,4,0,Math.PI*2);ctx.fill();ctx.stroke();
+}
+function _drawFireSword(){
+  const t=Date.now()/600;
+  // Blade - hot gradient
+  const bg=ctx.createLinearGradient(-4,0,4,0);
+  bg.addColorStop(0,'#ff6600');bg.addColorStop(0.5,'#ffee00');bg.addColorStop(1,'#ff4400');
+  ctx.fillStyle=bg;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(5,56);ctx.lineTo(-5,56);ctx.closePath();ctx.fill();
+  // Flame shimmer overlay
+  ctx.fillStyle='rgba(255,220,0,0.4)';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(2,20);ctx.lineTo(-2,20);ctx.closePath();ctx.fill();
+  // Animated flame licks
+  ctx.save();
+  for(let i=0;i<5;i++){
+    const fy=8+i*9;
+    const fx=Math.sin(t+i*1.3)*4;
+    const alpha=0.7-i*0.1;
+    ctx.fillStyle=`rgba(255,${140+i*20},0,${alpha})`;
+    ctx.beginPath();ctx.arc(fx,fy,3.5-i*0.4,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+  // Edge glow
+  ctx.strokeStyle='rgba(255,120,0,0.6)';ctx.lineWidth=1.5;
+  ctx.shadowColor='#ff8800';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(5,56);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-5,56);ctx.stroke();
+  ctx.shadowBlur=0;
+  // Guard
+  ctx.fillStyle='#cc4400';ctx.strokeStyle='#881100';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(-11,54,22,5,2);ctx.fill();ctx.stroke();
+  // Handle
+  ctx.fillStyle='#222';ctx.fillRect(-3,59,6,20);
+  ctx.fillStyle='rgba(255,80,0,0.5)';
+  for(let i=0;i<3;i++){ctx.fillRect(-3,61+i*6,6,3);}
+  // Pommel
+  ctx.fillStyle='#ff4400';ctx.strokeStyle='#881100';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(0,80,4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+}
+function _drawTripleSword(){
+  for(let s=-1;s<=1;s++){
+    const ox=s*9;
+    const len=s===0?60:52;
+    const bg=ctx.createLinearGradient(ox-3,0,ox+3,0);
+    bg.addColorStop(0,'#888');bg.addColorStop(0.5,'#eee');bg.addColorStop(1,'#666');
+    ctx.fillStyle=bg;
+    ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox+3,len);ctx.lineTo(ox-3,len);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=0.6;
+    ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox+3,len);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox-3,len);ctx.stroke();
+  }
+  // Tips highlight
+  ctx.fillStyle='#ddf';
+  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();
+  // Shared guard
+  ctx.fillStyle='#999';ctx.strokeStyle='#444';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(-19,58,38,5,2);ctx.fill();ctx.stroke();
+  // Handle
+  const hg=ctx.createLinearGradient(-3,63,3,63);
+  hg.addColorStop(0,'#4a1f0a');hg.addColorStop(0.5,'#7a3a18');hg.addColorStop(1,'#4a1f0a');
+  ctx.fillStyle=hg;ctx.fillRect(-3,63,6,18);
+  ctx.fillStyle='#bbb';ctx.beginPath();ctx.arc(0,82,4,0,Math.PI*2);ctx.fill();
+}
+function _drawGrenade(){
+  const t=Date.now()/400;
+  // Body
+  const rg=ctx.createRadialGradient(-4,-4,2,0,0,14);
+  rg.addColorStop(0,'#6db36d');rg.addColorStop(0.6,'#3a7a3a');rg.addColorStop(1,'#1a4a1a');
+  ctx.fillStyle=rg;ctx.strokeStyle='#1a3a1a';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // Segment lines
+  ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(13,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,13);ctx.stroke();
+  // Shine
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.beginPath();ctx.ellipse(-4,-4,5,3,Math.PI*0.3,0,Math.PI*2);ctx.fill();
+  // Neck
+  ctx.fillStyle='#888';ctx.strokeStyle='#444';ctx.lineWidth=1;
+  ctx.fillRect(-3,-17,6,5);ctx.strokeRect(-3,-17,6,5);
+  // Pin ring
+  ctx.strokeStyle='#ccc';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,-18,3.5,0,Math.PI*2);ctx.stroke();
+  // Fuse with spark
+  ctx.strokeStyle='#886633';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,-21);
+  ctx.bezierCurveTo(5,-26,8,-28,6+Math.sin(t)*2,-32);
+  ctx.stroke();
+  // Spark at fuse tip
+  const sparkAlpha=0.7+Math.sin(t*4)*0.3;
+  ctx.fillStyle=`rgba(255,200,0,${sparkAlpha})`;
+  ctx.beginPath();ctx.arc(6+Math.sin(t)*2,-32,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=`rgba(255,100,0,${sparkAlpha*0.7})`;
+  ctx.beginPath();ctx.arc(6+Math.sin(t)*2,-32,5,0,Math.PI*2);ctx.fill();
+}
+function drawCursorWeapon(){
+  const weapon=getWeaponTier(stats.playerLevel);
+  if(!weapon||gameOver||gameWon) return;
+  const mx=mouseScreen.x, my=mouseScreen.y;
+  const swingOff=weaponSwingAnim*0.6;
+  ctx.save();
+  ctx.translate(mx,my);
+  if(weapon.id==='grenade'){
+    // Grenade just floats at cursor, slight bob
+    ctx.translate(0,-16);
+    ctx.rotate(Math.sin(Date.now()/800)*0.08+swingOff);
+    _drawGrenade();
+  } else {
+    // Swords: tip at cursor, handle down-right, angled ~45°
+    ctx.rotate(Math.PI*0.28+swingOff);
+    if(weapon.id==='sword')       _drawSharpSword();
+    else if(weapon.id==='firesword')  _drawFireSword();
+    else if(weapon.id==='triplesword') _drawTripleSword();
+  }
+  ctx.restore();
+}
+
 // ── Drawing: backgrounds ──────────────────────────────────────────────────────
 function drawBackground(){
   const sk=getSkin();
@@ -5700,6 +5854,9 @@ function update(ts){
     else document.getElementById('wstatus-el').textContent=`${Math.ceil(waveTimer)}s`;
   }
 
+  if(weaponSwingAnim>0) weaponSwingAnim=Math.max(0,weaponSwingAnim-dt*3);
+  if(weaponCooldown>0) weaponCooldown=Math.max(0,weaponCooldown-dt);
+
   updateAnimals(dt);
   updateTowers(dt);
   updateHero(dt);
@@ -5869,6 +6026,7 @@ function update(ts){
   }
   ctx.restore(); // end camera transform
   drawCelestialBody(); // drawn in screen space — always on top
+  drawCursorWeapon();  // weapon cursor drawn in screen space
 }
 
 // ── Input ─────────────────────────────────────────────────────────────────────
@@ -5946,10 +6104,70 @@ function handleTap(e){
     }
   }
   deselectTower();
+
+  // Weapon cursor: click damages nearby enemies if cooldown is up
+  const _w=getWeaponTier(stats.playerLevel);
+  if(_w&&weaponCooldown<=0&&!gameOver&&!gameWon&&!gamePaused){
+    if(_w.aoe){
+      // Grenade: hits all enemies within range
+      let hit=false;
+      for(const c of cavemen){
+        const p=getEnemyPos(c);
+        if(Math.hypot(x-p.x,y-p.y)<=_w.range){
+          c.hp-=_w.dmg; c.hitFlash=0.25;
+          stats.damageDealt=(stats.damageDealt||0)+_w.dmg;
+          spawnDmgNumber(p.x,p.y-20,_w.dmg,true);
+          hit=true;
+          if(c.hp<=0){spawnParticles(p.x,p.y,1.0);coins+=c.reward||1;updateCoinUI();}
+        }
+      }
+      if(hit){
+        cavemen=cavemen.filter(c=>c.hp>0);
+        spawnParticles(x,y,1.5);
+        weaponCooldown=0.6; weaponSwingAnim=0.35;
+        checkAchievements();
+      }
+    } else {
+      // Sword: hits closest enemy within range
+      let best=null,bestDist=_w.range;
+      for(const c of cavemen){
+        const p=getEnemyPos(c);
+        const d=Math.hypot(x-p.x,y-p.y);
+        if(d<bestDist){bestDist=d;best=c;}
+      }
+      if(best){
+        const p=getEnemyPos(best);
+        best.hp-=_w.dmg; best.hitFlash=0.25;
+        stats.damageDealt=(stats.damageDealt||0)+_w.dmg;
+        spawnDmgNumber(p.x,p.y-20,_w.dmg,false);
+        weaponCooldown=0.45; weaponSwingAnim=0.3;
+        if(best.hp<=0){
+          cavemen=cavemen.filter(c=>c.id!==best.id);
+          spawnParticles(p.x,p.y,1.0);
+          coins+=best.reward||1; updateCoinUI();
+        }
+        checkAchievements();
+      }
+    }
+  }
 }
-canvas.addEventListener('mousemove',e=>{mouseWorld=canvasToWorld(e);});
+canvas.addEventListener('mousemove',e=>{
+  mouseWorld=canvasToWorld(e);
+  const rect=canvas.getBoundingClientRect();const border=3;
+  const cw=rect.width-border*2,ch=rect.height-border*2;
+  mouseScreen.x=(e.clientX-rect.left-border)*(W/cw);
+  mouseScreen.y=(e.clientY-rect.top-border)*(H/ch);
+});
 canvas.addEventListener('click',e=>{handleTap(e);});
-canvas.addEventListener('touchmove',e=>{e.preventDefault();mouseWorld=canvasToWorld(e.touches[0]);},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const t0=e.touches[0];
+  mouseWorld=canvasToWorld(t0);
+  const rect=canvas.getBoundingClientRect();const border=3;
+  const cw=rect.width-border*2,ch=rect.height-border*2;
+  mouseScreen.x=(t0.clientX-rect.left-border)*(W/cw);
+  mouseScreen.y=(t0.clientY-rect.top-border)*(H/ch);
+},{passive:false});
 canvas.addEventListener('touchend',e=>{e.preventDefault();handleTap(e.changedTouches[0]);},{passive:false});
 canvas.addEventListener('contextmenu',e=>{e.preventDefault();cancelPlacement();});
 
@@ -6834,7 +7052,7 @@ function startGame(diff){
   _updateSpeedBtn();
   deselectTower();
   document.getElementById('win-screen').classList.remove('show');
-  wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={}; lightningAvatarTimer=10; lightningEffects=[];
+  wave=0; waveActive=false; waveTimer=0; betweenWaveTimer=10; spawnTimer=0; bossSpawned=false; waveEnemyCount={}; lightningAvatarTimer=10; lightningEffects=[]; weaponSwingAnim=0; weaponCooldown=0;
   const _isMasterTier=diffConfig._pathId==='master'||diffConfig._pathId==='master_grand';
   playerHp=diffConfig.hp+(earnedAchievements.has('sec13')&&!_isMasterTier?25:0); continueUses=0; bossStage=1;
   coinDrops=permCoinDrops; superWashouts=permSuperWashouts;
@@ -6863,6 +7081,7 @@ function startGame(diff){
   // Size canvas to viewport
   resizeCanvas();
   window.addEventListener('resize',resizeCanvas);
+  canvas.style.cursor=getWeaponTier(stats.playerLevel)?'none':'default';
 
   requestAnimationFrame(update);
 }
