@@ -1236,7 +1236,7 @@ function scheduleBgm(){
   for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.07,t,musicGain);t+=b*BGM_BEAT;}
   // Square lead — thick detuned square, cuts through the mix
   t=bgmNextTime;
-  for(const[f,b]of BGM) squareLeadTone(f,b*BGM_BEAT*0.82,0.07,t),t+=b*BGM_BEAT;
+  for(const[f,b]of BGM) squareLeadTone(f,b*BGM_BEAT*0.82,0.18,t),t+=b*BGM_BEAT;
   // Harmony — triangle wave (softer)
   t=bgmNextTime;
   for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
