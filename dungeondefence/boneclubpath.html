@@ -1822,6 +1822,7 @@ const ACHIEVEMENTS=[
   {id:'sec12',name:'Stargazer',       desc:'Toggled night mode 10 times. A true creature of the dark.', check:()=>(stats.nightModeTaps||0)>=10, shadow:true},
   {id:'sec13',name:'Protection Max',  desc:'Caught 25 falling shields. Your base gains +25 HP every game.', check:()=>(stats.shieldClicks||0)>=25, shadow:true},
   {id:'sec14',name:'Thunderstruck',   desc:'The Lightning avatar struck 10 enemies. You are the storm.', check:()=>(stats.lightningStrikes||0)>=10, shadow:true},
+  {id:'sec15',name:'Syncer',          desc:'Tapped 10 times in a row, each within 600ms. You feel the beat.', check:()=>(stats.syncerUnlocked||0)>=1, shadow:true},
   {id:'dc1', name:'First Loot',       desc:'Opened your first daily chest.',                                   check:()=>(stats.dailyChestsOpened||0)>=1},
   {id:'dc2', name:'Daily Devotion',   desc:'Opened 7 daily chests. Dedication pays off.',                      check:()=>(stats.dailyChestsOpened||0)>=7},
   {id:'dc3', name:'Chest Addict',     desc:'Opened 30 daily chests. You never miss a day.',                    check:()=>(stats.dailyChestsOpened||0)>=30},
@@ -2672,6 +2673,7 @@ let selectedDef=null;
 let selectedTower=null;
 let mouseWorld={x:0,y:0};
 let mouseScreen={x:0,y:0};
+let syncerStreak=0, syncerLastTap=0;
 let weaponSwingAnim=0; // counts down, >0 = swinging
 let weaponCooldown=0; // counts down, must be 0 to deal damage again
 let focusedEnemyId=null; // id of tapped/targeted enemy
@@ -6041,6 +6043,11 @@ function canvasToWorld(e){
 }
 function handleTap(e){
   const{x,y}=canvasToWorld(e);
+  // Syncer achievement: 10 taps each within 600ms of the last
+  const _now=Date.now();
+  if(_now-syncerLastTap<=600){ syncerStreak++; } else { syncerStreak=1; }
+  syncerLastTap=_now;
+  if(syncerStreak>=10){ stats.syncerUnlocked=1; checkAchievements(); }
   if(heroPlaceMode){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)) return;
     const h=HERO_DEFS.find(z=>z.id===activeHeroId);
