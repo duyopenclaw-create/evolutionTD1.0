@@ -1145,6 +1145,33 @@ function drumHihat(t,vol=1,open=false){
   s.connect(hpf);hpf.connect(g);g.connect(musicGain);s.start(t);
 }
 
+// Square lead — two detuned square oscs, BPF, punchy envelope
+function squareLeadTone(freq, dur, vol, t){
+  const ctx=getACtx();
+  const totalDur=dur+0.12;
+  // Two slightly detuned square oscillators for thickness
+  const osc1=ctx.createOscillator();
+  osc1.type='square';
+  osc1.frequency.value=freq*1.008; // +8 cents sharp
+  const osc2=ctx.createOscillator();
+  osc2.type='square';
+  osc2.frequency.value=freq*0.992; // -8 cents flat
+  // Bandpass filter — cuts muddiness, gives lead presence
+  const bpf=ctx.createBiquadFilter();
+  bpf.type='bandpass';
+  bpf.frequency.value=freq*2.5;
+  bpf.Q.value=0.8;
+  // Envelope — snappy attack, bright sustain, quick release
+  const env=ctx.createGain();
+  env.gain.setValueAtTime(0,t);
+  env.gain.linearRampToValueAtTime(vol,t+0.015);       // sharp attack
+  env.gain.setValueAtTime(vol,t+dur*0.6);               // sustain
+  env.gain.exponentialRampToValueAtTime(0.001,t+dur+0.1); // release
+  osc1.connect(bpf); osc2.connect(bpf); bpf.connect(env); env.connect(musicGain);
+  osc1.start(t); osc1.stop(t+totalDur);
+  osc2.start(t); osc2.stop(t+totalDur);
+}
+
 // Violin — doubles BGM melody an octave lower (÷2), same rhythm
 const BGM_VIOLIN=BGM.map(([f,b])=>[f*0.5,b]);
 
@@ -1204,9 +1231,12 @@ function pianoTone(freq, dur, vol, t){
 function scheduleBgm(){
   if(!bgmActive||!audioEnabled)return;
   const ctx=getACtx();
-  // Melody — square wave
+  // Melody — simple square wave (kept soft, sits behind the lead)
   let t=bgmNextTime;
-  for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.14,t,musicGain);t+=b*BGM_BEAT;}
+  for(const[f,b]of BGM){tone(f,'square',b*BGM_BEAT*0.8,0.07,t,musicGain);t+=b*BGM_BEAT;}
+  // Square lead — thick detuned square, cuts through the mix
+  t=bgmNextTime;
+  for(const[f,b]of BGM) squareLeadTone(f,b*BGM_BEAT*0.82,0.18,t),t+=b*BGM_BEAT;
   // Harmony — triangle wave (softer)
   t=bgmNextTime;
   for(const[f,b]of BGM_HARM){tone(f,'triangle',b*BGM_BEAT*0.85,0.04,t,musicGain);t+=b*BGM_BEAT;}
