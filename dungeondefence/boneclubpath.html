@@ -6043,11 +6043,6 @@ function canvasToWorld(e){
 }
 function handleTap(e){
   const{x,y}=canvasToWorld(e);
-  // Syncer achievement: 10 taps each within 600ms of the last
-  const _now=Date.now();
-  if(_now-syncerLastTap<=600){ syncerStreak++; } else { syncerStreak=1; }
-  syncerLastTap=_now;
-  if(syncerStreak>=10){ stats.syncerUnlocked=1; checkAchievements(); }
   if(heroPlaceMode){
     if(!validPlacement(x,y)||!noTowerOverlap(x,y)) return;
     const h=HERO_DEFS.find(z=>z.id===activeHeroId);
@@ -6167,6 +6162,13 @@ canvas.addEventListener('mousemove',e=>{
   mouseScreen.y=(e.clientY-rect.top-border)*(H/ch);
 });
 canvas.addEventListener('click',e=>{handleTap(e);});
+// Syncer achievement — global tap counter (any click/tap anywhere counts)
+document.addEventListener('pointerdown',()=>{
+  const _now=Date.now();
+  if(_now-syncerLastTap<=600){ syncerStreak++; } else { syncerStreak=1; }
+  syncerLastTap=_now;
+  if(syncerStreak>=10){ stats.syncerUnlocked=1; checkAchievements(); }
+});
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
   const t0=e.touches[0];
