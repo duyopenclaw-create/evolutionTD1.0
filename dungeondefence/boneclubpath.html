@@ -6789,6 +6789,7 @@ function selectMap(id){
   document.getElementById('map-select').style.display='none';
   document.getElementById('map-page-nav').style.display='none';
   document.getElementById('diff-select').style.display='flex';
+  document.getElementById('daily-chest-wrap').style.display='none';
   checkResumeBtn();
 }
 function backToMapSelect(){
@@ -6796,6 +6797,8 @@ function backToMapSelect(){
   document.getElementById('diff-sub').style.display='none';
   document.getElementById('map-select').style.display='flex';
   document.getElementById('map-page-nav').style.display='flex';
+  document.getElementById('daily-chest-wrap').style.display='flex';
+  updateChestUI();
 }
 
 // ── Shop ─────────────────────────────────────────────────────────────────────
