@@ -1546,7 +1546,7 @@ function writeSave(){
 }
 
 // ── Mid-game resume ────────────────────────────────────────────────────────────
-const RESUME_KEY='evolutionTD_resume';
+function _resumeKey(id){ return 'evolutionTD_resume_'+(id||''); }
 function saveGameState(){
   if(gameOver||gameWon||sandboxMode||!diffConfig._pathId) return;
   const state={
@@ -1563,10 +1563,10 @@ function saveGameState(){
       boss:c.boss,missile:c.missile,robot:c.robot,coins:c.coins,skin:c.skin,
       bobPhase:c.bobPhase})),
   };
-  localStorage.setItem(RESUME_KEY,JSON.stringify(state));
+  localStorage.setItem(_resumeKey(mapId),JSON.stringify(state));
 }
 function clearResumeState(){
-  localStorage.removeItem(RESUME_KEY);
+  localStorage.removeItem(_resumeKey(mapId));
   const rb=document.getElementById('title-resume');
   if(rb){ rb.disabled=true; rb.textContent='▶ RESUME'; }
   if(_contInterval){ clearInterval(_contInterval); _contInterval=null; }
@@ -1577,7 +1577,7 @@ function checkResumeBtn(){
   const rb=document.getElementById('title-resume');
   if(!rb) return;
   try{
-    const s=JSON.parse(localStorage.getItem(RESUME_KEY)||'null');
+    const s=JSON.parse(localStorage.getItem(_resumeKey(pendingMapId))||'null');
     if(s&&s.diffId){
       rb.disabled=false;
       rb.textContent=`▶ RESUME  Wave ${s.wave} · ${s.diffId.replace('_',' ').toUpperCase()}`;
@@ -1588,7 +1588,7 @@ function checkResumeBtn(){
   }catch(e){ rb.disabled=true; rb.textContent='▶ RESUME'; }
 }
 function resumeGame(){
-  const raw=localStorage.getItem(RESUME_KEY);
+  const raw=localStorage.getItem(_resumeKey(pendingMapId));
   if(!raw) return;
   let state;
   try{ state=JSON.parse(raw); }catch(e){ return; }
