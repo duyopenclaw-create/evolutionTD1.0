@@ -1145,6 +1145,26 @@ function drumHihat(t,vol=1,open=false){
   s.connect(hpf);hpf.connect(g);g.connect(musicGain);s.start(t);
 }
 
+// Square lead — two detuned square oscs, BPF, punchy envelope
+function squareLeadTone(freq, dur, vol, t){
+  const ctx=getACtx();
+  const totalDur=dur+0.12;
+  const osc1=ctx.createOscillator();
+  osc1.type='square'; osc1.frequency.value=freq*1.008;
+  const osc2=ctx.createOscillator();
+  osc2.type='square'; osc2.frequency.value=freq*0.992;
+  const bpf=ctx.createBiquadFilter();
+  bpf.type='bandpass'; bpf.frequency.value=freq*2.5; bpf.Q.value=0.8;
+  const env=ctx.createGain();
+  env.gain.setValueAtTime(0,t);
+  env.gain.linearRampToValueAtTime(vol,t+0.015);
+  env.gain.setValueAtTime(vol,t+dur*0.6);
+  env.gain.exponentialRampToValueAtTime(0.001,t+dur+0.1);
+  osc1.connect(bpf); osc2.connect(bpf); bpf.connect(env); env.connect(musicGain);
+  osc1.start(t); osc1.stop(t+totalDur);
+  osc2.start(t); osc2.stop(t+totalDur);
+}
+
 // Violin — doubles BGM melody an octave lower (÷2), same rhythm
 const BGM_VIOLIN=BGM.map(([f,b])=>[f*0.5,b]);
 
@@ -1249,9 +1269,9 @@ function scheduleBgm(){
     tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
     tone(f,'sawtooth',b*BGM_BEAT*0.75,0.06,t,musicGain);t+=b*BGM_BEAT;
   }
-  // Synth bass — punchy pluck following melody 2 octaves down
+  // Square lead — thick detuned square, cuts through the mix
   t=bgmNextTime;
-  for(const[f,b]of BGM_SYNTH_BASS) bassTone(f,b*BGM_BEAT*0.88,0.28,t),t+=b*BGM_BEAT;
+  for(const[f,b]of BGM) squareLeadTone(f,b*BGM_BEAT*0.82,0.18,t),t+=b*BGM_BEAT;
   // Drums — 6 bars of 4/4
   for(let i=0;i<24;i++){
     const bt=bgmNextTime+i*BGM_BEAT;
