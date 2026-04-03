@@ -158,12 +158,12 @@ const ot=document.getElementById('ot'),om=document.getElementById('om'),ob=docum
 
 // ─── WEAPONS & ARMORS ────────────────────────────────────────────────────────
 const WEAPONS=[
-  {id:'pistol',  name:'Pistol',    ico:'🔫',price:0,  dmg:1, cd:0,  spd:11,life:110,ammo:15,r:5, color:'#ffdd00',tier:1,desc:'1 dmg · fast · 15 ammo/pack'},
-  {id:'revolver',name:'Revolver',  ico:'🔫',price:10, dmg:2, cd:15, spd:13,life:130,ammo:10,r:5, color:'#ff8800',tier:2,desc:'2 dmg · medium · 10 ammo/pack'},
-  {id:'shotgun', name:'Shotgun',   ico:'🔫',price:30, dmg:3, cd:25, spd:10,life:85, ammo:8, r:6, color:'#cc6600',tier:3,desc:'3 dmg × 3 pellets · 8 ammo/pack'},
-  {id:'ar',      name:'Assault R.',ico:'🔫',price:80, dmg:2, cd:4,  spd:15,life:140,ammo:25,r:4, color:'#44ff44',tier:4,desc:'2 dmg · rapid fire · 25 ammo/pack'},
-  {id:'rocket',  name:'Rocket L.', ico:'🚀',price:200,dmg:10,cd:90, spd:8, life:220,ammo:5, r:8, color:'#ff4400',tier:5,desc:'10 dmg · AoE · slow · 5 ammo/pack'},
-  {id:'sniper',  name:'Sniper',    ico:'🎯',price:500,dmg:5, cd:180,spd:22,life:280,ammo:20,r:4, color:'#44aaff',tier:6,desc:'5 dmg · 3s cooldown · long range · 20 ammo/pack'},
+  {id:'pistol',  name:'Pistol',    ico:'🔫',price:0,  dmg:1, cd:0,  spd:11,life:110,ammo:15,maxAmmo:30,r:5, color:'#ffdd00',tier:1,desc:'1 dmg · fast · 15 ammo/pack'},
+  {id:'revolver',name:'Revolver',  ico:'🔫',price:10, dmg:2, cd:15, spd:13,life:130,ammo:10,maxAmmo:20,r:5, color:'#ff8800',tier:2,desc:'2 dmg · medium · 10 ammo/pack'},
+  {id:'shotgun', name:'Shotgun',   ico:'🔫',price:30, dmg:3, cd:25, spd:10,life:85, ammo:8, maxAmmo:16,r:6, color:'#cc6600',tier:3,desc:'3 dmg × 3 pellets · 8 ammo/pack'},
+  {id:'ar',      name:'Assault R.',ico:'🔫',price:80, dmg:2, cd:4,  spd:15,life:140,ammo:25,maxAmmo:50,r:4, color:'#44ff44',tier:4,desc:'2 dmg · rapid fire · 25 ammo/pack'},
+  {id:'rocket',  name:'Rocket L.', ico:'🚀',price:200,dmg:10,cd:90, spd:8, life:220,ammo:5, maxAmmo:10,r:8, color:'#ff4400',tier:5,desc:'10 dmg · AoE · slow · 5 ammo/pack'},
+  {id:'sniper',  name:'Sniper',    ico:'🎯',price:500,dmg:5, cd:180,spd:22,life:280,ammo:20,maxAmmo:20,r:4, color:'#44aaff',tier:6,desc:'5 dmg · 3s cooldown · long range · 20 ammo/pack'},
 ];
 const ARMORS=[
   {id:'cloth',  name:'Cloth',      ico:'👕',price:0,  shield:5, smul:1.0, tier:1,desc:'No extra protection'},
@@ -269,6 +269,43 @@ let weaponAmmo={pistol:15};
 let invBtnBounds=null,invItemBounds=[];
 bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];
 
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+function saveProgress(){
+  try{
+    localStorage.setItem('zs_coins', coins);
+    if(player){
+      localStorage.setItem('zs_level', player.level);
+      localStorage.setItem('zs_xp', player.xp);
+    }
+    localStorage.setItem('zs_owned_w', JSON.stringify([...owned.weapons]));
+    localStorage.setItem('zs_owned_a', JSON.stringify([...owned.armors]));
+    localStorage.setItem('zs_equipped_w', equipped.weapon);
+    localStorage.setItem('zs_equipped_a', equipped.armor);
+    localStorage.setItem('zs_ammo', JSON.stringify(weaponAmmo));
+  }catch(e){}
+}
+function loadProgress(){
+  try{
+    const c=localStorage.getItem('zs_coins');if(c!==null)coins=Math.max(0,parseInt(c)||0);
+    const ow=localStorage.getItem('zs_owned_w');
+    if(ow){const arr=JSON.parse(ow);owned.weapons=new Set(arr.filter(id=>WEAPONS.find(w=>w.id===id)));}
+    if(!owned.weapons.has('pistol'))owned.weapons.add('pistol');
+    const oa=localStorage.getItem('zs_owned_a');
+    if(oa){const arr=JSON.parse(oa);owned.armors=new Set(arr.filter(id=>ARMORS.find(a=>a.id===id)));}
+    if(!owned.armors.has('cloth'))owned.armors.add('cloth');
+    const ew=localStorage.getItem('zs_equipped_w');if(ew&&owned.weapons.has(ew))equipped.weapon=ew;
+    const ea=localStorage.getItem('zs_equipped_a');if(ea&&owned.armors.has(ea))equipped.armor=ea;
+    const am=localStorage.getItem('zs_ammo');
+    if(am){
+      const parsed=JSON.parse(am);
+      // Clamp each weapon's ammo to its maxAmmo
+      WEAPONS.forEach(w=>{if(parsed[w.id]!==undefined)weaponAmmo[w.id]=Math.min(parsed[w.id],w.maxAmmo);});
+    }
+    if(weaponAmmo[equipped.weapon]===undefined)weaponAmmo[equipped.weapon]=getWeapon().ammo;
+  }catch(e){}
+}
+loadProgress();
+
 function getWeapon(){return WEAPONS.find(w=>w.id===equipped.weapon);}
 function getArmor(){return ARMORS.find(a=>a.id===equipped.armor);}
 function getLevel(){return player?player.level:1;}
@@ -289,8 +326,10 @@ function segHits(x1,y1,x2,y2,r){
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function initGame(){
   const armor=getArmor();
+  const savedLevel=parseInt(localStorage.getItem('zs_level'))||1;
+  const savedXp=parseInt(localStorage.getItem('zs_xp'))||0;
   player={x:400,y:300,r:16,hp:10,maxHp:10,shield:armor.shield,maxShield:armor.shield,
-          speed:3*armor.smul,level:1,xp:0};
+          speed:3*armor.smul,level:savedLevel,xp:savedXp};
   bullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
@@ -324,7 +363,7 @@ function updateHUD(){
   shBar.style.width=(sh*100)+'%';
   shTxt.textContent=`${player.shield}/${player.maxShield}`;
   const w=getWeapon();
-  ammoVal.textContent=weaponAmmo[equipped.weapon]||0;
+  ammoVal.textContent=`${weaponAmmo[equipped.weapon]||0}/${w.maxAmmo}`;
   weapIco.textContent=w.ico; weapName.textContent=w.name;
   levelVal.textContent=player.level;
   killsVal.textContent=kills;
@@ -489,7 +528,9 @@ function update(now){
       spawnBlood(z.x,z.y);
       spawnExp(z.x,z.y,z.r>18);
       player.xp+=z.zt.xp;
-      while(player.xp>=xpToNext(player.level)){player.xp-=xpToNext(player.level);player.level++;}
+      let leveled=false;
+      while(player.xp>=xpToNext(player.level)){player.xp-=xpToNext(player.level);player.level++;leveled=true;}
+      if(leveled)saveProgress();
       const [mn,mx]=z.zt.coins;
       dropCoins(z.x,z.y,mn,mx);
       return false;
@@ -511,21 +552,23 @@ function update(now){
     const dx=player.x-a.x,dy=player.y-a.y;
     if(dx*dx+dy*dy<(player.r+12)**2){
       const w=getWeapon();
-      weaponAmmo[equipped.weapon]=(weaponAmmo[equipped.weapon]||0)+w.ammo;
+      weaponAmmo[equipped.weapon]=Math.min(w.maxAmmo,(weaponAmmo[equipped.weapon]||0)+w.ammo);
+      saveProgress();
       return false;
     }
     return true;
   });
   coinPickups=coinPickups.filter(c=>{
     const dx=player.x-c.x,dy=player.y-c.y;
-    if(dx*dx+dy*dy<(player.r+12)**2){coins++;return false;}
+    if(dx*dx+dy*dy<(player.r+12)**2){coins++;saveProgress();return false;}
     return true;
   });
   heartPickups=heartPickups.filter(h=>{
+    if(player.hp>=player.maxHp)return true; // wait until player needs it
     const dx=player.x-h.x,dy=player.y-h.y;
     if(dx*dx+dy*dy<(player.r+18)**2){
       player.hp=Math.min(player.maxHp,player.hp+10);
-      lastHeartSpawn=now; // reset timer after pickup
+      lastHeartSpawn=now;
       return false;
     }
     return true;
@@ -534,7 +577,7 @@ function update(now){
   updateHUD();
 
   if(player.hp<=0){
-    player.hp=0;gameState='dead';pauseMusic();
+    player.hp=0;gameState='dead';saveProgress();pauseMusic();
     ot.textContent='YOU DIED';
     om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
     ob.textContent='PLAY AGAIN';
@@ -911,7 +954,7 @@ function buyItem(item,type){
   } else {
     owned.armors.add(item.id);
   }
-  updateHUD();renderShop();
+  saveProgress();updateHUD();renderShop();
 }
 function openShop(){
   if(gameState==='playing'){gameState='paused';pauseMusic();
@@ -953,7 +996,7 @@ function equipItem(type,id){
     player.maxShield=a.shield;
     player.speed=3*a.smul;
   }
-  updateHUD();
+  saveProgress();updateHUD();
 }
 
 // ─── EVENTS ──────────────────────────────────────────────────────────────────
