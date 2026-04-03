@@ -106,7 +106,7 @@ canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair
     </div>
     <div class="sep"></div>
     <div class="hs">
-      <span style="font-size:14px">🪙</span>
+      <span style="font-size:14px">🟨</span>
       <span id="coins-val" class="val">0</span>
     </div>
     <div class="hsp"></div>
@@ -121,7 +121,7 @@ canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair
 <div id="shop" class="hidden">
   <div id="shop-panel">
     <h2>🛒 SHOP <button id="shop-x">✕</button></h2>
-    <div id="shop-gold-line">Gold: <span id="sg-val">0</span> 🪙</div>
+    <div id="shop-gold-line">Gold: <span id="sg-val">0</span> 🟨</div>
     <div class="tabs">
       <button class="stab active" id="tab-w">⚔ Weapons</button>
       <button class="stab" id="tab-a">🛡 Armors</button>
@@ -941,10 +941,10 @@ function renderShop(){
     const badge=isEq?'<span class="sbadge">✓ equipped</span>':isOwned?'<span class="sbadge" style="color:#44ff44">owned</span>':'';
     div.innerHTML=`<h3>${item.ico} ${item.name} ${badge}</h3>
       <div class="sdesc">${item.desc}</div>
-      <div class="sprice ${item.price===0?'free':''}">${item.price===0?'FREE':item.price+' 🪙'}</div>`;
+      <div class="sprice ${item.price===0?'free':''}">${item.price===0?'FREE':item.price+' 🟨'}</div>`;
     if(!isOwned&&item.price>0){
       const btn=document.createElement('button');
-      btn.textContent=coins>=item.price?'BUY':'Need '+item.price+' 🪙';
+      btn.textContent=coins>=item.price?'BUY':'Need '+item.price+' 🟨';
       btn.style.cssText='margin-top:6px;background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:3px;width:100%';
       btn.disabled=coins<item.price;
       btn.onclick=()=>buyItem(item,shopTabActive);
