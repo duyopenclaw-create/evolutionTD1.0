@@ -325,6 +325,7 @@ function segHits(x1,y1,x2,y2,r){
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function initGame(){
+  loadProgress(); // always restore gold, level, items from localStorage on every start/restart
   const armor=getArmor();
   const savedLevel=parseInt(localStorage.getItem('zs_level'))||1;
   const savedXp=parseInt(localStorage.getItem('zs_xp'))||0;
@@ -1050,7 +1051,12 @@ ob.addEventListener('click',()=>{
 });
 
 // ─── LOOP ────────────────────────────────────────────────────────────────────
-function loop(now){update(now);draw();requestAnimationFrame(loop);}
+let lastAutoSave=0;
+function loop(now){
+  update(now);draw();
+  if(gameState==='playing'&&now-lastAutoSave>10000){saveProgress();lastAutoSave=now;}
+  requestAnimationFrame(loop);
+}
 requestAnimationFrame(loop);
 </script>
 </body>
