@@ -72,6 +72,7 @@
       osc.stop(t + 0.1);
     }
 
+
     function playGameOverSound() {
       const ac = getAudio();
       [494, 370, 311, 247].forEach((freq, i) => {
@@ -292,6 +293,8 @@
     let bird, pipes, coins, powerups, score, highScore, coinsCollected, frame, state, particles;
     let magnetPowerActive = false;
     let magnetPowerTimer  = 0;
+    let lightningActive   = false;
+    let lightningTimer    = 0;
 
     function init() {
       bird = {
@@ -306,6 +309,8 @@
       powerups = [];
       magnetPowerActive = false;
       magnetPowerTimer  = 0;
+      lightningActive   = false;
+      lightningTimer    = 0;
       particles = [];
       score = 0;
       if (highScore === undefined) highScore = 0;
@@ -486,8 +491,9 @@
         const spawnX = W + PIPE_WIDTH + 20 + Math.random() * 40;
         const spawnY = safeTop + Math.random() * (safeBot - safeTop);
         if (Math.random() < 0.1 && powerups.length < 2) {
-          // Magnet power-up (10% chance)
-          powerups.push({ x: spawnX, y: spawnY, r: 12, spin: 0 });
+          // Power-up: 50/50 magnet vs lightning
+          const puType = Math.random() < 0.5 ? 'magnet' : 'lightning';
+          powerups.push({ x: spawnX, y: spawnY, r: 12, spin: 0, type: puType });
         } else {
           coins.push({
             x: spawnX, y: spawnY, r: 9, spin: 0, attracted: false,
@@ -545,7 +551,7 @@
 
       // Apply slow-pipes upgrade
       const slowLevel = boughtUpgrades.slow || 0;
-      const gameSpeed = diff().speed * (1 - slowLevel * 0.12);
+      const gameSpeed = diff().speed * (1 - slowLevel * 0.12) * (lightningActive ? 1.1 : 1);
 
       // Move pipes & score
       for (const p of pipes) {
@@ -609,21 +615,30 @@
       }
       coins = coins.filter(c => c.r > 0 && c.x + c.r > 0);
 
-      // Magnet power-up timer
+      // Power-up timers
       if (magnetPowerActive) {
         magnetPowerTimer--;
         if (magnetPowerTimer <= 0) { magnetPowerActive = false; magnetPowerTimer = 0; }
       }
+      if (lightningActive) {
+        lightningTimer--;
+        if (lightningTimer <= 0) { lightningActive = false; lightningTimer = 0; }
+      }
 
-      // Move & collect magnet power-ups
+      // Move & collect power-ups
       for (const pu of powerups) {
         pu.x -= gameSpeed;
         pu.spin += 0.03;
         const dx = bird.x - pu.x;
         const dy = bird.y - pu.y;
         if (Math.sqrt(dx * dx + dy * dy) < bird.radius + pu.r) {
-          magnetPowerActive = true;
-          magnetPowerTimer  = 600; // 10 seconds at 60fps
+          if (pu.type === 'lightning') {
+            lightningActive = true;
+            lightningTimer  = 600; // 10 seconds at 60fps
+          } else {
+            magnetPowerActive = true;
+            magnetPowerTimer  = 600; // 10 seconds at 60fps
+          }
           playCoinSound();
           pu.r = 0;
         }
@@ -933,6 +948,69 @@
       ctx.closePath();
       ctx.fill();
 
+      // Astronaut suit (Space map only)
+      if (currentMap === 2) {
+        // White suit body over the bird
+        ctx.fillStyle = 'rgba(230,240,255,0.82)';
+        ctx.beginPath();
+        ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Suit seams / panels
+        ctx.strokeStyle = 'rgba(150,170,210,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, bird.radius * 0.68, 0.3, Math.PI - 0.3);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-6, 2); ctx.lineTo(6, 2);
+        ctx.stroke();
+
+        // Helmet dome
+        ctx.fillStyle = 'rgba(200,220,255,0.55)';
+        ctx.strokeStyle = 'rgba(180,200,240,0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(2, -3, bird.radius * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Visor (dark reflective window)
+        const visorGrad = ctx.createLinearGradient(-2, -8, 8, 2);
+        visorGrad.addColorStop(0, 'rgba(100,160,255,0.75)');
+        visorGrad.addColorStop(1, 'rgba(20,40,100,0.85)');
+        ctx.fillStyle = visorGrad;
+        ctx.beginPath();
+        ctx.ellipse(5, -4, 7, 5, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Visor shine
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath();
+        ctx.ellipse(3, -6, 3, 1.5, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // X eyes still visible through visor when dead
+        if (state === 'dead') {
+          ctx.strokeStyle = 'rgba(255,80,80,0.9)';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(2, -7); ctx.lineTo(8, -1);
+          ctx.moveTo(8, -7); ctx.lineTo(2, -1);
+          ctx.stroke();
+        }
+
+        // Small NASA-style flag patch on wing area
+        ctx.fillStyle = '#e53935';
+        ctx.fillRect(-11, 2, 8, 5);
+        ctx.fillStyle = '#1565c0';
+        ctx.fillRect(-11, 2, 4, 2);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(-11, 4, 8, 1);
+        ctx.fillRect(-9, 2, 1, 5);
+      }
+
       // Shield ring (flashes white during invincibility)
       if (shieldLives > 0 || invincFrames > 0) {
         const flashing = invincFrames > 0 && Math.floor(invincFrames / 4) % 2 === 0;
@@ -1000,6 +1078,21 @@
         ctx.fill();
         ctx.fillStyle = '#42a5f5';
         roundRect(12, 120, 78 * pct, 6, 3);
+        ctx.fill();
+      }
+      // Lightning speed boost indicator
+      if (lightningActive) {
+        const yOff = magnetPowerActive ? 20 : 0;
+        const pct = lightningTimer / 600;
+        ctx.font = 'bold 11px Arial';
+        ctx.fillStyle = '#ffe000';
+        ctx.textAlign = 'left';
+        ctx.fillText('Speed Boost', 12, 116 + yOff);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        roundRect(12, 120 + yOff, 78, 6, 3);
+        ctx.fill();
+        ctx.fillStyle = '#ffe000';
+        roundRect(12, 120 + yOff, 78 * pct, 6, 3);
         ctx.fill();
       }
 
@@ -1168,28 +1261,49 @@
         ctx.translate(pu.x, pu.y);
         ctx.rotate(Math.sin(pu.spin) * 0.25); // gentle wobble
 
-        ctx.shadowColor = '#42a5f5';
-        ctx.shadowBlur = 14;
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
+        if (pu.type === 'lightning') {
+          // Lightning bolt — yellow zigzag
+          ctx.shadowColor = '#ffe000';
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = '#ffe000';
+          ctx.strokeStyle = '#ff9800';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          // Bolt shape: top-right → middle-left → bottom-right
+          ctx.moveTo(4, -11);
+          ctx.lineTo(-3, -1);
+          ctx.lineTo(2, -1);
+          ctx.lineTo(-4, 11);
+          ctx.lineTo(5, 0);
+          ctx.lineTo(0, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // Magnet (default)
+          ctx.shadowColor = '#42a5f5';
+          ctx.shadowBlur = 14;
+          ctx.lineWidth = 5;
+          ctx.lineCap = 'round';
 
-        // U-shape arc (silver body) — opens downward
-        ctx.strokeStyle = '#bdbdbd';
-        ctx.beginPath();
-        ctx.arc(0, 0, 9, Math.PI, 0); // top semicircle
-        ctx.stroke();
+          // U-shape arc (silver body) — opens downward
+          ctx.strokeStyle = '#bdbdbd';
+          ctx.beginPath();
+          ctx.arc(0, 0, 9, Math.PI, 0); // top semicircle
+          ctx.stroke();
 
-        // Left arm — blue (N pole)
-        ctx.strokeStyle = '#42a5f5';
-        ctx.beginPath();
-        ctx.moveTo(-9, 0); ctx.lineTo(-9, 10);
-        ctx.stroke();
+          // Left arm — blue (N pole)
+          ctx.strokeStyle = '#42a5f5';
+          ctx.beginPath();
+          ctx.moveTo(-9, 0); ctx.lineTo(-9, 10);
+          ctx.stroke();
 
-        // Right arm — red (S pole)
-        ctx.strokeStyle = '#ef5350';
-        ctx.beginPath();
-        ctx.moveTo(9, 0); ctx.lineTo(9, 10);
-        ctx.stroke();
+          // Right arm — red (S pole)
+          ctx.strokeStyle = '#ef5350';
+          ctx.beginPath();
+          ctx.moveTo(9, 0); ctx.lineTo(9, 10);
+          ctx.stroke();
+        }
 
         ctx.shadowBlur = 0;
         ctx.restore();
