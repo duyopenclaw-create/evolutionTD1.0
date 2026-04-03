@@ -823,65 +823,72 @@ function drawInventoryUI(){
 
   if(!invOpen)return;
   invItemBounds=[];
-  const pw=190,pad=8,rowH=24,gap=2;
+  // Two-column layout: weapons left, armors right — stays compact no matter how many items
+  const colW=155,pad=6,rowH=20,gap=1,colGap=8;
+  const pw=colW*2+colGap+pad*2;
   const wList=[...owned.weapons],aList=[...owned.armors];
-  const rows=1+wList.length+1+aList.length+2; // header+weapons+divider+armors+level
-  const ph=pad*2+rows*(rowH+gap)-gap;
+  const maxRows=Math.max(wList.length,aList.length);
+  const headerH=18;
+  const ph=pad*2+24+4+headerH+maxRows*(rowH+gap);
+
   let px=Math.max(8,Math.min(W-pw-8,player.x-pw/2));
   let py=Math.max(46,by-ph-6);
+  if(py+ph>H-8)py=H-ph-8;
 
-  ctx.fillStyle='rgba(0,0,0,0.9)';
+  ctx.fillStyle='rgba(0,0,0,0.92)';
   ctx.beginPath();ctx.roundRect(px,py,pw,ph,8);ctx.fill();
-  ctx.strokeStyle='#444';ctx.lineWidth=1;
+  ctx.strokeStyle='#555';ctx.lineWidth=1;
   ctx.beginPath();ctx.roundRect(px,py,pw,ph,8);ctx.stroke();
 
-  let ry=py+pad;
-  // Level header
+  // Level header (full width)
   ctx.fillStyle='#ffaa00';ctx.font='bold 11px monospace';ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillText(`⭐ LV.${player.level}  ${player.xp}/${xpToNext(player.level)} XP`,px+pad,ry+4);
-  ry+=rowH+gap+2;
+  ctx.fillText(`⭐ LV.${player.level}   ${player.xp}/${xpToNext(player.level)} XP`,px+pad,py+pad+2);
 
-  // Weapons
-  ctx.fillStyle='#555';ctx.font='9px monospace';
-  ctx.fillText('── WEAPONS ──────────',px+pad,ry);ry+=12;
-  wList.forEach(wid=>{
+  const colTop=py+pad+24+4;
+  const lx=px+pad, rx=px+pad+colW+colGap;
+
+  // Column headers
+  ctx.fillStyle='#00aaff';ctx.font='bold 9px monospace';
+  ctx.fillText('⚔ WEAPONS',lx,colTop);
+  ctx.fillStyle='#44ff88';
+  ctx.fillText('🛡 ARMORS',rx,colTop);
+
+  const listTop=colTop+headerH;
+
+  // Weapons column
+  wList.forEach((wid,i)=>{
     const w=WEAPONS.find(x=>x.id===wid);
     const isCur=equipped.weapon===wid;
-    const ob={x:px+pad,y:ry,w:pw-pad*2,h:rowH,wid,type:'weapon'};
+    const ry=listTop+i*(rowH+gap);
+    const ob={x:lx,y:ry,w:colW,h:rowH,wid,type:'weapon'};
     invItemBounds.push(ob);
-    ctx.fillStyle=isCur?'rgba(0,100,255,0.3)':'rgba(255,255,255,0.05)';
-    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,4);ctx.fill();
-    ctx.strokeStyle=isCur?'#00aaff':'#333';ctx.lineWidth=1;
-    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,4);ctx.stroke();
-    ctx.fillStyle=isCur?'#00aaff':'#ccc';ctx.font='11px monospace';ctx.textBaseline='middle';
-    ctx.fillText(`${w.ico} ${w.name}`,ob.x+6,ob.y+rowH/2);
-    ctx.fillStyle='#666';ctx.font='9px monospace';
-    ctx.textAlign='right';
-    ctx.fillText(`${w.dmg}dmg`,ob.x+ob.w-4,ob.y+rowH/2);
+    ctx.fillStyle=isCur?'rgba(0,120,255,0.35)':'rgba(255,255,255,0.05)';
+    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,3);ctx.fill();
+    ctx.strokeStyle=isCur?'#00aaff':'#2a2a2a';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,3);ctx.stroke();
+    ctx.fillStyle=isCur?'#00aaff':'#ccc';ctx.font='10px monospace';ctx.textBaseline='middle';
+    ctx.fillText(`${w.ico} ${w.name}`,ob.x+4,ob.y+rowH/2);
+    ctx.fillStyle='#555';ctx.font='9px monospace';ctx.textAlign='right';
+    ctx.fillText(`${weaponAmmo[wid]||0}/${w.maxAmmo}`,ob.x+ob.w-3,ob.y+rowH/2);
     ctx.textAlign='left';
-    ry+=rowH+gap;
   });
 
-  ry+=4;
-  // Armors
-  ctx.fillStyle='#555';ctx.font='9px monospace';ctx.textBaseline='top';
-  ctx.fillText('── ARMORS ───────────',px+pad,ry);ry+=12;
-  aList.forEach(aid=>{
+  // Armors column
+  aList.forEach((aid,i)=>{
     const a=ARMORS.find(x=>x.id===aid);
     const isCur=equipped.armor===aid;
-    const ob={x:px+pad,y:ry,w:pw-pad*2,h:rowH,aid,type:'armor'};
+    const ry=listTop+i*(rowH+gap);
+    const ob={x:rx,y:ry,w:colW,h:rowH,aid,type:'armor'};
     invItemBounds.push(ob);
-    ctx.fillStyle=isCur?'rgba(0,150,50,0.3)':'rgba(255,255,255,0.05)';
-    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,4);ctx.fill();
-    ctx.strokeStyle=isCur?'#44ff88':'#333';ctx.lineWidth=1;
-    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,4);ctx.stroke();
-    ctx.fillStyle=isCur?'#44ff88':'#ccc';ctx.font='11px monospace';ctx.textBaseline='middle';
-    ctx.fillText(`${a.ico} ${a.name}`,ob.x+6,ob.y+rowH/2);
-    ctx.fillStyle='#666';ctx.font='9px monospace';
-    ctx.textAlign='right';
-    ctx.fillText(`${a.shield}🛡`,ob.x+ob.w-4,ob.y+rowH/2);
+    ctx.fillStyle=isCur?'rgba(0,180,80,0.35)':'rgba(255,255,255,0.05)';
+    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,3);ctx.fill();
+    ctx.strokeStyle=isCur?'#44ff88':'#2a2a2a';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(ob.x,ob.y,ob.w,ob.h,3);ctx.stroke();
+    ctx.fillStyle=isCur?'#44ff88':'#ccc';ctx.font='10px monospace';ctx.textBaseline='middle';
+    ctx.fillText(`${a.ico} ${a.name}`,ob.x+4,ob.y+rowH/2);
+    ctx.fillStyle='#555';ctx.font='9px monospace';ctx.textAlign='right';
+    ctx.fillText(`${a.shield}🛡`,ob.x+ob.w-3,ob.y+rowH/2);
     ctx.textAlign='left';
-    ry+=rowH+gap;
   });
 }
 
