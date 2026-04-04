@@ -1491,7 +1491,8 @@ function shootAtAngle(pl,ang){
   updateHUD();
 }
 function shoot(){
-  const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  const wm=worldMouse();
+  const ang=Math.atan2(wm.y-player.y,wm.x-player.x);
   shootAtAngle(player,ang);
 }
 
@@ -1802,7 +1803,8 @@ function drawPlayer(){
   }
   ctx.shadowBlur=0;
   ctx.beginPath();ctx.arc(-5,-5,5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fill();
-  const ang=gameState==='paused'?frozenAngle:Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  const _wm=worldMouse();
+  const ang=gameState==='paused'?frozenAngle:Math.atan2(_wm.y-player.y,_wm.x-player.x);
   ctx.rotate(ang);
   ctx.fillStyle='#888';ctx.fillRect(player.r-2,-4,16,8);
   ctx.fillStyle='#bbb';ctx.fillRect(player.r,-3,14,2);
@@ -2060,7 +2062,37 @@ function drawPauseOverlay(){
   ctx.textAlign='left';
 }
 
-function draw(){
+// Helper: convert canvas mouse coords → world coords for P1's split-screen viewport
+function worldMouse(){
+  if(!twoPlayerMode||!player2)return mouse;
+  const camX=Math.max(W/4,Math.min(W*3/4,player.x));
+  return{x:mouse.x+camX-W/4, y:mouse.y};
+}
+
+function drawDownedBody(x,y,col,label){
+  ctx.save();ctx.translate(x,y);
+  ctx.globalAlpha=0.7;
+  ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(0,4,18,10,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.font='bold 9px monospace';ctx.fillStyle='#fff';
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,0,4);
+  ctx.restore();
+  ctx.font='8px monospace';ctx.fillStyle='#ffdd00';
+  ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillText('hold X to revive',x,y-14);ctx.textAlign='left';
+}
+
+// Draws the full game world. vpX/vpY = viewport top-left on canvas, vpW/vpH = size, camX/camY = world pos to center on
+function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
+  const halfW=vpW/2,halfH=vpH/2;
+  // Clamp camera inside world bounds
+  const cx=Math.max(halfW,Math.min(W-halfW,camX));
+  const cy=Math.max(halfH,Math.min(H-halfH,camY));
+  ctx.save();
+  ctx.beginPath();ctx.rect(vpX,vpY,vpW,vpH);ctx.clip();
+  ctx.translate(vpX+halfW-cx, vpY+halfH-cy);
+
   drawFloor();
   drawBloodPools();
   WALLS.forEach(drawWall);
@@ -2072,41 +2104,20 @@ function draw(){
   chestPickups.forEach(drawChest);
   bullets.forEach(drawBullet);
   zBullets.forEach(b=>{
-    ctx.save();
-    ctx.shadowColor=b.color;ctx.shadowBlur=reducedFx?0:6;
-    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);
-    ctx.fillStyle=b.color;ctx.fill();
-    ctx.restore();
+    ctx.save();ctx.shadowColor=b.color;ctx.shadowBlur=reducedFx?0:6;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);ctx.fillStyle=b.color;ctx.fill();ctx.restore();
   });
   drawParticles();
   zombies.forEach(drawZombie);
   soldiers.forEach(drawSoldier);
   sBullets.forEach(b=>{
-    ctx.save();
-    ctx.shadowColor='#ffdd44';ctx.shadowBlur=reducedFx?0:7;
-    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);
-    ctx.fillStyle='#ffdd44';ctx.fill();
-    ctx.restore();
+    ctx.save();ctx.shadowColor='#ffdd44';ctx.shadowBlur=reducedFx?0:7;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);ctx.fillStyle='#ffdd44';ctx.fill();ctx.restore();
   });
   if(player&&(gameState==='playing'||gameState==='paused'||gameState==='dead')){
     drawPlayer2();
     drawPlayer();
-    drawInventoryUI();
-  }
-  // Draw downed bodies + revive bar
-  function drawDownedBody(x,y,col,label){
-    ctx.save();ctx.translate(x,y);
-    ctx.globalAlpha=0.7;
-    ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(0,4,18,10,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
-    ctx.globalAlpha=1;
-    ctx.font='bold 9px monospace';ctx.fillStyle='#fff';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,0,4);
-    ctx.restore();
-    // Revive hint
-    ctx.font='8px monospace';ctx.fillStyle='#ffdd00';
-    ctx.textAlign='center';ctx.textBaseline='bottom';
-    ctx.fillText('hold X to revive',x,y-14);ctx.textAlign='left';
+    if(whichPlayer==='p1')drawInventoryUI();
   }
   if(twoPlayerMode){
     if(p2Downed)drawDownedBody(p2Downed.x,p2Downed.y,'#cc44cc','P2 ↓');
@@ -2122,8 +2133,75 @@ function draw(){
       ctx.fillText('REVIVING...',rx,ry-40);ctx.textAlign='left';
     }
   }
-  drawDmgNumbers();
-  drawLowHealthEffect();
+  // Dmg numbers live in world coords — draw inside viewport
+  ctx.textAlign='center';
+  dmgNumbers.forEach(d=>{
+    ctx.globalAlpha=d.life/d.maxLife;
+    if(d.text){ctx.font='16px monospace';ctx.fillText(d.val,d.x,d.y);}
+    else{ctx.font='bold 13px monospace';ctx.fillStyle='#ff6600';ctx.fillText('-'+d.val,d.x,d.y);}
+  });
+  ctx.globalAlpha=1;ctx.textAlign='left';
+  // Low-health vignette per player
+  if(whichPlayer==='p1'&&player&&player.hp>0&&player.hp<=5){
+    const t=Date.now(),phase=(t%850)/850;
+    const beat=phase<0.12?(phase/0.12):(phase<0.38?((0.38-phase)/0.26):0);
+    const beat2=phase<0.38?0:(phase-0.38<0.12?((phase-0.38)/0.12):(phase-0.38<0.38?((0.76-phase)/0.26):0));
+    const pulse=Math.max(beat,beat2);const base=(5-player.hp)/5;
+    const dark=0.45+0.3*base+0.2*pulse,red=0.15+0.2*base+0.18*pulse;
+    const gv=ctx.createRadialGradient(cx,cy,vpH*.12,cx,cy,vpH*.82);
+    gv.addColorStop(0,'rgba(0,0,0,0)');
+    gv.addColorStop(0.55,`rgba(50,0,0,${red.toFixed(2)})`);
+    gv.addColorStop(1,`rgba(0,0,0,${dark.toFixed(2)})`);
+    ctx.fillStyle=gv;ctx.fillRect(cx-vpW,cy-vpH,vpW*2,vpH*2);
+  }
+  if(whichPlayer==='p2'&&player2&&player2.hp>0&&player2.hp<=5){
+    const t=Date.now(),phase=(t%850)/850;
+    const pulse=Math.max(phase<0.12?(phase/0.12):(phase<0.38?((0.38-phase)/0.26):0),0);
+    const base=(5-player2.hp)/5;const dark=0.45+0.3*base+0.2*pulse,red=0.15+0.2*base+0.18*pulse;
+    const gv=ctx.createRadialGradient(cx,cy,vpH*.12,cx,cy,vpH*.82);
+    gv.addColorStop(0,'rgba(0,0,0,0)');gv.addColorStop(0.55,`rgba(50,0,0,${red.toFixed(2)})`);
+    gv.addColorStop(1,`rgba(0,0,0,${dark.toFixed(2)})`);
+    ctx.fillStyle=gv;ctx.fillRect(cx-vpW,cy-vpH,vpW*2,vpH*2);
+  }
+  // Mini P2 HUD inside right viewport
+  if(whichPlayer==='p2'&&twoPlayerMode){
+    ctx.save();ctx.setTransform(1,0,0,1,0,0); // reset transform for screen-space UI
+    const hx=vpX+8,hy=vpY+8,hw=vpW-16;
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();ctx.roundRect(hx,hy,hw,40,5);ctx.fill();
+    // HP
+    ctx.fillStyle='#004400';ctx.fillRect(hx+4,hy+6,hw-8,8);
+    const hpr=(player2?player2.hp/player2.maxHp:0);
+    ctx.fillStyle=hpr>.5?'#44ff44':hpr>.25?'#ffaa00':'#ff3333';
+    ctx.fillRect(hx+4,hy+6,(hw-8)*hpr,8);
+    ctx.font='bold 7px monospace';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillText(`❤ ${player2?player2.hp:0}/${player2?player2.maxHp:0}`,hx+6,hy+10);
+    // Shield
+    ctx.fillStyle='#001133';ctx.fillRect(hx+4,hy+17,hw-8,7);
+    const shr=(player2&&player2.maxShield>0?player2.shield/player2.maxShield:0);
+    ctx.fillStyle='#00aaff';ctx.fillRect(hx+4,hy+17,(hw-8)*shr,7);
+    ctx.fillText(`🛡 ${player2?player2.shield:0}/${player2?player2.maxShield:0}`,hx+6,hy+20);
+    // Controls hint
+    ctx.fillStyle='#777';ctx.font='7px monospace';
+    ctx.fillText('Arrows=move  /=shoot',hx+6,hy+33);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(twoPlayerMode&&(player2||p2Downed)){
+    const p2cam=p2Downed?{x:p2Downed.x,y:p2Downed.y}:{x:player2.x,y:player2.y};
+    drawScene(player.x,player.y,  0,0,W/2,H,'p1');
+    drawScene(p2cam.x,p2cam.y, W/2,0,W/2,H,'p2');
+    // Divider
+    ctx.fillStyle='#000';ctx.fillRect(W/2-1,0,2,H);
+    ctx.fillStyle='#555';ctx.fillRect(W/2-1,0,1,H);
+  } else {
+    drawScene(player?player.x:W/2, player?player.y:H/2, 0,0,W,H,'p1');
+  }
+  // Tick damage numbers ONCE after drawing both viewports
+  dmgNumbers=dmgNumbers.filter(d=>{d.y+=d.vy;d.vy*=0.92;d.life--;return d.life>0;});
   drawAchievementNotifs();
   if(gameState==='paused')drawPauseOverlay();
   if(gameState==='title'||gameState==='dead'){
@@ -2379,7 +2457,7 @@ function drawAbilityHUD(){
 // ─── PAUSE ────────────────────────────────────────────────────────────────────
 function togglePause(){
   if(gameState==='playing'){
-    if(player)frozenAngle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+    if(player){const _fm=worldMouse();frozenAngle=Math.atan2(_fm.y-player.y,_fm.x-player.x);}
     gameState='paused';pauseMusic();stopHeartbeat();pauseBtn.textContent='▶';pauseBtn.classList.add('on');
   }else if(gameState==='paused'&&shopEl.classList.contains('hidden')){
     gameState='playing';resumeMusic();pauseBtn.textContent='⏸';pauseBtn.classList.remove('on');
