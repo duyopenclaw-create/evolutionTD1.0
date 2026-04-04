@@ -902,7 +902,8 @@ function spawnZombie(){
     zGun=WEAPONS.find(w=>w.id===gId);
   }
   zombies.push({x:pos.x,y:pos.y,r:zt.r,hp,maxHp:hp,dmg,
-                speed:spd,baseSpeed:spd,angle:0,type:zt.id,zt,gun:zGun,lastShot:0});
+                speed:spd,baseSpeed:spd,angle:0,type:zt.id,zt,gun:zGun,lastShot:0,
+                targetP2:Math.random()<0.5});
 }
 
 function spawnBlood(x,y){
@@ -1059,7 +1060,8 @@ function update(now){
   zombies.forEach(z=>{
     if(camoOn){z.angle=(z.angle||0)+0.01;return;} // wander, don't chase
     let _ztx=player.x,_zty=player.y;
-    if(twoPlayerMode&&player2){const _d1=Math.hypot(player.x-z.x,player.y-z.y),_d2=Math.hypot(player2.x-z.x,player2.y-z.y);if(_d2<_d1){_ztx=player2.x;_zty=player2.y;}}
+    if(twoPlayerMode&&player2){if(z.targetP2){_ztx=player2.x;_zty=player2.y;}else{_ztx=player.x;_zty=player.y;}}
+    else if(twoPlayerMode&&!player2&&p2Downed){_ztx=player.x;_zty=player.y;} // P2 down, retarget P1
     const dx=_ztx-z.x,dy=_zty-z.y,dist=Math.hypot(dx,dy);
     if(dist>0){
       z.angle=Math.atan2(dy,dx);
@@ -1095,7 +1097,7 @@ function update(now){
       if(!z.jumpTimer)z.jumpTimer=now;
       if(now-z.jumpTimer>7000){
         z.jumpTimer=now;
-        let _jt=player;if(twoPlayerMode&&player2&&Math.hypot(player2.x-z.x,player2.y-z.y)<Math.hypot(player.x-z.x,player.y-z.y))_jt=player2;
+        const _jt=(twoPlayerMode&&player2&&z.targetP2)?player2:player;
         z.jumping=true;z.jumpLandTime=now+500;z.jumpTarget={x:_jt.x,y:_jt.y};
         spawnExp(z.x,z.y,true);
       }
@@ -1112,7 +1114,7 @@ function update(now){
   zombies.forEach(z=>{
     if(!z.gun||camoOn)return;
     let _zt=player;
-    if(twoPlayerMode&&player2){const _gd1=Math.hypot(player.x-z.x,player.y-z.y),_gd2=Math.hypot(player2.x-z.x,player2.y-z.y);if(_gd2<_gd1)_zt=player2;}
+    if(twoPlayerMode&&player2){_zt=z.targetP2?player2:player;}
     const dist=Math.hypot(_zt.x-z.x,_zt.y-z.y);
     if(dist>350)return; // out of range
     const shotCd=Math.max(1500,(z.gun.cd/60)*1000*2); // slower than player
