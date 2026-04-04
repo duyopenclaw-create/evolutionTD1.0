@@ -66,6 +66,27 @@ body { background:#0a0a0a; display:flex; align-items:center; justify-content:cen
 canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair; transition:filter .2s; }
 canvas.hc { filter:contrast(1.4) saturate(2); }
 
+/* ── Stage select ── */
+#stage-modal { position:absolute; inset:0; background:rgba(0,0,0,0.93);
+               display:flex; align-items:center; justify-content:center; z-index:9; }
+#stage-panel { background:#0c0c0c; border:2px solid #444; border-radius:12px;
+               width:700px; padding:28px 24px; }
+#stage-panel h2 { font-size:26px; color:#fff; text-align:center; margin-bottom:6px;
+                  letter-spacing:5px; text-shadow:0 0 20px #fff4; }
+#stage-panel .sp-sub { font-size:11px; color:#555; text-align:center; margin-bottom:20px; letter-spacing:1px; }
+.stage-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+.sg-item { border:2px solid #2a2a2a; border-radius:8px; padding:14px 8px 10px;
+           text-align:center; cursor:pointer; background:#111; transition:all .15s; position:relative; }
+.sg-item:not(.locked):hover { transform:translateY(-4px); box-shadow:0 6px 24px rgba(0,0,0,.6); }
+.sg-item.locked { opacity:.38; cursor:not-allowed; filter:grayscale(.6); }
+.sg-item .sg-ico { font-size:26px; margin-bottom:6px; line-height:1; }
+.sg-item .sg-name { font-size:11px; font-weight:bold; letter-spacing:2px; margin-bottom:5px; }
+.sg-item .sg-desc { font-size:9px; color:#666; margin-bottom:8px; line-height:1.5; }
+.sg-item .sg-req { font-size:9px; font-weight:bold; padding:2px 6px;
+                   border-radius:3px; display:inline-block; }
+.sg-item.locked .sg-req { background:#1a1a1a; color:#555; }
+.sg-item:not(.locked) .sg-req { color:#0a0a0a; }
+
 /* ── Shop modal ── */
 #shop { position:absolute; inset:0; background:rgba(0,0,0,0.85);
         display:flex; align-items:center; justify-content:center; z-index:10; }
@@ -178,6 +199,15 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
   </div>
 </div>
 
+<!-- Stage select modal -->
+<div id="stage-modal" class="hidden">
+  <div id="stage-panel">
+    <h2>SELECT STAGE</h2>
+    <p class="sp-sub">Gold and level carry over · Harder stages give more XP and coins</p>
+    <div id="stage-grid" class="stage-grid"></div>
+  </div>
+</div>
+
 <!-- Achievements modal -->
 <div id="ach-modal" class="hidden">
   <div id="ach-panel">
@@ -263,6 +293,26 @@ const ACHIEVEMENTS=[
   {id:'kill_boss',  name:'Boss Slayer',   desc:'Kill a Boss',                     ico:'💥'},
   {id:'no_dmg_10',  name:'Untouchable',   desc:'Kill 10 zombies without damage',  ico:'🛡'},
 ];
+
+// ─── STAGES ──────────────────────────────────────────────────────────────────
+const STAGES=[
+  {id:'beginner',name:'BEGINNER',ico:'🌿',color:'#44ff88',reqLv:1,
+   desc:'Slow spawns\nweak enemies',
+   spawnMs:20000,maxZ:12,hpMul:1.0,dmgMul:1.0,spdMul:1.0,coinMul:1.0,xpMul:1.0},
+  {id:'easy',    name:'EASY',    ico:'⚡',color:'#44aaff',reqLv:1,
+   desc:'Normal spawns\nstandard enemies',
+   spawnMs:15000,maxZ:18,hpMul:1.3,dmgMul:1.0,spdMul:1.1,coinMul:1.3,xpMul:1.3},
+  {id:'medium',  name:'MEDIUM',  ico:'🔥',color:'#ffaa00',reqLv:5,
+   desc:'Fast spawns\ntougher enemies',
+   spawnMs:10000,maxZ:24,hpMul:1.8,dmgMul:1.3,spdMul:1.25,coinMul:1.7,xpMul:1.7},
+  {id:'hard',    name:'HARD',    ico:'💀',color:'#ff3333',reqLv:10,
+   desc:'Rapid spawns\nelite enemies · LV10',
+   spawnMs:7000, maxZ:32,hpMul:2.5,dmgMul:1.7,spdMul:1.5,coinMul:2.2,xpMul:2.2},
+  {id:'boss',    name:'BOSS',    ico:'😈',color:'#cc44ff',reqLv:25,
+   desc:'Non-stop nightmare\nboss-tier all · LV25',
+   spawnMs:4000, maxZ:45,hpMul:4.0,dmgMul:2.5,spdMul:1.8,coinMul:3.5,xpMul:3.5},
+];
+let currentStage=STAGES[0];
 
 // ─── FLOOR ────────────────────────────────────────────────────────────────────
 const TILE=40, tileMap=[];
@@ -353,14 +403,12 @@ function sClap(t){
 function schedLoop(t0){
   if(!musicActive)return;
   const B=60/130;
-  // Kick: beats 0,1,2,3,4,5,6,7 + extra hit at 0.5,2.5,4.5,6.5
-  [0,0.5,1,2,2.5,3,4,4.5,5,6,6.5,7].forEach(b=>sKick(t0+b*B));
-  // Snare + clap on backbeats
+  // Kick on 1, 2.5, 3, 4.5, 5, 6.5, 7 — driving but not overwhelming
+  [0,2.5,4,6.5].forEach(b=>sKick(t0+b*B));
+  // Snare + clap on backbeats 2 and 6
   [2,6].forEach(b=>{sSnare(t0+b*B);sClap(t0+b*B);});
-  // Off-beat snare ghost hits
-  [1,3,5,7].forEach(b=>sSnare(t0+(b+0.5)*B));
-  // Hi-hats every 8th, louder on downbeats
-  for(let b=0;b<16;b++)sHat(t0+b*B*.5,b%2===0?.25:.13);
+  // Hi-hats every 8th note — consistent, quieter on off-beats
+  for(let b=0;b<16;b++)sHat(t0+b*B*.5,b%4===0?.22:b%2===0?.14:.08);
   [[0,110,1.75],[2,110,1.75],[4,82.4,1.75],[6,73.4,1.75]]
     .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'sawtooth',.22));
   [[0,329.6,.45],[.5,440,.45],[1,392,.45],[1.5,329.6,.45],
@@ -564,8 +612,10 @@ function spawnZombie(){
   let pool=[];
   avail.forEach(t=>{for(let i=0;i<(weights[t.id]||1);i++)pool.push(t);});
   const zt=pool[Math.floor(Math.random()*pool.length)];
-  const spd=zt.spd*(0.85+Math.random()*.3);
-  zombies.push({x:pos.x,y:pos.y,r:zt.r,hp:zt.hp,maxHp:zt.hp,dmg:zt.dmg,
+  const spd=zt.spd*currentStage.spdMul*(0.85+Math.random()*.3);
+  const hp=Math.ceil(zt.hp*currentStage.hpMul);
+  const dmg=Math.max(1,Math.round(zt.dmg*currentStage.dmgMul));
+  zombies.push({x:pos.x,y:pos.y,r:zt.r,hp,maxHp:hp,dmg,
                 speed:spd,angle:0,type:zt.id,zt});
 }
 
@@ -638,7 +688,7 @@ function update(now){
   checkAchievements();
 
   // Zombie spawn
-  if(now-lastZombieSpawn>15000&&zombies.length<20){spawnZombie();lastZombieSpawn=now;}
+  if(now-lastZombieSpawn>currentStage.spawnMs&&zombies.length<currentStage.maxZ){spawnZombie();lastZombieSpawn=now;}
   while(zombies.length<3)spawnZombie();
 
   // Ammo spawn every 30s
@@ -705,7 +755,7 @@ function update(now){
     if(z.hp<=0){
       spawnBlood(z.x,z.y);
       spawnExp(z.x,z.y,z.r>18);
-      player.xp+=z.zt.xp;
+      player.xp+=Math.round(z.zt.xp*currentStage.xpMul);
       let leveled=false;
       while(player.xp>=xpToNext(player.level)){
         player.xp-=xpToNext(player.level);
@@ -720,10 +770,10 @@ function update(now){
       if(z.zt.id==='demon')earnAchievement('kill_demon');
       // Normal zombies: 50% coin drop; others: guaranteed range
       if(z.zt.id==='normal'){
-        if(Math.random()<0.5)dropCoins(z.x,z.y,1,1);
+        if(Math.random()<0.5)dropCoins(z.x,z.y,1,Math.ceil(1*currentStage.coinMul));
       } else {
         const [mn,mx]=z.zt.coins;
-        dropCoins(z.x,z.y,mn,mx);
+        dropCoins(z.x,z.y,mn,Math.ceil(mx*currentStage.coinMul));
       }
       return false;
     }
@@ -1346,7 +1396,9 @@ document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 pauseBtn.addEventListener('click',togglePause);
 muteBtn.addEventListener('click',toggleMute);
 ob.addEventListener('click',()=>{
-  if(gameState==='dead'||gameState==='title'){initGame();overlay.classList.add('hidden');}
+  if(gameState==='dead'||gameState==='title'){
+    openStageSelect();
+  }
 });
 
 // ─── ACCESSIBILITY BAR ────────────────────────────────────────────────────────
@@ -1371,6 +1423,38 @@ document.getElementById('ab-hc').addEventListener('click',()=>{
   highContrast=!highContrast;canvas.classList.toggle('hc',highContrast);
   document.getElementById('ab-hc').classList.toggle('on',highContrast);
 });
+
+// ─── STAGE SELECT ────────────────────────────────────────────────────────────
+const stageModal=document.getElementById('stage-modal');
+const stageGrid=document.getElementById('stage-grid');
+function renderStageSelect(){
+  const savedLv=parseInt(localStorage.getItem('zs_level'))||1;
+  stageGrid.innerHTML='';
+  STAGES.forEach(s=>{
+    const unlocked=savedLv>=s.reqLv;
+    const div=document.createElement('div');
+    div.className='sg-item'+(unlocked?'':' locked');
+    div.style.borderColor=unlocked?s.color:'#2a2a2a';
+    if(s===currentStage&&unlocked)div.style.background='rgba(255,255,255,0.06)';
+    div.innerHTML=`
+      <div class="sg-ico">${s.ico}</div>
+      <div class="sg-name" style="color:${unlocked?s.color:'#444'}">${s.name}</div>
+      <div class="sg-desc">${s.desc.replace(/\n/g,'<br>')}</div>
+      <div class="sg-req" style="background:${unlocked?s.color:'transparent'}">${s.reqLv<=1?'OPEN':'LV '+s.reqLv+' REQ'}</div>`;
+    if(unlocked)div.onclick=()=>startStage(s);
+    stageGrid.appendChild(div);
+  });
+}
+function openStageSelect(){
+  renderStageSelect();
+  stageModal.classList.remove('hidden');
+}
+function startStage(s){
+  currentStage=s;
+  stageModal.classList.add('hidden');
+  initGame();
+  overlay.classList.add('hidden');
+}
 
 // ─── ACHIEVEMENTS MODAL ───────────────────────────────────────────────────────
 const achModal=document.getElementById('ach-modal');
