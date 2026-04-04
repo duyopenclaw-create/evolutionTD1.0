@@ -387,7 +387,6 @@ function sHat(t,v){
 }
 function sClap(t){
   if(!audioCtx||!musicActive)return;
-  // Two quick noise bursts = clap layered on snare
   [0,0.012].forEach(dt=>{
     const len=Math.floor(audioCtx.sampleRate*0.08);
     const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
@@ -400,25 +399,70 @@ function sClap(t){
     src.start(t+dt);
   });
 }
+// ── Arp: short bright pulse note ─────────────────────────────────────────────
+function sArp(f,t,v=0.072){
+  if(!audioCtx||!musicActive)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain(),
+        filt=audioCtx.createBiquadFilter();
+  o.connect(filt);filt.connect(g);g.connect(masterGain);
+  o.type='square';o.frequency.value=f;
+  filt.type='highpass';filt.frequency.value=200; // remove low mud
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(v,t+0.007);
+  g.gain.setValueAtTime(v*.8,t+0.055);
+  g.gain.linearRampToValueAtTime(0,t+0.11);
+  o.start(t);o.stop(t+0.13);
+}
+// ── Bass: punchy filtered sawtooth ───────────────────────────────────────────
+function sBass(f,t,dur=0.28){
+  if(!audioCtx||!musicActive)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain(),
+        lp=audioCtx.createBiquadFilter();
+  o.connect(lp);lp.connect(g);g.connect(masterGain);
+  o.type='sawtooth';
+  // Slight pitch drop for punch
+  o.frequency.setValueAtTime(f*1.06,t);
+  o.frequency.exponentialRampToValueAtTime(f,t+0.035);
+  lp.type='lowpass';lp.frequency.value=420;lp.Q.value=3.5;
+  g.gain.setValueAtTime(0.42,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.start(t);o.stop(t+dur+0.02);
+}
 function schedLoop(t0){
   if(!musicActive)return;
   const B=60/130;
-  // Kick on 1, 2.5, 3, 4.5, 5, 6.5, 7 — driving but not overwhelming
+
+  // ── Drums ─────────────────────────────────────────────────────────────────
   [0,2.5,4,6.5].forEach(b=>sKick(t0+b*B));
-  // Snare + clap on backbeats 2 and 6
   [2,6].forEach(b=>{sSnare(t0+b*B);sClap(t0+b*B);});
-  // Hi-hats every 8th note — consistent, quieter on off-beats
   for(let b=0;b<16;b++)sHat(t0+b*B*.5,b%4===0?.22:b%2===0?.14:.08);
-  [[0,110,1.75],[2,110,1.75],[4,82.4,1.75],[6,73.4,1.75]]
-    .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'sawtooth',.22));
+
+  // ── Walking bass (per beat, following Am → Em → Dm) ───────────────────────
+  // Root walking: A C A E  E G D A  (chord tones + passing notes)
+  [[0,110],[1,130.8],[2,110],[3,82.41],
+   [4,82.41],[5,98.0],[6,73.42],[7,110]]
+    .forEach(([b,f])=>sBass(f,t0+b*B));
+
+  // ── Arpeggios (8th notes, chord tones of Am / Em / Dm) ───────────────────
+  // Am: A4 E5 C5 E5 repeated × 2 (beats 0–4)
+  // Em: E4 B4 G4 B4 (beats 4–6)
+  // Dm: D4 A4 F4 A4 (beats 6–8)
+  [440,659.3,523.3,659.3, 440,659.3,523.3,659.3,  // Am × 2
+   329.6,493.9,392,493.9,                          // Em
+   293.7,440,349.2,440]                            // Dm
+    .forEach((f,i)=>sArp(f,t0+i*B*.5));
+
+  // ── Melody (square lead) ──────────────────────────────────────────────────
   [[0,329.6,.45],[.5,440,.45],[1,392,.45],[1.5,329.6,.45],
    [2,261.6,.45],[2.5,329.6,.45],[3,220,.85],[3.75,220,.2],
    [4,293.7,.45],[4.5,329.6,.45],[5,392,.45],[5.5,440,.45],
    [6,392,.45],[6.5,329.6,.45],[7,220,.9]]
-    .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'square',.085));
-  [[0,164.8,.45],[1,196,.45],[2,130.8,.45],[3,110,.85],
-   [4,146.8,.45],[5,196,.45],[6,196,.45],[7,110,.9]]
-    .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'triangle',.055));
+    .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'square',.075));
+
+  // ── Pad harmony (triangle) ────────────────────────────────────────────────
+  [[0,164.8,.9],[2,130.8,.9],[4,146.8,.9],[6,110,.9]]
+    .forEach(([b,f,d])=>sNote(f,t0+b*B,d*B,'triangle',.048));
+
   loopTimer=setTimeout(()=>schedLoop(t0+8*B),8*B*1000-150);
 }
 function startMusic(){initAudio();if(musicActive)return;if(audioCtx.state==='suspended')audioCtx.resume();musicActive=true;schedLoop(audioCtx.currentTime+.05);}
