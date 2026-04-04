@@ -535,37 +535,52 @@ function pauseMusic(){musicActive=false;clearTimeout(loopTimer);if(audioCtx)audi
 function resumeMusic(){if(!audioCtx)return;audioCtx.resume().then(()=>{musicActive=true;schedLoop(audioCtx.currentTime+.05);});}
 
 // ─── HEARTBEAT SFX ───────────────────────────────────────────────────────────
-let heartbeatActive=false,heartbeatTimer=null;
+let heartbeatActive=false,heartbeatTimer=null,heartGain=null;
+function initHeartGain(){
+  if(heartGain)return;
+  initAudio();
+  heartGain=audioCtx.createGain();
+  heartGain.gain.value=muted?0:0.9; // own volume, independent of music
+  heartGain.connect(audioCtx.destination);
+}
 function playHeartbeat(){
   if(!audioCtx||muted)return;
-  function thump(t,freq,gain){
-    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-    o.connect(g);g.connect(masterGain);
-    o.type='sine';
-    o.frequency.setValueAtTime(freq,t);
-    o.frequency.exponentialRampToValueAtTime(freq*.55,t+0.15);
-    g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(gain,t+0.012);
-    g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
-    o.start(t);o.stop(t+0.25);
+  initHeartGain();
+  // thump: sine at ~100Hz + a higher harmonic at ~220Hz for laptop speaker audibility
+  function thump(t,f1,f2,gain){
+    // Low body
+    const o1=audioCtx.createOscillator(),g1=audioCtx.createGain();
+    o1.type='sine';o1.frequency.setValueAtTime(f1,t);
+    o1.frequency.exponentialRampToValueAtTime(f1*0.45,t+0.14);
+    g1.gain.setValueAtTime(0,t);g1.gain.linearRampToValueAtTime(gain,t+0.006);
+    g1.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+    o1.connect(g1);g1.connect(heartGain);o1.start(t);o1.stop(t+0.2);
+    // Mid click for presence
+    const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+    o2.type='triangle';o2.frequency.setValueAtTime(f2,t);
+    o2.frequency.exponentialRampToValueAtTime(f2*0.6,t+0.06);
+    g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(gain*0.45,t+0.005);
+    g2.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+    o2.connect(g2);g2.connect(heartGain);o2.start(t);o2.stop(t+0.1);
   }
   const t=audioCtx.currentTime;
-  thump(t,    68,0.55); // lub
-  thump(t+0.26,58,0.40); // dub
+  thump(t,      110, 260, 1.0); // lub — stronger
+  thump(t+0.30,  90, 200, 0.65); // dub
 }
 function startHeartbeat(){
   if(heartbeatActive)return;
   heartbeatActive=true;
   initAudio();
-  if(audioCtx.state==='suspended')audioCtx.resume();
-  playHeartbeat();
-  heartbeatTimer=setInterval(()=>{if(heartbeatActive)playHeartbeat();},850);
+  // Resume context if needed, then play
+  const doPlay=()=>{playHeartbeat();heartbeatTimer=setInterval(()=>{if(heartbeatActive)playHeartbeat();},860);};
+  if(audioCtx.state==='suspended')audioCtx.resume().then(doPlay);
+  else doPlay();
 }
 function stopHeartbeat(){
   heartbeatActive=false;
   clearInterval(heartbeatTimer);heartbeatTimer=null;
 }
-function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
+function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;if(heartGain)heartGain.gain.value=muted?0:0.9;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,chestPickups,particles,bloodPools,spikes;
