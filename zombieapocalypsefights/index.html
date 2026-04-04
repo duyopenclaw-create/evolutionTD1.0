@@ -1544,7 +1544,7 @@ function drawZombie(z){
   const bx=z.x-bw/2,by=z.y-z.r-(z.r>=20?14:10);
   ctx.fillStyle='#100010';ctx.fillRect(bx-1,by-1,bw+2,bh+2);
   ctx.fillStyle='#330000';ctx.fillRect(bx,by,bw,bh);
-  const pct=z.hp/z.zt.hp;
+  const pct=z.hp/z.maxHp;
   ctx.fillStyle=pct>.5?'#ff3333':pct>.25?'#ff8800':'#ff2222';
   if(z.zt.id!=='normal')ctx.fillStyle=pct>.5?zt.eye:pct>.25?'#ff8800':'#ff2222';
   ctx.fillRect(bx,by,bw*pct,bh);
