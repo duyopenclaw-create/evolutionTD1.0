@@ -533,6 +533,38 @@ function schedLoop(t0){
 function startMusic(){initAudio();if(musicActive)return;if(audioCtx.state==='suspended')audioCtx.resume();musicActive=true;schedLoop(audioCtx.currentTime+.05);}
 function pauseMusic(){musicActive=false;clearTimeout(loopTimer);if(audioCtx)audioCtx.suspend();}
 function resumeMusic(){if(!audioCtx)return;audioCtx.resume().then(()=>{musicActive=true;schedLoop(audioCtx.currentTime+.05);});}
+
+// ─── HEARTBEAT SFX ───────────────────────────────────────────────────────────
+let heartbeatActive=false,heartbeatTimer=null;
+function playHeartbeat(){
+  if(!audioCtx||muted)return;
+  function thump(t,freq,gain){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(masterGain);
+    o.type='sine';
+    o.frequency.setValueAtTime(freq,t);
+    o.frequency.exponentialRampToValueAtTime(freq*.55,t+0.15);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(gain,t+0.012);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+    o.start(t);o.stop(t+0.25);
+  }
+  const t=audioCtx.currentTime;
+  thump(t,    68,0.55); // lub
+  thump(t+0.26,58,0.40); // dub
+}
+function startHeartbeat(){
+  if(heartbeatActive)return;
+  heartbeatActive=true;
+  initAudio();
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  playHeartbeat();
+  heartbeatTimer=setInterval(()=>{if(heartbeatActive)playHeartbeat();},850);
+}
+function stopHeartbeat(){
+  heartbeatActive=false;
+  clearInterval(heartbeatTimer);heartbeatTimer=null;
+}
 function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -1038,10 +1070,14 @@ function update(now){
     return true;
   });
 
+  // Low-health heartbeat
+  if(player.hp>0&&player.hp<=5)startHeartbeat();
+  else stopHeartbeat();
+
   updateHUD();
 
   if(player.hp<=0){
-    player.hp=0;gameState='dead';saveProgress();pauseMusic();
+    player.hp=0;gameState='dead';saveProgress();pauseMusic();stopHeartbeat();
     ot.textContent='YOU DIED';
     om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
     ob.textContent='PLAY AGAIN';
@@ -1522,6 +1558,24 @@ function drawAchievementNotifs(){
   ctx.globalAlpha=1;
 }
 
+function drawLowHealthEffect(){
+  if(!player||player.hp>5||gameState==='dead')return;
+  const t=Date.now();
+  // pulse tied to heartbeat cycle (~850ms)
+  const phase=(t%850)/850;
+  const beat=phase<0.12?(phase/0.12):(phase<0.38?((0.38-phase)/0.26):0);
+  const beat2=phase<0.38?0:(phase-0.38<0.12?((phase-0.38)/0.12):(phase-0.38<0.38?((0.76-phase)/0.26):0));
+  const pulse=Math.max(beat,beat2);
+  const base=(5-player.hp)/5; // 0 at 5hp → 1 at 0hp
+  const dark=0.45+0.3*base+0.2*pulse;
+  const red=0.15+0.2*base+0.18*pulse;
+  const gv=ctx.createRadialGradient(W/2,H/2,H*0.12,W/2,H/2,H*0.82);
+  gv.addColorStop(0,'rgba(0,0,0,0)');
+  gv.addColorStop(0.55,`rgba(50,0,0,${red.toFixed(2)})`);
+  gv.addColorStop(1,`rgba(0,0,0,${dark.toFixed(2)})`);
+  ctx.fillStyle=gv;ctx.fillRect(0,0,W,H);
+}
+
 function drawPauseOverlay(){
   ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='rgba(0,0,0,0.8)';
@@ -1560,6 +1614,7 @@ function draw(){
     drawInventoryUI();
   }
   drawDmgNumbers();
+  drawLowHealthEffect();
   drawAchievementNotifs();
   if(gameState==='paused')drawPauseOverlay();
   if(gameState==='title'||gameState==='dead'){
@@ -1768,7 +1823,7 @@ function drawAbilityHUD(){
 function togglePause(){
   if(gameState==='playing'){
     if(player)frozenAngle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-    gameState='paused';pauseMusic();pauseBtn.textContent='▶';pauseBtn.classList.add('on');
+    gameState='paused';pauseMusic();stopHeartbeat();pauseBtn.textContent='▶';pauseBtn.classList.add('on');
   }else if(gameState==='paused'&&shopEl.classList.contains('hidden')){
     gameState='playing';resumeMusic();pauseBtn.textContent='⏸';pauseBtn.classList.remove('on');
   }
