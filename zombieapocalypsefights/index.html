@@ -536,7 +536,7 @@ function resumeMusic(){if(!audioCtx)return;audioCtx.resume().then(()=>{musicActi
 function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,particles,bloodPools,spikes;
+let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,chestPickups,particles,bloodPools,spikes;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
 let gameState='title',invTimer=0,lastZombieSpawn=0,lastAmmoSpawn=0,lastHeartSpawn=0;
 let frozenAngle=0,invOpen=false,shopTab='weapons';
@@ -557,7 +557,7 @@ let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
 let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false;
 let mouseDown=false,skipFrame=false;
 let dmgNumbers=[];
-bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];spikes=[];
+bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];chestPickups=[];particles=[];bloodPools=[];spikes=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function saveProgress(){
@@ -640,7 +640,7 @@ function initGame(){
   const aShield=armor.shield+(armorUpgrades[armor.id]||0);
   player={x:400,y:300,r:16,hp:10,maxHp:10,shield:aShield,maxShield:aShield,
           speed:3*armor.smul,level:savedLevel,xp:savedXp};
-  bullets=[];zBullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];
+  bullets=[];zBullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];chestPickups=[];
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
@@ -981,6 +981,8 @@ function update(now){
         const [mn,mx]=z.zt.coins;
         dropCoins(z.x,z.y,mn,Math.ceil(mx*currentStage.coinMul));
       }
+      // 1 in 3 chance: drop a chest
+      if(Math.random()<0.333)chestPickups.push({x:z.x,y:z.y,bob:0});
       return false;
     }
     return true;
@@ -1017,6 +1019,20 @@ function update(now){
     if(dx*dx+dy*dy<(player.r+18)**2){
       player.hp=Math.min(player.maxHp,player.hp+10);
       lastHeartSpawn=now;
+      return false;
+    }
+    return true;
+  });
+  // Chest pickups
+  chestPickups.forEach(c=>c.bob=(c.bob||0)+0.07);
+  chestPickups=chestPickups.filter(c=>{
+    const dx=player.x-c.x,dy=player.y-c.y;
+    if(dx*dx+dy*dy<(player.r+16)**2){
+      const pick=['soda','camo','plague'][Math.floor(Math.random()*3)];
+      abilityInventory[pick]=(abilityInventory[pick]||0)+1;
+      saveProgress();renderAbilityBar();
+      // floating text
+      dmgNumbers.push({x:c.x,y:c.y-10,val:pick==='soda'?'🥤':pick==='camo'?'🫥':'🧫',life:80,maxLife:80,vy:-0.6,text:true});
       return false;
     }
     return true;
@@ -1186,6 +1202,38 @@ function drawHeart(h){
   ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('+10',0,8);
   ctx.restore();
 }
+function drawChest(c){
+  const bob=Math.sin(c.bob)*3;
+  ctx.save();ctx.translate(c.x,c.y+bob);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.beginPath();ctx.ellipse(1,10,10,4,0,0,Math.PI*2);ctx.fill();
+  // Glow
+  if(!reducedFx){ctx.shadowColor='#ffd700';ctx.shadowBlur=16;}
+  // Chest body
+  const g=ctx.createLinearGradient(-10,-8,-10,8);
+  g.addColorStop(0,'#8b5e1a');g.addColorStop(.5,'#6b3e0a');g.addColorStop(1,'#4a2a05');
+  ctx.fillStyle=g;ctx.strokeStyle='#3a1a00';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.roundRect(-10,0,20,10,2);ctx.fill();ctx.stroke();
+  // Lid
+  const lg=ctx.createLinearGradient(-10,-8,-10,0);
+  lg.addColorStop(0,'#c08030');lg.addColorStop(1,'#7a4010');
+  ctx.fillStyle=lg;
+  ctx.beginPath();ctx.roundRect(-10,-8,20,9,2);ctx.fill();ctx.stroke();
+  // Metal bands
+  ctx.strokeStyle='#c8a000';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-10,-4);ctx.lineTo(10,-4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-10,4);ctx.lineTo(10,4);ctx.stroke();
+  // Latch
+  ctx.fillStyle='#ffd700';ctx.strokeStyle='#aa8800';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(-3,-3,6,5,1);ctx.fill();ctx.stroke();
+  // Question mark glow
+  ctx.shadowBlur=0;
+  ctx.font='bold 9px monospace';ctx.fillStyle='#fff';
+  ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText('?',0,-10);
+  ctx.restore();
+}
+
 function drawZombie(z){
   const zt=z.zt;
   ctx.save();ctx.translate(z.x,z.y);
@@ -1239,15 +1287,21 @@ function drawZombie(z){
     ctx.textAlign='center';ctx.textBaseline='bottom';
     ctx.fillText(zt.name,z.x,by-1);ctx.textAlign='left';
   }
-  // Gun indicator
+  // Gun indicator — rusty/worn look so it's distinct from the player's gun
   if(z.gun){
     ctx.save();ctx.translate(z.x,z.y);ctx.rotate(z.angle);
-    ctx.fillStyle=z.gun.color;ctx.shadowColor=z.gun.color;ctx.shadowBlur=reducedFx?0:6;
-    ctx.fillRect(z.r-1,-3,z.gun.id==='sniper'?14:10,z.gun.id==='rocket'?5:3);
-    ctx.shadowBlur=0;ctx.restore();
-    // weapon label above HP bar
-    ctx.fillStyle=z.gun.color;ctx.font='bold 7px monospace';
-    ctx.textAlign='center';ctx.textBaseline='bottom';
+    const gLen=z.gun.id==='sniper'?18:z.gun.id==='rocket'?12:10;
+    const gH=z.gun.id==='rocket'?5:3;
+    // Stock
+    ctx.fillStyle='#5a3a1a';ctx.fillRect(z.r-3,-(gH+1),gLen+4,gH+2);
+    // Barrel
+    ctx.fillStyle='#3a3a3a';ctx.fillRect(z.r+1,-Math.floor(gH/2),gLen,Math.ceil(gH*.6));
+    // Worn highlight
+    ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(z.r+1,-Math.floor(gH/2),gLen,1);
+    ctx.restore();
+    // Weapon type emoji above HP bar
+    ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillStyle='#ccc';
     ctx.fillText(z.gun.ico,z.x,by-1-(z.zt.id!=='normal'&&z.zt.id!=='mutant'?9:0));
     ctx.textAlign='left';
   }
@@ -1430,12 +1484,16 @@ function drawInventoryUI(){
 
 function drawDmgNumbers(){
   if(!dmgNumbers.length)return;
-  ctx.font='bold 13px monospace';ctx.textAlign='center';
+  ctx.textAlign='center';
   dmgNumbers=dmgNumbers.filter(d=>{
     d.y+=d.vy;d.vy*=0.92;d.life--;
     ctx.globalAlpha=d.life/d.maxLife;
-    ctx.fillStyle='#ff6600';
-    ctx.fillText('-'+d.val,d.x,d.y);
+    if(d.text){
+      ctx.font='16px monospace';ctx.fillText(d.val,d.x,d.y);
+    } else {
+      ctx.font='bold 13px monospace';ctx.fillStyle='#ff6600';
+      ctx.fillText('-'+d.val,d.x,d.y);
+    }
     return d.life>0;
   });
   ctx.globalAlpha=1;ctx.textAlign='left';
@@ -1486,6 +1544,7 @@ function draw(){
   ammoPickups.forEach(drawAmmo);
   coinPickups.forEach(drawCoin);
   heartPickups.forEach(drawHeart);
+  chestPickups.forEach(drawChest);
   bullets.forEach(drawBullet);
   zBullets.forEach(b=>{
     ctx.save();
