@@ -160,6 +160,9 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
   <div class="absp"></div>
   <div class="ab-sep"></div>
   <button class="abtn" id="ab-ach" title="Achievements">🏆</button>
+  <div class="ab-sep"></div>
+  <button class="abtn on" id="army-btn" title="Toggle army on/off">🪖</button>
+  <button class="abtn" id="p2-btn" title="Toggle 2-player mode">👥</button>
 </div>
 <div id="game-wrap">
   <div id="hud">
@@ -197,10 +200,7 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
       <span id="coins-val" class="val">0</span>
     </div>
     <div class="hsp"></div>
-    <button id="ach-btn" class="hbtn">🏆</button>
     <button id="shop-btn" class="hbtn">🛒 SHOP</button>
-    <button id="army-btn" class="hbtn on" title="Toggle army on/off">🪖 ON</button>
-    <button id="p2-btn" class="hbtn" title="Toggle 2-player mode">👥 1P</button>
     <button id="pause-btn" class="hbtn">⏸</button>
     <button id="mute-btn"  class="hbtn">🔊</button>
   </div>
@@ -648,6 +648,10 @@ let frozenAngle=0,invOpen=false,shopTab='weapons';
 let owned={weapons:new Set(['pistol']),armors:new Set(['cloth'])};
 let equipped={weapon:'pistol',armor:'cloth'};
 let weaponAmmo={pistol:15};
+let p2equipped={weapon:'pistol',armor:'cloth'};
+let p2weaponAmmo={pistol:15};
+let p2weaponUpgrades={};
+let p2lastShot=0;
 let invBtnBounds=null,invItemBounds=[],invUpgradeBounds=[];
 let weaponUpgrades={},armorUpgrades={};
 let ownedSkins=new Set(['default']);
@@ -726,6 +730,7 @@ loadProgress();
 
 function getWeapon(){return WEAPONS.find(w=>w.id===equipped.weapon);}
 function getArmor(){return ARMORS.find(a=>a.id===equipped.armor);}
+function getP2Weapon(){return WEAPONS.find(w=>w.id===p2equipped.weapon)||WEAPONS[0];}
 function getLevel(){return player?player.level:1;}
 function xpToNext(lv){return Math.floor(50*Math.pow(1.6,lv-1));}
 function equippedWeaponTier(){return getWeapon().tier;}
@@ -789,6 +794,8 @@ function initGame(){
 function spawnPlayer2(ox,oy){
   const armor=getArmor();
   const aShield=armor.shield+(armorUpgrades[armor.id]||0);
+  // Init P2 ammo if first spawn
+  if(!p2weaponAmmo[p2equipped.weapon])p2weaponAmmo[p2equipped.weapon]=getP2Weapon().ammo;
   player2={x:ox!==undefined?ox:player.x+44,y:oy!==undefined?oy:player.y,
            r:player.r,hp:player.maxHp,maxHp:player.maxHp,
            shield:aShield,maxShield:aShield,speed:player.speed,
@@ -976,7 +983,7 @@ function movePlayer2(){
     if(keys['arrowleft'])sdx=-1;
     if(keys['arrowright'])sdx=1;
     const ang=(sdx||sdy)?Math.atan2(sdy,sdx):p2FaceAngle;
-    if(player2)shootAtAngle(player2,ang);
+    if(player2)shootAtAngle(player2,ang,true);
   }
 }
 function applyDamage(dmg){
@@ -1051,7 +1058,9 @@ function update(now){
   const camoOn=activeEffects.camo&&Date.now()<activeEffects.camo.endTime;
   zombies.forEach(z=>{
     if(camoOn){z.angle=(z.angle||0)+0.01;return;} // wander, don't chase
-    const dx=player.x-z.x,dy=player.y-z.y,dist=Math.hypot(dx,dy);
+    let _ztx=player.x,_zty=player.y;
+    if(twoPlayerMode&&player2){const _d1=Math.hypot(player.x-z.x,player.y-z.y),_d2=Math.hypot(player2.x-z.x,player2.y-z.y);if(_d2<_d1){_ztx=player2.x;_zty=player2.y;}}
+    const dx=_ztx-z.x,dy=_zty-z.y,dist=Math.hypot(dx,dy);
     if(dist>0){
       z.angle=Math.atan2(dy,dx);
       const nx=z.x+(dx/dist)*z.speed,ny=z.y+(dy/dist)*z.speed;
@@ -1086,13 +1095,15 @@ function update(now){
       if(!z.jumpTimer)z.jumpTimer=now;
       if(now-z.jumpTimer>7000){
         z.jumpTimer=now;
-        z.jumping=true;z.jumpLandTime=now+500;z.jumpTarget={x:player.x,y:player.y};
+        let _jt=player;if(twoPlayerMode&&player2&&Math.hypot(player2.x-z.x,player2.y-z.y)<Math.hypot(player.x-z.x,player.y-z.y))_jt=player2;
+        z.jumping=true;z.jumpLandTime=now+500;z.jumpTarget={x:_jt.x,y:_jt.y};
         spawnExp(z.x,z.y,true);
       }
       if(z.jumping&&now>=z.jumpLandTime){
         z.x=z.jumpTarget.x;z.y=z.jumpTarget.y;z.jumping=false;
         spawnExp(z.x,z.y,true);
         if(invTimer===0){applyDamage(15);invTimer=90;killStreak=0;}
+        if(twoPlayerMode&&player2&&player2.invTimer===0){const _jd=Math.hypot(player2.x-z.x,player2.y-z.y);if(_jd<50){for(let i=0;i<15;i++){if(player2.shield>0)player2.shield--;else player2.hp--;}player2.invTimer=90;}}
       }
     }
   });
@@ -1100,12 +1111,14 @@ function update(now){
   // Armed zombie shooting
   zombies.forEach(z=>{
     if(!z.gun||camoOn)return;
-    const dist=Math.hypot(player.x-z.x,player.y-z.y);
+    let _zt=player;
+    if(twoPlayerMode&&player2){const _gd1=Math.hypot(player.x-z.x,player.y-z.y),_gd2=Math.hypot(player2.x-z.x,player2.y-z.y);if(_gd2<_gd1)_zt=player2;}
+    const dist=Math.hypot(_zt.x-z.x,_zt.y-z.y);
     if(dist>350)return; // out of range
     const shotCd=Math.max(1500,(z.gun.cd/60)*1000*2); // slower than player
     if(nowMs-z.lastShot<shotCd)return;
     z.lastShot=nowMs;
-    const ang=Math.atan2(player.y-z.y,player.x-z.x);
+    const ang=Math.atan2(_zt.y-z.y,_zt.x-z.x);
     const spread=(z.gun.id==='shotgun')?[-0.22,0,0.22]:[0];
     spread.forEach(off=>{
       const a=ang+off+(Math.random()*0.18-0.09); // slight inaccuracy
@@ -1123,6 +1136,13 @@ function update(now){
       const dx=b.x-player.x,dy=b.y-player.y;
       if(dx*dx+dy*dy<(b.r+player.r)**2){
         applyDamage(b.dmg);invTimer=30;killStreak=0;return false;
+      }
+    }
+    if(twoPlayerMode&&player2&&player2.invTimer===0){
+      const dx=b.x-player2.x,dy=b.y-player2.y;
+      if(dx*dx+dy*dy<(b.r+player2.r)**2){
+        for(let i=0;i<b.dmg;i++){if(player2.shield>0)player2.shield--;else player2.hp--;}
+        player2.invTimer=30;return false;
       }
     }
     return true;
@@ -1381,9 +1401,15 @@ function update(now){
     if(dx*dx+dy*dy<(player.r+12)**2){
       const w=getWeapon();
       weaponAmmo[equipped.weapon]=Math.min(w.maxAmmo,(weaponAmmo[equipped.weapon]||0)+w.ammo);
-      sfx('ammo');
-      saveProgress();
-      return false;
+      sfx('ammo');saveProgress();return false;
+    }
+    if(twoPlayerMode&&player2){
+      const dx2=player2.x-a.x,dy2=player2.y-a.y;
+      if(dx2*dx2+dy2*dy2<(player2.r+12)**2){
+        const w2=getP2Weapon();
+        p2weaponAmmo[p2equipped.weapon]=Math.min(w2.maxAmmo,(p2weaponAmmo[p2equipped.weapon]||0)+w2.ammo);
+        sfx('ammo');return false;
+      }
     }
     return true;
   });
@@ -1461,17 +1487,21 @@ function triggerRocket(x,y){
 
 // ─── SHOOT ───────────────────────────────────────────────────────────────────
 let lastShot=0;
-function shootAtAngle(pl,ang){
+function shootAtAngle(pl,ang,isP2=false){
   if(gameState!=='playing')return;
-  const wdata=getWeapon();
-  const ammo=weaponAmmo[equipped.weapon]||0;
+  const wdata=isP2?getP2Weapon():getWeapon();
+  const eqKey=isP2?p2equipped.weapon:equipped.weapon;
+  const ammoObj=isP2?p2weaponAmmo:weaponAmmo;
+  const upgObj=isP2?p2weaponUpgrades:weaponUpgrades;
+  const ammo=ammoObj[eqKey]||0;
   if(ammo<=0)return;
   const nowT=Date.now();
-  if(wdata.cd>0&&nowT-lastShot<(wdata.cd/60)*1000)return;
-  lastShot=nowT;
+  const shotTimer=isP2?p2lastShot:lastShot;
+  if(wdata.cd>0&&nowT-shotTimer<(wdata.cd/60)*1000)return;
+  if(isP2)p2lastShot=nowT;else lastShot=nowT;
   const tx=pl.x+Math.cos(ang)*(pl.r+18),ty=pl.y+Math.sin(ang)*(pl.r+18);
   const sodaBonus=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?3:0;
-  const finalDmg=wdata.dmg+(weaponUpgrades[wdata.id]||0)+sodaBonus;
+  const finalDmg=wdata.dmg+(upgObj[wdata.id]||0)+sodaBonus;
   if(wdata.id==='shotgun'){
     for(const offset of[-0.22,0,0.22]){
       const a=ang+offset;
@@ -1479,16 +1509,16 @@ function shootAtAngle(pl,ang){
                     r:wdata.r,life:wdata.life,dmg:finalDmg,
                     sniper:false,rocket:false,color:wdata.color});
     }
-    weaponAmmo[equipped.weapon]--;
+    ammoObj[eqKey]--;
   } else {
     bullets.push({x:tx,y:ty,vx:Math.cos(ang)*wdata.spd,vy:Math.sin(ang)*wdata.spd,
                   r:wdata.r,life:wdata.life,dmg:finalDmg,
                   sniper:wdata.id==='sniper',rocket:wdata.id==='rocket',color:wdata.color});
-    weaponAmmo[equipped.weapon]--;
+    ammoObj[eqKey]--;
   }
   sfx('shoot_'+wdata.id);
   spawnFlash(tx,ty);
-  updateHUD();
+  if(!isP2)updateHUD();
 }
 function shoot(){
   const wm=worldMouse();
@@ -2117,9 +2147,8 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
   const _gameActive=gameState==='playing'||gameState==='paused'||gameState==='dead';
   if(_gameActive){
     if(twoPlayerMode){
-      // Each viewport only draws its own player
-      if(whichPlayer==='p1'&&player){drawPlayer();drawInventoryUI();}
-      else if(whichPlayer==='p2'&&player2){drawPlayer2();}
+      if(whichPlayer==='p1'&&player){if(player2)drawPlayer2();drawPlayer();drawInventoryUI();}
+      else if(whichPlayer==='p2'&&player2){drawPlayer();drawPlayer2();}
     } else {
       if(player){drawPlayer2();drawPlayer();drawInventoryUI();}
     }
@@ -2180,7 +2209,7 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
   if(whichPlayer==='p2'&&twoPlayerMode){
     ctx.save();ctx.setTransform(1,0,0,1,0,0); // reset transform for screen-space UI
     const hx=vpX+8,hy=vpY+8,hw=vpW-16;
-    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();ctx.roundRect(hx,hy,hw,40,5);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.beginPath();ctx.roundRect(hx,hy,hw,48,5);ctx.fill();
     // HP
     ctx.fillStyle='#004400';ctx.fillRect(hx+4,hy+6,hw-8,8);
     const hpr=(player2?player2.hp/player2.maxHp:0);
@@ -2193,9 +2222,12 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
     const shr=(player2&&player2.maxShield>0?player2.shield/player2.maxShield:0);
     ctx.fillStyle='#00aaff';ctx.fillRect(hx+4,hy+17,(hw-8)*shr,7);
     ctx.fillText(`🛡 ${player2?player2.shield:0}/${player2?player2.maxShield:0}`,hx+6,hy+20);
-    // Controls hint
-    ctx.fillStyle='#777';ctx.font='7px monospace';
-    ctx.fillText('Arrows=move  /=shoot',hx+6,hy+33);
+    // Weapon / ammo
+    const _pw2=getP2Weapon();
+    ctx.fillStyle='#ffdd88';ctx.font='bold 7px monospace';
+    ctx.fillText(`${_pw2.ico} ${_pw2.name}  ${p2weaponAmmo[p2equipped.weapon]||0}/${_pw2.maxAmmo}`,hx+6,hy+30);
+    ctx.fillStyle='#555';ctx.font='7px monospace';
+    ctx.fillText('Arrows=move  /=shoot',hx+6,hy+39);
     ctx.restore();
   }
   ctx.restore();
@@ -2573,13 +2605,11 @@ pauseBtn.addEventListener('click',togglePause);
 muteBtn.addEventListener('click',toggleMute);
 if(armyBtn)armyBtn.addEventListener('click',()=>{
   armyActive=!armyActive;
-  armyBtn.textContent='🪖 '+(armyActive?'ON':'OFF');
   armyBtn.classList.toggle('on',armyActive);
 });
 const p2Btn=document.getElementById('p2-btn');
 if(p2Btn)p2Btn.addEventListener('click',()=>{
   twoPlayerMode=!twoPlayerMode;
-  p2Btn.textContent='👥 '+(twoPlayerMode?'2P':'1P');
   p2Btn.classList.toggle('on',twoPlayerMode);
   if(twoPlayerMode&&gameState==='playing'&&!player2)spawnPlayer2();
   else if(!twoPlayerMode)player2=null;
@@ -2669,7 +2699,6 @@ function closeAchievements(){
   if(gameState==='paused'){gameState='playing';resumeMusic();pauseBtn.textContent='⏸';pauseBtn.classList.remove('on');}
 }
 document.getElementById('ach-x').onclick=closeAchievements;
-document.getElementById('ach-btn').onclick=()=>achModal.classList.contains('hidden')?openAchievements():closeAchievements();
 document.getElementById('ab-ach').onclick=()=>achModal.classList.contains('hidden')?openAchievements():closeAchievements();
 
 // ─── LOOP ────────────────────────────────────────────────────────────────────
