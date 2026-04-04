@@ -1774,7 +1774,7 @@ function drawZombie(z){
   if(z.zt.id!=='normal'&&z.zt.id!=='mutant'){
     ctx.fillStyle=zt.eye;ctx.font='bold 7px monospace';
     ctx.textAlign='center';ctx.textBaseline='bottom';
-    ctx.fillText(zt.name,z.x,by-1);ctx.textAlign='left';
+    ctx.fillText(zt.name,z.x,by-1);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   }
   // Gun indicator — rusty/worn look so it's distinct from the player's gun
   if(z.gun){
@@ -1792,7 +1792,7 @@ function drawZombie(z){
     ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
     ctx.fillStyle='#ccc';
     ctx.fillText(z.gun.ico,z.x,by-1-(z.zt.id!=='normal'&&z.zt.id!=='mutant'?9:0));
-    ctx.textAlign='left';
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
   }
 }
 function drawFireBombs(){
@@ -1878,7 +1878,7 @@ function drawPlayer2(){
   // P2 label
   ctx.font='bold 9px monospace';ctx.fillStyle='#ff88ff';
   ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('P2',player2.x,player2.y-player2.r-4);ctx.textAlign='left';
+  ctx.fillText('P2',player2.x,player2.y-player2.r-4);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   // HP/shield bars
   const bw=36,bh=5,gap=3,bx=player2.x-bw/2;
   const shY=player2.y-player2.r-22;
@@ -1920,7 +1920,12 @@ function drawInventoryUI(){
   const headerH=18, upgradeH=56;
   const ph=pad*2+24+4+headerH+maxRows*(rowH+gap)+upgradeH;
 
-  let px=Math.max(8,Math.min(W-pw-8,player.x-pw/2));
+  // In split mode, clamp popup to P1's visible viewport (camera-relative)
+  const _splitActive=twoPlayerMode&&(player2||p2Downed);
+  const _camX=_splitActive?Math.max(W/4,Math.min(3*W/4,player.x)):W/2;
+  const _vpL=_splitActive?_camX-W/4:0;
+  const _vpR=_splitActive?_camX+W/4:W;
+  let px=Math.max(_vpL+8,Math.min(_vpR-pw-8,player.x-pw/2));
   let py=Math.max(46,by-ph-6);
   if(py+ph>H-8)py=H-ph-8;
 
@@ -2121,6 +2126,8 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
   // Clamp camera inside world bounds
   const cx=Math.max(halfW,Math.min(W-halfW,camX));
   const cy=Math.max(halfH,Math.min(H-halfH,camY));
+  const _prevFx=reducedFx;
+  if(twoPlayerMode&&(player2||p2Downed))reducedFx=true; // suppress shadow draws (rendered twice)
   ctx.save();
   ctx.beginPath();ctx.rect(vpX,vpY,vpW,vpH);ctx.clip();
   ctx.translate(vpX+halfW-cx, vpY+halfH-cy);
@@ -2233,6 +2240,7 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
     ctx.restore();
   }
   ctx.restore();
+  reducedFx=_prevFx; // restore original fx setting
 }
 
 function draw(){
