@@ -200,6 +200,7 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
     <button id="ach-btn" class="hbtn">🏆</button>
     <button id="shop-btn" class="hbtn">🛒 SHOP</button>
     <button id="army-btn" class="hbtn on" title="Toggle army on/off">🪖 ON</button>
+    <button id="p2-btn" class="hbtn" title="Toggle 2-player mode">👥 1P</button>
     <button id="pause-btn" class="hbtn">⏸</button>
     <button id="mute-btn"  class="hbtn">🔊</button>
   </div>
@@ -334,7 +335,7 @@ const ZTYPES=[
   {id:'mutant',   name:'Mutant',   r:20,hp:8,  dmg:3, spd:0.38,col1:'#cc3366',col2:'#1a0010',eye:'#fc0',xp:30, coins:[1,3,1],  minStage:0},
   {id:'elite',    name:'Elite',    r:17,hp:15, dmg:2, spd:0.65,col1:'#99aacc',col2:'#223355',eye:'#0ff',xp:60, coins:[2,5,1],  minStage:2},
   {id:'warlord',  name:'Warlord',  r:24,hp:100,dmg:10,spd:0.5, col1:'#ff8800',col2:'#441100',eye:'#f0f',xp:400,coins:[8,15,2], minStage:3},
-  {id:'demon',    name:'DEMON',    r:28,hp:50, dmg:6, spd:0.4, col1:'#ff1111',col2:'#550000',eye:'#ff0',xp:250,coins:[5,12,2], minStage:4},
+  {id:'demon',    name:'DEMON',    r:28,hp:500,dmg:6, spd:0.4, col1:'#ff1111',col2:'#550000',eye:'#ff0',xp:250,coins:[5,12,2], minStage:4},
 ];
 
 // ─── ACHIEVEMENTS ────────────────────────────────────────────────────────────
@@ -631,7 +632,13 @@ function sfx(type){
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,chestPickups,particles,bloodPools,spikes;
+let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,chestPickups,particles,bloodPools,spikes,fireBombs;
+let twoPlayerMode=false;
+let player2=null;
+let p1FaceAngle=0;
+let p2FaceAngle=0;
+let p2RespawnTimer=0;
+let eliteBoostTimer=0;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
 let gameState='title',invTimer=0,lastZombieSpawn=0,lastAmmoSpawn=0,lastHeartSpawn=0;
 let frozenAngle=0,invOpen=false,shopTab='weapons';
@@ -655,7 +662,7 @@ let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
 let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false,armyActive=true;
 let mouseDown=false,skipFrame=false;
 let dmgNumbers=[];
-bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];chestPickups=[];particles=[];bloodPools=[];spikes=[];
+bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];chestPickups=[];particles=[];bloodPools=[];spikes=[];fireBombs=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function saveProgress(){
@@ -765,12 +772,22 @@ function initGame(){
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
-  spikes=[];
+  spikes=[];fireBombs=[];
   keys={};mouse={x:0,y:0};kills=0;killStreak=0;dmgNumbers=[];achievementNotifs=[];
   invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;gameStartTime=0;
   frozenAngle=0;invOpen=false;activeEffects={};
+  if(twoPlayerMode)spawnPlayer2();
+  else player2=null;
   gameState='playing';
   updateHUD();startMusic();
+}
+
+function spawnPlayer2(){
+  const armor=getArmor();
+  const aShield=armor.shield+(armorUpgrades[armor.id]||0);
+  player2={x:player.x+40,y:player.y,r:14,hp:player.maxHp,maxHp:player.maxHp,
+           shield:aShield,maxShield:aShield,speed:player.speed,
+           level:player.level,xp:player.xp,invTimer:0};
 }
 
 function spawnHeartPos(){
@@ -873,7 +890,7 @@ function spawnZombie(){
     zGun=WEAPONS.find(w=>w.id===gId);
   }
   zombies.push({x:pos.x,y:pos.y,r:zt.r,hp,maxHp:hp,dmg,
-                speed:spd,angle:0,type:zt.id,zt,gun:zGun,lastShot:0});
+                speed:spd,baseSpeed:spd,angle:0,type:zt.id,zt,gun:zGun,lastShot:0});
 }
 
 function spawnBlood(x,y){
@@ -921,16 +938,41 @@ function dropCoins(x,y,mn,mx){
 // ─── UPDATE ──────────────────────────────────────────────────────────────────
 function movePlayer(){
   let dx=0,dy=0;
-  if(keys['w']||keys['arrowup'])dy-=1;
-  if(keys['s']||keys['arrowdown'])dy+=1;
-  if(keys['a']||keys['arrowleft'])dx-=1;
-  if(keys['d']||keys['arrowright'])dx+=1;
+  if(keys['w'])dy-=1;
+  if(keys['s'])dy+=1;
+  if(keys['a'])dx-=1;
+  if(keys['d'])dx+=1;
   if(dx&&dy){dx*=.707;dy*=.707;}
+  if(dx!==0||dy!==0)p1FaceAngle=Math.atan2(dy,dx);
   const sodaSpd=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?1.5:1;
   const sp=player.speed*(getArmor().smul)*sodaSpd;
   const nx=player.x+dx*sp,ny=player.y+dy*sp;
   if(!wallsBlock(nx,player.y,player.r))player.x=nx;
   if(!wallsBlock(player.x,ny,player.r))player.y=ny;
+}
+function movePlayer2(){
+  let dx=0,dy=0;
+  if(keys['arrowup'])dy-=1;
+  if(keys['arrowdown'])dy+=1;
+  if(keys['arrowleft'])dx-=1;
+  if(keys['arrowright'])dx+=1;
+  if(dx&&dy){dx*=.707;dy*=.707;}
+  if(dx!==0||dy!==0)p2FaceAngle=Math.atan2(dy,dx);
+  const armor=getArmor();
+  const sodaSpd2=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?1.5:1;
+  const sp=player2.speed*(armor.smul)*sodaSpd2;
+  const nx=player2.x+dx*sp,ny=player2.y+dy*sp;
+  if(!wallsBlock(nx,player2.y,player2.r))player2.x=nx;
+  if(!wallsBlock(player2.x,ny,player2.r))player2.y=ny;
+  if(keys['enter']){
+    let sdx=0,sdy=0;
+    if(keys['arrowup'])sdy=-1;
+    if(keys['arrowdown'])sdy=1;
+    if(keys['arrowleft'])sdx=-1;
+    if(keys['arrowright'])sdx=1;
+    const ang=(sdx||sdy)?Math.atan2(sdy,sdx):p2FaceAngle;
+    shootAtAngle(player2,ang);
+  }
 }
 function applyDamage(dmg){
   sfx('player_hurt');
@@ -942,7 +984,15 @@ function update(now){
   if(slowMode){skipFrame=!skipFrame;if(skipFrame)return;}
   if(gameStartTime===0)gameStartTime=Date.now();
   if(autoFire&&mouseDown)shoot();
+  if(keys['c']){
+    let sdx=0,sdy=0;
+    if(keys['s'])sdy=1; if(keys['w'])sdy=-1;
+    if(keys['a'])sdx=-1; if(keys['d'])sdx=1;
+    const cAng=(sdx||sdy)?Math.atan2(sdy,sdx):p1FaceAngle;
+    shootAtAngle(player,cAng);
+  }
   movePlayer();
+  if(twoPlayerMode&&player2)movePlayer2();
   if(invTimer>0)invTimer--;
   checkAchievements();
 
@@ -1016,6 +1066,30 @@ function update(now){
         }
       }
     }
+    // Demon fire bombs and jump attack
+    if(z.zt.id==='demon'){
+      if(!z.bombTimer)z.bombTimer=now;
+      if(now-z.bombTimer>4000){
+        z.bombTimer=now;
+        for(let i=0;i<4;i++){
+          const ang=Math.random()*Math.PI*2;
+          const spd=2.5+Math.random()*1.5;
+          fireBombs.push({x:z.x,y:z.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+                          life:180,maxLife:180,r:8,dmg:4,exploded:false});
+        }
+      }
+      if(!z.jumpTimer)z.jumpTimer=now;
+      if(now-z.jumpTimer>7000){
+        z.jumpTimer=now;
+        z.jumping=true;z.jumpLandTime=now+500;z.jumpTarget={x:player.x,y:player.y};
+        spawnExp(z.x,z.y,true);
+      }
+      if(z.jumping&&now>=z.jumpLandTime){
+        z.x=z.jumpTarget.x;z.y=z.jumpTarget.y;z.jumping=false;
+        spawnExp(z.x,z.y,true);
+        if(invTimer===0){applyDamage(15);invTimer=90;killStreak=0;}
+      }
+    }
   });
 
   // Armed zombie shooting
@@ -1060,6 +1134,39 @@ function update(now){
       return s.life>0;
     });
   }
+
+  // Elite aura: boost 3 random non-elite zombies every 5s
+  const hasElite=zombies.some(z=>z.zt.id==='elite');
+  if(hasElite){
+    if(now-eliteBoostTimer>5000){
+      eliteBoostTimer=now;
+      const targets=zombies.filter(z=>z.zt.id!=='elite');
+      for(let i=targets.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[targets[i],targets[j]]=[targets[j],targets[i]];}
+      targets.slice(0,3).forEach(z=>{z.boosted=true;z.boostEnd=now+5000;});
+    }
+  }
+  // Apply/expire boost
+  zombies.forEach(z=>{
+    if(z.boosted&&now>z.boostEnd){z.boosted=false;z.speed=z.baseSpeed;}
+    else if(z.boosted){z.speed=z.baseSpeed*2.2;}
+  });
+
+  // Fire bomb update
+  fireBombs=fireBombs.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    if(b.life<=0||segHits(b.x,b.y,b.x-b.vx,b.y-b.vy,b.r)){
+      spawnExp(b.x,b.y,true);
+      bloodPools.push({x:b.x,y:b.y,r:28,alpha:.7,fire:true});
+      const dx=player.x-b.x,dy=player.y-b.y;
+      if(dx*dx+dy*dy<40*40&&invTimer===0){applyDamage(b.dmg);invTimer=45;}
+      return false;
+    }
+    if(invTimer===0){
+      const dx=player.x-b.x,dy=player.y-b.y;
+      if(dx*dx+dy*dy<(player.r+b.r)**2){applyDamage(b.dmg);invTimer=45;return false;}
+    }
+    return true;
+  });
 
   // Bullet-zombie hits
   bullets.forEach((b,bi)=>{
@@ -1211,6 +1318,26 @@ function update(now){
     });
   }
 
+  // P2 damage from zombies
+  if(twoPlayerMode&&player2&&player2.invTimer===0&&!camoOn){
+    zombies.forEach(z=>{
+      const dx=player2.x-z.x,dy=player2.y-z.y;
+      if(dx*dx+dy*dy<(player2.r+z.r)**2){
+        for(let i=0;i<z.dmg;i++){if(player2.shield>0)player2.shield--;else player2.hp--;}
+        player2.invTimer=90;killStreak=0;
+        sfx('player_hurt');
+      }
+    });
+  }
+  if(player2&&player2.invTimer>0)player2.invTimer--;
+  if(twoPlayerMode&&player2&&player2.hp<=0){
+    sfx('game_over');spawnBlood(player2.x,player2.y);
+    player2=null;p2RespawnTimer=Date.now()+5000;
+  }
+  if(twoPlayerMode&&!player2&&p2RespawnTimer>0&&Date.now()>p2RespawnTimer){
+    spawnPlayer2();p2RespawnTimer=0;
+  }
+
   // Soldiers passively collect coins nearby
   coinPickups=coinPickups.filter(c=>{
     for(const s of soldiers){
@@ -1238,6 +1365,10 @@ function update(now){
     return true;
   });
   heartPickups=heartPickups.filter(h=>{
+    if(twoPlayerMode&&player2&&player2.hp<player2.maxHp){
+      const dx=player2.x-h.x,dy=player2.y-h.y;
+      if(dx*dx+dy*dy<(player2.r+18)**2){player2.hp=Math.min(player2.maxHp,player2.hp+10);lastHeartSpawn=now;return false;}
+    }
     if(player.hp>=player.maxHp)return true; // wait until player needs it
     const dx=player.x-h.x,dy=player.y-h.y;
     if(dx*dx+dy*dy<(player.r+18)**2){
@@ -1289,17 +1420,15 @@ function triggerRocket(x,y){
 
 // ─── SHOOT ───────────────────────────────────────────────────────────────────
 let lastShot=0;
-function shoot(){
+function shootAtAngle(pl,ang){
   if(gameState!=='playing')return;
   const wdata=getWeapon();
   const ammo=weaponAmmo[equipped.weapon]||0;
   if(ammo<=0)return;
-  const now=Date.now();
-  if(wdata.cd>0&&now-lastShot<(wdata.cd/60)*1000)return;
-  lastShot=now;
-  const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
-  const tx=player.x+Math.cos(ang)*(player.r+18),ty=player.y+Math.sin(ang)*(player.r+18);
-
+  const nowT=Date.now();
+  if(wdata.cd>0&&nowT-lastShot<(wdata.cd/60)*1000)return;
+  lastShot=nowT;
+  const tx=pl.x+Math.cos(ang)*(pl.r+18),ty=pl.y+Math.sin(ang)*(pl.r+18);
   const sodaBonus=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?3:0;
   const finalDmg=wdata.dmg+(weaponUpgrades[wdata.id]||0)+sodaBonus;
   if(wdata.id==='shotgun'){
@@ -1319,6 +1448,10 @@ function shoot(){
   sfx('shoot_'+wdata.id);
   spawnFlash(tx,ty);
   updateHUD();
+}
+function shoot(){
+  const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  shootAtAngle(player,ang);
 }
 
 // ─── DRAW ────────────────────────────────────────────────────────────────────
@@ -1517,6 +1650,11 @@ function drawZombie(z){
   // Shadow
   ctx.fillStyle='rgba(0,0,0,0.45)';
   ctx.beginPath();ctx.ellipse(3,5,z.r*.9,z.r*.5,0,0,Math.PI*2);ctx.fill();
+  // Boosted aura ring
+  if(z.boosted){
+    ctx.strokeStyle='#ffdd00';ctx.lineWidth=3;ctx.shadowColor='#ffdd00';ctx.shadowBlur=12;
+    ctx.beginPath();ctx.arc(0,0,z.r+5,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+  }
   // Spiky ring for elite+
   if(z.r>16){
     const spk=z.r>=24?12:10;
@@ -1583,6 +1721,19 @@ function drawZombie(z){
     ctx.textAlign='left';
   }
 }
+function drawFireBombs(){
+  fireBombs.forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);
+    ctx.shadowColor='#ff6600';ctx.shadowBlur=reducedFx?0:14;
+    const g=ctx.createRadialGradient(0,0,0,0,0,b.r);
+    g.addColorStop(0,'rgba(255,220,50,0.95)');
+    g.addColorStop(.5,'rgba(255,80,0,0.8)');
+    g.addColorStop(1,'rgba(100,20,0,0)');
+    ctx.beginPath();ctx.arc(0,0,b.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();ctx.arc(0,0,b.r*.45,0,Math.PI*2);ctx.fillStyle='#fff8aa';ctx.fill();
+    ctx.shadowBlur=0;ctx.restore();
+  });
+}
 function drawPlayer(){
   ctx.save();ctx.translate(player.x,player.y);
   const flash=invTimer>0&&Math.floor(invTimer/8)%2===0;
@@ -1628,6 +1779,43 @@ function drawPlayer(){
   const hpr=player.hp/player.maxHp;
   ctx.fillStyle=hpr>.5?'#44ff44':hpr>.25?'#ffaa00':'#ff3333';
   ctx.fillRect(bx,hpY,bw*hpr,bh);
+}
+
+function drawPlayer2(){
+  if(!player2)return;
+  ctx.save();ctx.translate(player2.x,player2.y);
+  const flash=player2.invTimer>0&&Math.floor(player2.invTimer/8)%2===0;
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.beginPath();ctx.ellipse(3,6,player2.r*.9,player2.r*.5,0,0,Math.PI*2);ctx.fill();
+  if(!flash){ctx.shadowColor='#ff88ff';ctx.shadowBlur=18;}
+  const g=ctx.createRadialGradient(-5,-5,2,0,0,player2.r);
+  g.addColorStop(0,flash?'#fff':'#ffbbff');
+  g.addColorStop(.6,flash?'#aaa':'#cc44cc');
+  g.addColorStop(1,flash?'#555':'#660066');
+  ctx.beginPath();ctx.arc(0,0,player2.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle=flash?'#fff':'#ff44ff';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.rotate(p2FaceAngle);
+  ctx.fillStyle='#888';ctx.fillRect(player2.r-2,-4,16,8);
+  ctx.fillStyle='#bbb';ctx.fillRect(player2.r,-3,14,2);
+  ctx.fillStyle='#555';ctx.fillRect(player2.r+2,3,8,5);
+  ctx.restore();
+  // P2 label
+  ctx.font='bold 9px monospace';ctx.fillStyle='#ff88ff';
+  ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.fillText('P2',player2.x,player2.y-player2.r-4);ctx.textAlign='left';
+  // HP/shield bars
+  const bw=36,bh=5,gap=3,bx=player2.x-bw/2;
+  const shY=player2.y-player2.r-22;
+  ctx.fillStyle='#001133';ctx.fillRect(bx-1,shY-1,bw+2,bh+2);
+  ctx.fillStyle='#003366';ctx.fillRect(bx,shY,bw,bh);
+  ctx.fillStyle='#00aaff';ctx.fillRect(bx,shY,bw*(player2.shield/player2.maxShield||0),bh);
+  const hpY=shY+bh+gap;
+  ctx.fillStyle='#222';ctx.fillRect(bx-1,hpY-1,bw+2,bh+2);
+  ctx.fillStyle='#004400';ctx.fillRect(bx,hpY,bw,bh);
+  const hpr2=player2.hp/player2.maxHp;
+  ctx.fillStyle=hpr2>.5?'#ff88ff':hpr2>.25?'#ffaa00':'#ff3333';
+  ctx.fillRect(bx,hpY,bw*hpr2,bh);
 }
 
 // ─── INVENTORY BUTTON + POPUP ────────────────────────────────────────────────
@@ -1836,6 +2024,7 @@ function draw(){
   drawBloodPools();
   WALLS.forEach(drawWall);
   spikes.forEach(drawSpike);
+  drawFireBombs();
   ammoPickups.forEach(drawAmmo);
   coinPickups.forEach(drawCoin);
   heartPickups.forEach(drawHeart);
@@ -1859,8 +2048,16 @@ function draw(){
     ctx.restore();
   });
   if(player&&(gameState==='playing'||gameState==='paused'||gameState==='dead')){
+    drawPlayer2();
     drawPlayer();
     drawInventoryUI();
+  }
+  if(twoPlayerMode&&!player2&&p2RespawnTimer>0){
+    const rem=Math.ceil((p2RespawnTimer-Date.now())/1000);
+    if(rem>0){
+      ctx.font='bold 14px monospace';ctx.fillStyle='#ff88ff';ctx.textAlign='center';
+      ctx.fillText('P2 respawns in '+rem+'s',W/2,H-80);ctx.textAlign='left';
+    }
   }
   drawDmgNumbers();
   drawLowHealthEffect();
@@ -2207,7 +2404,9 @@ document.addEventListener('keydown',e=>{
   if(k==='1'){useAbility('soda');return;}
   if(k==='2'){useAbility('camo');return;}
   if(k==='3'){useAbility('plague');return;}
-  keys[k]=true;e.preventDefault();
+  keys[k]=true;
+  // Prevent default for game keys (movement, shoot, arrow keys)
+  if(['w','a','s','d','c','enter','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
 });
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 pauseBtn.addEventListener('click',togglePause);
@@ -2216,6 +2415,14 @@ if(armyBtn)armyBtn.addEventListener('click',()=>{
   armyActive=!armyActive;
   armyBtn.textContent='🪖 '+(armyActive?'ON':'OFF');
   armyBtn.classList.toggle('on',armyActive);
+});
+const p2Btn=document.getElementById('p2-btn');
+if(p2Btn)p2Btn.addEventListener('click',()=>{
+  twoPlayerMode=!twoPlayerMode;
+  p2Btn.textContent='👥 '+(twoPlayerMode?'2P':'1P');
+  p2Btn.classList.toggle('on',twoPlayerMode);
+  if(twoPlayerMode&&gameState==='playing'&&!player2)spawnPlayer2();
+  else if(!twoPlayerMode)player2=null;
 });
 ob.addEventListener('click',()=>{
   if(gameState==='dead'||gameState==='title'){
