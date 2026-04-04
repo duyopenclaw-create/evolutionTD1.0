@@ -710,8 +710,9 @@ function loadProgress(){
     const sol=localStorage.getItem('zs_soldiers');if(sol)ownedSoldiers=Math.min(10,Math.max(0,parseInt(sol)||0));
   }catch(e){}
 }
-// ── One-time level grant ──────────────────────────────────────────────────────
+// ── One-time grants ───────────────────────────────────────────────────────────
 (function(){const cur=parseInt(localStorage.getItem('zs_level'))||1;if(cur<25){localStorage.setItem('zs_level',25);localStorage.setItem('zs_xp',0);}})();
+(function(){const cur=parseInt(localStorage.getItem('zs_coins'))||0;if(cur<1000){localStorage.setItem('zs_coins',1000);}})();
 // ─────────────────────────────────────────────────────────────────────────────
 loadProgress();
 // renderAbilityBar called after DOM ready via updateHUD below
