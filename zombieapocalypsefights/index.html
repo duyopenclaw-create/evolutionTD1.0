@@ -266,7 +266,8 @@ let frozenAngle=0,invOpen=false,shopTab='weapons';
 let owned={weapons:new Set(['pistol']),armors:new Set(['cloth'])};
 let equipped={weapon:'pistol',armor:'cloth'};
 let weaponAmmo={pistol:15};
-let invBtnBounds=null,invItemBounds=[];
+let invBtnBounds=null,invItemBounds=[],invUpgradeBounds=[];
+let weaponUpgrades={},armorUpgrades={}; // extra dmg/shield from level spending
 bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
@@ -282,6 +283,8 @@ function saveProgress(){
     localStorage.setItem('zs_equipped_w', equipped.weapon);
     localStorage.setItem('zs_equipped_a', equipped.armor);
     localStorage.setItem('zs_ammo', JSON.stringify(weaponAmmo));
+    localStorage.setItem('zs_wup', JSON.stringify(weaponUpgrades));
+    localStorage.setItem('zs_aup', JSON.stringify(armorUpgrades));
   }catch(e){}
 }
 function loadProgress(){
@@ -302,6 +305,8 @@ function loadProgress(){
       WEAPONS.forEach(w=>{if(parsed[w.id]!==undefined)weaponAmmo[w.id]=Math.min(parsed[w.id],w.maxAmmo);});
     }
     if(weaponAmmo[equipped.weapon]===undefined)weaponAmmo[equipped.weapon]=getWeapon().ammo;
+    const wu=localStorage.getItem('zs_wup');if(wu)weaponUpgrades={...JSON.parse(wu)};
+    const au=localStorage.getItem('zs_aup');if(au)armorUpgrades={...JSON.parse(au)};
   }catch(e){}
 }
 loadProgress();
@@ -329,7 +334,8 @@ function initGame(){
   const armor=getArmor();
   const savedLevel=parseInt(localStorage.getItem('zs_level'))||1;
   const savedXp=parseInt(localStorage.getItem('zs_xp'))||0;
-  player={x:400,y:300,r:16,hp:10,maxHp:10,shield:armor.shield,maxShield:armor.shield,
+  const aShield=armor.shield+(armorUpgrades[armor.id]||0);
+  player={x:400,y:300,r:16,hp:10,maxHp:10,shield:aShield,maxShield:aShield,
           speed:3*armor.smul,level:savedLevel,xp:savedXp};
   bullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
@@ -530,10 +536,21 @@ function update(now){
       spawnExp(z.x,z.y,z.r>18);
       player.xp+=z.zt.xp;
       let leveled=false;
-      while(player.xp>=xpToNext(player.level)){player.xp-=xpToNext(player.level);player.level++;leveled=true;}
+      while(player.xp>=xpToNext(player.level)){
+        player.xp-=xpToNext(player.level);
+        player.level++;
+        leveled=true;
+        // Every 10 levels: +5 max HP (stacks)
+        if(player.level%10===0){player.maxHp+=5;player.hp=Math.min(player.hp+5,player.maxHp);}
+      }
       if(leveled)saveProgress();
-      const [mn,mx]=z.zt.coins;
-      dropCoins(z.x,z.y,mn,mx);
+      // Normal zombies: 50% coin drop; others: guaranteed range
+      if(z.zt.id==='normal'){
+        if(Math.random()<0.5)dropCoins(z.x,z.y,1,1);
+      } else {
+        const [mn,mx]=z.zt.coins;
+        dropCoins(z.x,z.y,mn,mx);
+      }
       return false;
     }
     return true;
@@ -607,17 +624,18 @@ function shoot(){
   const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
   const tx=player.x+Math.cos(ang)*(player.r+18),ty=player.y+Math.sin(ang)*(player.r+18);
 
+  const finalDmg=wdata.dmg+(weaponUpgrades[wdata.id]||0);
   if(wdata.id==='shotgun'){
     for(const offset of[-0.22,0,0.22]){
       const a=ang+offset;
       bullets.push({x:tx,y:ty,vx:Math.cos(a)*wdata.spd,vy:Math.sin(a)*wdata.spd,
-                    r:wdata.r,life:wdata.life,dmg:wdata.dmg,
+                    r:wdata.r,life:wdata.life,dmg:finalDmg,
                     sniper:false,rocket:false,color:wdata.color});
     }
     weaponAmmo[equipped.weapon]--;
   } else {
     bullets.push({x:tx,y:ty,vx:Math.cos(ang)*wdata.spd,vy:Math.sin(ang)*wdata.spd,
-                  r:wdata.r,life:wdata.life,dmg:wdata.dmg,
+                  r:wdata.r,life:wdata.life,dmg:finalDmg,
                   sniper:wdata.id==='sniper',rocket:wdata.id==='rocket',color:wdata.color});
     weaponAmmo[equipped.weapon]--;
   }
@@ -823,14 +841,14 @@ function drawInventoryUI(){
   ctx.textAlign='left';
 
   if(!invOpen)return;
-  invItemBounds=[];
+  invItemBounds=[];invUpgradeBounds=[];
   // Two-column layout: weapons left, armors right — stays compact no matter how many items
   const colW=155,pad=6,rowH=20,gap=1,colGap=8;
   const pw=colW*2+colGap+pad*2;
   const wList=[...owned.weapons],aList=[...owned.armors];
   const maxRows=Math.max(wList.length,aList.length);
-  const headerH=18;
-  const ph=pad*2+24+4+headerH+maxRows*(rowH+gap);
+  const headerH=18, upgradeH=56;
+  const ph=pad*2+24+4+headerH+maxRows*(rowH+gap)+upgradeH;
 
   let px=Math.max(8,Math.min(W-pw-8,player.x-pw/2));
   let py=Math.max(46,by-ph-6);
@@ -891,6 +909,47 @@ function drawInventoryUI(){
     ctx.fillText(`${a.shield}🛡`,ob.x+ob.w-3,ob.y+rowH/2);
     ctx.textAlign='left';
   });
+
+  // ── UPGRADE SECTION ──
+  const upgY=listTop+maxRows*(rowH+gap)+6;
+  ctx.strokeStyle='#333';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(px+pad,upgY);ctx.lineTo(px+pw-pad,upgY);ctx.stroke();
+  ctx.fillStyle='#888';ctx.font='bold 9px monospace';ctx.textBaseline='top';ctx.textAlign='left';
+  ctx.fillText('── SPEND 1 LEVEL TO UPGRADE ──',px+pad,upgY+4);
+
+  const canUpgrade=player.level>1;
+  const wup=weaponUpgrades[equipped.weapon]||0;
+  const aup=armorUpgrades[equipped.armor]||0;
+  const wdata2=getWeapon(),ar2=getArmor();
+  const btnW=58,btnH=18,upY=upgY+18;
+
+  // Weapon upgrade row
+  ctx.fillStyle='#ccc';ctx.font='10px monospace';ctx.textBaseline='middle';ctx.textAlign='left';
+  ctx.fillText(`${wdata2.ico} ${wdata2.name}: ${wdata2.dmg+wup}dmg (+${wup})`,px+pad,upY+btnH/2);
+  const wBtnX=px+pw-pad-btnW;
+  const wBtnBounds={x:wBtnX,y:upY,w:btnW,h:btnH,kind:'weapon'};
+  invUpgradeBounds.push(wBtnBounds);
+  ctx.fillStyle=canUpgrade?'rgba(0,180,120,0.4)':'rgba(80,80,80,0.4)';
+  ctx.beginPath();ctx.roundRect(wBtnX,upY,btnW,btnH,3);ctx.fill();
+  ctx.strokeStyle=canUpgrade?'#44ff88':'#444';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(wBtnX,upY,btnW,btnH,3);ctx.stroke();
+  ctx.fillStyle=canUpgrade?'#44ff88':'#666';ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('⬆ 1 LV',wBtnX+btnW/2,upY+btnH/2);
+
+  // Armor upgrade row
+  const arY=upY+btnH+3;
+  ctx.fillStyle='#ccc';ctx.font='10px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(`${ar2.ico} ${ar2.name}: ${ar2.shield+aup}🛡 (+${aup})`,px+pad,arY+btnH/2);
+  const aBtnX=px+pw-pad-btnW;
+  const aBtnBounds={x:aBtnX,y:arY,w:btnW,h:btnH,kind:'armor'};
+  invUpgradeBounds.push(aBtnBounds);
+  ctx.fillStyle=canUpgrade?'rgba(0,120,255,0.4)':'rgba(80,80,80,0.4)';
+  ctx.beginPath();ctx.roundRect(aBtnX,arY,btnW,btnH,3);ctx.fill();
+  ctx.strokeStyle=canUpgrade?'#00aaff':'#444';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(aBtnX,arY,btnW,btnH,3);ctx.stroke();
+  ctx.fillStyle=canUpgrade?'#00aaff':'#666';ctx.font='9px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('⬆ 1 LV',aBtnX+btnW/2,arY+btnH/2);
+  ctx.textAlign='left';
 }
 
 function drawPauseOverlay(){
@@ -990,6 +1049,22 @@ function togglePause(){
   }
 }
 
+// ─── UPGRADE ─────────────────────────────────────────────────────────────────
+function upgradeEquipped(type){
+  if(!player||player.level<=1)return; // need at least level 2 to spend a level
+  player.level--;
+  if(type==='weapon'){
+    weaponUpgrades[equipped.weapon]=(weaponUpgrades[equipped.weapon]||0)+1;
+  } else {
+    armorUpgrades[equipped.armor]=(armorUpgrades[equipped.armor]||0)+1;
+    // immediately apply to player shield
+    const a=getArmor();
+    player.maxShield=a.shield+(armorUpgrades[equipped.armor]||0);
+    player.shield=Math.min(player.shield+1,player.maxShield);
+  }
+  saveProgress();updateHUD();
+}
+
 // ─── EQUIP ───────────────────────────────────────────────────────────────────
 function equipItem(type,id){
   if(type==='weapon'){
@@ -1000,8 +1075,9 @@ function equipItem(type,id){
     if(!owned.armors.has(id))return;
     equipped.armor=id;
     const a=ARMORS.find(x=>x.id===id);
-    player.shield=Math.min(player.shield+1,a.shield);
-    player.maxShield=a.shield;
+    const newMax=a.shield+(armorUpgrades[id]||0);
+    player.shield=Math.min(player.shield+1,newMax);
+    player.maxShield=newMax;
     player.speed=3*a.smul;
   }
   saveProgress();updateHUD();
@@ -1018,8 +1094,14 @@ canvas.addEventListener('click',e=>{
      &&my>=invBtnBounds.y&&my<=invBtnBounds.y+invBtnBounds.h){
     invOpen=!invOpen;return;
   }
-  // Inventory item click
+  // Inventory item / upgrade click
   if(invOpen){
+    // Check upgrade buttons first
+    for(const ob of invUpgradeBounds){
+      if(mx>=ob.x&&mx<=ob.x+ob.w&&my>=ob.y&&my<=ob.y+ob.h){
+        upgradeEquipped(ob.kind);return;
+      }
+    }
     for(const ob of invItemBounds){
       if(mx>=ob.x&&mx<=ob.x+ob.w&&my>=ob.y&&my<=ob.y+ob.h){
         if(ob.type==='weapon')equipItem('weapon',ob.wid);
