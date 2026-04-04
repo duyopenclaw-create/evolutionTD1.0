@@ -7,7 +7,39 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#0a0a0a; display:flex; align-items:center; justify-content:center;
        height:100vh; font-family:monospace; color:#fff; overflow:hidden; }
-#game-wrap { display:flex; flex-direction:column; box-shadow:0 0 50px #000; }
+#outer-wrap { display:flex; flex-direction:row; align-items:stretch; box-shadow:0 0 50px #000; }
+#game-wrap { display:flex; flex-direction:column; }
+/* ── Access bar ── */
+#access-bar { width:44px; background:#0d0d0d; border:3px solid #333; border-right:2px solid #1a1a1a;
+              display:flex; flex-direction:column; align-items:center; padding:6px 0; gap:5px; }
+.abtn { width:34px; height:34px; background:rgba(255,255,255,0.06); border:1px solid #3a3a3a;
+        color:#555; cursor:pointer; border-radius:5px; font-size:17px; display:flex;
+        align-items:center; justify-content:center; flex-shrink:0; padding:0; transition:all .12s; }
+.abtn:hover { background:rgba(255,255,255,0.14); color:#ccc; border-color:#666; }
+.abtn.on { background:rgba(255,210,50,0.18); border-color:#999; color:#ffe; }
+.ab-sep { width:28px; height:1px; background:#282828; flex-shrink:0; }
+.absp { flex:1; }
+.ab-lbl { font-size:7px; color:#333; letter-spacing:.5px; font-family:monospace; }
+/* ── Achievements modal ── */
+#ach-modal { position:absolute; inset:0; background:rgba(0,0,0,0.88);
+             display:flex; align-items:center; justify-content:center; z-index:10; }
+#ach-panel { background:#111; border:2px solid #555; border-radius:8px;
+             width:640px; max-height:88vh; overflow-y:auto; padding:18px; }
+#ach-panel h2 { font-size:20px; color:#ffd700; margin-bottom:6px;
+                display:flex; justify-content:space-between; align-items:center; }
+#ach-panel h2 button { background:#333; border:1px solid #555; color:#aaa;
+                       font-size:15px; cursor:pointer; border-radius:4px; padding:2px 8px; }
+#ach-count { font-size:11px; color:#666; margin-bottom:12px; }
+.ach-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
+.ach-item { background:#161616; border:2px solid #252525; border-radius:6px;
+            padding:8px 6px; text-align:center; }
+.ach-item.earned { border-color:#c8a800; background:#181200; }
+.ach-item .ai-ico { font-size:22px; line-height:1; margin-bottom:3px; filter:grayscale(1) opacity(.3); }
+.ach-item.earned .ai-ico { filter:none; }
+.ach-item .ai-name { font-size:10px; font-weight:bold; color:#444; margin-bottom:2px; }
+.ach-item.earned .ai-name { color:#ffd700; }
+.ach-item .ai-desc { font-size:9px; color:#383838; line-height:1.3; }
+.ach-item.earned .ai-desc { color:#777; }
 
 /* ── HUD ── */
 #hud { width:800px; height:46px; background:#0e0e0e; border:3px solid #333;
@@ -31,7 +63,8 @@ body { background:#0a0a0a; display:flex; align-items:center; justify-content:cen
 .hbtn:hover { background:rgba(255,255,255,0.15); }
 .hbtn.on { background:rgba(255,255,255,0.2); border-color:#888; color:#fff; }
 
-canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair; }
+canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair; transition:filter .2s; }
+canvas.hc { filter:contrast(1.4) saturate(2); }
 
 /* ── Shop modal ── */
 #shop { position:absolute; inset:0; background:rgba(0,0,0,0.85);
@@ -74,6 +107,19 @@ canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair
 </style>
 </head>
 <body>
+<div id="outer-wrap">
+<div id="access-bar">
+  <div class="ab-lbl">ACC</div>
+  <div class="ab-sep"></div>
+  <button class="abtn" id="ab-autofire" title="Auto-fire (hold mouse to shoot)">🔁</button>
+  <button class="abtn" id="ab-dmgnums" title="Show damage numbers">🔢</button>
+  <button class="abtn" id="ab-reducefx" title="Reduce visual effects">✨</button>
+  <button class="abtn" id="ab-slow" title="Slow mode (60% speed)">🐢</button>
+  <button class="abtn" id="ab-hc" title="High contrast mode">👁</button>
+  <div class="absp"></div>
+  <div class="ab-sep"></div>
+  <button class="abtn" id="ab-ach" title="Achievements">🏆</button>
+</div>
 <div id="game-wrap">
   <div id="hud">
     <div class="hs">
@@ -110,12 +156,14 @@ canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair
       <span id="coins-val" class="val">0</span>
     </div>
     <div class="hsp"></div>
+    <button id="ach-btn" class="hbtn">🏆</button>
     <button id="shop-btn" class="hbtn">🛒 SHOP</button>
     <button id="pause-btn" class="hbtn">⏸</button>
     <button id="mute-btn"  class="hbtn">🔊</button>
   </div>
   <canvas id="game"></canvas>
-</div>
+</div><!-- end game-wrap -->
+</div><!-- end outer-wrap -->
 
 <!-- Shop modal -->
 <div id="shop" class="hidden">
@@ -127,6 +175,15 @@ canvas { display:block; border:3px solid #333; border-top:none; cursor:crosshair
       <button class="stab" id="tab-a">🛡 Armors</button>
     </div>
     <div id="shop-grid" class="shop-grid"></div>
+  </div>
+</div>
+
+<!-- Achievements modal -->
+<div id="ach-modal" class="hidden">
+  <div id="ach-panel">
+    <h2>🏆 ACHIEVEMENTS <button id="ach-x">✕</button></h2>
+    <div id="ach-count"></div>
+    <div id="ach-grid" class="ach-grid"></div>
   </div>
 </div>
 
@@ -181,6 +238,30 @@ const ZTYPES=[
   {id:'elite',  name:'Elite',   r:17,hp:15,dmg:2,spd:0.65,col1:'#99aacc',col2:'#223355',eye:'#0ff',xp:60, coins:[2,5,1],  minWT:4,minAT:4},
   {id:'boss',   name:'Boss',    r:24,hp:30,dmg:4,spd:0.5, col1:'#ff8800',col2:'#441100',eye:'#f0f',xp:120,coins:[3,7,1],  minWT:5,minAT:5},
   {id:'demon',  name:'DEMON',   r:28,hp:50,dmg:6,spd:0.4, col1:'#ff1111',col2:'#550000',eye:'#ff0',xp:250,coins:[5,12,2], minWT:6,minAT:6},
+];
+
+// ─── ACHIEVEMENTS ────────────────────────────────────────────────────────────
+const ACHIEVEMENTS=[
+  {id:'first_kill', name:'First Blood',   desc:'Kill your first zombie',          ico:'🩸'},
+  {id:'kills_10',   name:'Exterminator',  desc:'Kill 10 zombies in one run',      ico:'☠'},
+  {id:'kills_50',   name:'Slaughter',     desc:'Kill 50 zombies in one run',      ico:'⚔'},
+  {id:'kills_100',  name:'Rampage',       desc:'Kill 100 zombies in one run',     ico:'💀'},
+  {id:'kills_500',  name:'Apocalypse',    desc:'Kill 500 zombies total',          ico:'🔥'},
+  {id:'level_5',    name:'Rising Star',   desc:'Reach level 5',                   ico:'⭐'},
+  {id:'level_10',   name:'Veteran',       desc:'Reach level 10',                  ico:'🏆'},
+  {id:'level_20',   name:'Legend',        desc:'Reach level 20',                  ico:'👑'},
+  {id:'gold_50',    name:'Gold Rush',     desc:'Collect 50 gold total',           ico:'🟡'},
+  {id:'gold_200',   name:'Moneybags',     desc:'Collect 200 gold total',          ico:'💰'},
+  {id:'buy_any',    name:'Shopper',       desc:'Buy any item from the shop',      ico:'🛒'},
+  {id:'upgrade_any',name:'Upgrader',      desc:'Upgrade a weapon or armor',       ico:'⬆'},
+  {id:'sniper_buy', name:'Marksman',      desc:'Buy the Sniper rifle',            ico:'🎯'},
+  {id:'dragon_buy', name:'Dragon Knight', desc:'Buy Dragon Scale armor',          ico:'🐉'},
+  {id:'survive_2m', name:'Survivor',      desc:'Survive 2 minutes in one game',   ico:'⏱'},
+  {id:'survive_5m', name:'Endurance',     desc:'Survive 5 minutes in one game',   ico:'🕰'},
+  {id:'hp_15',      name:'Tough',         desc:'Reach 15 max HP',                 ico:'❤'},
+  {id:'kill_demon', name:'Demon Slayer',  desc:'Kill a Demon',                    ico:'😈'},
+  {id:'kill_boss',  name:'Boss Slayer',   desc:'Kill a Boss',                     ico:'💥'},
+  {id:'no_dmg_10',  name:'Untouchable',   desc:'Kill 10 zombies without damage',  ico:'🛡'},
 ];
 
 // ─── FLOOR ────────────────────────────────────────────────────────────────────
@@ -267,7 +348,14 @@ let owned={weapons:new Set(['pistol']),armors:new Set(['cloth'])};
 let equipped={weapon:'pistol',armor:'cloth'};
 let weaponAmmo={pistol:15};
 let invBtnBounds=null,invItemBounds=[],invUpgradeBounds=[];
-let weaponUpgrades={},armorUpgrades={}; // extra dmg/shield from level spending
+let weaponUpgrades={},armorUpgrades={};
+// Achievements & stats
+let earnedAchievements=new Set(),achievementNotifs=[];
+let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
+// Accessibility
+let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false;
+let mouseDown=false,skipFrame=false;
+let dmgNumbers=[];
 bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
@@ -285,6 +373,9 @@ function saveProgress(){
     localStorage.setItem('zs_ammo', JSON.stringify(weaponAmmo));
     localStorage.setItem('zs_wup', JSON.stringify(weaponUpgrades));
     localStorage.setItem('zs_aup', JSON.stringify(armorUpgrades));
+    localStorage.setItem('zs_ach', JSON.stringify([...earnedAchievements]));
+    localStorage.setItem('zs_lk', lifetimeKills);
+    localStorage.setItem('zs_lc', lifetimeCoins);
   }catch(e){}
 }
 function loadProgress(){
@@ -307,6 +398,9 @@ function loadProgress(){
     if(weaponAmmo[equipped.weapon]===undefined)weaponAmmo[equipped.weapon]=getWeapon().ammo;
     const wu=localStorage.getItem('zs_wup');if(wu)weaponUpgrades={...JSON.parse(wu)};
     const au=localStorage.getItem('zs_aup');if(au)armorUpgrades={...JSON.parse(au)};
+    const ach=localStorage.getItem('zs_ach');if(ach)earnedAchievements=new Set(JSON.parse(ach));
+    const lk=localStorage.getItem('zs_lk');if(lk)lifetimeKills=parseInt(lk)||0;
+    const lc=localStorage.getItem('zs_lc');if(lc)lifetimeCoins=parseInt(lc)||0;
   }catch(e){}
 }
 loadProgress();
@@ -341,8 +435,8 @@ function initGame(){
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
-  keys={};mouse={x:0,y:0};kills=0;
-  invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;
+  keys={};mouse={x:0,y:0};kills=0;killStreak=0;dmgNumbers=[];achievementNotifs=[];
+  invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;gameStartTime=0;
   frozenAngle=0;invOpen=false;
   gameState='playing';
   updateHUD();startMusic();
@@ -361,6 +455,11 @@ function spawnHeartPos(){
 
 // ─── HUD UPDATE ──────────────────────────────────────────────────────────────
 function updateHUD(){
+  // Always show gold and level (even on title screen before game starts)
+  coinsVal.textContent=coins;
+  const savedLv=parseInt(localStorage.getItem('zs_level'))||1;
+  levelVal.textContent=player?player.level:savedLv;
+  killsVal.textContent=kills;
   if(!player)return;
   const hp=player.hp/player.maxHp;
   hpBar.style.width=(hp*100)+'%';
@@ -372,9 +471,37 @@ function updateHUD(){
   const w=getWeapon();
   ammoVal.textContent=`${weaponAmmo[equipped.weapon]||0}/${w.maxAmmo}`;
   weapIco.textContent=w.ico; weapName.textContent=w.name;
-  levelVal.textContent=player.level;
-  killsVal.textContent=kills;
-  coinsVal.textContent=coins;
+}
+updateHUD(); // show saved gold/level on title screen immediately
+
+// ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
+function earnAchievement(id){
+  if(earnedAchievements.has(id))return;
+  earnedAchievements.add(id);
+  const a=ACHIEVEMENTS.find(x=>x.id===id);
+  if(a)achievementNotifs.push({id,name:a.name,ico:a.ico,life:280,maxLife:280});
+  saveProgress();
+}
+function checkAchievements(){
+  if(!player)return;
+  const now=Date.now();
+  const survived=(now-gameStartTime)/1000;
+  if(gameStartTime>0&&survived>=120)earnAchievement('survive_2m');
+  if(gameStartTime>0&&survived>=300)earnAchievement('survive_5m');
+  if(kills>=1) earnAchievement('first_kill');
+  if(kills>=10) earnAchievement('kills_10');
+  if(kills>=50) earnAchievement('kills_50');
+  if(kills>=100)earnAchievement('kills_100');
+  if(lifetimeKills>=500)earnAchievement('kills_500');
+  if(player.level>=5) earnAchievement('level_5');
+  if(player.level>=10)earnAchievement('level_10');
+  if(player.level>=20)earnAchievement('level_20');
+  if(lifetimeCoins>=50) earnAchievement('gold_50');
+  if(lifetimeCoins>=200)earnAchievement('gold_200');
+  if(player.maxHp>=15) earnAchievement('hp_15');
+  if(killStreak>=10)   earnAchievement('no_dmg_10');
+  if(owned.weapons.has('sniper'))earnAchievement('sniper_buy');
+  if(owned.armors.has('dragon')) earnAchievement('dragon_buy');
 }
 
 // ─── SPAWN ───────────────────────────────────────────────────────────────────
@@ -404,7 +531,7 @@ function spawnZombie(){
 }
 
 function spawnBlood(x,y){
-  for(let i=0;i<10;i++){
+  for(let i=0;i<(reducedFx?3:10);i++){
     const a=Math.random()*Math.PI*2,s=.5+Math.random()*2.5;
     particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
       r:2+Math.random()*3,life:40+Math.random()*30,maxLife:70,
@@ -413,7 +540,7 @@ function spawnBlood(x,y){
   bloodPools.push({x,y,r:5+Math.random()*7,alpha:.65,fire:false});
 }
 function spawnExp(x,y,big){
-  const n=big?24:10,sp=big?3.5:2;
+  const n=reducedFx?(big?6:3):(big?24:10),sp=big?3.5:2;
   for(let i=0;i<n;i++){
     const a=(i/n)*Math.PI*2+Math.random()*.4,spd=.8+Math.random()*sp;
     particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
@@ -464,8 +591,12 @@ function applyDamage(dmg){
 
 function update(now){
   if(gameState!=='playing')return;
+  if(slowMode){skipFrame=!skipFrame;if(skipFrame)return;}
+  if(gameStartTime===0)gameStartTime=Date.now();
+  if(autoFire&&mouseDown)shoot();
   movePlayer();
   if(invTimer>0)invTimer--;
+  checkAchievements();
 
   // Zombie spawn
   if(now-lastZombieSpawn>15000&&zombies.length<20){spawnZombie();lastZombieSpawn=now;}
@@ -520,6 +651,7 @@ function update(now){
       const dx=b.x-z.x,dy=b.y-z.y;
       if(dx*dx+dy*dy<(b.r+z.r)**2){
         z.hp-=b.dmg;
+        if(showDmgNums)dmgNumbers.push({x:z.x+(Math.random()*16-8),y:z.y-z.r-4,val:b.dmg,life:55,maxLife:55,vy:-0.7});
         bullets[bi]=null;
         spawnBlood(z.x,z.y);
         if(b.rocket)triggerRocket(b.x,b.y);
@@ -544,6 +676,9 @@ function update(now){
         if(player.level%10===0){player.maxHp+=5;player.hp=Math.min(player.hp+5,player.maxHp);}
       }
       if(leveled)saveProgress();
+      killStreak++;lifetimeKills++;
+      if(z.zt.id==='boss')earnAchievement('kill_boss');
+      if(z.zt.id==='demon')earnAchievement('kill_demon');
       // Normal zombies: 50% coin drop; others: guaranteed range
       if(z.zt.id==='normal'){
         if(Math.random()<0.5)dropCoins(z.x,z.y,1,1);
@@ -561,7 +696,7 @@ function update(now){
   if(invTimer===0){
     zombies.forEach(z=>{
       const dx=player.x-z.x,dy=player.y-z.y;
-      if(dx*dx+dy*dy<(player.r+z.r)**2){applyDamage(z.dmg);invTimer=90;}
+      if(dx*dx+dy*dy<(player.r+z.r)**2){applyDamage(z.dmg);invTimer=90;killStreak=0;}
     });
   }
 
@@ -578,7 +713,7 @@ function update(now){
   });
   coinPickups=coinPickups.filter(c=>{
     const dx=player.x-c.x,dy=player.y-c.y;
-    if(dx*dx+dy*dy<(player.r+12)**2){coins++;saveProgress();return false;}
+    if(dx*dx+dy*dy<(player.r+12)**2){coins++;lifetimeCoins++;saveProgress();return false;}
     return true;
   });
   heartPickups=heartPickups.filter(h=>{
@@ -952,6 +1087,42 @@ function drawInventoryUI(){
   ctx.textAlign='left';
 }
 
+function drawDmgNumbers(){
+  if(!dmgNumbers.length)return;
+  ctx.font='bold 13px monospace';ctx.textAlign='center';
+  dmgNumbers=dmgNumbers.filter(d=>{
+    d.y+=d.vy;d.vy*=0.92;d.life--;
+    ctx.globalAlpha=d.life/d.maxLife;
+    ctx.fillStyle='#ff6600';
+    ctx.fillText('-'+d.val,d.x,d.y);
+    return d.life>0;
+  });
+  ctx.globalAlpha=1;ctx.textAlign='left';
+}
+function drawAchievementNotifs(){
+  if(!achievementNotifs.length)return;
+  achievementNotifs=achievementNotifs.filter(n=>{
+    n.life--;
+    const alpha=Math.min(1,(n.life/20),(n.life/n.maxLife)*3);
+    const nx=W-200,ny=16+(achievementNotifs.indexOf(n)*44);
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='rgba(20,16,0,0.92)';
+    ctx.beginPath();ctx.roundRect(nx,ny,190,36,6);ctx.fill();
+    ctx.strokeStyle='#c8a800';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(nx,ny,190,36,6);ctx.stroke();
+    ctx.globalAlpha=alpha;
+    ctx.font='18px monospace';ctx.textBaseline='middle';ctx.textAlign='left';
+    ctx.fillStyle='#fff';ctx.fillText(n.ico,nx+8,ny+18);
+    ctx.font='bold 10px monospace';ctx.fillStyle='#ffd700';
+    ctx.fillText(n.name,nx+32,ny+10);
+    ctx.font='9px monospace';ctx.fillStyle='#aaa';
+    ctx.fillText('Achievement unlocked!',nx+32,ny+25);
+    ctx.globalAlpha=1;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    return n.life>0;
+  });
+  ctx.globalAlpha=1;
+}
+
 function drawPauseOverlay(){
   ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='rgba(0,0,0,0.8)';
@@ -980,6 +1151,8 @@ function draw(){
     drawPlayer();
     drawInventoryUI();
   }
+  drawDmgNumbers();
+  drawAchievementNotifs();
   if(gameState==='paused')drawPauseOverlay();
   if(gameState==='title'||gameState==='dead'){
     ctx.fillStyle='rgba(0,0,0,0.68)';ctx.fillRect(0,0,W,H);
@@ -1021,6 +1194,7 @@ function buyItem(item,type){
   } else {
     owned.armors.add(item.id);
   }
+  earnAchievement('buy_any');
   saveProgress();updateHUD();renderShop();
 }
 function openShop(){
@@ -1062,6 +1236,7 @@ function upgradeEquipped(type){
     player.maxShield=a.shield+(armorUpgrades[equipped.armor]||0);
     player.shield=Math.min(player.shield+1,player.maxShield);
   }
+  earnAchievement('upgrade_any');
   saveProgress();updateHUD();
 }
 
@@ -1115,6 +1290,9 @@ canvas.addEventListener('click',e=>{
   if(gameState!=='playing')return;
   shoot();
 });
+canvas.addEventListener('mousedown',()=>{mouseDown=true;});
+canvas.addEventListener('mouseup',()=>{mouseDown=false;});
+canvas.addEventListener('mouseleave',()=>{mouseDown=false;});
 canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;
 });
@@ -1131,6 +1309,56 @@ muteBtn.addEventListener('click',toggleMute);
 ob.addEventListener('click',()=>{
   if(gameState==='dead'||gameState==='title'){initGame();overlay.classList.add('hidden');}
 });
+
+// ─── ACCESSIBILITY BAR ────────────────────────────────────────────────────────
+function abToggle(id,varRef,setter){
+  const btn=document.getElementById(id);
+  if(!btn)return;
+  btn.addEventListener('click',()=>{setter(!varRef());btn.classList.toggle('on');});
+}
+document.getElementById('ab-autofire').addEventListener('click',()=>{
+  autoFire=!autoFire;document.getElementById('ab-autofire').classList.toggle('on',autoFire);
+});
+document.getElementById('ab-dmgnums').addEventListener('click',()=>{
+  showDmgNums=!showDmgNums;document.getElementById('ab-dmgnums').classList.toggle('on',showDmgNums);
+});
+document.getElementById('ab-reducefx').addEventListener('click',()=>{
+  reducedFx=!reducedFx;document.getElementById('ab-reducefx').classList.toggle('on',reducedFx);
+});
+document.getElementById('ab-slow').addEventListener('click',()=>{
+  slowMode=!slowMode;skipFrame=false;document.getElementById('ab-slow').classList.toggle('on',slowMode);
+});
+document.getElementById('ab-hc').addEventListener('click',()=>{
+  highContrast=!highContrast;canvas.classList.toggle('hc',highContrast);
+  document.getElementById('ab-hc').classList.toggle('on',highContrast);
+});
+
+// ─── ACHIEVEMENTS MODAL ───────────────────────────────────────────────────────
+const achModal=document.getElementById('ach-modal');
+const achGrid=document.getElementById('ach-grid');
+const achCount=document.getElementById('ach-count');
+function renderAchievements(){
+  const earned=ACHIEVEMENTS.filter(a=>earnedAchievements.has(a.id)).length;
+  achCount.textContent=`${earned} / ${ACHIEVEMENTS.length} unlocked`;
+  achGrid.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const div=document.createElement('div');
+    div.className='ach-item'+(earnedAchievements.has(a.id)?' earned':'');
+    div.innerHTML=`<div class="ai-ico">${a.ico}</div><div class="ai-name">${a.name}</div><div class="ai-desc">${a.desc}</div>`;
+    achGrid.appendChild(div);
+  });
+}
+function openAchievements(){
+  if(gameState==='playing'){gameState='paused';pauseMusic();pauseBtn.textContent='▶';pauseBtn.classList.add('on');}
+  renderAchievements();achModal.classList.remove('hidden');
+}
+function closeAchievements(){
+  achModal.classList.add('hidden');
+  if(gameState==='paused'){gameState='playing';resumeMusic();pauseBtn.textContent='⏸';pauseBtn.classList.remove('on');}
+}
+document.getElementById('ach-x').onclick=closeAchievements;
+document.getElementById('ach-btn').onclick=()=>achModal.classList.contains('hidden')?openAchievements():closeAchievements();
+document.getElementById('ab-ach').onclick=()=>achModal.classList.contains('hidden')?openAchievements():closeAchievements();
 
 // ─── LOOP ────────────────────────────────────────────────────────────────────
 let lastAutoSave=0;
