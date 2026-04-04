@@ -2114,10 +2114,15 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
     ctx.save();ctx.shadowColor='#ffdd44';ctx.shadowBlur=reducedFx?0:7;
     ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);ctx.fillStyle='#ffdd44';ctx.fill();ctx.restore();
   });
-  if(player&&(gameState==='playing'||gameState==='paused'||gameState==='dead')){
-    drawPlayer2();
-    drawPlayer();
-    if(whichPlayer==='p1')drawInventoryUI();
+  const _gameActive=gameState==='playing'||gameState==='paused'||gameState==='dead';
+  if(_gameActive){
+    if(twoPlayerMode){
+      // Each viewport only draws its own player
+      if(whichPlayer==='p1'&&player){drawPlayer();drawInventoryUI();}
+      else if(whichPlayer==='p2'&&player2){drawPlayer2();}
+    } else {
+      if(player){drawPlayer2();drawPlayer();drawInventoryUI();}
+    }
   }
   if(twoPlayerMode){
     if(p2Downed)drawDownedBody(p2Downed.x,p2Downed.y,'#cc44cc','P2 ↓');
@@ -2162,6 +2167,14 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
     gv.addColorStop(0,'rgba(0,0,0,0)');gv.addColorStop(0.55,`rgba(50,0,0,${red.toFixed(2)})`);
     gv.addColorStop(1,`rgba(0,0,0,${dark.toFixed(2)})`);
     ctx.fillStyle=gv;ctx.fillRect(cx-vpW,cy-vpH,vpW*2,vpH*2);
+  }
+  // P1 label at top of left viewport
+  if(whichPlayer==='p1'&&twoPlayerMode){
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);
+    ctx.font='bold 11px monospace';ctx.fillStyle='#88ddff';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText('P1',vpX+vpW/2,vpY+4);
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    ctx.restore();
   }
   // Mini P2 HUD inside right viewport
   if(whichPlayer==='p2'&&twoPlayerMode){
@@ -2503,7 +2516,13 @@ function equipItem(type,id){
 canvas.addEventListener('click',e=>{
   if(!shopEl.classList.contains('hidden'))return;
   const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const rawX=e.clientX-r.left,rawY=e.clientY-r.top;
+  // Convert canvas click to world coords for P1's viewport in split-screen
+  let mx=rawX,my=rawY;
+  if(twoPlayerMode&&(player2||p2Downed)){
+    const camX=Math.max(W/4,Math.min(3*W/4,player?player.x:W/2));
+    mx=rawX+camX-W/4; // no Y offset (cy always = H/2)
+  }
 
   // Inventory button click
   if(invBtnBounds&&mx>=invBtnBounds.x&&mx<=invBtnBounds.x+invBtnBounds.w
