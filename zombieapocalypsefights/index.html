@@ -108,6 +108,22 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
 .sitem.ability { border-color:#aa44ff; }
 .sitem.ability.owned { border-color:#cc66ff; }
 .sitem .scnt { font-size:11px; color:#cc88ff; font-weight:bold; float:right; }
+
+/* ── Ability bar ── */
+#ability-bar { width:800px; background:#0d0d0d; border:3px solid #333; border-top:none;
+               display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 0; }
+.abl-slot { display:flex; flex-direction:column; align-items:center; gap:2px;
+            background:#111; border:2px solid #333; border-radius:7px;
+            padding:5px 14px; cursor:pointer; user-select:none; transition:border-color .1s,background .1s; min-width:80px; }
+.abl-slot:hover { border-color:#666; background:#1a1a1a; }
+.abl-slot.active { border-color:#ffcc00; background:#1a1500; animation:abl-pulse .7s ease-in-out infinite alternate; }
+.abl-slot.empty { opacity:.38; cursor:not-allowed; }
+@keyframes abl-pulse { from{box-shadow:0 0 4px #ffcc0044} to{box-shadow:0 0 14px #ffcc0088} }
+.abl-ico { font-size:22px; line-height:1; }
+.abl-name { font-size:9px; color:#888; letter-spacing:.5px; }
+.abl-cnt { font-size:11px; font-weight:bold; color:#fff; }
+.abl-key { font-size:8px; color:#444; }
+.abl-timer { font-size:9px; color:#ffcc00; font-weight:bold; min-height:12px; }
 .sitem { background:#1a1a1a; border:2px solid #333; border-radius:6px;
          padding:10px; cursor:pointer; transition:border-color .1s; }
 .sitem.owned { border-color:#44ff44; }
@@ -187,6 +203,29 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
     <button id="mute-btn"  class="hbtn">🔊</button>
   </div>
   <canvas id="game"></canvas>
+  <div id="ability-bar">
+    <div class="abl-slot empty" id="abl-soda" onclick="useAbility('soda')">
+      <div class="abl-ico">🥤</div>
+      <div class="abl-name">SODA CAN</div>
+      <div class="abl-cnt" id="abl-soda-cnt">×0</div>
+      <div class="abl-key">[1] spd+dmg 10s</div>
+      <div class="abl-timer" id="abl-soda-timer"></div>
+    </div>
+    <div class="abl-slot empty" id="abl-camo" onclick="useAbility('camo')">
+      <div class="abl-ico">🫥</div>
+      <div class="abl-name">CAMOUFLAGE</div>
+      <div class="abl-cnt" id="abl-camo-cnt">×0</div>
+      <div class="abl-key">[2] invisible 15s</div>
+      <div class="abl-timer" id="abl-camo-timer"></div>
+    </div>
+    <div class="abl-slot empty" id="abl-plague" onclick="useAbility('plague')">
+      <div class="abl-ico">🧫</div>
+      <div class="abl-name">PLAGUE</div>
+      <div class="abl-cnt" id="abl-plague-cnt">×0</div>
+      <div class="abl-key">[3] 1dmg/s all 8s</div>
+      <div class="abl-timer" id="abl-plague-timer"></div>
+    </div>
+  </div>
 </div><!-- end game-wrap -->
 </div><!-- end outer-wrap -->
 
@@ -497,7 +536,7 @@ function resumeMusic(){if(!audioCtx)return;audioCtx.resume().then(()=>{musicActi
 function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-let player,bullets,zombies,ammoPickups,coinPickups,heartPickups,particles,bloodPools,spikes;
+let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,particles,bloodPools,spikes;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
 let gameState='title',invTimer=0,lastZombieSpawn=0,lastAmmoSpawn=0,lastHeartSpawn=0;
 let frozenAngle=0,invOpen=false,shopTab='weapons';
@@ -518,7 +557,7 @@ let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
 let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false;
 let mouseDown=false,skipFrame=false;
 let dmgNumbers=[];
-bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];spikes=[];
+bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];spikes=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function saveProgress(){
@@ -573,6 +612,7 @@ function loadProgress(){
   }catch(e){}
 }
 loadProgress();
+// renderAbilityBar called after DOM ready via updateHUD below
 
 function getWeapon(){return WEAPONS.find(w=>w.id===equipped.weapon);}
 function getArmor(){return ARMORS.find(a=>a.id===equipped.armor);}
@@ -600,7 +640,7 @@ function initGame(){
   const aShield=armor.shield+(armorUpgrades[armor.id]||0);
   player={x:400,y:300,r:16,hp:10,maxHp:10,shield:aShield,maxShield:aShield,
           speed:3*armor.smul,level:savedLevel,xp:savedXp};
-  bullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];
+  bullets=[];zBullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
@@ -641,6 +681,7 @@ function updateHUD(){
   const w=getWeapon();
   ammoVal.textContent=`${weaponAmmo[equipped.weapon]||0}/${w.maxAmmo}`;
   weapIco.textContent=w.ico; weapName.textContent=w.name;
+  renderAbilityBar();
 }
 updateHUD(); // show saved gold/level on title screen immediately
 
@@ -696,8 +737,22 @@ function spawnZombie(){
   const spd=zt.spd*currentStage.spdMul*(0.85+Math.random()*.3);
   const hp=Math.ceil(zt.hp*currentStage.hpMul);
   const dmg=Math.max(1,Math.round(zt.dmg*currentStage.dmgMul));
+  // 1 in 5 chance of carrying a gun (rarer = better gun)
+  let zGun=null;
+  if(Math.random()<0.2){
+    const gPool=[
+      ...Array(50).fill('pistol'),
+      ...Array(25).fill('revolver'),
+      ...Array(14).fill('shotgun'),
+      ...Array(7).fill('ar'),
+      ...Array(3).fill('rocket'),
+      ...Array(1).fill('sniper'),
+    ];
+    const gId=gPool[Math.floor(Math.random()*gPool.length)];
+    zGun=WEAPONS.find(w=>w.id===gId);
+  }
   zombies.push({x:pos.x,y:pos.y,r:zt.r,hp,maxHp:hp,dmg,
-                speed:spd,angle:0,type:zt.id,zt});
+                speed:spd,angle:0,type:zt.id,zt,gun:zGun,lastShot:0});
 }
 
 function spawnBlood(x,y){
@@ -839,6 +894,37 @@ function update(now){
         }
       }
     }
+  });
+
+  // Armed zombie shooting
+  zombies.forEach(z=>{
+    if(!z.gun||camoOn)return;
+    const dist=Math.hypot(player.x-z.x,player.y-z.y);
+    if(dist>350)return; // out of range
+    const shotCd=Math.max(1500,(z.gun.cd/60)*1000*2); // slower than player
+    if(nowMs-z.lastShot<shotCd)return;
+    z.lastShot=nowMs;
+    const ang=Math.atan2(player.y-z.y,player.x-z.x);
+    const spread=(z.gun.id==='shotgun')?[-0.22,0,0.22]:[0];
+    spread.forEach(off=>{
+      const a=ang+off+(Math.random()*0.18-0.09); // slight inaccuracy
+      zBullets.push({x:z.x+Math.cos(a)*(z.r+10),y:z.y+Math.sin(a)*(z.r+10),
+                     vx:Math.cos(a)*z.gun.spd*.7,vy:Math.sin(a)*z.gun.spd*.7,
+                     r:z.gun.r,life:z.gun.life*.6,dmg:z.gun.dmg,color:z.gun.color});
+    });
+  });
+
+  // zBullet move + player hit
+  zBullets=zBullets.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    if(b.life<=0||segHits(b.x,b.y,b.x-b.vx,b.y-b.vy,b.r))return false;
+    if(invTimer===0&&!camoOn){
+      const dx=b.x-player.x,dy=b.y-player.y;
+      if(dx*dx+dy*dy<(b.r+player.r)**2){
+        applyDamage(b.dmg);invTimer=30;killStreak=0;return false;
+      }
+    }
+    return true;
   });
 
   // Spike update + player collision
@@ -1153,6 +1239,18 @@ function drawZombie(z){
     ctx.textAlign='center';ctx.textBaseline='bottom';
     ctx.fillText(zt.name,z.x,by-1);ctx.textAlign='left';
   }
+  // Gun indicator
+  if(z.gun){
+    ctx.save();ctx.translate(z.x,z.y);ctx.rotate(z.angle);
+    ctx.fillStyle=z.gun.color;ctx.shadowColor=z.gun.color;ctx.shadowBlur=reducedFx?0:6;
+    ctx.fillRect(z.r-1,-3,z.gun.id==='sniper'?14:10,z.gun.id==='rocket'?5:3);
+    ctx.shadowBlur=0;ctx.restore();
+    // weapon label above HP bar
+    ctx.fillStyle=z.gun.color;ctx.font='bold 7px monospace';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText(z.gun.ico,z.x,by-1-(z.zt.id!=='normal'&&z.zt.id!=='mutant'?9:0));
+    ctx.textAlign='left';
+  }
 }
 function drawPlayer(){
   ctx.save();ctx.translate(player.x,player.y);
@@ -1389,6 +1487,13 @@ function draw(){
   coinPickups.forEach(drawCoin);
   heartPickups.forEach(drawHeart);
   bullets.forEach(drawBullet);
+  zBullets.forEach(b=>{
+    ctx.save();
+    ctx.shadowColor=b.color;ctx.shadowBlur=reducedFx?0:6;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);
+    ctx.fillStyle=b.color;ctx.fill();
+    ctx.restore();
+  });
   drawParticles();
   zombies.forEach(drawZombie);
   if(player&&(gameState==='playing'||gameState==='paused'||gameState==='dead')){
@@ -1396,7 +1501,6 @@ function draw(){
     drawInventoryUI();
   }
   drawDmgNumbers();
-  drawAbilityHUD();
   drawAchievementNotifs();
   if(gameState==='paused')drawPauseOverlay();
   if(gameState==='title'||gameState==='dead'){
@@ -1530,7 +1634,6 @@ function useAbility(id){
   abilityInventory[id]--;
   const now=Date.now();
   if(id==='soda'){
-    // stack: extend duration
     const end=(activeEffects.soda&&activeEffects.soda.endTime>now)?activeEffects.soda.endTime:now;
     activeEffects.soda={endTime:end+10000};
   } else if(id==='camo'){
@@ -1540,7 +1643,28 @@ function useAbility(id){
     const end=(activeEffects.plague&&activeEffects.plague.endTime>now)?activeEffects.plague.endTime:now;
     activeEffects.plague={endTime:end+8000,lastTick:now};
   }
-  saveProgress();
+  saveProgress();renderAbilityBar();
+}
+function renderAbilityBar(){
+  const now=Date.now();
+  [
+    {id:'soda', dur:10000},
+    {id:'camo', dur:15000},
+    {id:'plague',dur:8000},
+  ].forEach(({id,dur})=>{
+    const slot=document.getElementById('abl-'+id);
+    const cntEl=document.getElementById('abl-'+id+'-cnt');
+    const timerEl=document.getElementById('abl-'+id+'-timer');
+    if(!slot)return;
+    const cnt=abilityInventory[id]||0;
+    const eff=activeEffects[id];
+    const active=eff&&eff.endTime>now;
+    const rem=active?Math.ceil((eff.endTime-now)/1000):0;
+    cntEl.textContent='×'+cnt;
+    timerEl.textContent=active?rem+'s left':'';
+    slot.classList.toggle('empty',cnt<=0&&!active);
+    slot.classList.toggle('active',active);
+  });
 }
 
 function drawAbilityHUD(){
