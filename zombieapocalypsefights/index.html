@@ -199,6 +199,7 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
     <div class="hsp"></div>
     <button id="ach-btn" class="hbtn">🏆</button>
     <button id="shop-btn" class="hbtn">🛒 SHOP</button>
+    <button id="army-btn" class="hbtn on" title="Toggle army on/off">🪖 ON</button>
     <button id="pause-btn" class="hbtn">⏸</button>
     <button id="mute-btn"  class="hbtn">🔊</button>
   </div>
@@ -282,7 +283,7 @@ const ammoVal=document.getElementById('ammo-val');
 const weapIco=document.getElementById('weap-ico'),weapName=document.getElementById('weap-name');
 const levelVal=document.getElementById('level-val'),killsVal=document.getElementById('kills-val');
 const coinsVal=document.getElementById('coins-val');
-const pauseBtn=document.getElementById('pause-btn'),muteBtn=document.getElementById('mute-btn');
+const pauseBtn=document.getElementById('pause-btn'),muteBtn=document.getElementById('mute-btn'),armyBtn=document.getElementById('army-btn');
 const shopEl=document.getElementById('shop'),shopBtn=document.getElementById('shop-btn');
 const shopGrid=document.getElementById('shop-grid');
 const sgVal=document.getElementById('sg-val');
@@ -651,7 +652,7 @@ let activeEffects={};
 let earnedAchievements=new Set(),achievementNotifs=[];
 let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
 // Accessibility
-let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false;
+let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false,armyActive=true;
 let mouseDown=false,skipFrame=false;
 let dmgNumbers=[];
 bullets=[];zBullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];chestPickups=[];particles=[];bloodPools=[];spikes=[];
@@ -1139,26 +1140,38 @@ function update(now){
   });
   soldiers=soldiers.filter(s=>{
     if(s.invTimer>0)s.invTimer--;
-    // Find target: zombie with highest HP
-    let target=null,maxZhp=-1;
-    zombies.forEach(z=>{if(z.hp>maxZhp){maxZhp=z.hp;target=z;}});
-    // Move toward target
-    if(target){
-      const dist=Math.hypot(target.x-s.x,target.y-s.y);
-      s.angle=Math.atan2(target.y-s.y,target.x-s.x);
-      if(dist>110){
-        const dx=(target.x-s.x)/dist,dy=(target.y-s.y)/dist;
-        if(!wallsBlock(s.x+dx*s.speed,s.y,s.r))s.x+=dx*s.speed;
-        if(!wallsBlock(s.x,s.y+dy*s.speed,s.r))s.y+=dy*s.speed;
+    if(armyActive){
+      // Target: closest zombie to this soldier that is NOT within 80px of the player
+      let target=null,minDist=Infinity;
+      zombies.forEach(z=>{
+        const pdx=z.x-player.x,pdy=z.y-player.y;
+        if(pdx*pdx+pdy*pdy<80*80)return; // skip zombies too close to player
+        const d=Math.hypot(z.x-s.x,z.y-s.y);
+        if(d<minDist){minDist=d;target=z;}
+      });
+      // Fallback: if all zombies are near the player, pick the farthest from player instead
+      if(!target&&zombies.length){
+        let maxPdist=-1;
+        zombies.forEach(z=>{const d=Math.hypot(z.x-player.x,z.y-player.y);if(d>maxPdist){maxPdist=d;target=z;}});
       }
-      // Shoot every 1.2s
-      if(nowSol-s.lastShot>1200){
-        s.lastShot=nowSol;
-        const ang=Math.atan2(target.y-s.y,target.x-s.x);
-        sBullets.push({x:s.x+Math.cos(ang)*(s.r+8),y:s.y+Math.sin(ang)*(s.r+8),
-                       vx:Math.cos(ang)*11,vy:Math.sin(ang)*11,
-                       r:4,life:120,dmg:s.dmg,color:'#ffdd44'});
-        sfx('soldier_shoot');
+      // Move toward target
+      if(target){
+        const dist=Math.hypot(target.x-s.x,target.y-s.y);
+        s.angle=Math.atan2(target.y-s.y,target.x-s.x);
+        if(dist>110){
+          const dx=(target.x-s.x)/dist,dy=(target.y-s.y)/dist;
+          if(!wallsBlock(s.x+dx*s.speed,s.y,s.r))s.x+=dx*s.speed;
+          if(!wallsBlock(s.x,s.y+dy*s.speed,s.r))s.y+=dy*s.speed;
+        }
+        // Shoot every 1.2s
+        if(nowSol-s.lastShot>1200){
+          s.lastShot=nowSol;
+          const ang=Math.atan2(target.y-s.y,target.x-s.x);
+          sBullets.push({x:s.x+Math.cos(ang)*(s.r+8),y:s.y+Math.sin(ang)*(s.r+8),
+                         vx:Math.cos(ang)*11,vy:Math.sin(ang)*11,
+                         r:4,life:120,dmg:s.dmg,color:'#ffdd44'});
+          sfx('soldier_shoot');
+        }
       }
     }
     // Take damage from zombies
@@ -2203,6 +2216,11 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 pauseBtn.addEventListener('click',togglePause);
 muteBtn.addEventListener('click',toggleMute);
+if(armyBtn)armyBtn.addEventListener('click',()=>{
+  armyActive=!armyActive;
+  armyBtn.textContent='🪖 '+(armyActive?'ON':'OFF');
+  armyBtn.classList.toggle('on',armyActive);
+});
 ob.addEventListener('click',()=>{
   if(gameState==='dead'||gameState==='title'){
     openStageSelect();
