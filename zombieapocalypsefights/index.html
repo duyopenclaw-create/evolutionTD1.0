@@ -266,7 +266,7 @@ const ZTYPES=[
   {id:'normal', name:'Zombie',  r:14,hp:2, dmg:1,spd:0.48,col1:'#7dcf50',col2:'#1e4a00',eye:'#f00',xp:10, coins:[0,0,1],  minWT:0,minAT:0},
   {id:'mutant', name:'Mutant',  r:20,hp:8, dmg:3,spd:0.38,col1:'#cc3366',col2:'#1a0010',eye:'#fc0',xp:30, coins:[1,3,1],  minWT:0,minAT:0},
   {id:'elite',  name:'Elite',   r:17,hp:15,dmg:2,spd:0.65,col1:'#99aacc',col2:'#223355',eye:'#0ff',xp:60, coins:[2,5,1],  minWT:4,minAT:4},
-  {id:'boss',   name:'Boss',    r:24,hp:30,dmg:4,spd:0.5, col1:'#ff8800',col2:'#441100',eye:'#f0f',xp:120,coins:[3,7,1],  minWT:5,minAT:5},
+  {id:'boss',   name:'Boss',    r:24,hp:500,dmg:10,spd:0.5,col1:'#ff8800',col2:'#441100',eye:'#f0f',xp:400,coins:[8,15,2], minWT:5,minAT:5},
   {id:'demon',  name:'DEMON',   r:28,hp:50,dmg:6,spd:0.4, col1:'#ff1111',col2:'#550000',eye:'#ff0',xp:250,coins:[5,12,2], minWT:6,minAT:6},
 ];
 
@@ -427,7 +427,7 @@ function resumeMusic(){if(!audioCtx)return;audioCtx.resume().then(()=>{musicActi
 function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-let player,bullets,zombies,ammoPickups,coinPickups,heartPickups,particles,bloodPools;
+let player,bullets,zombies,ammoPickups,coinPickups,heartPickups,particles,bloodPools,spikes;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
 let gameState='title',invTimer=0,lastZombieSpawn=0,lastAmmoSpawn=0,lastHeartSpawn=0;
 let frozenAngle=0,invOpen=false,shopTab='weapons';
@@ -443,7 +443,7 @@ let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
 let autoFire=false,showDmgNums=false,reducedFx=false,slowMode=false,highContrast=false;
 let mouseDown=false,skipFrame=false;
 let dmgNumbers=[];
-bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];
+bullets=[];zombies=[];ammoPickups=[];coinPickups=[];heartPickups=[];particles=[];bloodPools=[];spikes=[];
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function saveProgress(){
@@ -522,6 +522,7 @@ function initGame(){
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
+  spikes=[];
   keys={};mouse={x:0,y:0};kills=0;killStreak=0;dmgNumbers=[];achievementNotifs=[];
   invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;gameStartTime=0;
   frozenAngle=0;invOpen=false;
@@ -722,7 +723,7 @@ function update(now){
     return true;
   });
 
-  // Zombies move
+  // Zombies move + boss spike spawning
   zombies.forEach(z=>{
     const dx=player.x-z.x,dy=player.y-z.y,dist=Math.hypot(dx,dy);
     if(dist>0){
@@ -731,7 +732,32 @@ function update(now){
       if(!wallsBlock(nx,z.y,z.r))z.x=nx;
       if(!wallsBlock(z.x,ny,z.r))z.y=ny;
     }
+    // Boss spawns spikes every 3 seconds
+    if(z.zt.id==='boss'){
+      if(!z.spikeTimer)z.spikeTimer=now;
+      if(now-z.spikeTimer>3000){
+        z.spikeTimer=now;
+        for(let i=0;i<6;i++){
+          let sx,sy,tries=0;
+          do{sx=30+Math.random()*(W-60);sy=30+Math.random()*(H-60);tries++;}
+          while(wallsBlock(sx,sy,12)&&tries<20);
+          spikes.push({x:sx,y:sy,life:300,maxLife:300,r:10,dmg:2});
+        }
+      }
+    }
   });
+
+  // Spike update + player collision
+  if(spikes.length){
+    spikes=spikes.filter(s=>{
+      s.life--;
+      if(invTimer===0){
+        const dx=player.x-s.x,dy=player.y-s.y;
+        if(dx*dx+dy*dy<(player.r+s.r-2)**2){applyDamage(s.dmg);invTimer=45;killStreak=0;}
+      }
+      return s.life>0;
+    });
+  }
 
   // Bullet-zombie hits
   bullets.forEach((b,bi)=>{
@@ -934,6 +960,26 @@ function drawAmmo(a){
   ctx.fillStyle='#ffcc00';
   [-5,0,5].forEach(ox=>{ctx.fillRect(ox-2,-6,4,10);ctx.beginPath();ctx.ellipse(ox,-6,2,3,0,Math.PI,0);ctx.fill();});
   ctx.shadowBlur=0;ctx.restore();
+}
+function drawSpike(s){
+  const fade=s.life/s.maxLife;
+  const pulse=1+0.15*Math.sin(Date.now()/120);
+  ctx.save();ctx.translate(s.x,s.y);ctx.scale(pulse,pulse);
+  ctx.globalAlpha=Math.min(1,fade*3); // flash warning when fading
+  ctx.shadowColor='#ff4400';ctx.shadowBlur=16*fade;
+  // Draw 8-pointed spike
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2;
+    const r=i%2===0?s.r:s.r*0.4;
+    i===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  ctx.closePath();
+  const g=ctx.createRadialGradient(0,0,0,0,0,s.r);
+  g.addColorStop(0,'#ffcc00');g.addColorStop(0.5,'#ff4400');g.addColorStop(1,'#880000');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle='#ff2200';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.restore();
 }
 function drawCoin(c){
   const pulse=.88+.12*Math.sin(Date.now()/220+c.x*.01);
@@ -1230,6 +1276,7 @@ function draw(){
   drawFloor();
   drawBloodPools();
   WALLS.forEach(drawWall);
+  spikes.forEach(drawSpike);
   ammoPickups.forEach(drawAmmo);
   coinPickups.forEach(drawCoin);
   heartPickups.forEach(drawHeart);
