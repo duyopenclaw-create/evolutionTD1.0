@@ -103,7 +103,11 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
 .stab.active { background:#333; border-color:#888; color:#fff; }
 #shop-gold-line { font-size:13px; color:#aaa; margin-bottom:10px; }
 #shop-gold-line span { color:#ffd700; font-weight:bold; }
-.shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.shop-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.sitem.skin { border-width:3px; }
+.sitem.ability { border-color:#aa44ff; }
+.sitem.ability.owned { border-color:#cc66ff; }
+.sitem .scnt { font-size:11px; color:#cc88ff; font-weight:bold; float:right; }
 .sitem { background:#1a1a1a; border:2px solid #333; border-radius:6px;
          padding:10px; cursor:pointer; transition:border-color .1s; }
 .sitem.owned { border-color:#44ff44; }
@@ -194,6 +198,8 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
     <div class="tabs">
       <button class="stab active" id="tab-w">⚔ Weapons</button>
       <button class="stab" id="tab-a">🛡 Armors</button>
+      <button class="stab" id="tab-s">🎨 Skins</button>
+      <button class="stab" id="tab-ab">⚡ Abilities</button>
     </div>
     <div id="shop-grid" class="shop-grid"></div>
   </div>
@@ -259,6 +265,25 @@ const ARMORS=[
   {id:'iron',   name:'Iron Plate', ico:'🛡',price:80, shield:14,smul:0.95,tier:4,desc:'Heavy protection'},
   {id:'steel',  name:'Steel',      ico:'🛡',price:200,shield:18,smul:0.9, tier:5,desc:'Military grade'},
   {id:'dragon', name:'Dragon Scale',ico:'🐉',price:500,shield:25,smul:0.85,tier:6,desc:'Legendary defense'},
+];
+
+// ─── SKINS ───────────────────────────────────────────────────────────────────
+const SKINS=[
+  {id:'default', name:'Classic',   price:0,   c1:'#88ddff',c2:'#1177cc',stroke:'#00ccff', desc:'Original blue'},
+  {id:'red',     name:'Crimson',   price:25,  c1:'#ff8888',c2:'#aa1111',stroke:'#ff4444', desc:'Blood red'},
+  {id:'orange',  name:'Ember',     price:50,  c1:'#ffbb66',c2:'#aa4400',stroke:'#ff8844', desc:'Burning orange'},
+  {id:'yellow',  name:'Solar',     price:75,  c1:'#ffee66',c2:'#aaaa00',stroke:'#ffdd00', desc:'Blazing yellow'},
+  {id:'lime',    name:'Venom',     price:100, c1:'#88ff88',c2:'#008800',stroke:'#44ff44', desc:'Toxic green'},
+  {id:'teal',    name:'Phantom',   price:150, c1:'#66ffcc',c2:'#007766',stroke:'#00ffbb', desc:'Ghost teal'},
+  {id:'indigo',  name:'Void',      price:200, c1:'#8888ff',c2:'#2200cc',stroke:'#6644ff', desc:'Dark indigo'},
+  {id:'purple',  name:'Wraith',    price:300, c1:'#dd88ff',c2:'#660099',stroke:'#cc44ff', desc:'Deep purple'},
+];
+
+// ─── ABILITIES ───────────────────────────────────────────────────────────────
+const ABILITIES=[
+  {id:'soda',  name:'Soda Can',     ico:'🥤', price:30, desc:'10s speed +50% · +3 dmg · stackable', color:'#44aaff'},
+  {id:'camo',  name:'Camouflage',   ico:'🫥', price:60, desc:'15s · zombies ignore you · stackable', color:'#44ff88'},
+  {id:'plague',name:'Plague Spray', ico:'🧫', price:80, desc:'8s · all zombies take 1 dmg/sec',      color:'#cc44ff'},
 ];
 
 // ─── ZOMBIE TYPES ────────────────────────────────────────────────────────────
@@ -481,6 +506,11 @@ let equipped={weapon:'pistol',armor:'cloth'};
 let weaponAmmo={pistol:15};
 let invBtnBounds=null,invItemBounds=[],invUpgradeBounds=[];
 let weaponUpgrades={},armorUpgrades={};
+let ownedSkins=new Set(['default']);
+let equippedSkin='default';
+let abilityInventory={soda:0,camo:0,plague:0};
+// activeEffects: {soda:{endTime,dmgBonus,speedMul}, camo:{endTime}, plague:{endTime,lastTick}}
+let activeEffects={};
 // Achievements & stats
 let earnedAchievements=new Set(),achievementNotifs=[];
 let lifetimeKills=0,lifetimeCoins=0,killStreak=0,gameStartTime=0;
@@ -508,6 +538,9 @@ function saveProgress(){
     localStorage.setItem('zs_ach', JSON.stringify([...earnedAchievements]));
     localStorage.setItem('zs_lk', lifetimeKills);
     localStorage.setItem('zs_lc', lifetimeCoins);
+    localStorage.setItem('zs_skins', JSON.stringify([...ownedSkins]));
+    localStorage.setItem('zs_skin_eq', equippedSkin);
+    localStorage.setItem('zs_abil', JSON.stringify(abilityInventory));
   }catch(e){}
 }
 function loadProgress(){
@@ -533,6 +566,10 @@ function loadProgress(){
     const ach=localStorage.getItem('zs_ach');if(ach)earnedAchievements=new Set(JSON.parse(ach));
     const lk=localStorage.getItem('zs_lk');if(lk)lifetimeKills=parseInt(lk)||0;
     const lc=localStorage.getItem('zs_lc');if(lc)lifetimeCoins=parseInt(lc)||0;
+    const sk=localStorage.getItem('zs_skins');if(sk){const arr=JSON.parse(sk);ownedSkins=new Set(arr.filter(id=>SKINS.find(s=>s.id===id)));}
+    if(!ownedSkins.has('default'))ownedSkins.add('default');
+    const se=localStorage.getItem('zs_skin_eq');if(se&&ownedSkins.has(se))equippedSkin=se;
+    const ab=localStorage.getItem('zs_abil');if(ab){const parsed=JSON.parse(ab);ABILITIES.forEach(a=>{if(parsed[a.id]!==undefined)abilityInventory[a.id]=Math.max(0,parseInt(parsed[a.id])||0);});}
   }catch(e){}
 }
 loadProgress();
@@ -570,7 +607,7 @@ function initGame(){
   spikes=[];
   keys={};mouse={x:0,y:0};kills=0;killStreak=0;dmgNumbers=[];achievementNotifs=[];
   invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;gameStartTime=0;
-  frozenAngle=0;invOpen=false;
+  frozenAngle=0;invOpen=false;activeEffects={};
   gameState='playing';
   updateHUD();startMusic();
 }
@@ -713,7 +750,8 @@ function movePlayer(){
   if(keys['a']||keys['arrowleft'])dx-=1;
   if(keys['d']||keys['arrowright'])dx+=1;
   if(dx&&dy){dx*=.707;dy*=.707;}
-  const sp=player.speed*(getArmor().smul);
+  const sodaSpd=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?1.5:1;
+  const sp=player.speed*(getArmor().smul)*sodaSpd;
   const nx=player.x+dx*sp,ny=player.y+dy*sp;
   if(!wallsBlock(nx,player.y,player.r))player.x=nx;
   if(!wallsBlock(player.x,ny,player.r))player.y=ny;
@@ -730,6 +768,17 @@ function update(now){
   movePlayer();
   if(invTimer>0)invTimer--;
   checkAchievements();
+
+  // Active ability effects
+  const nowMs=Date.now();
+  if(activeEffects.plague&&activeEffects.plague.endTime>nowMs){
+    if(nowMs-activeEffects.plague.lastTick>=1000){
+      activeEffects.plague.lastTick=nowMs;
+      zombies.forEach(z=>{z.hp-=1;if(showDmgNums)dmgNumbers.push({x:z.x,y:z.y-z.r-4,val:1,life:50,maxLife:50,vy:-0.5});});
+    }
+  } else if(activeEffects.plague&&activeEffects.plague.endTime<=nowMs){delete activeEffects.plague;}
+  if(activeEffects.soda&&activeEffects.soda.endTime<=nowMs)delete activeEffects.soda;
+  if(activeEffects.camo&&activeEffects.camo.endTime<=nowMs)delete activeEffects.camo;
 
   // Zombie spawn
   if(now-lastZombieSpawn>currentStage.spawnMs&&zombies.length<currentStage.maxZ){spawnZombie();lastZombieSpawn=now;}
@@ -767,7 +816,9 @@ function update(now){
   });
 
   // Zombies move + boss spike spawning
+  const camoOn=activeEffects.camo&&Date.now()<activeEffects.camo.endTime;
   zombies.forEach(z=>{
+    if(camoOn){z.angle=(z.angle||0)+0.01;return;} // wander, don't chase
     const dx=player.x-z.x,dy=player.y-z.y,dist=Math.hypot(dx,dy);
     if(dist>0){
       z.angle=Math.atan2(dy,dx);
@@ -850,8 +901,8 @@ function update(now){
   });
   kills+=before-zombies.length;
 
-  // Player-zombie collision
-  if(invTimer===0){
+  // Player-zombie collision (skip if camo active)
+  if(invTimer===0&&!camoOn){
     zombies.forEach(z=>{
       const dx=player.x-z.x,dy=player.y-z.y;
       if(dx*dx+dy*dy<(player.r+z.r)**2){applyDamage(z.dmg);invTimer=90;killStreak=0;}
@@ -917,7 +968,8 @@ function shoot(){
   const ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
   const tx=player.x+Math.cos(ang)*(player.r+18),ty=player.y+Math.sin(ang)*(player.r+18);
 
-  const finalDmg=wdata.dmg+(weaponUpgrades[wdata.id]||0);
+  const sodaBonus=(activeEffects.soda&&Date.now()<activeEffects.soda.endTime)?3:0;
+  const finalDmg=wdata.dmg+(weaponUpgrades[wdata.id]||0)+sodaBonus;
   if(wdata.id==='shotgun'){
     for(const offset of[-0.22,0,0.22]){
       const a=ang+offset;
@@ -1107,13 +1159,26 @@ function drawPlayer(){
   const flash=invTimer>0&&Math.floor(invTimer/8)%2===0;
   ctx.fillStyle='rgba(0,0,0,0.35)';
   ctx.beginPath();ctx.ellipse(3,6,player.r*.9,player.r*.5,0,0,Math.PI*2);ctx.fill();
-  if(!flash){ctx.shadowColor='#00aaff';ctx.shadowBlur=20;}
-  const g=ctx.createRadialGradient(-5,-5,2,0,0,player.r);
-  g.addColorStop(0,flash?'#fff':'#88ddff');
-  g.addColorStop(.6,flash?'#aaa':'#1177cc');
-  g.addColorStop(1,flash?'#555':'#003366');
-  ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
-  ctx.strokeStyle=flash?'#fff':'#00ccff';ctx.lineWidth=2.5;ctx.stroke();
+  const skin=SKINS.find(s=>s.id===equippedSkin)||SKINS[0];
+  const camoActive=activeEffects.camo&&Date.now()<activeEffects.camo.endTime;
+  if(camoActive){
+    // Draw as zombie (green skin) during camo
+    ctx.shadowColor='#3a8000';ctx.shadowBlur=12;
+    const cg=ctx.createRadialGradient(-4,-4,2,0,0,player.r);
+    cg.addColorStop(0,'#aae066');cg.addColorStop(.7,'#5a9020');cg.addColorStop(1,'#1e4a00');
+    ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+    ctx.strokeStyle='#7dcf50';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.shadowBlur=0;
+  } else {
+    if(!flash){ctx.shadowColor=skin.stroke;ctx.shadowBlur=20;}
+    const g=ctx.createRadialGradient(-5,-5,2,0,0,player.r);
+    g.addColorStop(0,flash?'#fff':skin.c1);
+    g.addColorStop(.6,flash?'#aaa':skin.c2);
+    g.addColorStop(1,flash?'#555':skin.c2+'88');
+    ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+    ctx.strokeStyle=flash?'#fff':skin.stroke;ctx.lineWidth=2.5;ctx.stroke();
+    ctx.shadowBlur=0;
+  }
   ctx.shadowBlur=0;
   ctx.beginPath();ctx.arc(-5,-5,5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fill();
   const ang=gameState==='paused'?frozenAngle:Math.atan2(mouse.y-player.y,mouse.x-player.x);
@@ -1331,6 +1396,7 @@ function draw(){
     drawInventoryUI();
   }
   drawDmgNumbers();
+  drawAbilityHUD();
   drawAchievementNotifs();
   if(gameState==='paused')drawPauseOverlay();
   if(gameState==='title'||gameState==='dead'){
@@ -1342,36 +1408,91 @@ function draw(){
 let shopTabActive='weapons';
 function renderShop(){
   sgVal.textContent=coins;
-  const items=shopTabActive==='weapons'?WEAPONS:ARMORS;
   shopGrid.innerHTML='';
-  items.forEach(item=>{
-    const isOwned=shopTabActive==='weapons'?owned.weapons.has(item.id):owned.armors.has(item.id);
-    const isEq=shopTabActive==='weapons'?equipped.weapon===item.id:equipped.armor===item.id;
-    const div=document.createElement('div');
-    div.className='sitem'+(isOwned?' owned':'')+(isEq?' equipped':'');
-    const badge=isEq?'<span class="sbadge">✓ equipped</span>':isOwned?'<span class="sbadge" style="color:#44ff44">owned</span>':'';
-    div.innerHTML=`<h3>${item.ico} ${item.name} ${badge}</h3>
-      <div class="sdesc">${item.desc}</div>
-      <div class="sprice ${item.price===0?'free':''}">${item.price===0?'FREE':item.price+' 🟡'}</div>`;
-    if(!isOwned&&item.price>0){
+  if(shopTabActive==='weapons'||shopTabActive==='armors'){
+    const items=shopTabActive==='weapons'?WEAPONS:ARMORS;
+    items.forEach(item=>{
+      const isOwned=shopTabActive==='weapons'?owned.weapons.has(item.id):owned.armors.has(item.id);
+      const isEq=shopTabActive==='weapons'?equipped.weapon===item.id:equipped.armor===item.id;
+      const div=document.createElement('div');
+      div.className='sitem'+(isOwned?' owned':'')+(isEq?' equipped':'');
+      const badge=isEq?'<span class="sbadge">✓ equipped</span>':isOwned?'<span class="sbadge" style="color:#44ff44">owned</span>':'';
+      div.innerHTML=`<h3>${item.ico} ${item.name} ${badge}</h3>
+        <div class="sdesc">${item.desc}</div>
+        <div class="sprice ${item.price===0?'free':''}">${item.price===0?'FREE':item.price+' 🟡'}</div>`;
+      if(!isOwned&&item.price>0){
+        const btn=document.createElement('button');
+        btn.textContent=coins>=item.price?'BUY':'Need '+item.price+' 🟡';
+        btn.style.cssText='margin-top:6px;background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:3px;width:100%';
+        btn.disabled=coins<item.price;
+        btn.onclick=()=>buyItem(item,'gear');
+        div.appendChild(btn);
+      }
+      shopGrid.appendChild(div);
+    });
+  } else if(shopTabActive==='skins'){
+    SKINS.forEach(skin=>{
+      const isOwned=ownedSkins.has(skin.id);
+      const isEq=equippedSkin===skin.id;
+      const div=document.createElement('div');
+      div.className='sitem skin'+(isOwned?' owned':'')+(isEq?' equipped':'');
+      div.style.borderColor=isEq?skin.stroke:isOwned?'#44ff44':'#333';
+      div.style.background=isEq?`${skin.c2}44`:'#1a1a1a';
+      const badge=isEq?'<span class="sbadge">✓ on</span>':isOwned?'<span class="sbadge" style="color:#44ff44">owned</span>':'';
+      div.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 40% 35%,${skin.c1},${skin.c2});border:2px solid ${skin.stroke};display:inline-block;vertical-align:middle;margin-right:4px"></div>
+        <span style="font-size:12px;font-weight:bold;color:#fff;vertical-align:middle">${skin.name}</span> ${badge}
+        <div class="sdesc" style="margin-top:4px">${skin.desc}</div>
+        <div class="sprice ${skin.price===0?'free':''}">${skin.price===0?'FREE':skin.price+' 🟡'}</div>`;
+      if(!isOwned&&skin.price>0){
+        const btn=document.createElement('button');
+        btn.textContent=coins>=skin.price?'BUY':'Need '+skin.price+' 🟡';
+        btn.style.cssText='margin-top:6px;background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:3px;width:100%';
+        btn.disabled=coins<skin.price;
+        btn.onclick=()=>buyItem(skin,'skin');
+        div.appendChild(btn);
+      } else if(isOwned&&!isEq){
+        const btn=document.createElement('button');
+        btn.textContent='EQUIP';
+        btn.style.cssText='margin-top:6px;background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:3px;width:100%';
+        btn.onclick=()=>{equippedSkin=skin.id;saveProgress();renderShop();};
+        div.appendChild(btn);
+      }
+      shopGrid.appendChild(div);
+    });
+  } else if(shopTabActive==='abilities'){
+    ABILITIES.forEach(ab=>{
+      const cnt=abilityInventory[ab.id]||0;
+      const div=document.createElement('div');
+      div.className='sitem ability'+(cnt>0?' owned':'');
+      div.innerHTML=`<h3>${ab.ico} ${ab.name} <span class="scnt">×${cnt}</span></h3>
+        <div class="sdesc">${ab.desc}</div>
+        <div class="sprice">${ab.price} 🟡 each</div>`;
       const btn=document.createElement('button');
-      btn.textContent=coins>=item.price?'BUY':'Need '+item.price+' 🟡';
+      btn.textContent=coins>=ab.price?'BUY 1':'Need '+ab.price+' 🟡';
       btn.style.cssText='margin-top:6px;background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:3px;width:100%';
-      btn.disabled=coins<item.price;
-      btn.onclick=()=>buyItem(item,shopTabActive);
+      btn.disabled=coins<ab.price;
+      btn.onclick=()=>buyItem(ab,'ability');
       div.appendChild(btn);
-    }
-    shopGrid.appendChild(div);
-  });
+      shopGrid.appendChild(div);
+    });
+  }
 }
 function buyItem(item,type){
   if(coins<item.price)return;
   coins-=item.price;
-  if(type==='weapons'){
-    owned.weapons.add(item.id);
-    if(!weaponAmmo[item.id])weaponAmmo[item.id]=item.ammo;
-  } else {
-    owned.armors.add(item.id);
+  if(type==='gear'){
+    // figure out weapon vs armor
+    if(WEAPONS.find(w=>w.id===item.id)){
+      owned.weapons.add(item.id);
+      if(!weaponAmmo[item.id])weaponAmmo[item.id]=item.ammo;
+    } else {
+      owned.armors.add(item.id);
+    }
+  } else if(type==='skin'){
+    ownedSkins.add(item.id);
+    equippedSkin=item.id;
+  } else if(type==='ability'){
+    abilityInventory[item.id]=(abilityInventory[item.id]||0)+1;
   }
   earnAchievement('buy_any');
   saveProgress();updateHUD();renderShop();
@@ -1387,10 +1508,78 @@ function closeShop(){
   if(gameState==='paused'){gameState='playing';resumeMusic();
     pauseBtn.textContent='⏸';pauseBtn.classList.remove('on');}
 }
-document.getElementById('tab-w').onclick=()=>{shopTabActive='weapons';document.getElementById('tab-w').classList.add('active');document.getElementById('tab-a').classList.remove('active');renderShop();};
-document.getElementById('tab-a').onclick=()=>{shopTabActive='armors';document.getElementById('tab-a').classList.add('active');document.getElementById('tab-w').classList.remove('active');renderShop();};
+function setShopTab(tabKey,tabId){
+  shopTabActive=tabKey;
+  ['tab-w','tab-a','tab-s','tab-ab'].forEach(t=>{
+    const el=document.getElementById(t);
+    if(el)el.classList.toggle('active',t===tabId);
+  });
+  renderShop();
+}
+document.getElementById('tab-w').onclick=()=>setShopTab('weapons','tab-w');
+document.getElementById('tab-a').onclick=()=>setShopTab('armors','tab-a');
+document.getElementById('tab-s').onclick=()=>setShopTab('skins','tab-s');
+document.getElementById('tab-ab').onclick=()=>setShopTab('abilities','tab-ab');
 document.getElementById('shop-x').onclick=closeShop;
 shopBtn.onclick=()=>shopEl.classList.contains('hidden')?openShop():closeShop();
+
+// ─── ABILITIES ───────────────────────────────────────────────────────────────
+function useAbility(id){
+  if(gameState!=='playing')return;
+  if(abilityInventory[id]<=0)return;
+  abilityInventory[id]--;
+  const now=Date.now();
+  if(id==='soda'){
+    // stack: extend duration
+    const end=(activeEffects.soda&&activeEffects.soda.endTime>now)?activeEffects.soda.endTime:now;
+    activeEffects.soda={endTime:end+10000};
+  } else if(id==='camo'){
+    const end=(activeEffects.camo&&activeEffects.camo.endTime>now)?activeEffects.camo.endTime:now;
+    activeEffects.camo={endTime:end+15000};
+  } else if(id==='plague'){
+    const end=(activeEffects.plague&&activeEffects.plague.endTime>now)?activeEffects.plague.endTime:now;
+    activeEffects.plague={endTime:end+8000,lastTick:now};
+  }
+  saveProgress();
+}
+
+function drawAbilityHUD(){
+  if(!player||(gameState!=='playing'&&gameState!=='paused'))return;
+  const now=Date.now();
+  const abs=[
+    {id:'soda', ico:'🥤', key:'1', color:'#44aaff'},
+    {id:'camo', ico:'🫥', key:'2', color:'#44ff88'},
+    {id:'plague',ico:'🧫',key:'3', color:'#cc44ff'},
+  ];
+  const slotW=54,slotH=52,gap=6,startX=W/2-(abs.length*(slotW+gap)-gap)/2,startY=H-slotH-10;
+  abs.forEach((ab,i)=>{
+    const x=startX+i*(slotW+gap),y=startY;
+    const cnt=abilityInventory[ab.id]||0;
+    const eff=activeEffects[ab.id];
+    const active=eff&&eff.endTime>now;
+    const pct=active?(eff.endTime-now)/(ab.id==='soda'?10000:ab.id==='camo'?15000:8000):0;
+    // slot bg
+    ctx.fillStyle=active?`${ab.color}33`:'rgba(0,0,0,0.7)';
+    ctx.strokeStyle=active?ab.color:'#444';
+    ctx.lineWidth=active?2:1;
+    ctx.beginPath();ctx.roundRect(x,y,slotW,slotH,6);ctx.fill();ctx.stroke();
+    // cooldown arc
+    if(active){
+      ctx.strokeStyle=ab.color;ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(x+slotW/2,y+slotH/2,22,-Math.PI/2,-Math.PI/2+pct*Math.PI*2);ctx.stroke();
+    }
+    // icon
+    ctx.font='20px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(ab.ico,x+slotW/2,y+slotH/2-4);
+    // count
+    ctx.font='bold 11px monospace';ctx.fillStyle=cnt>0?'#fff':'#555';
+    ctx.fillText(`×${cnt}`,x+slotW/2,y+slotH-8);
+    // key hint
+    ctx.font='9px monospace';ctx.fillStyle='#444';ctx.textBaseline='top';
+    ctx.fillText(`[${ab.key}]`,x+slotW/2,y+3);
+    ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  });
+}
 
 // ─── PAUSE ────────────────────────────────────────────────────────────────────
 function togglePause(){
@@ -1480,6 +1669,9 @@ document.addEventListener('keydown',e=>{
   if(k==='p'){togglePause();return;}
   if(k==='m'){toggleMute();return;}
   if(k==='i'){invOpen=!invOpen;return;}
+  if(k==='1'){useAbility('soda');return;}
+  if(k==='2'){useAbility('camo');return;}
+  if(k==='3'){useAbility('plague');return;}
   keys[k]=true;e.preventDefault();
 });
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
