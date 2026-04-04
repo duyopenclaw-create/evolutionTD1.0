@@ -637,7 +637,10 @@ let twoPlayerMode=false;
 let player2=null;
 let p1FaceAngle=0;
 let p2FaceAngle=0;
-let p2RespawnTimer=0;
+let p1Downed=null; // {x,y} when P1 is downed in 2P mode
+let p2Downed=null; // {x,y} when P2 is downed
+let reviveProgress=0; // 0–300 (5 sec at 60fps)
+let reviveTarget=null; // 'p1' or 'p2'
 let eliteBoostTimer=0;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
 let gameState='title',invTimer=0,lastZombieSpawn=0,lastAmmoSpawn=0,lastHeartSpawn=0;
@@ -776,16 +779,18 @@ function initGame(){
   keys={};mouse={x:0,y:0};kills=0;killStreak=0;dmgNumbers=[];achievementNotifs=[];
   invTimer=0;lastZombieSpawn=0;lastAmmoSpawn=0;lastHeartSpawn=0;gameStartTime=0;
   frozenAngle=0;invOpen=false;activeEffects={};
+  p1Downed=null;p2Downed=null;reviveProgress=0;reviveTarget=null;
   if(twoPlayerMode)spawnPlayer2();
   else player2=null;
   gameState='playing';
   updateHUD();startMusic();
 }
 
-function spawnPlayer2(){
+function spawnPlayer2(ox,oy){
   const armor=getArmor();
   const aShield=armor.shield+(armorUpgrades[armor.id]||0);
-  player2={x:player.x+40,y:player.y,r:14,hp:player.maxHp,maxHp:player.maxHp,
+  player2={x:ox!==undefined?ox:player.x+44,y:oy!==undefined?oy:player.y,
+           r:player.r,hp:player.maxHp,maxHp:player.maxHp,
            shield:aShield,maxShield:aShield,speed:player.speed,
            level:player.level,xp:player.xp,invTimer:0};
 }
@@ -964,14 +969,14 @@ function movePlayer2(){
   const nx=player2.x+dx*sp,ny=player2.y+dy*sp;
   if(!wallsBlock(nx,player2.y,player2.r))player2.x=nx;
   if(!wallsBlock(player2.x,ny,player2.r))player2.y=ny;
-  if(keys['enter']){
+  if(keys['/']){
     let sdx=0,sdy=0;
     if(keys['arrowup'])sdy=-1;
     if(keys['arrowdown'])sdy=1;
     if(keys['arrowleft'])sdx=-1;
     if(keys['arrowright'])sdx=1;
     const ang=(sdx||sdy)?Math.atan2(sdy,sdx):p2FaceAngle;
-    shootAtAngle(player2,ang);
+    if(player2)shootAtAngle(player2,ang);
   }
 }
 function applyDamage(dmg){
@@ -1331,11 +1336,34 @@ function update(now){
   }
   if(player2&&player2.invTimer>0)player2.invTimer--;
   if(twoPlayerMode&&player2&&player2.hp<=0){
-    sfx('game_over');spawnBlood(player2.x,player2.y);
-    player2=null;p2RespawnTimer=Date.now()+5000;
+    sfx('player_hurt');spawnBlood(player2.x,player2.y);
+    p2Downed={x:player2.x,y:player2.y};player2=null;
   }
-  if(twoPlayerMode&&!player2&&p2RespawnTimer>0&&Date.now()>p2RespawnTimer){
-    spawnPlayer2();p2RespawnTimer=0;
+  // Revive logic: hold X near a downed player
+  if(twoPlayerMode){
+    const reviver=player2?player2:null; // P2 revives P1, P1 revives P2
+    // Check P1 reviving P2
+    if(p2Downed&&!p2Downed.reviving){
+      const d1=Math.hypot(player.x-p2Downed.x,player.y-p2Downed.y);
+      if(d1<36&&keys['x']){
+        reviveTarget='p2';reviveProgress=Math.min(300,reviveProgress+1);
+        if(reviveProgress>=300){spawnPlayer2(p2Downed.x,p2Downed.y);p2Downed=null;reviveProgress=0;reviveTarget=null;}
+      } else if(reviveTarget==='p2'){reviveProgress=Math.max(0,reviveProgress-2);}
+    }
+    // Check P2 reviving P1
+    if(p1Downed&&player2){
+      const d2=Math.hypot(player2.x-p1Downed.x,player2.y-p1Downed.y);
+      if(d2<36&&keys['x']){
+        reviveTarget='p1';reviveProgress=Math.min(300,reviveProgress+1);
+        if(reviveProgress>=300){
+          // Revive P1: restore half HP
+          player.hp=Math.max(1,Math.floor(player.maxHp/2));
+          player.shield=0;player.invTimer=120;
+          p1Downed=null;reviveProgress=0;reviveTarget=null;
+        }
+      } else if(reviveTarget==='p1'){reviveProgress=Math.max(0,reviveProgress-2);}
+    }
+    if(!p2Downed&&!p1Downed){reviveProgress=0;reviveTarget=null;}
   }
 
   // Soldiers passively collect coins nearby
@@ -1402,11 +1430,24 @@ function update(now){
   updateHUD();
 
   if(player.hp<=0){
-    player.hp=0;gameState='dead';sfx('game_over');saveProgress();pauseMusic();stopHeartbeat();
-    ot.textContent='YOU DIED';
-    om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
-    ob.textContent='PLAY AGAIN';
-    overlay.classList.remove('hidden');
+    if(twoPlayerMode&&(player2||p2Downed===null)){
+      // In 2P mode: P1 goes downed, game only ends if P2 also downed/dead
+      player.hp=0;sfx('player_hurt');spawnBlood(player.x,player.y);
+      p1Downed={x:player.x,y:player.y};player.hp=1;player.invTimer=9999;
+      if(!player2&&!p2Downed){
+        // Both players down — real game over
+        p1Downed=null;player.hp=0;
+        gameState='dead';sfx('game_over');saveProgress();pauseMusic();stopHeartbeat();
+        ot.textContent='BOTH PLAYERS DOWN';
+        om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
+        ob.textContent='PLAY AGAIN';overlay.classList.remove('hidden');
+      }
+    } else {
+      player.hp=0;gameState='dead';sfx('game_over');saveProgress();pauseMusic();stopHeartbeat();
+      ot.textContent='YOU DIED';
+      om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
+      ob.textContent='PLAY AGAIN';overlay.classList.remove('hidden');
+    }
   }
 }
 
@@ -2052,11 +2093,33 @@ function draw(){
     drawPlayer();
     drawInventoryUI();
   }
-  if(twoPlayerMode&&!player2&&p2RespawnTimer>0){
-    const rem=Math.ceil((p2RespawnTimer-Date.now())/1000);
-    if(rem>0){
-      ctx.font='bold 14px monospace';ctx.fillStyle='#ff88ff';ctx.textAlign='center';
-      ctx.fillText('P2 respawns in '+rem+'s',W/2,H-80);ctx.textAlign='left';
+  // Draw downed bodies + revive bar
+  function drawDownedBody(x,y,col,label){
+    ctx.save();ctx.translate(x,y);
+    ctx.globalAlpha=0.7;
+    ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(0,4,18,10,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.font='bold 9px monospace';ctx.fillStyle='#fff';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,0,4);
+    ctx.restore();
+    // Revive hint
+    ctx.font='8px monospace';ctx.fillStyle='#ffdd00';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText('hold X to revive',x,y-14);ctx.textAlign='left';
+  }
+  if(twoPlayerMode){
+    if(p2Downed)drawDownedBody(p2Downed.x,p2Downed.y,'#cc44cc','P2 ↓');
+    if(p1Downed)drawDownedBody(p1Downed.x,p1Downed.y,'#4488ff','P1 ↓');
+    if(reviveProgress>0){
+      const rx=reviveTarget==='p2'?(p2Downed?p2Downed.x:0):(p1Downed?p1Downed.x:0);
+      const ry=reviveTarget==='p2'?(p2Downed?p2Downed.y:0):(p1Downed?p1Downed.y:0);
+      const pct=reviveProgress/300;
+      ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(rx-26,ry-30,52,8);
+      ctx.fillStyle='#44ff88';ctx.fillRect(rx-25,ry-29,50*pct,6);
+      ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(rx-26,ry-30,52,8);
+      ctx.font='7px monospace';ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.fillText('REVIVING...',rx,ry-40);ctx.textAlign='left';
     }
   }
   drawDmgNumbers();
@@ -2406,7 +2469,7 @@ document.addEventListener('keydown',e=>{
   if(k==='3'){useAbility('plague');return;}
   keys[k]=true;
   // Prevent default for game keys (movement, shoot, arrow keys)
-  if(['w','a','s','d','c','enter','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+  if(['w','a','s','d','c','x','/','arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
 });
 document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 pauseBtn.addEventListener('click',togglePause);
