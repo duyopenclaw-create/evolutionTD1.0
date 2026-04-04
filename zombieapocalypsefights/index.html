@@ -239,6 +239,7 @@ canvas.hc { filter:contrast(1.4) saturate(2); }
       <button class="stab" id="tab-a">🛡 Armors</button>
       <button class="stab" id="tab-s">🎨 Skins</button>
       <button class="stab" id="tab-ab">⚡ Abilities</button>
+      <button class="stab" id="tab-ar">⚔ Army</button>
     </div>
     <div id="shop-grid" class="shop-grid"></div>
   </div>
@@ -582,6 +583,52 @@ function stopHeartbeat(){
 }
 function toggleMute(){if(!masterGain)return;muted=!muted;masterGain.gain.value=muted?0:.38;if(heartGain)heartGain.gain.value=muted?0:0.9;muteBtn.textContent=muted?'🔇':'🔊';muteBtn.classList.toggle('on',muted);}
 
+// ─── SFX ─────────────────────────────────────────────────────────────────────
+function sfx(type){
+  if(!audioCtx||muted)return;
+  const t=audioCtx.currentTime;
+  // helper: noise burst
+  function noise(dur,freq,q,gain,filterType='bandpass'){
+    const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*dur,audioCtx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+    src.buffer=buf;f.type=filterType;f.frequency.value=freq;f.Q.value=q;
+    src.connect(f);f.connect(g);g.connect(masterGain);
+    g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    src.start(t);
+  }
+  // helper: tone sweep
+  function tone(freq,endFreq,dur,type,gain){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,t);
+    if(endFreq!==freq)o.frequency.exponentialRampToValueAtTime(endFreq,t+dur);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(gain,t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.connect(g);g.connect(masterGain);o.start(t);o.stop(t+dur+0.01);
+  }
+  switch(type){
+    case 'shoot_pistol':  noise(0.06,3500,1.2,0.35); tone(320,180,0.08,'square',0.18); break;
+    case 'shoot_revolver':noise(0.09,2200,0.9,0.45); tone(200,100,0.12,'square',0.25); break;
+    case 'shoot_shotgun': noise(0.18,1200,0.6,0.7,'lowpass'); tone(120,55,0.18,'sawtooth',0.35); break;
+    case 'shoot_ar':      noise(0.05,4000,1.5,0.28); tone(380,220,0.06,'square',0.14); break;
+    case 'shoot_rocket':  noise(0.25,600,0.5,0.8,'lowpass'); tone(80,40,0.3,'sawtooth',0.5); break;
+    case 'shoot_sniper':  noise(0.04,6000,2,0.5); tone(500,80,0.22,'sine',0.4); break;
+    case 'hit_zombie':    noise(0.07,900,1.2,0.4); break;
+    case 'zombie_die':    noise(0.14,500,0.8,0.55,'lowpass'); tone(180,60,0.14,'sine',0.3); break;
+    case 'player_hurt':   noise(0.1,800,0.7,0.6); tone(150,80,0.15,'sawtooth',0.4); break;
+    case 'coin':          tone(1200,1500,0.07,'sine',0.3); break;
+    case 'ammo':          noise(0.05,2500,2,0.25); tone(300,400,0.05,'square',0.15); break;
+    case 'heart':         tone(440,660,0.12,'sine',0.35); tone(660,880,0.12,'sine',0.2); break;
+    case 'chest':         [523,659,784,1047].forEach((f,i)=>{setTimeout(()=>{if(!muted){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.18);o.connect(g);g.connect(masterGain);o.start();o.stop(audioCtx.currentTime+0.19);}},i*70)}); break;
+    case 'level_up':      [330,440,523,659,880].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.07);g.gain.linearRampToValueAtTime(0.35,t+i*0.07+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.07+0.22);o.connect(g);g.connect(masterGain);o.start(t+i*0.07);o.stop(t+i*0.07+0.23);}); break;
+    case 'buy':           tone(660,880,0.1,'sine',0.35); setTimeout(()=>{if(!muted){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=1100;g.gain.setValueAtTime(0.25,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);o.connect(g);g.connect(masterGain);o.start();o.stop(audioCtx.currentTime+0.11);}},90); break;
+    case 'ability_use':   noise(0.15,2000,0.8,0.4,'highpass'); tone(440,880,0.15,'sine',0.25); break;
+    case 'game_over':     [440,330,220,110].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sawtooth';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.18);g.gain.linearRampToValueAtTime(0.4,t+i*0.18+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.18+0.35);o.connect(g);g.connect(masterGain);o.start(t+i*0.18);o.stop(t+i*0.18+0.36);}); break;
+    case 'soldier_die':   noise(0.1,1200,1,0.45); tone(200,80,0.12,'square',0.3); break;
+    case 'soldier_shoot': noise(0.04,3000,1.5,0.2); break;
+  }
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let player,bullets,zBullets,zombies,ammoPickups,coinPickups,heartPickups,chestPickups,particles,bloodPools,spikes;
 let keys={},mouse={x:0,y:0},kills=0,coins=0;
@@ -595,6 +642,9 @@ let weaponUpgrades={},armorUpgrades={};
 let ownedSkins=new Set(['default']);
 let equippedSkin='default';
 let abilityInventory={soda:0,camo:0,plague:0};
+let ownedSoldiers=0; // permanent count, saved to localStorage
+let soldiers=[];     // active instances this run
+let sBullets=[];     // soldier bullets (separate from player bullets)
 // activeEffects: {soda:{endTime,dmgBonus,speedMul}, camo:{endTime}, plague:{endTime,lastTick}}
 let activeEffects={};
 // Achievements & stats
@@ -627,6 +677,7 @@ function saveProgress(){
     localStorage.setItem('zs_skins', JSON.stringify([...ownedSkins]));
     localStorage.setItem('zs_skin_eq', equippedSkin);
     localStorage.setItem('zs_abil', JSON.stringify(abilityInventory));
+    localStorage.setItem('zs_soldiers', ownedSoldiers);
   }catch(e){}
 }
 function loadProgress(){
@@ -656,6 +707,7 @@ function loadProgress(){
     if(!ownedSkins.has('default'))ownedSkins.add('default');
     const se=localStorage.getItem('zs_skin_eq');if(se&&ownedSkins.has(se))equippedSkin=se;
     const ab=localStorage.getItem('zs_abil');if(ab){const parsed=JSON.parse(ab);ABILITIES.forEach(a=>{if(parsed[a.id]!==undefined)abilityInventory[a.id]=Math.max(0,parseInt(parsed[a.id])||0);});}
+    const sol=localStorage.getItem('zs_soldiers');if(sol)ownedSoldiers=Math.min(10,Math.max(0,parseInt(sol)||0));
   }catch(e){}
 }
 loadProgress();
@@ -688,6 +740,27 @@ function initGame(){
   player={x:400,y:300,r:16,hp:10,maxHp:10,shield:aShield,maxShield:aShield,
           speed:3*armor.smul,level:savedLevel,xp:savedXp};
   bullets=[];zBullets=[];zombies=[];particles=[];bloodPools=[];coinPickups=[];chestPickups=[];
+  sBullets=[];
+  // Spawn soldiers near player start
+  soldiers=[];
+  for(let i=0;i<ownedSoldiers;i++){
+    const ang=(i/Math.max(1,ownedSoldiers))*Math.PI*2;
+    const wdata=getWeapon();
+    const armor=getArmor();
+    soldiers.push({
+      x:400+Math.cos(ang)*50,y:300+Math.sin(ang)*50,
+      r:11,
+      hp:Math.max(1,Math.floor(player.maxHp/2)),
+      maxHp:Math.max(1,Math.floor(player.maxHp/2)),
+      shield:Math.max(0,Math.floor(player.maxShield/2)),
+      maxShield:Math.max(0,Math.floor(player.maxShield/2)),
+      dmg:Math.max(1,Math.floor((wdata.dmg+(weaponUpgrades[wdata.id]||0))/2)),
+      speed:player.speed*0.85,
+      angle:0,lastShot:0,
+      coins:0,abilities:[],invTimer:0,
+      num:i+1
+    });
+  }
   ammoPickups=[{x:100,y:150},{x:700,y:150},{x:100,y:450},{x:700,y:450}];
   // 1 heart at start
   heartPickups=[spawnHeartPos()];
@@ -859,6 +932,7 @@ function movePlayer(){
   if(!wallsBlock(player.x,ny,player.r))player.y=ny;
 }
 function applyDamage(dmg){
+  sfx('player_hurt');
   for(let i=0;i<dmg;i++){if(player.shield>0)player.shield--;else player.hp--;}
 }
 
@@ -993,6 +1067,7 @@ function update(now){
       const dx=b.x-z.x,dy=b.y-z.y;
       if(dx*dx+dy*dy<(b.r+z.r)**2){
         z.hp-=b.dmg;
+        sfx('hit_zombie');
         if(showDmgNums)dmgNumbers.push({x:z.x+(Math.random()*16-8),y:z.y-z.r-4,val:b.dmg,life:55,maxLife:55,vy:-0.7});
         bullets[bi]=null;
         spawnBlood(z.x,z.y);
@@ -1007,6 +1082,7 @@ function update(now){
   zombies=zombies.filter(z=>{
     if(z.hp<=0){
       spawnBlood(z.x,z.y);
+      sfx('zombie_die');
       spawnExp(z.x,z.y,z.r>18);
       player.xp+=Math.round(z.zt.xp*currentStage.xpMul);
       let leveled=false;
@@ -1014,6 +1090,7 @@ function update(now){
         player.xp-=xpToNext(player.level);
         player.level++;
         leveled=true;
+        sfx('level_up');
         // Every 10 levels: +5 max HP (stacks)
         if(player.level%10===0){player.maxHp+=5;player.hp=Math.min(player.hp+5,player.maxHp);}
       }
@@ -1036,6 +1113,83 @@ function update(now){
   });
   kills+=before-zombies.length;
 
+  // ── Soldiers ──────────────────────────────────────────────────────────────
+  const nowSol=Date.now();
+  // sBullets move
+  sBullets=sBullets.filter(b=>{
+    b.x+=b.vx;b.y+=b.vy;b.life--;
+    if(b.life<=0||segHits(b.x,b.y,b.x-b.vx,b.y-b.vy,b.r))return false;
+    // hit zombie
+    for(let i=0;i<zombies.length;i++){
+      const z=zombies[i];
+      const dx=b.x-z.x,dy=b.y-z.y;
+      if(dx*dx+dy*dy<(b.r+z.r)**2){
+        z.hp-=b.dmg;
+        sfx('hit_zombie');
+        if(showDmgNums)dmgNumbers.push({x:z.x+(Math.random()*14-7),y:z.y-z.r-4,val:b.dmg,life:50,maxLife:50,vy:-0.6});
+        spawnBlood(z.x,z.y);
+        return false;
+      }
+    }
+    return true;
+  });
+  soldiers=soldiers.filter(s=>{
+    if(s.invTimer>0)s.invTimer--;
+    // Find target: zombie with highest HP
+    let target=null,maxZhp=-1;
+    zombies.forEach(z=>{if(z.hp>maxZhp){maxZhp=z.hp;target=z;}});
+    // Move toward target
+    if(target){
+      const dist=Math.hypot(target.x-s.x,target.y-s.y);
+      s.angle=Math.atan2(target.y-s.y,target.x-s.x);
+      if(dist>110){
+        const dx=(target.x-s.x)/dist,dy=(target.y-s.y)/dist;
+        if(!wallsBlock(s.x+dx*s.speed,s.y,s.r))s.x+=dx*s.speed;
+        if(!wallsBlock(s.x,s.y+dy*s.speed,s.r))s.y+=dy*s.speed;
+      }
+      // Shoot every 1.2s
+      if(nowSol-s.lastShot>1200){
+        s.lastShot=nowSol;
+        const ang=Math.atan2(target.y-s.y,target.x-s.x);
+        sBullets.push({x:s.x+Math.cos(ang)*(s.r+8),y:s.y+Math.sin(ang)*(s.r+8),
+                       vx:Math.cos(ang)*11,vy:Math.sin(ang)*11,
+                       r:4,life:120,dmg:s.dmg,color:'#ffdd44'});
+        sfx('soldier_shoot');
+      }
+    }
+    // Take damage from zombies
+    if(s.invTimer===0){
+      zombies.forEach(z=>{
+        const dx=s.x-z.x,dy=s.y-z.y;
+        if(dx*dx+dy*dy<(s.r+z.r)**2){
+          for(let i=0;i<z.dmg;i++){if(s.shield>0)s.shield--;else s.hp--;}
+          s.invTimer=60;
+        }
+      });
+      // zombie bullets too
+      zBullets.forEach(b=>{
+        const dx=b.x-s.x,dy=b.y-s.y;
+        if(dx*dx+dy*dy<(b.r+s.r)**2){
+          for(let i=0;i<b.dmg;i++){if(s.shield>0)s.shield--;else s.hp--;}
+          s.invTimer=20;
+        }
+      });
+    }
+    if(s.hp<=0){
+      sfx('soldier_die');
+      spawnBlood(s.x,s.y);
+      // Drop collected coins
+      if(s.coins>0)dropCoins(s.x,s.y,s.coins,s.coins);
+      // Drop abilities
+      s.abilities.forEach(ab=>{abilityInventory[ab]=(abilityInventory[ab]||0)+1;});
+      if(s.abilities.length>0){renderAbilityBar();saveProgress();}
+      // 40% chest drop
+      if(Math.random()<0.4)chestPickups.push({x:s.x,y:s.y,bob:0});
+      return false;
+    }
+    return true;
+  });
+
   // Player-zombie collision (skip if camo active)
   if(invTimer===0&&!camoOn){
     zombies.forEach(z=>{
@@ -1044,12 +1198,22 @@ function update(now){
     });
   }
 
+  // Soldiers passively collect coins nearby
+  coinPickups=coinPickups.filter(c=>{
+    for(const s of soldiers){
+      const dx=s.x-c.x,dy=s.y-c.y;
+      if(dx*dx+dy*dy<(s.r+14)**2){s.coins++;return false;}
+    }
+    return true;
+  });
+
   // Pickups
   ammoPickups=ammoPickups.filter(a=>{
     const dx=player.x-a.x,dy=player.y-a.y;
     if(dx*dx+dy*dy<(player.r+12)**2){
       const w=getWeapon();
       weaponAmmo[equipped.weapon]=Math.min(w.maxAmmo,(weaponAmmo[equipped.weapon]||0)+w.ammo);
+      sfx('ammo');
       saveProgress();
       return false;
     }
@@ -1057,13 +1221,14 @@ function update(now){
   });
   coinPickups=coinPickups.filter(c=>{
     const dx=player.x-c.x,dy=player.y-c.y;
-    if(dx*dx+dy*dy<(player.r+12)**2){coins++;lifetimeCoins++;saveProgress();return false;}
+    if(dx*dx+dy*dy<(player.r+12)**2){sfx('coin');coins++;lifetimeCoins++;saveProgress();return false;}
     return true;
   });
   heartPickups=heartPickups.filter(h=>{
     if(player.hp>=player.maxHp)return true; // wait until player needs it
     const dx=player.x-h.x,dy=player.y-h.y;
     if(dx*dx+dy*dy<(player.r+18)**2){
+      sfx('heart');
       player.hp=Math.min(player.maxHp,player.hp+10);
       lastHeartSpawn=now;
       return false;
@@ -1077,6 +1242,7 @@ function update(now){
     if(dx*dx+dy*dy<(player.r+16)**2){
       const pick=['soda','camo','plague'][Math.floor(Math.random()*3)];
       abilityInventory[pick]=(abilityInventory[pick]||0)+1;
+      sfx('chest');
       saveProgress();renderAbilityBar();
       // floating text
       dmgNumbers.push({x:c.x,y:c.y-10,val:pick==='soda'?'🥤':pick==='camo'?'🫥':'🧫',life:80,maxLife:80,vy:-0.6,text:true});
@@ -1092,7 +1258,7 @@ function update(now){
   updateHUD();
 
   if(player.hp<=0){
-    player.hp=0;gameState='dead';saveProgress();pauseMusic();stopHeartbeat();
+    player.hp=0;gameState='dead';sfx('game_over');saveProgress();pauseMusic();stopHeartbeat();
     ot.textContent='YOU DIED';
     om.textContent=`Kills: ${kills}  ·  Gold: ${coins}  ·  Level: ${player.level}`;
     ob.textContent='PLAY AGAIN';
@@ -1137,6 +1303,7 @@ function shoot(){
                   sniper:wdata.id==='sniper',rocket:wdata.id==='rocket',color:wdata.color});
     weaponAmmo[equipped.weapon]--;
   }
+  sfx('shoot_'+wdata.id);
   spawnFlash(tx,ty);
   updateHUD();
 }
@@ -1285,6 +1452,52 @@ function drawChest(c){
   ctx.restore();
 }
 
+function drawSoldier(s){
+  const flash=s.invTimer>0&&Math.floor(s.invTimer/6)%2===0;
+  ctx.save();ctx.translate(s.x,s.y);
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath();ctx.ellipse(2,5,s.r*.85,s.r*.45,0,0,Math.PI*2);ctx.fill();
+  // Skin (same skin as player, smaller)
+  const skin=SKINS.find(sk=>sk.id===equippedSkin)||SKINS[0];
+  if(!flash){ctx.shadowColor=skin.stroke;ctx.shadowBlur=10;}
+  const g=ctx.createRadialGradient(-3,-3,1,0,0,s.r);
+  g.addColorStop(0,flash?'#fff':skin.c1);
+  g.addColorStop(.6,flash?'#aaa':skin.c2);
+  g.addColorStop(1,flash?'#555':skin.c2+'88');
+  ctx.beginPath();ctx.arc(0,0,s.r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle=flash?'#fff':skin.stroke;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.shadowBlur=0;
+  // Gun
+  ctx.rotate(s.angle);
+  ctx.fillStyle='#888';ctx.fillRect(s.r-1,-3,11,5);
+  ctx.fillStyle='#bbb';ctx.fillRect(s.r,-2,9,1.5);
+  ctx.restore();
+  // Number badge
+  ctx.font='bold 8px monospace';ctx.fillStyle='#ffdd44';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(s.num,s.x,s.y);
+  ctx.textAlign='left';
+  // HP bar above
+  const bw=28,bh=4,bx=s.x-bw/2,by=s.y-s.r-14;
+  ctx.fillStyle='#220022';ctx.fillRect(bx-1,by-1,bw+2,bh+2);
+  ctx.fillStyle='#440000';ctx.fillRect(bx,by,bw,bh);
+  const hpr=s.hp/s.maxHp;
+  ctx.fillStyle=hpr>.5?'#44ff44':hpr>.25?'#ffaa00':'#ff3333';
+  ctx.fillRect(bx,by,bw*hpr,bh);
+  if(s.maxShield>0){
+    const sw=28,sh=3,sx=s.x-sw/2,sy=by-sh-2;
+    ctx.fillStyle='#001133';ctx.fillRect(sx-1,sy-1,sw+2,sh+2);
+    ctx.fillStyle='#00aaff';ctx.fillRect(sx,sy,sw*(s.shield/s.maxShield),sh);
+  }
+  // Coin counter if >0
+  if(s.coins>0){
+    ctx.font='8px monospace';ctx.fillStyle='#ffd700';
+    ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText('🟡'+s.coins,s.x,by-6);
+    ctx.textAlign='left';
+  }
+}
 function drawZombie(z){
   const zt=z.zt;
   ctx.save();ctx.translate(z.x,z.y);
@@ -1624,6 +1837,14 @@ function draw(){
   });
   drawParticles();
   zombies.forEach(drawZombie);
+  soldiers.forEach(drawSoldier);
+  sBullets.forEach(b=>{
+    ctx.save();
+    ctx.shadowColor='#ffdd44';ctx.shadowBlur=reducedFx?0:7;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);
+    ctx.fillStyle='#ffdd44';ctx.fill();
+    ctx.restore();
+  });
   if(player&&(gameState==='playing'||gameState==='paused'||gameState==='dead')){
     drawPlayer();
     drawInventoryUI();
@@ -1708,6 +1929,33 @@ function renderShop(){
       div.appendChild(btn);
       shopGrid.appendChild(div);
     });
+  } else if(shopTabActive==='army'){
+    const maxSol=10;
+    const div=document.createElement('div');
+    div.className='sitem';
+    div.style.cssText='grid-column:1/-1;padding:14px;text-align:center;';
+    const wdata=getWeapon();
+    const dmg=Math.max(1,Math.floor((wdata.dmg+(weaponUpgrades[wdata.id]||0))/2));
+    const hp=Math.max(1,Math.floor((player?player.maxHp:10)/2));
+    div.innerHTML=`<h3 style="font-size:16px;margin-bottom:8px">🪖 Mini-You Soldier</h3>
+      <div class="sdesc" style="font-size:11px;margin-bottom:8px">
+        Autonomously attacks the highest-HP zombie · Uses your skin<br>
+        ❤ ${hp} HP · ⚔ ${dmg} dmg (half yours) · 🛡 half your shield<br>
+        Drops collected coins + abilities on death · Max 10
+      </div>
+      <div style="font-size:18px;margin-bottom:6px">Owned: <b style="color:#ffdd44">${ownedSoldiers}</b> / ${maxSol}</div>
+      <div class="sprice" style="margin-bottom:8px">150 🟡 each</div>`;
+    if(ownedSoldiers<maxSol){
+      const btn=document.createElement('button');
+      btn.textContent=coins>=150?`BUY SOLDIER #${ownedSoldiers+1}`:'Need 150 🟡';
+      btn.disabled=coins<150;
+      btn.style.cssText='background:#222;border:1px solid #555;color:#ccc;font-family:monospace;font-size:13px;padding:6px 20px;cursor:pointer;border-radius:4px;';
+      btn.onclick=()=>buyItem({id:'soldier',price:150},'army');
+      div.appendChild(btn);
+    } else {
+      div.innerHTML+='<div style="color:#44ff44;font-size:13px">✓ MAX SOLDIERS REACHED</div>';
+    }
+    shopGrid.appendChild(div);
   }
 }
 function buyItem(item,type){
@@ -1726,7 +1974,26 @@ function buyItem(item,type){
     equippedSkin=item.id;
   } else if(type==='ability'){
     abilityInventory[item.id]=(abilityInventory[item.id]||0)+1;
+  } else if(type==='army'){
+    ownedSoldiers=Math.min(10,ownedSoldiers+1);
+    // Add a new soldier to current game session if playing
+    if(gameState==='playing'||gameState==='paused'){
+      const wdata=getWeapon();
+      const ang=Math.random()*Math.PI*2;
+      soldiers.push({
+        x:player.x+Math.cos(ang)*60,y:player.y+Math.sin(ang)*60,
+        r:11,
+        hp:Math.max(1,Math.floor(player.maxHp/2)),
+        maxHp:Math.max(1,Math.floor(player.maxHp/2)),
+        shield:Math.max(0,Math.floor(player.maxShield/2)),
+        maxShield:Math.max(0,Math.floor(player.maxShield/2)),
+        dmg:Math.max(1,Math.floor((wdata.dmg+(weaponUpgrades[wdata.id]||0))/2)),
+        speed:player.speed*0.85,angle:0,lastShot:0,
+        coins:0,abilities:[],invTimer:0,num:ownedSoldiers
+      });
+    }
   }
+  sfx('buy');
   earnAchievement('buy_any');
   saveProgress();updateHUD();renderShop();
 }
@@ -1743,7 +2010,7 @@ function closeShop(){
 }
 function setShopTab(tabKey,tabId){
   shopTabActive=tabKey;
-  ['tab-w','tab-a','tab-s','tab-ab'].forEach(t=>{
+  ['tab-w','tab-a','tab-s','tab-ab','tab-ar'].forEach(t=>{
     const el=document.getElementById(t);
     if(el)el.classList.toggle('active',t===tabId);
   });
@@ -1753,6 +2020,7 @@ document.getElementById('tab-w').onclick=()=>setShopTab('weapons','tab-w');
 document.getElementById('tab-a').onclick=()=>setShopTab('armors','tab-a');
 document.getElementById('tab-s').onclick=()=>setShopTab('skins','tab-s');
 document.getElementById('tab-ab').onclick=()=>setShopTab('abilities','tab-ab');
+document.getElementById('tab-ar').onclick=()=>setShopTab('army','tab-ar');
 document.getElementById('shop-x').onclick=closeShop;
 shopBtn.onclick=()=>shopEl.classList.contains('hidden')?openShop():closeShop();
 
@@ -1761,6 +2029,7 @@ function useAbility(id){
   if(gameState!=='playing')return;
   if(abilityInventory[id]<=0)return;
   abilityInventory[id]--;
+  sfx('ability_use');
   const now=Date.now();
   if(id==='soda'){
     const end=(activeEffects.soda&&activeEffects.soda.endTime>now)?activeEffects.soda.endTime:now;
