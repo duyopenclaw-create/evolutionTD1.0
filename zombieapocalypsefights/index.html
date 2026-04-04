@@ -1282,8 +1282,8 @@ function update(now){
         }
       }
     }
-    // Take damage from zombies
-    if(s.invTimer===0){
+    // Take damage from zombies (only when army is active)
+    if(armyActive&&s.invTimer===0){
       zombies.forEach(z=>{
         const dx=s.x-z.x,dy=s.y-z.y;
         if(dx*dx+dy*dy<(s.r+z.r)**2){
@@ -2109,7 +2109,7 @@ function drawScene(camX,camY,vpX,vpY,vpW,vpH,whichPlayer){
   });
   drawParticles();
   zombies.forEach(drawZombie);
-  soldiers.forEach(drawSoldier);
+  if(armyActive)soldiers.forEach(drawSoldier);
   sBullets.forEach(b=>{
     ctx.save();ctx.shadowColor='#ffdd44';ctx.shadowBlur=reducedFx?0:7;
     ctx.beginPath();ctx.arc(b.x,b.y,b.r*.7,0,Math.PI*2);ctx.fillStyle='#ffdd44';ctx.fill();ctx.restore();
