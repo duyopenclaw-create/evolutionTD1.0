@@ -131,7 +131,7 @@ function makeEnemies(s){
     do{x=r+Math.random()*(W-r*2);y=r+Math.random()*(FIELD_H*0.65);}
     while(y>FIELD_H-130&&x>W/2-90&&x<W/2+90);
     out.push({x,y,vx:Math.cos(angle)*spd*(0.7+Math.random()*0.6),vy:Math.sin(angle)*spd*(0.7+Math.random()*0.6),
-      r,hp,maxHp:hp,hue:(s*37+i*26)%360,flash:0,dmgCd:0,hitCd:0,num:s});
+      r,hp,maxHp:hp,hue:(s*37+i*26)%360,flash:0,dmgCd:0,hitCd:0,bombCd:0,num:s});
   }
   return out;
 }
@@ -249,7 +249,7 @@ function update(){
 
   // Enemies
   G.enemies.forEach(e=>{
-    if(e.flash>0)e.flash--;if(e.dmgCd>0)e.dmgCd--;if(e.hitCd>0)e.hitCd--;
+    if(e.flash>0)e.flash--;if(e.dmgCd>0)e.dmgCd--;if(e.hitCd>0)e.hitCd--;if(e.bombCd>0)e.bombCd--;
     e.x+=e.vx;e.y+=e.vy;
     if(e.x-e.r<0){e.x=e.r;e.vx=Math.abs(e.vx);}
     if(e.x+e.r>W){e.x=W-e.r;e.vx=-Math.abs(e.vx);}
@@ -370,9 +370,9 @@ function update(){
     if(G.hasBomb&&G.ballNum>0){
       const bombR=getBombR();
       G.enemies.forEach(e=>{
-        if(e.hp<=0||e.hitCd>0)return;
+        if(e.hp<=0||e.bombCd>0)return;
         if((ball.x-e.x)**2+(ball.y-e.y)**2<(bombR+e.r)**2){
-          e.hp-=1;e.flash=6;e.hitCd=35;sfxHit();
+          e.hp-=1;e.flash=4;e.bombCd=35;sfxHit();
           if(e.hp<=0){burst(e.x,e.y,e.hue,20);G.earned+=killMoney();}
         }
       });
