@@ -400,7 +400,7 @@ function update(){
       G.enemies.forEach(e=>{
         if(e.hp<=0||e.bombCd>0)return;
         if((ball.x-e.x)**2+(ball.y-e.y)**2<(bombR+e.r)**2){
-          e.hp-=1;e.flash=4;e.bombCd=35;sfxHit();
+          e.hp-=G.ballNum;e.flash=4;e.bombCd=35;sfxHit();
           if(e.hp<=0){burst(e.x,e.y,e.hue,20);G.earned+=killMoney();}
         }
       });
@@ -638,8 +638,11 @@ function drawHUD(){
   ctx.fillStyle=bossWarn?'#ff4466':'#ccc';
   ctx.fillText(`Stage ${G.stage}/100${bossWarn?' ★ BOSS':''}`,14,y0+54);
   ctx.fillStyle='#6aabcc';ctx.font='10px Courier New';
-  const modeStr=G.ballMode==='percent'?`%${30+G.percentBonus}`:G.ballMode==='divider'?`DIV(x2,1/4 dmg)`:`#${fmt(G.ballNum)}`;
-  ctx.fillText(`${modeStr}  spd:${getSpeed().toFixed(1)}  x${G.ballCount}${G.hasBomb?'  💥r:'+fmt(getBombR()|0):''}`,14,y0+70);
+  let dmgStr;
+  if(G.ballMode==='percent') dmgStr=`DMG:${30+G.percentBonus}% HP/hit`;
+  else if(G.ballMode==='divider') dmgStr=`DMG:${fmt(Math.max(1,G.ballNum/4|0))}/hit (x2 balls)`;
+  else dmgStr=`DMG:${fmt(G.ballNum)}/hit`;
+  ctx.fillText(`${dmgStr}  spd:${getSpeed().toFixed(1)}  x${G.ballCount}${G.hasBomb?'  💥r:'+fmt(getBombR()|0):''}`,14,y0+70);
   // Lightning timer / mode label
   if(G.lightningActive>0){
     const secs=Math.ceil(G.lightningActive/FPS);
