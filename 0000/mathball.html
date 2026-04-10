@@ -17,12 +17,25 @@ const W=580, H=720; canvas.width=W; canvas.height=H;
 const FIELD_H=546, FPS=60;
 
 // ── SAVE ───────────────────────────────────────────────────
-const SK='mathball4';
+const SK='mathball_v1';
 function save(){
-  const {money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode}=G;
-  localStorage.setItem(SK,JSON.stringify({money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode}));
+  const {money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode,hp}=G;
+  localStorage.setItem(SK,JSON.stringify({money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode,hp}));
 }
-function loadSave(){ try{return JSON.parse(localStorage.getItem(SK))||{};}catch(e){return{};} }
+function loadSave(){
+  // Try current key, then migrate from any old key
+  const keys=['mathball_v1','mathball4','mathball3'];
+  for(const k of keys){
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      if(d&&(d.money!=null||d.ballNum!=null)){
+        if(k!==SK) localStorage.setItem(SK,JSON.stringify(d)); // migrate
+        return d;
+      }
+    }catch(e){}
+  }
+  return {};
+}
 
 // ── STATE ──────────────────────────────────────────────────
 let G=buildGame();
@@ -47,7 +60,7 @@ function buildGame(){
     pickupCds:{lightning:30*FPS, heart:45*FPS, bomb:90*FPS},
     lightningActive:0,
     percentBonus:0, // resets each stage, increments each hit in percent mode
-    hp:s.maxHp??5,
+    hp:s.hp??s.maxHp??5,
     hurtTimer:0, earned:0, frame:0,
     buyMsg:'', buyMsgTimer:0,
   };
