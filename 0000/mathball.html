@@ -457,13 +457,13 @@ function shopItems(){
       desc(){return`+25% money per kill  (lv ${G.luckyLvl+1})`;},
       cost(){return Math.round(60*Math.pow(2,G.luckyLvl));},avail(){return G.luckyLvl<10;},
       buy(){const c=Math.round(60*Math.pow(2,G.luckyLvl));G.money-=c;G.luckyLvl++;save();}},
-    // ── Evolution unlocked at ball #100 ──
-    ...(G.ballMode==='normal'&&G.ballNum>=100?[
+    // ── Evolution: offered every 10 stages in the shop ──
+    ...(G.ballMode==='normal'&&G.stage%10===0?[
       {id:'pct',icon:'%',name:'% Ball  [EVOLVE]',
-        desc(){return`Deal 30%+ of enemy max HP/hit. +1% per hit, resets each stage`;},
+        desc(){return`Deal 30% of enemy max HP/hit. +1% per hit, resets each stage`;},
         cost(){return 0;},avail(){return true;},
         buy(){G.ballMode='percent';save();G.buyMsg='Evolved to % Ball!';G.buyMsgTimer=120;}},
-      {id:'div',icon:'÷',name:'Divider  [EVOLVE]',
+      {id:'div',icon:'/',name:'Divider  [EVOLVE]',
         desc(){return`Ball splits into 2 small balls. Each deals 1/4 damage independently`;},
         cost(){return 0;},avail(){return true;},
         buy(){G.ballMode='divider';save();G.buyMsg='Evolved to Divider Ball!';G.buyMsgTimer=120;}},
@@ -609,7 +609,7 @@ function drawPlayerBalls(){
       ctx.beginPath();ctx.arc(ball.x,ball.y,br,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();ctx.restore();
       if(isPct){
         const pct=30+G.percentBonus;
-        const ps=pct>=100?11:pct>=10?12:14;
+        const ps=pct>=100?9:11; // always fits "XX%" or "XXX%"
         ctx.fillStyle='white';ctx.font=`bold ${ps}px Courier New`;
         ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${pct}%`,ball.x,ball.y+1);
       } else {
