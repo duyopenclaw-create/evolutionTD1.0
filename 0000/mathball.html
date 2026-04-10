@@ -79,7 +79,7 @@ function numInc(){ return G.ballNum<10?1:Math.pow(10,Math.floor(Math.log10(G.bal
 function numCost(){ return Math.ceil(50*numInc()); }
 function getSpeed(){ return (3.5+G.speedLvl*0.6)*(G.lightningActive>0?2:1); }
 function getBombR(){ return Math.min(G.ballR*(2.2+G.bombLvl*0.65),260); }
-function killMoney(){ return Math.floor(3*Math.pow(1.28,G.stage-1)*(1+G.luckyLvl*0.25)); }
+function killMoney(){ return Math.floor((2+G.stage*0.4)*(1+G.luckyLvl*0.15)); }
 function enemyHp(s){ return Math.max(1,Math.floor(Math.pow(s,2.3)*0.4)); }
 
 // ── AUDIO ──────────────────────────────────────────────────
