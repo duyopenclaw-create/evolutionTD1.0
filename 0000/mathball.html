@@ -133,8 +133,9 @@ function rr(x,y,w,h,r){
 }
 
 // ── ENEMIES ────────────────────────────────────────────────
+function isBossStage(s){ return s%10===0; }
 function makeEnemies(s){
-  const count=Math.min(3+Math.floor(s*1.8),28);
+  const count=2+s*2; // guaranteed +2 per stage
   const hp=enemyHp(s);
   const spd=Math.min(1.3+s*0.05,5.5);
   const out=[];
@@ -144,7 +145,21 @@ function makeEnemies(s){
     do{x=r+Math.random()*(W-r*2);y=r+Math.random()*(FIELD_H*0.65);}
     while(y>FIELD_H-130&&x>W/2-90&&x<W/2+90);
     out.push({x,y,vx:Math.cos(angle)*spd*(0.7+Math.random()*0.6),vy:Math.sin(angle)*spd*(0.7+Math.random()*0.6),
-      r,hp,maxHp:hp,hue:(s*37+i*26)%360,flash:0,dmgCd:0,hitCd:0,bombCd:0,num:s});
+      r,hp,maxHp:hp,hue:(s*37+i*26)%360,flash:0,dmgCd:0,hitCd:0,bombCd:0,num:s,boss:false});
+  }
+  // Boss every 10 stages
+  if(isBossStage(s)){
+    const bossHp=enemyHp(s)*12;
+    const br=38+Math.min(s,50)*0.4; // grows a little each boss stage
+    out.push({
+      x:W/2, y:FIELD_H*0.3,
+      vx:(Math.random()>.5?1:-1)*(0.8+s*0.02),
+      vy:(Math.random()>.5?1:-1)*(0.8+s*0.02),
+      r:br, hp:bossHp, maxHp:bossHp,
+      hue:(s*17)%360, flash:0, dmgCd:0, hitCd:0, bombCd:0,
+      num:s*2, // boss needs double your number to be immune
+      boss:true,
+    });
   }
   return out;
 }
@@ -486,21 +501,35 @@ function drawParticles(){
 function drawEnemies(){
   G.enemies.forEach(e=>{
     const f=e.flash/12;
-    ctx.save();ctx.shadowBlur=10+f*18;ctx.shadowColor=`hsl(${e.hue},80%,60%)`;
+    ctx.save();
+    ctx.shadowBlur=e.boss?28+f*30:10+f*18;
+    ctx.shadowColor=e.boss?`hsl(${e.hue},100%,70%)`:`hsl(${e.hue},80%,60%)`;
     const g2=ctx.createRadialGradient(e.x-e.r*.3,e.y-e.r*.3,1,e.x,e.y,e.r);
     if(f>0){g2.addColorStop(0,'white');g2.addColorStop(1,`hsl(${e.hue},100%,65%)`);}
+    else if(e.boss){g2.addColorStop(0,`hsl(${e.hue},100%,80%)`);g2.addColorStop(1,`hsl(${e.hue},80%,30%)`);}
     else{g2.addColorStop(0,`hsl(${e.hue},80%,70%)`);g2.addColorStop(1,`hsl(${e.hue},70%,38%)`);}
-    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();ctx.restore();
-    const bx=e.x-e.r,by=e.y+e.r+3;
-    ctx.fillStyle='rgba(0,0,0,.5)';rr(bx,by,e.r*2,4,2);ctx.fill();
-    ctx.fillStyle=`hsl(${(e.hp/e.maxHp)*120},80%,50%)`;rr(bx,by,e.r*2*(e.hp/e.maxHp),4,2);ctx.fill();
+    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();
+    if(e.boss){
+      // Pulsing ring for boss
+      ctx.strokeStyle=`hsla(${e.hue},100%,70%,${.4+Math.sin(G.frame*.08)*.3})`;
+      ctx.lineWidth=3;ctx.beginPath();ctx.arc(e.x,e.y,e.r+6+Math.sin(G.frame*.08)*3,0,Math.PI*2);ctx.stroke();
+      // Crown above boss
+      ctx.fillStyle='#ffd700';ctx.font=`${e.r*.55}px serif`;
+      ctx.textAlign='center';ctx.textBaseline='alphabetic';
+      ctx.fillText('👑',e.x,e.y-e.r-2);
+    }
+    ctx.restore();
+    // HP bar (wider for boss)
+    const bx=e.x-e.r,by=e.y+e.r+3,bw=e.r*2;
+    ctx.fillStyle='rgba(0,0,0,.55)';rr(bx,by,bw,e.boss?6:4,2);ctx.fill();
+    ctx.fillStyle=`hsl(${(e.hp/e.maxHp)*120},80%,50%)`;rr(bx,by,bw*(e.hp/e.maxHp),e.boss?6:4,2);ctx.fill();
     if(G.ballNum>e.num){
       ctx.save();ctx.strokeStyle='rgba(80,255,120,0.55)';ctx.lineWidth=2.5;
       ctx.beginPath();ctx.arc(e.x,e.y,e.r+4,0,Math.PI*2);ctx.stroke();ctx.restore();
     }
-    ctx.fillStyle='rgba(255,255,255,.9)';ctx.font=`bold ${e.r>18?12:10}px Courier New`;
+    ctx.fillStyle='rgba(255,255,255,.9)';ctx.font=`bold ${e.r>22?13:e.r>15?11:9}px Courier New`;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(fmt(e.num),e.x,e.y);
+    ctx.fillText(fmt(e.num),e.x,e.y+(e.boss?2:0));
   });
 }
 function drawPickups(){
@@ -605,7 +634,9 @@ function drawHUD(){
   ctx.fillStyle='#ffd700';ctx.font='bold 13px Courier New';ctx.textAlign='left';
   ctx.fillText(`$${fmt(G.money)}`,14,y0+38);
   ctx.fillStyle='#ccc';ctx.font='11px Courier New';
-  ctx.fillText(`Stage ${G.stage}/100`,14,y0+54);
+  const bossWarn=isBossStage(G.stage);
+  ctx.fillStyle=bossWarn?'#ff4466':'#ccc';
+  ctx.fillText(`Stage ${G.stage}/100${bossWarn?' ★ BOSS':''}`,14,y0+54);
   ctx.fillStyle='#6aabcc';ctx.font='10px Courier New';
   const modeStr=G.ballMode==='percent'?`%${30+G.percentBonus}`:G.ballMode==='divider'?`DIV(x2,1/4 dmg)`:`#${fmt(G.ballNum)}`;
   ctx.fillText(`${modeStr}  spd:${getSpeed().toFixed(1)}  x${G.ballCount}${G.hasBomb?'  💥r:'+fmt(getBombR()|0):''}`,14,y0+70);
@@ -689,24 +720,22 @@ function drawMenu(){
   renderShopItems(94,54,5);
   drawBuyMsg(W/2,_shopEnd+4);
   const py=_shopEnd+14;
-  // New Game button (left)
-  ctx.fillStyle='#0d1a3a';rr(14,py,254,42,10);ctx.fill();
-  ctx.strokeStyle='#3a6ab0';ctx.lineWidth=2;rr(14,py,254,42,10);ctx.stroke();
-  ctx.fillStyle='#6090dd';ctx.font='bold 15px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('▶  NEW GAME',14+127,py+21);
-  // Continue button (right) — only if currentStage > 1
-  const hasProgress=G.currentStage>1;
-  ctx.fillStyle=hasProgress?'#0d3a1a':'#111';
-  rr(W-14-254,py,254,42,10);ctx.fill();
-  ctx.strokeStyle=hasProgress?'#3a9a4a':'#223';ctx.lineWidth=2;
-  rr(W-14-254,py,254,42,10);ctx.stroke();
-  ctx.fillStyle=hasProgress?'#5aba6a':'#334';ctx.font='bold 15px Courier New';
-  ctx.fillText(hasProgress?`▶  CONTINUE (${G.currentStage})`:'▶  CONTINUE',W-14-127,py+21);
-  // Reset
-  ctx.fillStyle='#1a0808';rr(W/2-45,py+50,90,20,5);ctx.fill();
-  ctx.strokeStyle='#442';ctx.lineWidth=1;rr(W/2-45,py+50,90,20,5);ctx.stroke();
-  ctx.fillStyle='#665555';ctx.font='10px Courier New';ctx.textBaseline='middle';
-  ctx.fillText('RESET SAVE',W/2,py+60);
+  const resumeStage=G.currentStage>1?G.currentStage:1;
+  // Main PLAY button (full width, resumes saved stage)
+  ctx.fillStyle='#0d3a1a';rr(14,py,W-28,44,12);ctx.fill();
+  ctx.strokeStyle='#3a9a4a';ctx.lineWidth=2;rr(14,py,W-28,44,12);ctx.stroke();
+  ctx.fillStyle='#5aba6a';ctx.font='bold 20px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(G.currentStage>1?`▶  CONTINUE  (Stage ${resumeStage})`:'▶  PLAY',W/2,py+22);
+  // Secondary row: New Game (left) | Reset (right)
+  ctx.fillStyle='#112';ctx.font='11px Courier New';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillStyle='#3a5a3a';rr(14,py+52,130,22,6);ctx.fill();
+  ctx.strokeStyle='#254525';ctx.lineWidth=1;rr(14,py+52,130,22,6);ctx.stroke();
+  ctx.fillStyle='#7aaa7a';ctx.font='10px Courier New';ctx.textAlign='center';
+  ctx.fillText('NEW GAME (Stage 1)',14+65,py+63);
+  ctx.fillStyle='#221010';rr(W-144,py+52,130,22,6);ctx.fill();
+  ctx.strokeStyle='#442222';ctx.lineWidth=1;rr(W-144,py+52,130,22,6);ctx.stroke();
+  ctx.fillStyle='#774444';ctx.font='10px Courier New';
+  ctx.fillText('RESET SAVE',W-144+65,py+63);
 }
 
 // ── MID-STAGE SHOP ─────────────────────────────────────────
@@ -763,18 +792,19 @@ canvas.addEventListener('click',e=>{
   getAC();
   if(G.phase==='menu'){
     const py=_shopEnd+14;
-    // Reset
-    if(mx>=W/2-45&&mx<=W/2+45&&my>=py+50&&my<=py+70){
-      if(confirm('Reset all progress?')){localStorage.removeItem(SK);G=buildGame();}
-      return;
+    // Main PLAY / CONTINUE button
+    if(mx>=14&&mx<=W-14&&my>=py&&my<=py+44){
+      G.hp=G.maxHp;G.stage=G.currentStage>1?G.currentStage:1;G.earned=0;
+      startStage();startMusic();return;
     }
-    // New Game (left button)
-    if(mx>=14&&mx<=268&&my>=py&&my<=py+42){
+    // New Game (small, left)
+    if(mx>=14&&mx<=144&&my>=py+52&&my<=py+74){
       G.hp=G.maxHp;G.stage=1;G.earned=0;G.currentStage=1;startStage();startMusic();return;
     }
-    // Continue (right button)
-    if(mx>=W-268&&mx<=W-14&&my>=py&&my<=py+42&&G.currentStage>1){
-      G.hp=G.maxHp;G.stage=G.currentStage;G.earned=0;startStage();startMusic();return;
+    // Reset (small, right)
+    if(mx>=W-144&&mx<=W-14&&my>=py+52&&my<=py+74){
+      if(confirm('Reset all progress?')){localStorage.removeItem(SK);G=buildGame();}
+      return;
     }
     handleShopClick(mx,my);return;
   }
