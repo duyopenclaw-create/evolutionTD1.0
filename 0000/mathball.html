@@ -17,10 +17,10 @@ const W=580, H=720; canvas.width=W; canvas.height=H;
 const FIELD_H=546, FPS=60;
 
 // ── SAVE ───────────────────────────────────────────────────
-const SK='mathball3';
+const SK='mathball4';
 function save(){
-  const {money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage}=G;
-  localStorage.setItem(SK,JSON.stringify({money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage}));
+  const {money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode}=G;
+  localStorage.setItem(SK,JSON.stringify({money,ballNum,speedLvl,ballCount,maxHp,ballR,hasBomb,bombLvl,luckyLvl,bestStage,currentStage,ballMode}));
 }
 function loadSave(){ try{return JSON.parse(localStorage.getItem(SK))||{};}catch(e){return{};} }
 
@@ -39,11 +39,14 @@ function buildGame(){
     hasBomb:   s.hasBomb   ??false,
     bombLvl:   s.bombLvl   ??0,
     luckyLvl:  s.luckyLvl  ??0,
-    bestStage: s.bestStage ??0,
+    bestStage:    s.bestStage    ??0,
+    currentStage: s.currentStage ??1,
+    ballMode:     s.ballMode     ??'normal', // 'normal' | 'percent' | 'divider'
     // runtime
     balls:[],enemies:[],particles:[],pickups:[],
     pickupCds:{lightning:30*FPS, heart:45*FPS, bomb:90*FPS},
     lightningActive:0,
+    percentBonus:0, // resets each stage, increments each hit in percent mode
     hp:s.maxHp??5,
     hurtTimer:0, earned:0, frame:0,
     buyMsg:'', buyMsgTimer:0,
@@ -211,6 +214,7 @@ function startStage(){
   G.particles=[];G.pickups=[];
   G.pickupCds={lightning:30*FPS,heart:45*FPS,bomb:90*FPS};
   G.lightningActive=0;
+  G.percentBonus=0;
   G.earned=0;G.hurtTimer=0;
   G.balls=Array.from({length:G.ballCount},(_,i)=>makeBall(i));
   // Stage-start particle shower
@@ -317,15 +321,34 @@ function update(){
         if(dot<0){ball.vx-=dot*nx*.9;ball.vy-=dot*ny*.9;}
       }
       if(G.ballNum>0&&e.hitCd<=0){
-        e.hp-=G.ballNum;e.flash=12;e.hitCd=18;sfxHit();
-        // Directional hit sparks
-        const nx=(ball.x-e.x)/Math.max(dist,1),ny=(ball.y-e.y)/Math.max(dist,1);
+        // Mode-based damage
+        let dmg;
+        if(G.ballMode==='percent'){
+          dmg=Math.max(1,Math.floor(e.maxHp*(0.30+G.percentBonus*0.01)));
+          G.percentBonus++;
+        } else if(G.ballMode==='divider'){
+          dmg=Math.max(1,Math.floor(G.ballNum/4));
+        } else {
+          dmg=G.ballNum;
+        }
+        e.hp-=dmg;e.flash=12;e.hitCd=18;sfxHit();
+        const nx2=(ball.x-e.x)/Math.max(dist,1),ny2=(ball.y-e.y)/Math.max(dist,1);
         for(let i=0;i<8;i++){
-          const a=Math.atan2(ny,nx)+(.5-Math.random())*.8,sp=2+Math.random()*3;
+          const a=Math.atan2(ny2,nx2)+(.5-Math.random())*.8,sp=2+Math.random()*3;
           G.particles.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,
             life:.5+Math.random()*.3,hue:e.hue,sz:1.5+Math.random()*2.5,type:'spark'});
         }
         if(e.hp<=0){burst(e.x,e.y,e.hue,20);G.earned+=killMoney();}
+      }
+      // Divider: 2nd sub-ball collision (offset sub-ball hits independently)
+      if(G.ballMode==='divider'&&G.ballNum>0){
+        const sx=ball.x-ball.vx*G.ballR*0.9, sy=ball.y-ball.vy*G.ballR*0.9;
+        const sd=Math.hypot(sx-e.x,sy-e.y), sr=G.ballR*0.55+e.r;
+        if(sd<sr&&e.hitCd<=0){
+          const dmg2=Math.max(1,Math.floor(G.ballNum/4));
+          e.hp-=dmg2;e.flash=8;e.hitCd=18;sfxHit();
+          if(e.hp<=0){burst(e.x,e.y,e.hue,20);G.earned+=killMoney();}
+        }
       }
       if(G.hurtTimer<=0&&e.dmgCd<=0&&G.ballNum<=e.num){
         G.hp--;G.hurtTimer=80;e.dmgCd=80;sfxHurt();
@@ -364,9 +387,10 @@ function update(){
 
   G.enemies=G.enemies.filter(e=>e.hp>0);
   if(G.enemies.length===0){
-    G.ballNum+=1; // auto +1 per stage clear
+    if(G.ballMode==='normal') G.ballNum+=1; // auto +1 per stage clear (normal mode only)
     G.money+=G.earned;
-    if(G.stage>G.bestStage)G.bestStage=G.stage;
+    if(G.stage>G.bestStage) G.bestStage=G.stage;
+    G.currentStage=Math.min(G.stage+1,100);
     G.hp=Math.min(G.hp+1,G.maxHp); // free +1 HP heal
     save(); sfxClear();
     G.phase=G.stage>=100?'win':'shop';
@@ -405,6 +429,17 @@ function shopItems(){
       desc(){return`+25% money per kill  (lv ${G.luckyLvl+1})`;},
       cost(){return Math.round(60*Math.pow(2,G.luckyLvl));},avail(){return G.luckyLvl<10;},
       buy(){const c=Math.round(60*Math.pow(2,G.luckyLvl));G.money-=c;G.luckyLvl++;save();}},
+    // ── Evolution unlocked at ball #100 ──
+    ...(G.ballMode==='normal'&&G.ballNum>=100?[
+      {id:'pct',icon:'%',name:'% Ball  [EVOLVE]',
+        desc(){return`Deal 30%+ of enemy max HP/hit. +1% per hit, resets each stage`;},
+        cost(){return 0;},avail(){return true;},
+        buy(){G.ballMode='percent';save();G.buyMsg='Evolved to % Ball!';G.buyMsgTimer=120;}},
+      {id:'div',icon:'÷',name:'Divider  [EVOLVE]',
+        desc(){return`Ball splits into 2 small balls. Each deals 1/4 damage independently`;},
+        cost(){return 0;},avail(){return true;},
+        buy(){G.ballMode='divider';save();G.buyMsg='Evolved to Divider Ball!';G.buyMsgTimer=120;}},
+    ]:[]),
   ];
 }
 
@@ -505,14 +540,42 @@ function drawPlayerBalls(){
       ctx.fillStyle=`rgba(${G.lightningActive>0?'255,220,50':'80,160,255'},${a})`;ctx.fill();
     });
     if(G.hurtTimer>0&&Math.floor(G.hurtTimer/6)%2===0)return;
-    ctx.save();ctx.shadowBlur=22;ctx.shadowColor=G.lightningActive>0?'#ffee00':'#60aaff';
-    const g2=ctx.createRadialGradient(ball.x-br*.3,ball.y-br*.3,1,ball.x,ball.y,br);
-    if(G.lightningActive>0){g2.addColorStop(0,'#ffffaa');g2.addColorStop(1,'#ccaa00');}
-    else{g2.addColorStop(0,'#c0e0ff');g2.addColorStop(1,'#1a55cc');}
-    ctx.beginPath();ctx.arc(ball.x,ball.y,br,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();ctx.restore();
-    const ns=fmt(G.ballNum),fl=ns.length<=2?16:ns.length<=3?14:ns.length<=4?12:ns.length<=5?10:9;
-    ctx.fillStyle='white';ctx.font=`bold ${fl}px Courier New`;
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ns,ball.x,ball.y+1);
+
+    if(G.ballMode==='divider'){
+      // Draw 2 orbiting sub-balls instead of 1 big ball
+      const sbr=br*0.62;
+      [0,Math.PI].forEach((offset,si)=>{
+        const sa=ball.bp*1.4+offset;
+        const sx=ball.x+Math.cos(sa)*br*0.55, sy=ball.y+Math.sin(sa)*br*0.55;
+        ctx.save();ctx.shadowBlur=14;ctx.shadowColor='#aa80ff';
+        const gd=ctx.createRadialGradient(sx-sbr*.3,sy-sbr*.3,1,sx,sy,sbr);
+        gd.addColorStop(0,'#e0c0ff');gd.addColorStop(1,'#6620cc');
+        ctx.beginPath();ctx.arc(sx,sy,sbr,0,Math.PI*2);ctx.fillStyle=gd;ctx.fill();ctx.restore();
+        const ns=fmt(Math.max(1,Math.floor(G.ballNum/4))),fl=ns.length<=3?11:9;
+        ctx.fillStyle='white';ctx.font=`bold ${fl}px Courier New`;
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ns,sx,sy+1);
+      });
+    } else {
+      // Normal / percent ball
+      const isLit=G.lightningActive>0, isPct=G.ballMode==='percent';
+      ctx.save();ctx.shadowBlur=22;
+      ctx.shadowColor=isLit?'#ffee00':isPct?'#00ffaa':'#60aaff';
+      const g2=ctx.createRadialGradient(ball.x-br*.3,ball.y-br*.3,1,ball.x,ball.y,br);
+      if(isLit){g2.addColorStop(0,'#ffffaa');g2.addColorStop(1,'#ccaa00');}
+      else if(isPct){g2.addColorStop(0,'#aaffdd');g2.addColorStop(1,'#008855');}
+      else{g2.addColorStop(0,'#c0e0ff');g2.addColorStop(1,'#1a55cc');}
+      ctx.beginPath();ctx.arc(ball.x,ball.y,br,0,Math.PI*2);ctx.fillStyle=g2;ctx.fill();ctx.restore();
+      if(isPct){
+        const pct=30+G.percentBonus;
+        const ps=pct>=100?11:pct>=10?12:14;
+        ctx.fillStyle='white';ctx.font=`bold ${ps}px Courier New`;
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`${pct}%`,ball.x,ball.y+1);
+      } else {
+        const ns=fmt(G.ballNum),fl=ns.length<=2?16:ns.length<=3?14:ns.length<=4?12:ns.length<=5?10:9;
+        ctx.fillStyle='white';ctx.font=`bold ${fl}px Courier New`;
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ns,ball.x,ball.y+1);
+      }
+    }
   });
 }
 function drawHUD(){
@@ -531,12 +594,16 @@ function drawHUD(){
   ctx.fillStyle='#ccc';ctx.font='11px Courier New';
   ctx.fillText(`Stage ${G.stage}/100`,14,y0+54);
   ctx.fillStyle='#6aabcc';ctx.font='10px Courier New';
-  ctx.fillText(`#${fmt(G.ballNum)}  spd:${getSpeed().toFixed(1)}  x${G.ballCount}${G.hasBomb?'  💥r:'+fmt(getBombR()|0):''}`,14,y0+70);
-  // Lightning timer
+  const modeStr=G.ballMode==='percent'?`%${30+G.percentBonus}`:G.ballMode==='divider'?`DIV(x2,1/4 dmg)`:`#${fmt(G.ballNum)}`;
+  ctx.fillText(`${modeStr}  spd:${getSpeed().toFixed(1)}  x${G.ballCount}${G.hasBomb?'  💥r:'+fmt(getBombR()|0):''}`,14,y0+70);
+  // Lightning timer / mode label
   if(G.lightningActive>0){
     const secs=Math.ceil(G.lightningActive/FPS);
     ctx.fillStyle='#ffee44';ctx.font='bold 11px Courier New';
     ctx.fillText(`⚡ 2× SPD ${secs}s`,14,y0+84);
+  } else if(G.ballMode!=='normal'){
+    ctx.fillStyle=G.ballMode==='percent'?'#00ffaa':'#aa80ff';ctx.font='bold 10px Courier New';
+    ctx.fillText(G.ballMode==='percent'?'% BALL: +1% per hit, resets per stage':'DIVIDER: x2 sub-balls, 1/4 dmg each',14,y0+84);
   }
   ctx.textAlign='right';ctx.fillStyle='#444';ctx.font='9px Courier New';ctx.fillText('M:music',W-14,y0+84);
   ctx.fillStyle='#555';ctx.font='11px Courier New';ctx.fillText(`enemies:${G.enemies.length}`,W-14,y0+20);
@@ -546,9 +613,10 @@ function drawHUD(){
 }
 
 // ── SHARED SHOP ────────────────────────────────────────────
-let _shopBtns=[];
+let _shopBtns=[], _shopEnd=0;
 function renderShopItems(iy0,ih,gap){
   _shopBtns=[];const items=shopItems(),iw=W-36,ix=18;
+  _shopEnd=iy0+items.length*(ih+gap);
   items.forEach((item,i)=>{
     const cost=item.cost(),can=item.avail()&&G.money>=cost;
     const x=ix,y=iy0+i*(ih+gap);
@@ -606,17 +674,26 @@ function drawMenu(){
   ctx.fillStyle='#3a4a5a';ctx.font='11px Courier New';ctx.textBaseline='alphabetic';
   ctx.fillText('── UPGRADES ──',W/2,90);
   renderShopItems(94,54,5);
-  const shopEnd=94+7*(54+5);
-  drawBuyMsg(W/2,shopEnd+4);
-  const py=shopEnd+14;
-  ctx.fillStyle='#0d2a5a';rr(W/2-110,py,220,44,12);ctx.fill();
-  ctx.strokeStyle='#5090ff';ctx.lineWidth=2;rr(W/2-110,py,220,44,12);ctx.stroke();
-  ctx.fillStyle='#80b4ff';ctx.font='bold 19px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('▶  PLAY',W/2,py+22);
-  ctx.fillStyle='#221010';rr(W/2-45,py+52,90,20,5);ctx.fill();
-  ctx.strokeStyle='#552222';ctx.lineWidth=1;rr(W/2-45,py+52,90,20,5);ctx.stroke();
-  ctx.fillStyle='#774444';ctx.font='10px Courier New';ctx.textBaseline='middle';
-  ctx.fillText('RESET SAVE',W/2,py+62);
+  drawBuyMsg(W/2,_shopEnd+4);
+  const py=_shopEnd+14;
+  // New Game button (left)
+  ctx.fillStyle='#0d1a3a';rr(14,py,254,42,10);ctx.fill();
+  ctx.strokeStyle='#3a6ab0';ctx.lineWidth=2;rr(14,py,254,42,10);ctx.stroke();
+  ctx.fillStyle='#6090dd';ctx.font='bold 15px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('▶  NEW GAME',14+127,py+21);
+  // Continue button (right) — only if currentStage > 1
+  const hasProgress=G.currentStage>1;
+  ctx.fillStyle=hasProgress?'#0d3a1a':'#111';
+  rr(W-14-254,py,254,42,10);ctx.fill();
+  ctx.strokeStyle=hasProgress?'#3a9a4a':'#223';ctx.lineWidth=2;
+  rr(W-14-254,py,254,42,10);ctx.stroke();
+  ctx.fillStyle=hasProgress?'#5aba6a':'#334';ctx.font='bold 15px Courier New';
+  ctx.fillText(hasProgress?`▶  CONTINUE (${G.currentStage})`:'▶  CONTINUE',W-14-127,py+21);
+  // Reset
+  ctx.fillStyle='#1a0808';rr(W/2-45,py+50,90,20,5);ctx.fill();
+  ctx.strokeStyle='#442';ctx.lineWidth=1;rr(W/2-45,py+50,90,20,5);ctx.stroke();
+  ctx.fillStyle='#665555';ctx.font='10px Courier New';ctx.textBaseline='middle';
+  ctx.fillText('RESET SAVE',W/2,py+60);
 }
 
 // ── MID-STAGE SHOP ─────────────────────────────────────────
@@ -629,9 +706,8 @@ function drawMidShop(){
   ctx.fillText(`+$${fmt(G.earned)} (+1 auto ball#)   $${fmt(G.money)} total`,W/2,46);
   ctx.fillStyle='#3a4a5a';ctx.font='11px Courier New';ctx.fillText('── SHOP ──',W/2,70);
   renderShopItems(74,54,5);
-  const shopEnd=74+7*(54+5);
-  drawBuyMsg(W/2,shopEnd+4);
-  const ny=shopEnd+14,nw=200,nx2=W/2-100;
+  drawBuyMsg(W/2,_shopEnd+4);
+  const ny=_shopEnd+14,nw=200,nx2=W/2-100;
   ctx.fillStyle='#0d3a1a';rr(nx2,ny,nw,40,10);ctx.fill();
   ctx.strokeStyle='#3a9a4a';ctx.lineWidth=2;rr(nx2,ny,nw,40,10);ctx.stroke();
   ctx.fillStyle='#5aba6a';ctx.font='bold 14px Courier New';
@@ -673,22 +749,25 @@ canvas.addEventListener('click',e=>{
   const my=(e.clientY-rect.top)*(H/rect.height);
   getAC();
   if(G.phase==='menu'){
-    const shopEnd=94+7*(54+5);
-    const py=shopEnd+14;
+    const py=_shopEnd+14;
     // Reset
-    if(mx>=W/2-45&&mx<=W/2+45&&my>=py+52&&my<=py+72){
+    if(mx>=W/2-45&&mx<=W/2+45&&my>=py+50&&my<=py+70){
       if(confirm('Reset all progress?')){localStorage.removeItem(SK);G=buildGame();}
       return;
     }
-    // Play
-    if(mx>=W/2-110&&mx<=W/2+110&&my>=py&&my<=py+44){
-      G.hp=G.maxHp;G.stage=1;G.earned=0;startStage();startMusic();return;
+    // New Game (left button)
+    if(mx>=14&&mx<=268&&my>=py&&my<=py+42){
+      G.hp=G.maxHp;G.stage=1;G.earned=0;G.currentStage=1;startStage();startMusic();return;
+    }
+    // Continue (right button)
+    if(mx>=W-268&&mx<=W-14&&my>=py&&my<=py+42&&G.currentStage>1){
+      G.hp=G.maxHp;G.stage=G.currentStage;G.earned=0;startStage();startMusic();return;
     }
     handleShopClick(mx,my);return;
   }
   if(G.phase==='shop'){
     if(handleShopClick(mx,my))return;
-    const shopEnd=74+7*(54+5);const ny=shopEnd+14;
+    const ny=_shopEnd+14;
     if(mx>=W/2-100&&mx<=W/2+100&&my>=ny&&my<=ny+40){G.stage++;startStage();}
     return;
   }
