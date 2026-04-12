@@ -237,6 +237,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div id="roomInfo">
       <div id="roomName">ROOM</div>
       <div id="roomDesc"></div>
+      <div id="roomObjects" style="margin-top:.4rem;font-size:.62rem;color:#5a4a30;line-height:1.7;letter-spacing:.08em;"></div>
       <div id="examineResult"></div>
       <button id="readAloudBtn" onclick="readAloud()" style="display:none;margin-top:.5rem;background:none;border:1px solid #4a382060;color:#8a7050;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.28rem .9rem;cursor:pointer;border-radius:2px;">🔊 READ ALOUD</button>
     </div>
@@ -4198,6 +4199,16 @@ function examineHotspot(hs,foundSet){
       state.inventory.push(itemData);
       addLog(`Found: ${itemData.name}`,'important');
       updateInventory();
+      // Refresh objects list to grey out the found item
+      const objEl=document.getElementById('roomObjects');
+      const room=ROOM_DATA[state.currentRoom];
+      if(objEl&&room.hotspots){
+        const fSet=state.roomItemsFound[state.currentRoom]||new Set();
+        objEl.innerHTML=room.hotspots.map(h=>{
+          const hasIt=h.giveItem&&!fSet.has(h.giveItem);
+          return `<span style="color:${hasIt?'#c8a06090':'#3a2a1890'}">${hasIt?'◆ ':'· '}${h.label}</span>`;
+        }).join('&nbsp;&nbsp;');
+      }
     }
   }
 }
@@ -5597,6 +5608,18 @@ function render(){
   document.getElementById('roomDesc').textContent=room.desc;
   document.getElementById('examineResult').textContent='';
   setReadableHotspot(null);
+  // Show all interactable objects in this room
+  const objEl=document.getElementById('roomObjects');
+  if(objEl && room.hotspots){
+    const foundSet=state.roomItemsFound[state.currentRoom]||new Set();
+    const lines=room.hotspots.map(hs=>{
+      const hasItem=hs.giveItem && !foundSet.has(hs.giveItem);
+      const prefix=hasItem?'◆ ':'· ';
+      const color=hasItem?'#c8a06090':'#3a2a1890';
+      return `<span style="color:${color}">${prefix}${hs.label}</span>`;
+    });
+    objEl.innerHTML=lines.join('&nbsp;&nbsp;');
+  }
   drawRoom();
   updateDoors();
   updateHotspots();
