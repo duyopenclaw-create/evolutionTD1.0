@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Smack Da Piggy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:linear-gradient(180deg,#5a9e38 0%,#3d7022 100%);
+  min-height:100vh;font-family:'Arial Black',sans-serif;
+  user-select:none;overflow-x:hidden;touch-action:manipulation;
+  display:flex;flex-direction:column;
+}
+#hdr{
+  background:rgba(0,0,0,.4);padding:8px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:2px solid rgba(255,255,255,.12);flex-shrink:0;
+}
+#money-display{font-size:1.3em;color:#ffdd44;text-shadow:1px 1px 3px #000;}
+#weapon-display{font-size:.85em;color:#ddd;text-shadow:1px 1px 2px #000;}
+#inv-bar{
+  background:rgba(0,0,0,.25);padding:5px 8px;
+  display:flex;gap:10px;justify-content:center;flex-wrap:wrap;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.inv-item{color:#fff;font-size:.82em;text-shadow:1px 1px 2px #000;display:flex;align-items:center;gap:3px;}
+.inv-count{color:#ffdd44;font-size:1.1em;}
+#game-area{
+  flex:1;position:relative;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;cursor:pointer;
+}
+#pigs-area{
+  display:flex;justify-content:center;align-items:flex-end;
+  flex-wrap:wrap;gap:12px;padding:20px 80px 20px 10px;
+  width:100%;
+}
+.pig-col{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  position:relative;
+}
+.pig-hp-bar{width:90px;height:8px;background:#333;border-radius:4px;overflow:hidden;border:1px solid #555;}
+.pig-hp-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#e67e22);border-radius:4px;transition:width .08s;}
+.pig-hp-text{font-size:.6em;color:#bbb;text-align:center;}
+.pig-wrap{position:relative;transition:transform .05s;}
+.pig-wrap.slapped{animation:pigshake .28s ease-out;}
+@keyframes pigshake{
+  0%{transform:translateX(0) scaleX(1);}
+  25%{transform:translateX(14px) scaleX(.88) rotate(4deg);}
+  55%{transform:translateX(-6px) scaleX(1.04);}
+  100%{transform:translateX(0) scaleX(1);}
+}
+.pig-label{font-size:.7em;color:#ffdd44;text-shadow:1px 1px 2px #000;text-align:center;}
+.oink-bub{
+  position:absolute;background:#fff;border:2px solid #c05070;
+  border-radius:12px;padding:3px 8px;font-size:.8em;font-weight:900;
+  color:#c05070;pointer-events:none;white-space:nowrap;
+  top:-10px;left:50%;animation:oinkpop .9s ease-out forwards;z-index:50;
+}
+.oink-bub::after{
+  content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:#c05070;
+}
+@keyframes oinkpop{
+  0%{opacity:1;transform:translateX(-50%) scale(.5) translateY(0);}
+  20%{opacity:1;transform:translateX(-50%) scale(1.1) translateY(-4px);}
+  70%{opacity:1;transform:translateX(-50%) scale(1) translateY(-18px);}
+  100%{opacity:0;transform:translateX(-50%) scale(.8) translateY(-38px);}
+}
+.drop-pop{
+  position:absolute;font-size:.82em;font-weight:900;color:#fff;
+  text-shadow:1px 1px 3px #000;pointer-events:none;white-space:nowrap;
+  animation:droppop .85s ease-out forwards;z-index:51;top:0;left:50%;
+}
+@keyframes droppop{
+  0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+  100%{opacity:0;transform:translateX(-50%) translateY(-55px) scale(.7);}
+}
+.death-flash{
+  position:absolute;inset:0;background:rgba(255,50,50,.5);
+  border-radius:50%;animation:dflash .4s ease-out forwards;pointer-events:none;z-index:60;
+}
+@keyframes dflash{0%{opacity:1;}100%{opacity:0;transform:scale(1.8);}}
+
+/* ARM */
+#arm-wrap{
+  position:fixed;right:-40px;top:18%;
+  transform-origin:40px 8px;
+  transform:rotate(30deg);
+  pointer-events:none;z-index:200;
+}
+#arm-wrap.slapping{animation:armswing .34s cubic-bezier(.25,.46,.45,.94);}
+@keyframes armswing{
+  0%{transform:rotate(30deg);}
+  28%{transform:rotate(-38deg);}
+  65%{transform:rotate(33deg);}
+  100%{transform:rotate(30deg);}
+}
+
+/* BOTTOM BAR */
+#bot-bar{
+  background:rgba(0,0,0,.35);padding:8px;
+  display:flex;flex-wrap:wrap;gap:5px;justify-content:center;
+  border-top:2px solid rgba(255,255,255,.1);flex-shrink:0;
+}
+.sell-btn{
+  background:linear-gradient(135deg,#27ae60,#1e8449);border:2px solid #16622d;
+  color:#fff;padding:7px 10px;border-radius:9px;
+  font-family:'Arial Black',sans-serif;font-size:.72em;cursor:pointer;
+  text-shadow:1px 1px 2px #000;touch-action:manipulation;
+}
+.sell-btn:active{transform:scale(.95);filter:brightness(.85);}
+.sell-btn:disabled{background:#444;border-color:#333;cursor:not-allowed;filter:none;opacity:.6;}
+#shop-btn{
+  background:linear-gradient(135deg,#e67e22,#c0392b);border:2px solid #922b21;
+  color:#fff;padding:7px 14px;border-radius:9px;
+  font-family:'Arial Black',sans-serif;font-size:.78em;cursor:pointer;
+  text-shadow:1px 1px 2px #000;touch-action:manipulation;
+}
+#shop-btn:active{transform:scale(.95);}
+
+/* FLOAT TEXT */
+.float-txt{
+  position:fixed;font-size:1.05em;font-weight:900;color:#ffdd44;
+  text-shadow:1px 1px 3px #000;pointer-events:none;
+  animation:floatup 1.1s ease-out forwards;z-index:400;white-space:nowrap;
+}
+@keyframes floatup{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-90px) scale(.8);}
+}
+
+/* SHOP MODAL */
+#shop-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);
+  z-index:600;overflow-y:auto;padding:16px;
+}
+#shop-modal.open{display:block;}
+#shop-inner{
+  background:#1e0e05;border:3px solid #7a4e2c;border-radius:16px;
+  padding:16px;max-width:420px;margin:0 auto;position:relative;
+}
+#shop-title{color:#ffdd44;font-size:1.4em;text-align:center;margin-bottom:12px;text-shadow:2px 2px 0 #000;}
+#shop-close{
+  position:absolute;top:12px;right:12px;background:#c0392b;border:2px solid #922b21;
+  color:#fff;border-radius:50%;width:30px;height:30px;font-size:1em;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-family:'Arial Black',sans-serif;
+}
+.sec-title{
+  color:#f0a060;font-size:.78em;font-weight:900;text-transform:uppercase;
+  letter-spacing:1px;margin:12px 0 5px;border-bottom:1px solid #4a2a10;padding-bottom:3px;
+}
+.upg-row{
+  background:rgba(255,255,255,.04);border:2px solid #4a2a10;border-radius:9px;
+  padding:9px 11px;margin-bottom:6px;display:flex;
+  justify-content:space-between;align-items:center;gap:8px;
+}
+.upg-row.owned{border-color:#27ae60;opacity:.55;}
+.upg-row.locked{opacity:.38;}
+.upg-info{flex:1;}
+.upg-name{color:#fff;font-size:.85em;font-weight:900;}
+.upg-desc{color:#999;font-size:.72em;margin-top:2px;}
+.upg-cost{color:#ffdd44;font-size:.8em;white-space:nowrap;text-align:right;}
+.buy-btn{
+  background:linear-gradient(135deg,#e67e22,#c0392b);border:2px solid #922b21;
+  color:#fff;padding:5px 10px;border-radius:7px;
+  font-family:'Arial Black',sans-serif;font-size:.72em;cursor:pointer;
+  white-space:nowrap;margin-top:3px;display:block;
+}
+.buy-btn:disabled{background:#444;border-color:#333;cursor:not-allowed;}
+.buy-btn:not(:disabled):active{transform:scale(.95);}
+#money-in-shop{color:#ffdd44;font-size:.9em;text-align:center;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="money-display">💰 $<span id="money">0</span></div>
+  <div id="weapon-display">🖐 Bare Hands (500 hits)</div>
+</div>
+<div id="inv-bar">
+  <div class="inv-item">🥩<span class="inv-count" id="i-pork">0</span></div>
+  <div class="inv-item">🥓<span class="inv-count" id="i-bacon">0</span></div>
+  <div class="inv-item">🍖<span class="inv-count" id="i-ham">0</span></div>
+  <div class="inv-item">🍯<span class="inv-count" id="i-hpb">0</span></div>
+</div>
+
+<div id="game-area">
+  <div id="pigs-area"></div>
+</div>
+
+<!-- ARM SVG: shoulder at top, hand at bottom, pivots from top -->
+<div id="arm-wrap">
+<svg viewBox="0 0 80 240" width="80" height="240" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shirt sleeve -->
+  <rect x="15" y="0" width="50" height="28" rx="8" fill="#3a7bd5" stroke="#2460b0" stroke-width="2"/>
+  <!-- Upper arm -->
+  <rect x="20" y="22" width="40" height="80" rx="18" fill="#f5c48a" stroke="#c07830" stroke-width="2.5"/>
+  <!-- Elbow -->
+  <ellipse cx="40" cy="102" rx="22" ry="16" fill="#edb870" stroke="#c07830" stroke-width="2"/>
+  <!-- Forearm -->
+  <rect x="22" y="94" width="36" height="88" rx="16" fill="#f5c48a" stroke="#c07830" stroke-width="2.5"/>
+  <!-- Wrist -->
+  <rect x="18" y="172" width="44" height="22" rx="10" fill="#f5c48a" stroke="#c07830" stroke-width="2"/>
+  <!-- Palm -->
+  <ellipse cx="40" cy="212" rx="30" ry="22" fill="#f5c48a" stroke="#c07830" stroke-width="2"/>
+  <!-- Index finger -->
+  <rect x="11" y="198" width="13" height="30" rx="6" fill="#f5c48a" stroke="#c07830" stroke-width="1.5"/>
+  <!-- Middle finger -->
+  <rect x="26" y="193" width="13" height="35" rx="6" fill="#f5c48a" stroke="#c07830" stroke-width="1.5"/>
+  <!-- Ring finger -->
+  <rect x="41" y="195" width="12" height="33" rx="6" fill="#f5c48a" stroke="#c07830" stroke-width="1.5"/>
+  <!-- Pinky -->
+  <rect x="55" y="200" width="10" height="26" rx="5" fill="#f5c48a" stroke="#c07830" stroke-width="1.5"/>
+  <!-- Thumb -->
+  <ellipse cx="8" cy="206" rx="9" ry="14" fill="#f5c48a" stroke="#c07830" stroke-width="1.5" transform="rotate(-15 8 206)"/>
+  <!-- Knuckle lines -->
+  <line x1="11" y1="215" x2="24" y2="215" stroke="#c07830" stroke-width="1" opacity=".45"/>
+  <line x1="26" y1="215" x2="39" y2="215" stroke="#c07830" stroke-width="1" opacity=".45"/>
+  <line x1="41" y1="215" x2="53" y2="215" stroke="#c07830" stroke-width="1" opacity=".45"/>
+</svg>
+</div>
+
+<div id="bot-bar">
+  <button class="sell-btn" id="sb-pork"  onclick="sellAll('pork')" >Sell 🥩 $1ea</button>
+  <button class="sell-btn" id="sb-bacon" onclick="sellAll('bacon')">Sell 🥓 $3ea</button>
+  <button class="sell-btn" id="sb-ham"   onclick="sellAll('ham')"  >Sell 🍖 $8ea</button>
+  <button class="sell-btn" id="sb-hpb"   onclick="sellAll('hpb')"  >Sell 🍯 $25ea</button>
+  <button id="shop-btn" onclick="openShop()">🏪 SHOP</button>
+</div>
+
+<!-- SHOP -->
+<div id="shop-modal">
+  <div id="shop-inner">
+    <button id="shop-close" onclick="closeShop()">✕</button>
+    <div id="shop-title">🏪 PIG SHOP</div>
+    <div style="text-align:center;margin-bottom:6px;">
+      <button onclick="resetGame()" style="background:#555;border:2px solid #333;color:#aaa;padding:4px 10px;border-radius:6px;font-family:'Arial Black',sans-serif;font-size:.65em;cursor:pointer;">🗑 Reset Save</button>
+    </div>
+    <div id="money-in-shop"></div>
+    <div id="shop-content"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+const G = {
+  money:0, pork:0, bacon:0, ham:0, hpb:0,
+  weapon:'hands',
+  baconDiv:5,
+  hamDiv:null,
+  hpbDiv:null,
+  pigs:[],
+  upgrades:new Set(),
+  busy:false,
+};
+
+const WEAPON_HP   = {hands:500, stick:250, axe:80};
+const WEAPON_NAME = {hands:'🖐 Bare Hands (500 hits)', stick:'🪵 Stick (250 hits)', axe:'🪓 Axe (80 hits)'};
+const SELL_PRICE  = {pork:1, bacon:3, ham:8, hpb:25};
+
+// ── UPGRADES TABLE ──────────────────────────────────────────────────
+const UPGS = [
+  // Weapons
+  {id:'stick',      sec:'⚔️ Weapons',           name:'Buy Stick 🪵',         desc:'Kills pig in 250 hits',               cost:50,   req:null},
+  {id:'axe',        sec:'⚔️ Weapons',           name:'Buy Axe 🪓',           desc:'Kills pig in 80 hits',                cost:200,  req:'stick'},
+  // Bacon
+  {id:'b3',         sec:'🥓 Bacon Drops',        name:'Bacon Luck I',         desc:'Bacon chance: 1 in 3',                cost:40,   req:null},
+  {id:'b2',         sec:'🥓 Bacon Drops',        name:'Bacon Luck II',        desc:'Bacon chance: 1 in 2',                cost:100,  req:'b3'},
+  // Ham
+  {id:'ham_on',     sec:'🍖 Ham Drops',          name:'Unlock Ham 🍖',        desc:'Ham drops: 1 in 8 chance per slap',   cost:180,  req:null},
+  {id:'h6',         sec:'🍖 Ham Drops',          name:'Ham Luck I',           desc:'Ham chance: 1 in 6',                  cost:260,  req:'ham_on'},
+  {id:'h4',         sec:'🍖 Ham Drops',          name:'Ham Luck II',          desc:'Ham chance: 1 in 4',                  cost:420,  req:'h6'},
+  {id:'h2',         sec:'🍖 Ham Drops',          name:'Ham Luck III',         desc:'Ham chance: 1 in 2',                  cost:700,  req:'h4'},
+  // HPB
+  {id:'hpb_on',     sec:'🍯 Honey Pork Belly',   name:'Unlock HPB 🍯',        desc:'HPB drops: 1 in 15 chance per slap',  cost:500,  req:null},
+  {id:'p12',        sec:'🍯 Honey Pork Belly',   name:'HPB Luck I',           desc:'HPB chance: 1 in 12',                 cost:700,  req:'hpb_on'},
+  {id:'p9',         sec:'🍯 Honey Pork Belly',   name:'HPB Luck II',          desc:'HPB chance: 1 in 9',                  cost:1000, req:'p12'},
+  {id:'p6',         sec:'🍯 Honey Pork Belly',   name:'HPB Luck III',         desc:'HPB chance: 1 in 6',                  cost:1500, req:'p9'},
+  {id:'p3',         sec:'🍯 Honey Pork Belly',   name:'HPB Luck IV',          desc:'HPB chance: 1 in 3',                  cost:2500, req:'p6'},
+];
+
+// ── AUDIO ───────────────────────────────────────────────────────────
+let AC = null;
+function ac() { if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)(); return AC; }
+
+function playOink(intensity=1) {
+  const ctx = ac(), t = ctx.currentTime;
+  // Noise through narrow resonant bandpass = nasal pig grunt
+  const sz = ctx.sampleRate * 0.45;
+  const buf = ctx.createBuffer(1, sz, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  // Pink-ish noise
+  let b0=0,b1=0,b2=0;
+  for(let i=0;i<sz;i++){
+    const w=Math.random()*2-1;
+    b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.96900*b2+w*.1538520;
+    d[i]=(b0+b1+b2+w*.5362)*0.11;
+  }
+  const ns = ctx.createBufferSource(); ns.buffer = buf;
+  const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=18;
+  const baseF = 180 + Math.random()*70 + (intensity-1)*25;
+  // Oink envelope: rises then falls
+  bp.frequency.setValueAtTime(baseF*.55, t);
+  bp.frequency.linearRampToValueAtTime(baseF*1.9, t+.09);
+  bp.frequency.exponentialRampToValueAtTime(baseF*.65, t+.38);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(.85*Math.min(intensity,2.2), t+.025);
+  g.gain.setValueAtTime(.85*Math.min(intensity,2.2), t+.14);
+  g.gain.exponentialRampToValueAtTime(.001, t+.42);
+  ns.connect(bp); bp.connect(g); g.connect(ctx.destination);
+  ns.start(t); ns.stop(t+.45);
+
+  // Body resonance
+  const osc = ctx.createOscillator(); osc.type='sine';
+  osc.frequency.setValueAtTime(baseF*.45,t);
+  osc.frequency.linearRampToValueAtTime(baseF*1.1,t+.09);
+  osc.frequency.exponentialRampToValueAtTime(baseF*.35,t+.38);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(.12*intensity,t);
+  og.gain.exponentialRampToValueAtTime(.001,t+.35);
+  osc.connect(og); og.connect(ctx.destination);
+  osc.start(t); osc.stop(t+.38);
+
+  // Slap thwack
+  const csz = Math.floor(ctx.sampleRate*.06);
+  const cb = ctx.createBuffer(1,csz,ctx.sampleRate);
+  const cd = cb.getChannelData(0);
+  for(let i=0;i<csz;i++) cd[i]=(Math.random()*2-1)*(1-i/csz)*(1-i/csz);
+  const cs = ctx.createBufferSource(); cs.buffer=cb;
+  const cf = ctx.createBiquadFilter(); cf.type='bandpass'; cf.frequency.value=1600; cf.Q.value=.7;
+  const cg = ctx.createGain(); cg.gain.value=.55*Math.min(intensity,2.5);
+  cs.connect(cf); cf.connect(cg); cg.connect(ctx.destination);
+  cs.start(t);
+}
+
+function playDeath() {
+  const ctx=ac(), t=ctx.currentTime;
+  const o=ctx.createOscillator(); o.type='sawtooth';
+  o.frequency.setValueAtTime(500,t);
+  o.frequency.linearRampToValueAtTime(900,t+.08);
+  o.frequency.exponentialRampToValueAtTime(80,t+.9);
+  const g=ctx.createGain(); g.gain.setValueAtTime(.45,t); g.gain.exponentialRampToValueAtTime(.001,t+.9);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t+.92);
+}
+
+// ── PIG ─────────────────────────────────────────────────────────────
+let _pid = 0;
+function mkPig() {
+  return {
+    id:++_pid,
+    hp:WEAPON_HP[G.weapon],
+    maxHp:WEAPON_HP[G.weapon],
+    golden:Math.random()<.2,
+    dead:false,
+  };
+}
+
+// ── PIG SVG ──────────────────────────────────────────────────────────
+function pigSVG(pig, size) {
+  if(pig.dead) return `<svg viewBox="0 0 200 190" width="${size}" height="${Math.round(size*.95)}">
+    <text x="100" y="100" text-anchor="middle" font-size="70" opacity=".35">😵</text>
+    <text x="100" y="145" text-anchor="middle" font-size="15" fill="#ddd" font-family="Arial">Respawning…</text>
+  </svg>`;
+
+  const g=pig.golden;
+  const sk  = g?'#FFD700':'#f08090';
+  const skL = g?'#FFE868':'#ffb8c6';
+  const skD = g?'#DAA520':'#d06070';
+  const br  = g?'#B8860B':'#c06070';
+  const h   = Math.round(size*.95);
+  return `<svg viewBox="0 0 200 190" width="${size}" height="${h}">
+    <ellipse cx="48" cy="50" rx="29" ry="29" fill="${skL}" stroke="${br}" stroke-width="3"/>
+    <ellipse cx="48" cy="50" rx="17" ry="17" fill="${sk}"/>
+    <ellipse cx="152" cy="50" rx="29" ry="29" fill="${skL}" stroke="${br}" stroke-width="3"/>
+    <ellipse cx="152" cy="50" rx="17" ry="17" fill="${sk}"/>
+    <ellipse cx="100" cy="108" rx="90" ry="82" fill="${sk}" stroke="${br}" stroke-width="3"/>
+    <ellipse cx="100" cy="96"  rx="76" ry="68" fill="${skL}" opacity=".28"/>
+    <circle cx="70"  cy="87" r="21" fill="#fff" stroke="#333" stroke-width="2"/>
+    <circle cx="130" cy="87" r="21" fill="#fff" stroke="#333" stroke-width="2"/>
+    <circle cx="74"  cy="90" r="11" fill="#222"/>
+    <circle cx="134" cy="90" r="11" fill="#222"/>
+    <circle cx="77"  cy="87" r="4"  fill="#fff"/>
+    <circle cx="137" cy="87" r="4"  fill="#fff"/>
+    <ellipse cx="51"  cy="125" rx="21" ry="14" fill="rgba(255,140,140,.38)"/>
+    <ellipse cx="149" cy="125" rx="21" ry="14" fill="rgba(255,140,140,.38)"/>
+    <ellipse cx="100" cy="140" rx="44" ry="33" fill="${skD}" stroke="${br}" stroke-width="2.5"/>
+    <ellipse cx="84"  cy="143" rx="12" ry="9"  fill="#8a3040"/>
+    <ellipse cx="116" cy="143" rx="12" ry="9"  fill="#8a3040"/>
+    <path d="M78 162 Q100 178 122 162" fill="none" stroke="#8a3040" stroke-width="3" stroke-linecap="round"/>
+    ${g?'<text x="100" y="28" text-anchor="middle" font-size="16">✨</text>':''}
+  </svg>`;
+}
+
+function pigSize() {
+  const n=G.pigs.length;
+  return n<=1?180:n<=3?130:n<=5?100:80;
+}
+
+// ── RENDER ──────────────────────────────────────────────────────────
+function renderPigs() {
+  const area = document.getElementById('pigs-area');
+  area.innerHTML='';
+  const sz = pigSize();
+  G.pigs.forEach(pig=>{
+    const col=document.createElement('div');
+    col.className='pig-col'; col.dataset.pig=pig.id;
+    const hpPct = pig.dead ? 0 : Math.max(0, pig.hp/pig.maxHp*100);
+    col.innerHTML=`
+      ${pig.golden?'<div class="pig-label">✨ GOLDEN $1/slap ✨</div>':'<div class="pig-label">🐷 Pig</div>'}
+      <div class="pig-hp-bar"><div class="pig-hp-fill" style="width:${hpPct}%"></div></div>
+      <div class="pig-hp-text">${pig.dead?'Dead…':pig.hp+'/'+pig.maxHp}</div>
+      <div class="pig-wrap">${pigSVG(pig,sz)}</div>
+    `;
+    area.appendChild(col);
+  });
+}
+
+function updHpBar(pig) {
+  const col=document.querySelector(`[data-pig="${pig.id}"]`);
+  if(!col)return;
+  const f=col.querySelector('.pig-hp-fill');
+  const t=col.querySelector('.pig-hp-text');
+  if(f) f.style.width=Math.max(0,pig.hp/pig.maxHp*100)+'%';
+  if(t) t.textContent=pig.hp+'/'+pig.maxHp;
+}
+
+function updateHUD() {
+  document.getElementById('money').textContent=G.money;
+  document.getElementById('i-pork').textContent=G.pork;
+  document.getElementById('i-bacon').textContent=G.bacon;
+  document.getElementById('i-ham').textContent=G.ham;
+  document.getElementById('i-hpb').textContent=G.hpb;
+  document.getElementById('weapon-display').textContent=WEAPON_NAME[G.weapon];
+  ['pork','bacon','ham','hpb'].forEach(k=>{
+    document.getElementById('sb-'+k).disabled = G[k]===0;
+  });
+}
+
+// ── SLAP ────────────────────────────────────────────────────────────
+function doSlap(e) {
+  if(G.busy) return;
+  G.busy=true;
+
+  const arm=document.getElementById('arm-wrap');
+  arm.classList.remove('slapping');
+  void arm.offsetWidth;
+  arm.classList.add('slapping');
+  arm.addEventListener('animationend',()=>{ arm.classList.remove('slapping'); G.busy=false; },{once:true});
+
+  const alive=G.pigs.filter(p=>!p.dead);
+  if(!alive.length){ G.busy=false; return; }
+
+  playOink(1+Math.min(alive.length-1,3)*.25);
+  alive.forEach(pig=>hitPig(pig, e));
+  updateHUD();
+}
+
+function hitPig(pig, ev) {
+  pig.hp--;
+  // animate
+  const col=document.querySelector(`[data-pig="${pig.id}"]`);
+  if(col){
+    const wrap=col.querySelector('.pig-wrap');
+    wrap.classList.remove('slapped');
+    void wrap.offsetWidth;
+    wrap.classList.add('slapped');
+    wrap.addEventListener('animationend',()=>wrap.classList.remove('slapped'),{once:true});
+    spawnOink(col);
+  }
+
+  // drops
+  const dr={pork:0,bacon:0,ham:0,hpb:0,money:0};
+  if(pig.golden){
+    dr.money=1; G.money++;
+  } else {
+    dr.pork=2; G.pork+=2;
+    if(Math.random()<1/G.baconDiv){ dr.bacon++; G.bacon++; }
+    if(G.hamDiv && Math.random()<1/G.hamDiv){ dr.ham++; G.ham++; }
+    if(G.hpbDiv && Math.random()<1/G.hpbDiv){ dr.hpb++; G.hpb++; }
+  }
+  if(col) spawnDrops(col, dr, ev);
+  updHpBar(pig);
+  if(pig.hp<=0) killPig(pig);
+}
+
+function spawnOink(col) {
+  const words=['OINK!','OINK OINK!','SQUEAL!','OINK~!','OINKY!','snort!'];
+  const b=document.createElement('div');
+  b.className='oink-bub';
+  b.textContent=words[Math.floor(Math.random()*words.length)];
+  col.appendChild(b);
+  b.addEventListener('animationend',()=>b.remove());
+}
+
+function spawnDrops(col, dr, ev) {
+  const parts=[];
+  if(dr.pork)  parts.push(`+${dr.pork}🥩`);
+  if(dr.bacon) parts.push(`+${dr.bacon}🥓`);
+  if(dr.ham)   parts.push(`+${dr.ham}🍖`);
+  if(dr.hpb)   parts.push(`+${dr.hpb}🍯`);
+  if(dr.money) parts.push(`+$${dr.money}`);
+  if(!parts.length) return;
+  const p=document.createElement('div');
+  p.className='drop-pop'; p.textContent=parts.join(' ');
+  col.querySelector('.pig-wrap').appendChild(p);
+  p.addEventListener('animationend',()=>p.remove());
+}
+
+function killPig(pig) {
+  pig.dead=true;
+  playDeath();
+  // death flash
+  const col=document.querySelector(`[data-pig="${pig.id}"]`);
+  if(col){
+    const fl=document.createElement('div'); fl.className='death-flash';
+    col.querySelector('.pig-wrap').appendChild(fl);
+    fl.addEventListener('animationend',()=>fl.remove());
+  }
+  if(!pig.golden){
+    G.pork+=50; G.bacon+=25; G.ham+=10; G.hpb+=3;
+    floatTxt('+50🥩 +25🥓 +10🍖 +3🍯',true);
+  } else {
+    floatTxt('💛 Golden Pig gone!',true);
+  }
+  renderPigs(); updateHUD();
+  // respawn
+  setTimeout(()=>{
+    pig.hp=WEAPON_HP[G.weapon]; pig.maxHp=WEAPON_HP[G.weapon];
+    pig.dead=false; pig.golden=Math.random()<.2;
+    renderPigs(); updateHUD();
+  },3000);
+}
+
+function floatTxt(text, center=false) {
+  const el=document.createElement('div');
+  el.className='float-txt'; el.textContent=text;
+  el.style.left=(center?window.innerWidth/2-100:30+Math.random()*(window.innerWidth-260))+'px';
+  el.style.top=(window.innerHeight*.35)+'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend',()=>el.remove());
+}
+
+// ── SELL ────────────────────────────────────────────────────────────
+function sellAll(type) {
+  const q=G[type]; if(!q)return;
+  const earn=q*SELL_PRICE[type];
+  G[type]=0; G.money+=earn;
+  floatTxt(`+$${earn} 💰`);
+  updateHUD();
+}
+
+// ── SHOP ─────────────────────────────────────────────────────────────
+function openShop()  { renderShop(); document.getElementById('shop-modal').classList.add('open'); }
+function closeShop() { document.getElementById('shop-modal').classList.remove('open'); }
+
+function renderShop() {
+  document.getElementById('money-in-shop').textContent='💰 You have $'+G.money;
+  const cnt=document.getElementById('shop-content'); cnt.innerHTML='';
+
+  // Buy Pig
+  cnt.innerHTML+=`<div class="sec-title">🐷 Pigs (you have ${G.pigs.length})</div>
+  <div class="upg-row">
+    <div class="upg-info">
+      <div class="upg-name">Buy Another Pig</div>
+      <div class="upg-desc">$500 each. 1 in 5 chance it's golden (gives $1 per slap). All pigs slapped at once.</div>
+    </div>
+    <div>
+      <div class="upg-cost">$500</div>
+      <button class="buy-btn" ${G.money<500?'disabled':''} onclick="buyPig()">Buy</button>
+    </div>
+  </div>`;
+
+  // Upgrades by section
+  const secs={};
+  UPGS.forEach(u=>{ if(!secs[u.sec]) secs[u.sec]=[]; secs[u.sec].push(u); });
+  for(const [sec,list] of Object.entries(secs)){
+    let html=`<div class="sec-title">${sec}</div>`;
+    list.forEach(u=>{
+      const owned=G.upgrades.has(u.id);
+      const reqOk=!u.req||G.upgrades.has(u.req);
+      const afford=G.money>=u.cost;
+      html+=`<div class="upg-row ${owned?'owned':!reqOk?'locked':''}">
+        <div class="upg-info">
+          <div class="upg-name">${u.name}</div>
+          <div class="upg-desc">${u.desc}${!reqOk&&u.req?' · (locked)':''}</div>
+        </div>
+        <div>
+          <div class="upg-cost">${owned?'✅ Owned':'$'+u.cost}</div>
+          ${!owned?`<button class="buy-btn" ${(!afford||!reqOk)?'disabled':''} onclick="applyUpg('${u.id}')">Buy</button>`:''}
+        </div>
+      </div>`;
+    });
+    cnt.innerHTML+=html;
+  }
+}
+
+function buyPig() {
+  if(G.money<500)return;
+  G.money-=500;
+  const p=mkPig(); G.pigs.push(p);
+  if(p.golden) floatTxt('✨ GOLDEN PIG!',true);
+  updateHUD(); renderPigs(); renderShop();
+}
+
+function applyUpg(id) {
+  const u=UPGS.find(x=>x.id===id);
+  if(!u||G.upgrades.has(id)||G.money<u.cost)return;
+  if(u.req&&!G.upgrades.has(u.req))return;
+  G.money-=u.cost; G.upgrades.add(id);
+  // effects
+  if(id==='stick'||id==='axe'){
+    G.weapon=id;
+    G.pigs.forEach(p=>{ if(!p.dead){ p.hp=WEAPON_HP[id]; p.maxHp=WEAPON_HP[id]; }});
+    renderPigs();
+  }
+  if(id==='b3')  G.baconDiv=3;
+  if(id==='b2')  G.baconDiv=2;
+  if(id==='ham_on') G.hamDiv=8;
+  if(id==='h6')  G.hamDiv=6;
+  if(id==='h4')  G.hamDiv=4;
+  if(id==='h2')  G.hamDiv=2;
+  if(id==='hpb_on') G.hpbDiv=15;
+  if(id==='p12') G.hpbDiv=12;
+  if(id==='p9')  G.hpbDiv=9;
+  if(id==='p6')  G.hpbDiv=6;
+  if(id==='p3')  G.hpbDiv=3;
+  floatTxt('Bought '+u.name+'! 🎉');
+  updateHUD(); renderShop();
+}
+
+// ── SAVE / LOAD ──────────────────────────────────────────────────────
+const SAVE_KEY = 'smackpiggy_v1';
+
+function saveGame() {
+  const data = {
+    money:    G.money,
+    pork:     G.pork,
+    bacon:    G.bacon,
+    ham:      G.ham,
+    hpb:      G.hpb,
+    weapon:   G.weapon,
+    baconDiv: G.baconDiv,
+    hamDiv:   G.hamDiv,
+    hpbDiv:   G.hpbDiv,
+    upgrades: [...G.upgrades],
+    pigs: G.pigs.map(p=>({ id:p.id, hp:p.hp, maxHp:p.maxHp, golden:p.golden, dead:false })),
+    pidCounter: _pid,
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    G.money    = d.money    ?? 0;
+    G.pork     = d.pork     ?? 0;
+    G.bacon    = d.bacon    ?? 0;
+    G.ham      = d.ham      ?? 0;
+    G.hpb      = d.hpb      ?? 0;
+    G.weapon   = d.weapon   ?? 'hands';
+    G.baconDiv = d.baconDiv ?? 5;
+    G.hamDiv   = d.hamDiv   ?? null;
+    G.hpbDiv   = d.hpbDiv   ?? null;
+    G.upgrades = new Set(d.upgrades ?? []);
+    _pid       = d.pidCounter ?? 0;
+    G.pigs     = (d.pigs ?? []).map(p=>({
+      id: p.id, hp: p.hp, maxHp: p.maxHp,
+      golden: p.golden, dead: false,
+    }));
+    if(G.pigs.length === 0) G.pigs.push(mkPig());
+    return true;
+  } catch(e) { return false; }
+}
+
+function resetGame() {
+  if(!confirm('Reset all progress?')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// Auto-save after every meaningful action
+const _origSell     = sellAll;
+const _origBuyPig   = buyPig;
+const _origApplyUpg = applyUpg;
+sellAll    = (...a) => { _origSell(...a);     saveGame(); };
+buyPig     = (...a) => { _origBuyPig(...a);   saveGame(); };
+applyUpg   = (...a) => { _origApplyUpg(...a); saveGame(); };
+
+// Save after each slap (debounced — every 5 slaps to avoid constant writes)
+let _slapsSinceLastSave = 0;
+const _origHitPig = hitPig;
+hitPig = (...a) => {
+  _origHitPig(...a);
+  if(++_slapsSinceLastSave >= 5){ _slapsSinceLastSave=0; saveGame(); }
+};
+
+// ── INPUT ────────────────────────────────────────────────────────────
+const gameArea = document.getElementById('game-area');
+gameArea.addEventListener('click', e=>{ if(!e.target.closest('button')) doSlap(e); });
+gameArea.addEventListener('touchstart', e=>{
+  if(e.target.closest('button'))return;
+  e.preventDefault(); doSlap(e.touches[0]);
+},{passive:false});
+
+// Close shop on backdrop click
+document.getElementById('shop-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('shop-modal')) closeShop();
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────
+const loaded = loadGame();
+if(!loaded) G.pigs.push(mkPig());
+renderPigs();
+updateHUD();
+if(loaded) floatTxt('✅ Game loaded!', true);
+</script>
+</body>
+</html>
