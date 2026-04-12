@@ -2499,8 +2499,18 @@ function buildFurniture(type,P,rng){
     // Hat boxes on floor near rack
     const hb1=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,0.2,12),mat(0x6a4828,0.9));hb1.position.set(-3.5,0.1,-3.0);roomGroup.add(hb1);
     const hb2=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.16,12),mat(0x483020,0.9));hb2.position.set(-3.8,0.08,-3.2);roomGroup.add(hb2);
-    addClickBox(0,0.6,2.0,0.5,-3.0,1.0,-3.5);// coat rack (hs0)
-    addClickBox(1,1.8,1.1,0.1,0,2.0,-4.4);// painting (hs1)
+    if(ch3Active){
+      // Room 42 — hospital hallway: emergency sign on wall, overturned gurney on floor
+      const sign=box(2.0,0.35,0.06,0xcc2222,0.9);sign.position.set(0,2.4,-4.38);roomGroup.add(sign);
+      const signText=box(1.7,0.22,0.04,0xffffff,0.99);signText.position.set(0,2.4,-4.35);roomGroup.add(signText);
+      const gurney=box(1.8,0.55,0.7,0xb0b0b8,0.8);gurney.position.set(-1.0,0.275,0.5);gurney.rotation.z=0.9;gurney.rotation.y=0.4;roomGroup.add(gurney);
+      const gurneyLeg=box(0.06,0.5,0.06,0x909098,0.7);gurneyLeg.position.set(-1.0,0.1,0.5);roomGroup.add(gurneyLeg);
+      addClickBox(0,2.2,0.4,0.1,0,2.4,-4.38);// emergency sign hs0
+      addClickBox(1,1.8,0.8,0.8,-1.0,0.4,0.5);// gurney hs1
+    } else {
+      addClickBox(0,0.6,2.0,0.5,-3.0,1.0,-3.5);// coat rack (hs0)
+      addClickBox(1,1.8,1.1,0.1,0,2.0,-4.4);// painting (hs1)
+    }
   }
 
   else if(type==='parlor' && state.currentRoom===32){
@@ -3281,6 +3291,234 @@ function buildFurniture(type,P,rng){
     addCandleLight(-1.0,2.5,-1.5,P,P.li);
     addClickBox(0,0.8,0.5,0.45,-0.5,0.55,-2.5);// sewing machine hs0
     addClickBox(1,0.35,0.65,0.28,1.2,0.7,-2.8);// dress form hs1
+  }
+
+  // ── CHAPTER 3 — HOSPITAL ROOMS ──────────────────────────────────
+  else if(type==='ward'){
+    // Fluorescent tube on ceiling (cold light)
+    const fl=new THREE.PointLight(0xc8f0e8,1.2,12,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Hospital bed — back centre
+    const bedBase=box(2.0,0.45,1.6,0xb0b8c0,0.9);bedBase.position.set(-1.0,0.225,-2.8);bedBase.castShadow=true;roomGroup.add(bedBase);
+    const matt=box(1.85,0.18,1.45,0xeae8e0,0.99);matt.position.set(-1.0,0.54,-2.8);roomGroup.add(matt);
+    const sheet=box(1.8,0.08,1.3,0xf0efeb,0.99);sheet.position.set(-1.0,0.64,-2.8);roomGroup.add(sheet);
+    const pillow=box(0.55,0.1,0.4,0xfaf9f6,0.99);pillow.position.set(-1.0,0.69,-3.45);roomGroup.add(pillow);
+    const hbar=box(2.0,0.5,0.06,0x909aa0,0.7);hbar.position.set(-1.0,0.56,-3.56);roomGroup.add(hbar);
+    // IV stand beside bed
+    const ivPost=box(0.04,1.55,0.04,0xa0a8b0,0.6,0.3);ivPost.position.set(0.3,0.78,-2.8);roomGroup.add(ivPost);
+    const ivBase=box(0.5,0.04,0.5,0x909898,0.7);ivBase.position.set(0.3,0.02,-2.8);roomGroup.add(ivBase);
+    const ivBag=box(0.18,0.28,0.06,0x88c0b0,0.5,0.1);ivBag.material.transparent=true;ivBag.material.opacity=0.6;ivBag.position.set(0.3,1.45,-2.8);roomGroup.add(ivBag);
+    // Window — back right wall
+    buildWindow(2.5,2.0,-4.4,1.2,1.0,P,rng);
+    // Clipboard on wall hook right
+    const cbBoard=box(0.28,0.38,0.04,0xd0c898,0.9);cbBoard.position.set(3.8,1.5,-4.38);roomGroup.add(cbBoard);
+    const cbClip=box(0.18,0.06,0.06,0x707878,0.6,0.3);cbClip.position.set(3.8,1.73,-4.38);roomGroup.add(cbClip);
+    const cbPaper=box(0.24,0.3,0.02,0xf0ede0,0.99);cbPaper.position.set(3.8,1.49,-4.37);roomGroup.add(cbPaper);
+    addClickBox(0,2.2,0.7,1.7,-1.0,0.5,-2.8);// hospital bed hs0
+    addClickBox(1,1.2,1.1,0.1,2.5,2.0,-4.4);// window hs1
+    addClickBox(2,0.4,0.5,0.1,3.8,1.5,-4.38);// clipboard hs2
+  }
+
+  else if(type==='nurses'){
+    const fl=new THREE.PointLight(0xc8f0e8,1.0,12,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Nurses' station desk — L-shaped, back-centre
+    const deskBack=box(4.5,0.08,1.0,0x888898,0.9);deskBack.position.set(0,0.88,-3.8);roomGroup.add(deskBack);
+    const deskBody=box(4.5,0.88,0.9,0x7a7a88,0.9);deskBody.position.set(0,0.44,-3.8);roomGroup.add(deskBody);
+    const deskSide=box(0.9,0.88,2.5,0x7a7a88,0.9);deskSide.position.set(-2.25,0.44,-2.55);roomGroup.add(deskSide);
+    const deskTop2=box(0.9,0.08,2.5,0x888898,0.9);deskTop2.position.set(-2.25,0.88,-2.55);roomGroup.add(deskTop2);
+    // Monitor stack on desk (two monitors)
+    const mon1=box(0.6,0.45,0.08,0x222228,0.9);mon1.position.set(-0.5,1.2,-3.38);roomGroup.add(mon1);
+    const scr1=box(0.52,0.38,0.04,0x001a0a,0.99);scr1.position.set(-0.5,1.2,-3.36);roomGroup.add(scr1);
+    // Faint screen glow (green flatline)
+    const gl=new THREE.PointLight(0x00ff44,0.3,1.5,2);gl.position.set(-0.5,1.2,-3.3);roomGroup.add(gl);candleLights.push(gl);
+    const mon2=box(0.6,0.45,0.08,0x222228,0.9);mon2.position.set(0.8,1.2,-3.38);roomGroup.add(mon2);
+    const scr2=box(0.52,0.38,0.04,0x001a0a,0.99);scr2.position.set(0.8,1.2,-3.36);roomGroup.add(scr2);
+    // Phone off hook
+    const phone=box(0.22,0.06,0.12,0x282828,0.9);phone.position.set(1.8,0.93,-3.5);phone.rotation.z=0.5;roomGroup.add(phone);
+    const receiver=box(0.18,0.05,0.08,0x202020,0.9);receiver.position.set(2.1,0.95,-3.5);receiver.rotation.z=0.4;roomGroup.add(receiver);
+    // Stacked patient files on desk
+    const files=box(0.5,0.12,0.35,0xf0e8d0,0.99);files.position.set(-0.5,0.96,-3.6);files.rotation.y=0.15;roomGroup.add(files);
+    // Medication cabinet — right wall
+    const medCab=box(0.9,1.8,0.4,0x9898a8,0.7,0.1);medCab.position.set(3.8,0.9,-3.5);roomGroup.add(medCab);
+    const medDoor=box(0.84,1.7,0.06,0xa8a8b8,0.6,0.1);medDoor.position.set(3.8,0.9,-3.31);roomGroup.add(medDoor);
+    const medHandle=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.12,6),mat(0x808090,0.4,0.4));
+    medHandle.position.set(3.52,0.9,-3.3);medHandle.rotation.x=Math.PI/2;roomGroup.add(medHandle);
+    addClickBox(0,1.5,0.5,0.15,-0.5,1.2,-3.38);// monitors hs0
+    addClickBox(1,4.5,0.12,1.0,0,0.92,-3.8);// desk surface hs1
+    addClickBox(2,0.9,1.8,0.45,3.8,0.9,-3.5);// medication cabinet hs2
+  }
+
+  else if(type==='ward2'){
+    const fl=new THREE.PointLight(0xb0d8d0,0.9,14,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Covered bed — right back (has sheet pulled up)
+    const cbed=box(1.8,0.55,1.5,0x909aa0,0.9);cbed.position.set(2.0,0.275,-3.0);roomGroup.add(cbed);
+    const csheet=box(1.7,0.5,1.4,0xe8e4e0,0.99);csheet.position.set(2.0,0.7,-3.0);csheet.material.transparent=true;csheet.material.opacity=0.9;roomGroup.add(csheet);
+    const cbump=box(0.45,0.35,0.4,0xe8e4e0,0.99);cbump.position.set(2.0,0.97,-3.0);cbump.material.transparent=true;cbump.material.opacity=0.9;roomGroup.add(cbump);
+    // Empty stripped bed 1 — left
+    const ebed=box(1.8,0.55,1.5,0x909aa0,0.9);ebed.position.set(-2.0,0.275,-3.0);roomGroup.add(ebed);
+    const ematt=box(1.65,0.15,1.35,0xd0ccc8,0.99);ematt.position.set(-2.0,0.53,-3.0);roomGroup.add(ematt);
+    // Bed 2 — floor level visible (ch3_t1 under here)
+    const ebed2=box(1.8,0.55,1.5,0x909aa0,0.9);ebed2.position.set(0,0.275,-3.5);roomGroup.add(ebed2);
+    const ematt2=box(1.65,0.15,1.35,0xd0ccc8,0.99);ematt2.position.set(0,0.53,-3.5);roomGroup.add(ematt2);
+    // Wall graffiti left wall — scratched marks
+    for(let i=0;i<8;i++){
+      const sc=box(0.02,0.14+Math.random()*0.1,0.02,0x586060,0.99);
+      sc.position.set(-4.39,1.3+i*0.1,-2.0+i*0.25);sc.rotation.z=(Math.random()-0.5)*0.5;roomGroup.add(sc);
+    }
+    addClickBox(0,1.9,1.3,1.6,2.0,0.7,-3.0);// covered bed hs0
+    addClickBox(1,0.5,1.5,0.1,-4.38,1.5,-2.0);// wall graffiti hs1
+    addClickBox(2,1.8,0.3,1.6,0,0.15,-3.5);// under bed 2 hs2
+  }
+
+  else if(type==='lab'){
+    const fl=new THREE.PointLight(0xd0ffe8,1.1,14,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Lab bench — centre
+    const bench=box(4.0,0.08,1.1,0xc0c8c0,0.9);bench.position.set(0,0.88,-3.0);roomGroup.add(bench);
+    const benchBody=box(3.8,0.88,1.0,0xa8b0a8,0.9);benchBody.position.set(0,0.44,-3.0);roomGroup.add(benchBody);
+    // Overturned centrifuge on left side of bench
+    const cfuge=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,0.55,12),mat(0xa0a8a0,0.7,0.2));
+    cfuge.position.set(-1.5,0.97,-3.0);cfuge.rotation.z=0.8;cfuge.castShadow=true;roomGroup.add(cfuge);
+    const cfugeLid=new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.28,0.08,12),mat(0xb8c0b8,0.7,0.1));
+    cfugeLid.position.set(-1.5,1.1,-3.0);cfugeLid.rotation.z=0.8;roomGroup.add(cfugeLid);
+    // Shattered specimen tubes on bench
+    [[0.2,0.94,-2.7],[0.5,0.93,-3.1],[-0.8,0.94,-2.9]].forEach(([tx,ty,tz])=>{
+      const tube=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.15,6),mat(0x88b8b0,0.3,0.1));
+      tube.material.transparent=true;tube.material.opacity=0.5;tube.position.set(tx,ty,tz);tube.rotation.z=0.6+Math.random()*0.4;roomGroup.add(tube);
+    });
+    // Lab journal — right side of bench
+    const journal=box(0.25,0.02,0.18,0xd8c898,0.99);journal.position.set(1.6,0.96,-3.0);journal.rotation.y=0.2;roomGroup.add(journal);
+    // Hook on right wall
+    const hookBar=box(0.04,0.14,0.12,0x888898,0.6,0.3);hookBar.position.set(4.38,1.8,-3.0);hookBar.rotation.y=Math.PI/2;roomGroup.add(hookBar);
+    const hookPeg=box(0.12,0.04,0.04,0x888898,0.6,0.3);hookPeg.position.set(4.3,1.72,-3.0);roomGroup.add(hookPeg);
+    // Emergency exit sign near hook
+    const exitSign=box(0.8,0.22,0.04,0xcc1111,0.9);exitSign.position.set(4.38,2.1,-3.0);exitSign.rotation.y=Math.PI/2;roomGroup.add(exitSign);
+    // Lab coats on floor
+    const coat=box(0.5,0.04,0.7,0xf0f0ec,0.99);coat.position.set(-0.5,0.02,0.5);coat.rotation.y=0.4;coat.material.transparent=true;coat.material.opacity=0.9;roomGroup.add(coat);
+    addClickBox(0,1.0,0.8,0.8,-1.5,0.9,-3.0);// centrifuge hs0
+    addClickBox(1,0.2,1.0,0.15,4.38,1.8,-3.0);// hook on wall hs1
+    addClickBox(2,0.35,0.1,0.25,1.6,0.97,-3.0);// journal hs2
+  }
+
+  else if(type==='supply'){
+    const fl=new THREE.PointLight(0xc0e8e0,0.9,14,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Floor-to-ceiling shelving back wall
+    const shelfBack=box(5.5,3.2,0.35,0x8a8a90,0.9);shelfBack.position.set(0,1.6,-4.2);roomGroup.add(shelfBack);
+    for(let si=0;si<5;si++){
+      const shelf=box(5.4,0.06,0.32,0xa0a0a8,0.9);shelf.position.set(0,0.6+si*0.6,-4.2);roomGroup.add(shelf);
+    }
+    // Remaining boxes/linen on shelves (half empty)
+    [[-1.5,0.66],[-1.5,1.26],[0.5,0.66],[2.0,1.26]].forEach(([sx,sy])=>{
+      const ob=box(0.45,0.5,0.28,0xd0d8e0,0.9);ob.position.set(sx,sy,-4.08);roomGroup.add(ob);
+    });
+    // Red lockbox top shelf (top: sy=3.18 - 0.4/2 = about 3.0)
+    const lockbox=box(0.35,0.28,0.22,0xcc1111,0.9);lockbox.position.set(-0.5,3.02,-4.08);roomGroup.add(lockbox);
+    const lbLatch=box(0.1,0.06,0.06,0xccaa20,0.5,0.4);lbLatch.position.set(-0.5,2.92,-3.98);roomGroup.add(lbLatch);
+    // Equipment on floor — defibrillator, oxygen tank
+    const defib=box(0.5,0.35,0.3,0xd0d0d8,0.9);defib.position.set(-2.0,0.175,0.5);roomGroup.add(defib);
+    const screen=box(0.3,0.18,0.04,0x002010,0.99);screen.position.set(-2.0,0.29,0.37);roomGroup.add(screen);
+    const oxyTank=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.7,10),mat(0x304888,0.7,0.1));
+    oxyTank.position.set(-2.8,0.35,0.8);roomGroup.add(oxyTank);
+    // IV stand
+    const ivPost2=box(0.04,1.4,0.04,0xa0a8b0,0.6,0.3);ivPost2.position.set(-3.0,0.7,0.0);roomGroup.add(ivPost2);
+    addClickBox(0,5.5,0.4,0.35,0,3.1,-4.2);// top shelf hs0
+    addClickBox(1,3.0,0.6,1.5,-2.0,0.35,0.5);// equipment hs1
+  }
+
+  else if(type==='lounge'){
+    const fl=new THREE.PointLight(0xd0e8e0,0.85,12,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Locker bank — left wall (4 lockers)
+    for(let li=0;li<4;li++){
+      const lk=box(0.9,2.0,0.5,0x889098,0.8);lk.position.set(-4.38,1.0,-3.5+li*1.1);lk.rotation.y=Math.PI/2;roomGroup.add(lk);
+      const lkDoor=box(0.82,1.9,0.06,0x909aA0,0.7);lkDoor.position.set(-4.08,1.0,-3.5+li*1.1);lkDoor.rotation.y=Math.PI/2;roomGroup.add(lkDoor);
+      const lkHandle=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.1,6),mat(0xa0a8b0,0.4,0.3));
+      lkHandle.position.set(-4.05,1.0,-3.5+li*1.1);lkHandle.rotation.z=Math.PI/2;roomGroup.add(lkHandle);
+    }
+    // Break table — centre
+    const table=box(2.2,0.06,1.0,0x8a9090,0.9);table.position.set(0,0.75,-2.0);roomGroup.add(table);
+    const tableBody=box(2.0,0.75,0.9,0x7a8088,0.9);tableBody.position.set(0,0.375,-2.0);roomGroup.add(tableBody);
+    // Mugs on table
+    [-0.5,0.2,0.8].forEach(mx=>{
+      const mug=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.05,0.1,8),mat(0xc8c0b8,0.8));
+      mug.position.set(mx,0.83,-2.0);roomGroup.add(mug);
+    });
+    // Incident report folder on table
+    const folder=box(0.35,0.06,0.28,0xe8e0d0,0.99);folder.position.set(-0.2,0.8,-2.2);folder.rotation.y=0.2;roomGroup.add(folder);
+    // TV on shelf right wall
+    const tvShelf=box(0.9,0.06,0.35,0x7a8088,0.9);tvShelf.position.set(4.38,1.5,-3.0);tvShelf.rotation.y=Math.PI/2;roomGroup.add(tvShelf);
+    const tv=box(0.7,0.5,0.1,0x1a1a1a,0.9);tv.position.set(4.38,1.8,-3.0);tv.rotation.y=Math.PI/2;roomGroup.add(tv);
+    const tvScr=box(0.62,0.43,0.04,0x080808,0.99);tvScr.position.set(4.35,1.8,-3.0);tvScr.rotation.y=Math.PI/2;roomGroup.add(tvScr);
+    // Static flicker light
+    const tvGl=new THREE.PointLight(0x888888,0.4,2,2);tvGl.position.set(4.2,1.8,-3.0);roomGroup.add(tvGl);candleLights.push(tvGl);
+    addClickBox(0,0.6,2.0,4.5,-4.08,1.0,-2.0);// lockers hs0
+    addClickBox(1,2.2,0.1,1.0,0,0.78,-2.0);// table hs1
+    addClickBox(2,0.1,0.6,0.8,4.35,1.8,-3.0);// TV hs2
+  }
+
+  else if(type==='corridor'){
+    const fl=new THREE.PointLight(0xff1a1a,0.8,16,1.2);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    const fl2=new THREE.PointLight(0xff1a1a,0.6,10,1.2);fl2.position.set(0,3.2,1.5);roomGroup.add(fl2);candleLights.push(fl2);
+    // Biohazard lockers left wall (open, emptied)
+    for(let bi=0;bi<3;bi++){
+      const bloc=box(1.0,2.0,0.5,0x4a5048,0.9);bloc.position.set(-4.38,1.0,-3.0+bi*1.0);bloc.rotation.y=Math.PI/2;roomGroup.add(bloc);
+      const bDoor=box(0.88,1.88,0.06,0x555850,0.8);bDoor.position.set(-4.08,1.0,-3.0+bi*1.0);bDoor.rotation.y=Math.PI/2;bDoor.rotation.z=0.35;roomGroup.add(bDoor);
+      // Biohazard symbol (box approximation)
+      const bhSym=box(0.2,0.2,0.03,0xffaa00,0.99);bhSym.position.set(-4.06,1.5,-3.0+bi*1.0);bhSym.rotation.y=Math.PI/2;roomGroup.add(bhSym);
+    }
+    // Red runner on floor
+    const runner=box(1.2,0.02,8.0,0x5a0808,0.99);runner.position.set(0,0.011,0);roomGroup.add(runner);
+    // Double steel exit doors at back
+    const door1=box(1.5,2.6,0.1,0x484858,0.8,0.2);door1.position.set(-0.75,1.3,-4.38);roomGroup.add(door1);
+    const door2=box(1.5,2.6,0.1,0x484858,0.8,0.2);door2.position.set(0.75,1.3,-4.38);roomGroup.add(door2);
+    const pushBar=box(2.8,0.08,0.08,0xc0c800,0.7,0.3);pushBar.position.set(0,0.9,-4.34);roomGroup.add(pushBar);
+    const keyhole=box(0.08,0.12,0.06,0x303038,0.8);keyhole.position.set(-0.2,1.1,-4.34);roomGroup.add(keyhole);
+    addClickBox(0,0.6,2.0,3.2,-4.08,1.0,-2.5);// biohazard lockers hs0
+    addClickBox(1,3.2,2.7,0.15,0,1.3,-4.38);// exit doors hs1
+  }
+
+  else if(type==='security'){
+    const fl=new THREE.PointLight(0xd0e8e0,0.9,14,1.5);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Monitor wall — back wall array
+    for(let mi=0;mi<4;mi++){
+      const mon=box(0.7,0.55,0.1,0x1a1a22,0.9);mon.position.set(-2.1+mi*1.4,1.8,-4.3);roomGroup.add(mon);
+      const scr=box(0.62,0.48,0.04,0x000810,0.99);scr.position.set(-2.1+mi*1.4,1.8,-4.27);roomGroup.add(scr);
+    }
+    const glow=new THREE.PointLight(0x004420,0.5,4,2);glow.position.set(0,1.8,-4.2);roomGroup.add(glow);candleLights.push(glow);
+    // Security desk — centre
+    const secDesk=box(2.5,0.08,1.2,0x9898a0,0.9);secDesk.position.set(0,0.75,-2.5);roomGroup.add(secDesk);
+    const secBody=box(2.3,0.75,1.1,0x888890,0.9);secBody.position.set(0,0.375,-2.5);roomGroup.add(secBody);
+    // Safe under desk (small, floor level)
+    const safe=box(0.55,0.45,0.45,0x505058,0.7,0.2);safe.position.set(-0.8,0.225,-2.0);roomGroup.add(safe);
+    const safeDoor=box(0.5,0.4,0.06,0x606068,0.7,0.3);safeDoor.position.set(-0.8,0.225,-1.78);roomGroup.add(safeDoor);
+    const dialCyl=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.04,10),mat(0x909098,0.4,0.4));
+    dialCyl.position.set(-0.8,0.25,-1.76);dialCyl.rotation.x=Math.PI/2;roomGroup.add(dialCyl);
+    // Key cabinet right wall — open, empty
+    const kCab=box(0.8,1.2,0.25,0x909098,0.6,0.1);kCab.position.set(4.38,1.4,-2.5);kCab.rotation.y=Math.PI/2;roomGroup.add(kCab);
+    const kDoor=box(0.72,1.12,0.06,0xa0a0a8,0.5,0.1);kDoor.position.set(4.08,1.4,-2.5);kDoor.rotation.y=Math.PI/2;kDoor.rotation.z=0.4;roomGroup.add(kDoor);
+    // Empty hooks inside cabinet
+    for(let ki=0;ki<4;ki++){
+      const hook=box(0.05,0.07,0.05,0x808090,0.7);hook.position.set(4.28,1.7-ki*0.22,-2.5);roomGroup.add(hook);
+    }
+    addClickBox(0,0.2,1.3,0.8,4.28,1.4,-2.5);// key cabinet hs0
+    addClickBox(1,0.6,0.5,0.5,-0.8,0.25,-2.0);// safe hs1
+  }
+
+  else if(type==='exit'){
+    const fl=new THREE.PointLight(0xff1a1a,1.0,16,1.2);fl.position.set(0,3.2,-1.5);roomGroup.add(fl);candleLights.push(fl);
+    // Large blast doors back-left
+    const bDoor1=box(2.5,3.0,0.18,0x404050,0.8,0.2);bDoor1.position.set(-1.5,1.5,-4.35);roomGroup.add(bDoor1);
+    const bDoor2=box(2.5,3.0,0.18,0x404050,0.8,0.2);bDoor2.position.set(1.0,1.5,-4.35);roomGroup.add(bDoor2);
+    const sealLight=new THREE.PointLight(0xff4400,0.8,3,2);sealLight.position.set(-0.5,2.5,-4.0);roomGroup.add(sealLight);candleLights.push(sealLight);
+    // Horizontal seal bar animated (pressurised gasket)
+    const gasket=box(5.5,0.12,0.22,0xcc6600,0.8);gasket.position.set(0,3.0,-4.35);roomGroup.add(gasket);
+    // Countdown panel on left wall
+    const panel=box(0.7,0.5,0.12,0x303038,0.9);panel.position.set(-4.38,1.8,-2.5);panel.rotation.y=Math.PI/2;roomGroup.add(panel);
+    const panelScr=box(0.5,0.3,0.04,0x001500,0.99);panelScr.position.set(-4.34,1.8,-2.5);panelScr.rotation.y=Math.PI/2;roomGroup.add(panelScr);
+    const redGl=new THREE.PointLight(0xff0000,0.6,2,2);redGl.position.set(-4.2,1.8,-2.5);roomGroup.add(redGl);candleLights.push(redGl);
+    // Emergency exit door — right back (smaller steel door)
+    const eDoor=box(1.1,2.4,0.12,0x485048,0.8,0.2);eDoor.position.set(3.5,1.2,-4.35);roomGroup.add(eDoor);
+    const ePushBar=box(0.9,0.08,0.08,0xd0c800,0.7,0.3);ePushBar.position.set(3.5,0.85,-4.3);roomGroup.add(ePushBar);
+    const exitSign2=box(0.8,0.22,0.04,0xcc1111,0.9);exitSign2.position.set(3.5,2.65,-4.35);roomGroup.add(exitSign2);
+    addClickBox(0,5.5,3.1,0.2,0,1.5,-4.35);// blast doors hs0
+    addClickBox(1,1.2,2.5,0.15,3.5,1.2,-4.35);// emergency exit hs1
   }
 
   // Default for any unhandled room type: add candle + basic furniture
@@ -4640,7 +4878,7 @@ function getTrophy(elapsedMs){
 }
 
 function showTrophy(elapsedMs, cb){
-  saveRun(elapsedMs);
+  if(!ch2Active&&!ch3Active) saveRun(elapsedMs); // only record to ch1 leaderboard for ch1 runs
   const trophy=getTrophy(elapsedMs);
   if(!trophy){ if(cb) cb(); return; }
   trophyContinueCb=cb||null;
@@ -4697,18 +4935,20 @@ function startTimer(){
       setTimeout(tick,1000);
       return;
     }
-    // Idle check — die if stuck in same room for 2 minutes
-    const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
-    const idleLeft=IDLE_LIMIT-idleSeconds;
-    const warn=document.getElementById('hunterWarning');
-    if(idleLeft<=30 && idleLeft>0){
-      warn.textContent=`KEEP MOVING — ${idleLeft}s`;
-      warn.classList.add('show');
-    } else if(idleLeft<=0){
-      triggerIdleDeath(); return;
-    } else {
-      // only clear idle warning if not also showing hunter warning
-      if(warn.textContent.startsWith('KEEP MOVING')) { warn.textContent=''; warn.classList.remove('show'); }
+    // Idle check — only in ch1 (Cole chases you). Ch2/ch3 have no idle death.
+    if(!ch2Active){
+      const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
+      const idleLeft=IDLE_LIMIT-idleSeconds;
+      const warn=document.getElementById('hunterWarning');
+      if(idleLeft<=30 && idleLeft>0){
+        warn.textContent=`KEEP MOVING — ${idleLeft}s`;
+        warn.classList.add('show');
+      } else if(idleLeft<=0){
+        triggerIdleDeath(); return;
+      } else {
+        // only clear idle warning if not also showing hunter warning
+        if(warn.textContent.startsWith('KEEP MOVING')) { warn.textContent=''; warn.classList.remove('show'); }
+      }
     }
     setTimeout(tick,1000);
   };
@@ -4945,7 +5185,7 @@ function loadChapter2(){
   state.selectedItem=null;
   state.roomItemsFound={};
   // 30-minute timer
-  timerSeconds=1800; timerRunning=false; gameOver=false;
+  timerSeconds=1800; timerRunning=false; gameOver=false; gameStartTime=Date.now();
   updateClock();
   ch2Active=true; ch2TvWatched=false;
   connMap=buildConnectionMap();
@@ -5007,7 +5247,7 @@ function closeTvScreen(){
   ch2TvWatched=true;
   buildObjectiveArrow(); // remove TV arrow
   // Timer starts when player closes the TV
-  if(!timerRunning){ startTimer(); startHunter(); }
+  if(!timerRunning){ startTimer(); }
   maraSpeak("Mara: \"30 minutes. Five keys. We split up — you go right, I'll go left.\"");
   addLog('Timer started. Find the five door keys.','important');
 }
@@ -6098,7 +6338,7 @@ function loadGame(){
     if(data.timerRunning && (state.notebookRead||ch2Active||ch3Active)){
       // Resume the timer where it left off
       startTimer();
-      if(!ch3Active) startHunter(); // no hunter in ch3
+      if(!ch2Active&&!ch3Active) startHunter(); // no hunter in ch2 or ch3
     }
     return true;
   }catch(e){ return false; }
