@@ -7,17 +7,35 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none;}
 body{background:#0d0b08;color:#c8b99a;font-family:'Georgia',serif;overflow:hidden;height:100vh;width:100vw;}
-#intro{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+#intro{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:20vh;z-index:100;overflow:hidden;overflow-y:auto;}
+#titleDust{position:fixed !important;inset:0;pointer-events:none;z-index:99;}
+#titleCornerTL,#titleCornerTR,#titleCornerBL,#titleCornerBR{position:fixed !important;width:120px;height:120px;pointer-events:none;z-index:101;opacity:0.5;}
+#titleCornerTL{top:18px;left:18px;border-top:1px solid #6a501890;border-left:1px solid #6a501890;}
+#titleCornerTR{top:18px;right:18px;border-top:1px solid #6a501890;border-right:1px solid #6a501890;}
+#titleCornerBL{bottom:18px;left:18px;border-bottom:1px solid #6a501890;border-left:1px solid #6a501890;}
+#titleCornerBR{bottom:18px;right:18px;border-bottom:1px solid #6a501890;border-right:1px solid #6a501890;}
+#titleCornerTL::before,#titleCornerTR::before,#titleCornerBL::before,#titleCornerBR::before{content:'✦';position:absolute;color:#6a5018;font-size:.7rem;opacity:.7;}
+#titleCornerTL::before{top:-6px;left:-6px;}
+#titleCornerTR::before{top:-6px;right:-6px;}
+#titleCornerBL::before{bottom:-6px;left:-6px;}
+#titleCornerBR::before{bottom:-6px;right:-6px;}
+#titleDivider{width:320px;height:1px;background:linear-gradient(to right,transparent,#6a501870,#c8a87050,#6a501870,transparent);margin:.4rem 0 1.6rem;position:relative;z-index:2;}
+#titleDivider::before,#titleDivider::after{content:'✦';position:absolute;top:50%;transform:translateY(-50%);color:#c8a87080;font-size:.55rem;}
+#titleDivider::before{left:-14px;}
+#titleDivider::after{right:-14px;}
+#titleSub{font-size:.6rem;letter-spacing:.45em;color:#4a3820;text-transform:uppercase;margin-bottom:.5rem;position:relative;z-index:2;animation:subFade 4s ease-in-out infinite;}
+@keyframes subFade{0%,100%{opacity:.5;}50%{opacity:1;}}
+#titleVersion{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:.5rem;letter-spacing:.3em;color:#2a1e10;pointer-events:none;z-index:2;}
 #intro h1{font-size:3rem;letter-spacing:.3em;color:#c8a870;text-shadow:0 0 8px #000,0 0 20px #1a0a0080,0 0 45px #3a180080,0 0 90px #2a100060,0 0 140px #1a080040;margin-bottom:1rem;animation:titleGlow 3s ease-in-out infinite;}
 @keyframes titleGlow{0%,100%{text-shadow:0 0 8px #000,0 0 20px #1a0a0080,0 0 45px #3a180080,0 0 90px #2a100060,0 0 140px #1a080040;}50%{text-shadow:0 0 8px #000,0 0 30px #2a1000c0,0 0 70px #5a2800a0,0 0 120px #3a150080,0 0 180px #200a0060;}}
-#titleWrap{position:relative;width:100%;text-align:center;height:4.2rem;margin-bottom:1rem;}
+#titleWrap{position:relative;width:100%;text-align:center;height:4.2rem;margin-bottom:.5rem;}
 .titleHalf{position:absolute;top:0;left:0;width:100%;white-space:nowrap;font-size:3rem;letter-spacing:.3em;color:#c8a870;font-family:Georgia,serif;text-align:center;animation:titleGlow 3s ease-in-out infinite;}
 #titleTop{clip-path:polygon(-5% 0,105% 0,105% 50%,-5% 30%);transition:transform 0.18s ease-out;}
 #titleBot{clip-path:polygon(-5% 30%,105% 50%,105% 110%,-5% 110%);transition:transform 0.18s ease-out;}
 #titleTop.cut{transform:translate(1px,-3px);}
 #titleBot.cut{transform:translate(-1px,3px);}
 #bloodCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:101;}
-#intro p{color:#6a5a4a;font-size:1rem;letter-spacing:.15em;margin-bottom:2rem;}
+#intro p{color:#6a5a4a;font-size:1rem;letter-spacing:.15em;margin-bottom:.8rem;}
 #intro button{background:none;border:1px solid #60402090;color:#a08060;padding:.8rem 2.5rem;font-family:Georgia,serif;font-size:1rem;letter-spacing:.2em;cursor:pointer;transition:all .25s;}
 #intro button:hover{border-color:#d4903a;color:#f0c060;box-shadow:0 0 18px #c0701860,0 0 6px #c0701830;text-shadow:0 0 12px #c8902080;}
 button{transition:all .25s;}
@@ -164,11 +182,18 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 <canvas id="grain" width="256" height="256"></canvas>
 
 <div id="intro">
+  <canvas id="titleDust"></canvas>
+  <div id="titleCornerTL"></div>
+  <div id="titleCornerTR"></div>
+  <div id="titleCornerBL"></div>
+  <div id="titleCornerBR"></div>
+  <div id="titleSub">Voss Motor Inn &nbsp;·&nbsp; Room 1 &nbsp;·&nbsp; 1891</div>
   <div id="titleWrap">
     <div class="titleHalf" id="titleTop">THE AWAKENING</div>
     <div class="titleHalf" id="titleBot">THE AWAKENING</div>
   </div>
   <canvas id="bloodCanvas"></canvas>
+  <div id="titleDivider"></div>
   <p>A mystery in 30 rooms · Find the key · Escape</p>
   <button onclick="openNameEntry()">NEW GAME</button>
   <button id="continueBtn" onclick="startGame(true)" style="display:none;margin-top:.6rem;border-color:#406040a0;color:#70a070;">CONTINUE</button>
@@ -176,7 +201,13 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
   <button onclick="toggleRecords()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">🏆 RECORDS</button>
   <button onclick="toggleExtraStuff()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">✦ EXTRA STUFF</button>
   <button onclick="toggleA11y()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">♿ ACCESSIBILITY</button>
+  <div style="margin-top:1.2rem;border-top:1px solid #2a1e0a50;padding-top:.9rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;">
+    <div style="font-size:.5rem;letter-spacing:.3em;color:#2a1e10;margin-bottom:.1rem;">QUICK START</div>
+    <button onclick="quickStartCh2()" style="background:none;border:1px solid #3a402090;color:#6a7040;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 2</button>
+    <button onclick="quickStartCh3()" style="background:none;border:1px solid #2a4a2090;color:#50804060;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;color:#609060;">▶ CHAPTER 3</button>
+  </div>
   <p id="saveInfo" style="font-size:.65rem;color:#3a2a18;margin-top:.5rem;display:none;"></p>
+  <div id="titleVersion">VERSION 2.0 &nbsp;·&nbsp; THE AWAKENING</div>
 </div>
 <div id="saveIndicator" style="position:fixed;bottom:12px;right:16px;font-size:.6rem;color:#6a8a6a;letter-spacing:.1em;opacity:0;transition:opacity .4s;pointer-events:none;z-index:100;">SAVED</div>
 
@@ -233,7 +264,8 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 <div id="deathScreen">
   <h1>YOU DIED</h1>
   <p id="deathMsg"></p>
-  <button onclick="location.reload()">TRY AGAIN</button>
+  <button id="deathRetryBtn" onclick="retryChapter()">RETRY CHAPTER</button>
+  <button onclick="location.reload()" style="margin-top:.7rem;background:none;border:1px solid #40201060;color:#804040;padding:.5rem 1.6rem;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;cursor:pointer;">MAIN MENU</button>
 </div>
 
 <div id="pauseScreen" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:800;display:none;flex-direction:column;align-items:center;justify-content:center;font-family:Georgia,serif;">
@@ -245,8 +277,9 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 
 <!-- ACCESSIBILITY PANEL -->
 <div id="nameEntryPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:910;flex-direction:column;align-items:center;justify-content:center;font-family:Georgia,serif;">
-  <h2 style="color:#c8a870;letter-spacing:.35em;font-size:1.3rem;margin-bottom:.3rem;">WHAT IS YOUR NAME?</h2>
+  <h2 id="nameEntryTitle" style="color:#c8a870;letter-spacing:.35em;font-size:1.3rem;margin-bottom:.3rem;">WHAT IS YOUR NAME?</h2>
   <p style="color:#4a3820;font-size:.62rem;letter-spacing:.2em;margin-bottom:1.8rem;">The house will remember you.</p>
+  <button onclick="randomizeName()" style="margin-bottom:.7rem;background:none;border:1px solid #4a382060;color:#7a6040;font-family:Georgia,serif;font-size:.62rem;letter-spacing:.2em;padding:.3rem 1rem;cursor:pointer;border-radius:2px;">🎲 RANDOMIZE</button>
   <input id="nameInput" type="text" maxlength="18" autocomplete="off" spellcheck="false"
     placeholder="Enter your name…"
     style="background:rgba(20,12,5,0.9);border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:1.1rem;letter-spacing:.15em;padding:.65rem 1.2rem;width:260px;text-align:center;outline:none;caret-color:#c8a870;border-radius:2px;"
@@ -310,7 +343,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">Author of <em>"Secrets of the Voss Estate"</em> (1894). His book is hidden in the library between rotting shelves. He documented the 1891 incident — including what the groundskeeper heard behind the sealed wall.</div></div>
     </div>
 
-    <div style="font-size:.58rem;letter-spacing:.2em;color:#4a3820;margin-top:.4rem;border-bottom:1px solid #3a2a1050;padding-bottom:.4rem;">CHAPTER 2 — THE HACKER'S HOUSE</div>
+    <div style="font-size:.58rem;letter-spacing:.2em;color:#4a3820;margin-top:.4rem;margin-bottom:.5rem;border-bottom:1px solid #3a2a1050;padding-bottom:.4rem;">CHAPTER 2 — THE HACKER'S HOUSE</div>
 
     <div style="display:flex;gap:1rem;align-items:flex-start;">
       <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🧍‍♀️</span>
@@ -322,6 +355,32 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <span style="font-size:2rem;min-width:2.4rem;text-align:center;">💻</span>
       <div><div style="color:#c03020;font-size:.78rem;letter-spacing:.2em;">THE HACKER</div>
       <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">He broadcasts from the roof. Five camera feeds. He knows every room. He's been watching Mara for two years — a photo of her is pinned to the basement wall. He is arrested after you escape. He is never named.</div></div>
+    </div>
+
+    <div style="font-size:.58rem;letter-spacing:.2em;color:#4a3820;margin-top:.4rem;margin-bottom:.5rem;border-bottom:1px solid #3a2a1050;padding-bottom:.4rem;">CHAPTER 3 — COUNTY GENERAL HOSPITAL</div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🧪</span>
+      <div><div style="color:#80c890;font-size:.78rem;letter-spacing:.2em;">DR. VICTOR MOSS</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">A researcher working on a biological compound he called "Project Anamnesis." He believed it could reverse certain neurological conditions. He was wrong about the dosage. He administered it to his assistant James, then was bitten in return. His field journal is in the Specimen Lab. He never finished it.</div></div>
+    </div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🧟</span>
+      <div><div style="color:#c05030;font-size:.78rem;letter-spacing:.2em;">JAMES</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">Dr. Moss's lab assistant. He volunteered for the first human trial. The journal says he was enthusiastic. He is not enthusiastic any more. He is now somewhere in the lower ward and should not be approached.</div></div>
+    </div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">👩‍⚕️</span>
+      <div><div style="color:#a0b8d0;font-size:.78rem;letter-spacing:.2em;">NURSE ELLIE T.</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">She left you the master exit key in the supply closet before she fled. She left a note. She never gave her last name. The supply inventory sheet says she took the south stairs. Nobody knows if she made it.</div></div>
+    </div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">📋</span>
+      <div><div style="color:#a08050;font-size:.78rem;letter-spacing:.2em;">DR. R. HARWICK</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">The overnight doctor who filled in your intake form. He left you a note in the patient clipboard explaining the situation. He sealed Ward C himself with duct tape and a trolley. His signature appears on three documents you find in the hospital. He is not found in any of the rooms.</div></div>
     </div>
 
   </div>
@@ -344,6 +403,14 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <div style="color:#c8a870;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE VOSS MOTOR INN</div>
       <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">The motel sign flickers in the rain: VOSS MOTOR INN — VACANCY. The estate was converted at some point into a motel. The 30 rooms are its 30 chambers. The pocket watch in Room 1 is still ticking. Nobody knows who reset it.</div>
     </div>
+    <div style="border-left:2px solid #40602890;padding-left:1rem;margin-top:.5rem;">
+      <div style="color:#80c870;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">PROJECT ANAMNESIS</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">Dr. Victor Moss worked for three months on a compound he believed could reverse certain neurological conditions — what he called "persistent memory erasure." His research notes describe successful animal trials. Trial 7 was the first human compound. It was not what he thought it was. His lab was inside County General Hospital, which itself was built on the eastern edge of the old Voss Estate. Some say the ground there has always been strange.</div>
+    </div>
+    <div style="border-left:2px solid #40602890;padding-left:1rem;">
+      <div style="color:#80c870;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE CONTAINMENT TIMER</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">County General's biohazard protocol triggers an automated containment seal — blast doors on all external exits — after a ten-minute warning period. The protocol was designed for chemical spills. It was never designed for what it ended up containing. Once the doors seal, they cannot be opened from the inside or outside without a decontamination team and a 48-hour wait.</div>
+    </div>
   </div>
 
   <!-- FUN FACTS tab -->
@@ -359,6 +426,12 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🏆</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">There are 4 trophy tiers. Platinum requires escaping in under 1 hour — with a 1-hour timer. It's possible.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🛶</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">After escaping chapter 1 you board a boat. The note Mara found — MARINA SLIP 7 — is where it was docked.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">👻</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">Eleanor Voss never left the estate. She said so in her letter. The lantern in the Secret Room is still lit.</span></div>
+    <div style="color:#5a4a30;font-size:.6rem;letter-spacing:.2em;margin-top:.4rem;margin-bottom:.2rem;">CHAPTER 3 — THE HOSPITAL</div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🧪</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">County General Hospital was built on the site of the old Voss Estate east wing. The plaque says "founded 1987." The safe combination is the founding year.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🗝</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">There are 4 keys and 3 treasures across 10 rooms. You have exactly 10 minutes — no extensions.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🧟</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The thing in the north stairwell camera feed is never named. You see it for exactly one second.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">📋</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">Dr. Harwick's intake form admits you were exposed to a biohazard. He signed the form at 03:14am — the same time the containment timer started.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🛡</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The antidote sample you collect from the security safe is the only vial that existed. It was never administered. Dr. Moss ran out of time.</span></div>
   </div>
 
   <button onclick="toggleExtraStuff()" style="margin-top:1.8rem;margin-bottom:2rem;background:none;border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;padding:.55rem 1.8rem;cursor:pointer;">CLOSE</button>
@@ -454,6 +527,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 </div>
 
 <div id="ch2Black"><div class="ch2cap" id="ch2Cap"></div></div>
+<div id="ch3Black" style="display:none;position:fixed;inset:0;background:#0a0d08;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch3Cap" style="color:#3a4a2a;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:520px;line-height:1.8;"></div></div>
 
 <div id="mapsScreen">
   <div id="mapsHeader">
@@ -608,7 +682,67 @@ function triggerDeathEffect(msg){
   setTimeout(()=>{
     canvas.style.opacity='0';
     deathEl.style.display='flex';
+    // Label the retry button for the current chapter
+    const retryBtn=document.getElementById('deathRetryBtn');
+    if(retryBtn){
+      if(ch3Active) retryBtn.textContent='RETRY CHAPTER 3';
+      else if(ch2Active) retryBtn.textContent='RETRY CHAPTER 2';
+      else retryBtn.textContent='RETRY CHAPTER 1';
+    }
   },2400);
+}
+
+function quickStartCh2(){
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  loadChapter2();
+  setInterval(saveGame,10000); loadA11ySettings();
+}
+
+function quickStartCh3(){
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  loadChapter3();
+  setInterval(saveGame,10000); loadA11ySettings();
+}
+
+function retryChapter(){
+  // Reset all death/flash visuals
+  document.getElementById('deathScreen').style.display='none';
+  document.getElementById('deathFlash').style.background='rgba(0,0,0,0)';
+  document.getElementById('bloodDrip').style.opacity='0';
+  document.getElementById('bloodCanvas').style.opacity='0';
+  // Ensure game panel is visible
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
+  // Clear any existing music/sound
+  try{ musicNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}});musicNodes=[]; }catch(e){}
+  startAmbientMusic();
+  if(ch3Active){
+    loadChapter3();
+  } else if(ch2Active){
+    loadChapter2();
+    maraSpeak("Mara: \"Let's try again. Five keys. Front door.\"");
+  } else {
+    // Chapter 1 — reset to room 1
+    try{ localStorage.removeItem('awakening_save'); }catch(e){}
+    state.currentRoom=1; state.visitedRooms=new Set([1]); state.inventory=[];
+    state.selectedItem=null; state.roomItemsFound={}; state.unlockedDoors=new Set();
+    state.brokenDoors=new Set(); state.ventOpened=false; state.escaped=false;
+    state.allRoomsVisited=false; state.totalTreasure=0; state.notebookRead=false;
+    hunterRoom=30; timerSeconds=3600; gameStartTime=Date.now();
+    connMap=buildConnectionMap();
+    render();
+    addLog(`${playerName} wakes again. The room is locked. Trapped.`,'important');
+    showOverlay(`TRY AGAIN`,`The pocket watch is ticking again.\n\nRead the notebook. Then run.`);
+  }
 }
 
 function sfxHammer(){
@@ -746,6 +880,37 @@ function sfxPoliceSiren(){
   });
   o1.start(now);o2.start(now);
   o1.stop(now+3);o2.stop(now+3);
+}
+
+function sfxZombieGroan(){
+  const ac=getAudio(); if(!ac) return;
+  const t=ac.currentTime;
+  // Low, wavering moan — sine with slow vibrato
+  const o=ac.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(90,t);
+  o.frequency.linearRampToValueAtTime(120,t+0.8);
+  o.frequency.linearRampToValueAtTime(70,t+1.8);
+  o.frequency.linearRampToValueAtTime(110,t+2.5);
+  // Vibrato LFO
+  const lfo=ac.createOscillator(); lfo.frequency.value=4.5;
+  const lfoG=ac.createGain(); lfoG.gain.value=6;
+  lfo.connect(lfoG); lfoG.connect(o.frequency);
+  // Bandpass for throaty quality
+  const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=200; bp.Q.value=1.5;
+  const g=ac.createGain();
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.12,t+0.4);
+  g.gain.linearRampToValueAtTime(0.09,t+2.0); g.gain.exponentialRampToValueAtTime(0.0001,t+2.8);
+  o.connect(bp); bp.connect(g); g.connect(ac.destination);
+  o.start(t); lfo.start(t); o.stop(t+3); lfo.stop(t+3);
+  // Raspy breath underneath
+  const len=ac.sampleRate*2|0;
+  const buf=ac.createBuffer(1,len,ac.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.sin(Math.PI*i/len)*0.5;
+  const src=ac.createBufferSource(); src.buffer=buf;
+  const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300;
+  const rg=ac.createGain(); rg.gain.value=0.05;
+  src.connect(lp); lp.connect(rg); rg.connect(ac.destination); src.start(t+0.3);
 }
 
 function sfxSlash(){
@@ -1114,7 +1279,18 @@ function startAmbientMusic(){
 
 // ── PLAYER NAME ───────────────────────────────────────────────────
 let playerName = 'You';
+let _nameEntryCallback=null;
 function openNameEntry(){
+  _nameEntryCallback=()=>startGame(false);
+  document.getElementById('nameEntryTitle').textContent='WHAT IS YOUR NAME?';
+  document.getElementById('nameInput').value='';
+  document.getElementById('nameError').textContent='';
+  document.getElementById('nameEntryPanel').style.display='flex';
+  setTimeout(()=>document.getElementById('nameInput').focus(),80);
+}
+function openNameEntryForCh2(){
+  _nameEntryCallback=()=>startGame(false,true);
+  document.getElementById('nameEntryTitle').textContent='WHAT IS YOUR NAME?';
   document.getElementById('nameInput').value='';
   document.getElementById('nameError').textContent='';
   document.getElementById('nameEntryPanel').style.display='flex';
@@ -1123,15 +1299,22 @@ function openNameEntry(){
 function closeNameEntry(){
   document.getElementById('nameEntryPanel').style.display='none';
 }
+const _randomNames=['Alex','Blake','Casey','Dana','Ellis','Finn','Grey','Harper','Indra','Jules','Kai','Lane','Morgan','Nova','Owen','Parker','Quinn','Reeve','Sloane','Tate','Uma','Vale','Wren','Xander','Yara','Zane','Avery','Brynn','Caden','Delia','Erin','Felix','Gemma','Holt','Iris','Jasper','Kira','Luca','Milo','Nora','Orion','Piper','Reid','Sage','Theo','Vera','Wilder','Xyla','York','Zora'];
+function randomizeName(){
+  const name=_randomNames[Math.floor(Math.random()*_randomNames.length)];
+  document.getElementById('nameInput').value=name;
+  document.getElementById('nameError').textContent='';
+}
+const _badWords=/\b(fuck|shit|ass|bitch|cunt|dick|cock|pussy|nigger|nigga|faggot|fag|retard|whore|slut|bastard|piss|cum|rape|sex|porn|nazi|hitler|penis|vagina|anus|boob|tit|nude|naked)\b/i;
 function confirmName(){
   const raw=document.getElementById('nameInput').value.trim();
-  if(!raw){
-    document.getElementById('nameError').textContent='Please enter a name.';
-    return;
-  }
+  const err=document.getElementById('nameError');
+  if(!raw){ err.textContent='Please enter a name.'; return; }
+  if(_badWords.test(raw)){ err.textContent='Please choose an appropriate name.'; return; }
+  if(/[^a-zA-Z0-9 '\-_.]/u.test(raw)){ err.textContent='Letters, numbers, and basic punctuation only.'; return; }
   playerName=raw;
   closeNameEntry();
-  startGame(false);
+  if(_nameEntryCallback){ _nameEntryCallback(); _nameEntryCallback=null; }
 }
 // Replace "You" at the start of a line with playerName in dialogue
 function pn(str){ return str.replace(/^You\b/,playerName); }
@@ -1379,6 +1562,80 @@ const ROOM_DATA = {
         {id:"hs2",label:"WALLS",x:"5%",y:"20%",w:"15%",h:"60%",examine:"The walls are covered in handwriting — names. Dozens of names. People who were trapped here before you."},
       ]},
 
+  // ══════════════════ CHAPTER 3 — COUNTY GENERAL HOSPITAL (10 rooms) ══════════════════
+  // Layout: two rows of five  |  41–45 (upper wing) / 46–50 (lower wing)
+  // Only keys unlock doors — no hammers. Treasures go into inventory as items.
+  // Timer: 10 minutes. Infection spreads; reach room 50 and use the exit key.
+  41:{name:"Patient Ward A",type:"ward",desc:"You jolt awake on a starched hospital bed. Fluorescent lights flicker. An IV is in your arm — you yank it out. The room smells of antiseptic and something worse underneath. A low groan echoes from somewhere deep in the building.",
+      items:[{id:"ch3_k1",name:"Ward Key",desc:"A brass key on a red plastic tag labelled WARD B — STAFF ONLY."}],
+      hotspots:[
+        {id:"hs1",label:"HOSPITAL BED",x:"15%",y:"30%",w:"45%",h:"50%",examine:"You tear back the thin mattress. Taped to the bed frame underneath: a brass ward key on a red tag.",giveItem:"ch3_k1"},
+        {id:"hs2",label:"WINDOW",x:"65%",y:"20%",w:"22%",h:"40%",examine:"The window is locked from the outside. Through the reinforced glass: a car park, dawn light, and a perimeter fence. No one is out there. The nearest building is a long sprint across open ground."},
+        {id:"hs3",label:"CLIPBOARD",x:"78%",y:"55%",w:"12%",h:"30%",examine:"A patient clipboard. The name says YOU. Admitted: tonight. Reason: 'exposure, shock, collapse — possible biohazard contact.' Someone checked the box next to QUARANTINE PROTOCOL.",readText:{title:"PATIENT INTAKE FORM — County General",body:"PATIENT: [Name on file]\nADMITTED: 03:14 tonight\nREASON: Severe shock, exposure to unknown biologic agent\n\nNOTES (Dr. R. Harwick, overnight):\n\n\"Patient arrived via ambulance with companion (Mara, surname withheld). Both collapsed at scene — 22 Oleander Drive, Dr. Victor Moss's private laboratory.\n\n\"Situation at the lab is being classified. What I can say: there are things walking the lower ward that should not be walking.\n\n\"BIOHAZARD TEAM is 40 minutes out. Until then — do not open the basement access door. Do not go to Ward C. And for the love of everything — GET OUT before the ten-minute containment seal engages. Once it seals: no one gets out.\n\n— Dr. R.H.\""}},
+      ]},
+  42:{name:"Main Hallway",type:"hallway",desc:"A long hospital corridor. Emergency lighting casts everything red. A gurney lies on its side, wheels still spinning. Signs above point to WARD B, NURSES' STATION, and SUPPLIES. A wet drag-mark crosses the linoleum and disappears around the corner.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"EMERGENCY SIGN",x:"20%",y:"15%",w:"55%",h:"20%",examine:"The sign reads: EMERGENCY EXIT — LOWER WING — SOUTH STAIRWELL. An arrow points left. The words TIME TO SEAL: PRINTED IN RED — then the timer readout display is cracked and dark."},
+        {id:"hs2",label:"OVERTURNED GURNEY",x:"15%",y:"40%",w:"30%",h:"45%",examine:"You right the gurney. Nothing useful. A torn hospital gown. The metal wheel is still spinning slowly — whatever hit it was moving fast."},
+      ]},
+  43:{name:"Nurses' Station",type:"nurses",desc:"The central nurses' station. Monitors showing flatlines. A phone knocked off its hook. One monitor shows a camera feed — the lower wing — and something is moving down there, but the resolution is too poor to make out what. The medication cabinet is still locked.",
+      items:[{id:"ch3_k2",name:"Lab Keycard",desc:"A proximity keycard labelled SPECIMEN LAB — LEVEL 2 ACCESS. Dr. Moss's photo is on it."}],
+      hotspots:[
+        {id:"hs1",label:"MONITORS",x:"20%",y:"20%",w:"50%",h:"40%",examine:"Camera feed, Room 34 — lower ward. Something is there. Slow. Wrong-shaped. Moving toward the stairwell. You don't watch for long."},
+        {id:"hs2",label:"DESK",x:"15%",y:"55%",w:"55%",h:"35%",giveItem:"ch3_k2",examine:"Dr. Moss's keycard for the specimen lab is half-hidden under a stack of patient files. You grab it."},
+        {id:"hs3",label:"MEDICATION CABINET",x:"72%",y:"20%",w:"20%",h:"65%",examine:"Locked tight. A sticker reads: CABINET LOCKED DURING BIOHAZARD PROTOCOL. Not what you need anyway.",
+         readText:{title:"PINNED TO THE NURSES' STATION BULLETIN BOARD",body:`STAFF MEMO — RE: DR. VICTOR MOSS\n\nEffective immediately, Dr. Moss's Level 2 lab access is under review.\nHis experiment ("Project Anamnesis") was NOT approved by the ethics board.\n\nIf you see Dr. Moss or his research assistant James in the building tonight, DO NOT ENGAGE.\nPage security immediately.\n\nUpdate (03:02am — Dr. Harwick):\nDo not page security. Security is not responding.\nDo not go to the lower wing.\nGet out if you can.\n\n— Senior Staff Notice`}},
+      ]},
+  44:{name:"Patient Ward B",type:"ward2",desc:"A four-bed ward. Three of the beds are stripped. The fourth has the sheets pulled up over something. You don't look closely. Graffiti scratched into the wall by the door: THEY GO FOR SOUND. STAY QUIET.",
+      items:[{id:"ch3_t1",name:"Dr. Moss's Research Bag",desc:"A leather medical bag. Inside: vials, syringes, and a journal. It may be evidence — or very, very dangerous.",isTreasure:true}],
+      hotspots:[
+        {id:"hs1",label:"BED WITH SHEET",x:"55%",y:"30%",w:"35%",h:"50%",examine:"You don't pull the sheet back. You decide that is the right call and move on."},
+        {id:"hs2",label:"WALL GRAFFITI",x:"10%",y:"15%",w:"20%",h:"50%",examine:"Scratched in a nurse's pen: THEY GO FOR SOUND. STAY QUIET. Below in different handwriting: FIVE ARE INFECTED. SPECIMEN LAB FIRST — FIND THE ANTIDOTE LOG."},
+        {id:"hs3",label:"UNDER BED 2",x:"20%",y:"60%",w:"30%",h:"28%",giveItem:"ch3_t1",examine:"Under the second empty bed: a leather research bag with Dr. Moss's initials burned into the handle. The latch is undone. Inside — his emergency kit and a folded journal."},
+      ]},
+  45:{name:"Specimen Lab",type:"lab",desc:"The lab where it happened. Equipment is everywhere — overturned centrifuge, smashed specimen jars, something dark splashed across the wall that you hope is chemicals. Two lab coats on the floor. One of them is moving slightly with the air conditioning. You tell yourself it's the air conditioning.",
+      items:[{id:"ch3_k3",name:"Emergency Key",desc:"A heavy red emergency key stamped STAIRWELL SOUTH. Hanging from a hook on the wall."}],
+      hotspots:[
+        {id:"hs1",label:"OVERTURNED CENTRIFUGE",x:"15%",y:"35%",w:"35%",h:"45%",examine:"The centrifuge is still spinning, grinding metal. Shattered specimen tubes everywhere. You can read the labels: ANAMNESIS — TRIAL 7 — DO NOT ADMINISTER UNVERIFIED."},
+        {id:"hs2",label:"HOOK ON WALL",x:"72%",y:"25%",w:"12%",h:"40%",giveItem:"ch3_k3",examine:"A heavy red key on a hook by the emergency exit sign: STAIRWELL SOUTH. You take it."},
+        {id:"hs3",label:"LAB JOURNAL",x:"50%",y:"55%",w:"20%",h:"30%",examine:"Dr. Moss's field journal, splattered but legible.",
+         readText:{title:"DR. VICTOR MOSS — FIELD JOURNAL (FINAL ENTRIES)",body:`Day 84 — Trial 7 complete. Compound is stable. Administered to cell culture — reanimation markers are exactly as theorised. This will save thousands.\n\nDay 85 — James is excited. He asked to be the first human trial. I said absolutely not. He said he'd do it himself if I refused. I told him that was against every protocol.\n\nDay 85 (late) — James administered Trial 7 to himself at 22:11. I found him at 22:34.\n\nDay 85 (very late) — James administered Trial 7 to me at 23:07. I am writing this before I lose the ability to write.\n\nIf anyone reads this: the antidote is in the Security Office safe. The code is the year the hospital was founded. Look at the front desk plaque.\n\nI am sorry about everything.\n\n— V. Moss`}},
+      ]},
+  46:{name:"Supply Closet",type:"supply",desc:"A large supply room at the end of the upper wing. Stacked with linen, equipment, and a floor-to-ceiling shelving unit. The shelves have been half-emptied in a hurry. On the top shelf, a red metal lockbox.",
+      items:[{id:"ch3_k4",name:"Master Exit Key",desc:"A heavy steel key on a yellow tag: EMERGENCY EXIT — SOUTH BLOCK — AUTHORISED PERSONNEL."}],
+      hotspots:[
+        {id:"hs1",label:"TOP SHELF",x:"20%",y:"10%",w:"60%",h:"35%",giveItem:"ch3_k4",examine:"You climb the lowest shelf and reach the red lockbox. It's already open — someone got here before you. Inside: the master exit key on a yellow tag. You grab it."},
+        {id:"hs2",label:"EQUIPMENT",x:"15%",y:"45%",w:"65%",h:"45%",examine:"A defibrillator still on. An oxygen tank, nearly empty. Boxes of latex gloves. A wheeled IV stand. Nothing you can carry usefully.",
+         readText:{title:"SUPPLY ROOM — INVENTORY SHEET (HANDWRITTEN ADDENDUM)",body:`STANDARD INVENTORY — see attached.\n\nHANDWRITTEN NOTE (time: 02:58am):\n"Left the master exit key in the red lockbox in case whoever came next needed it. I'm heading for the lower stairwell. Don't come after me.\n\nThe emergency containment timer is on the south wall in the security office. You have ten minutes from when the system triggered (approx. 03:14am). After that the blast doors seal and you aren't getting out.\n\n— Nurse Ellie T."`}},
+      ]},
+  47:{name:"Staff Lounge",type:"lounge",desc:"A cramped staff lounge. Mugs still full of cold coffee. A locker bank along one wall, most hanging open. A TV on a shelf plays static. You hear it — the groan from the floor below — closer than before.",
+      items:[{id:"ch3_t2",name:"Hospital Incident Report",desc:"A sealed incident report: COUNTY GENERAL — BIOHAZARD RESPONSE — CONFIDENTIAL. The seal is already broken.",isTreasure:true}],
+      hotspots:[
+        {id:"hs1",label:"OPEN LOCKERS",x:"10%",y:"20%",w:"30%",h:"65%",examine:"Name tags on the doors: Ellie T., Marco D., Dr. H. One locker has a note taped inside: 'If you find this, take the south stairs. North is gone.' The locker is otherwise empty."},
+        {id:"hs2",label:"TABLE",x:"45%",y:"35%",w:"40%",h:"40%",giveItem:"ch3_t2",examine:"On the break room table, a thick sealed incident report folder — COUNTY GENERAL — BIOHAZARD RESPONSE — CONFIDENTIAL. The seal is already broken. Inside: a full account of what Dr. Moss was actually doing. This is evidence."},
+        {id:"hs3",label:"TV (STATIC)",x:"68%",y:"10%",w:"22%",h:"28%",examine:"The TV shows static except for one second every minute: a close-circuit feed of the north stairwell. You wait. The second arrives. You see the north stairwell. You look away very quickly."},
+      ]},
+  48:{name:"Emergency Corridor",type:"corridor",desc:"A red-lit emergency corridor. The walls are lined with biohazard lockers, all open and emptied. Double doors at the far end: SOUTH STAIRWELL — EMERGENCY EXIT. A keyhole below the push bar.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"BIOHAZARD LOCKERS",x:"10%",y:"20%",w:"30%",h:"60%",examine:"All open. Someone cleared them in a hurry — hazmat suits, respirators, emergency kits. All gone. Just empty hangers and a faint chemical smell."},
+        {id:"hs2",label:"EXIT DOORS",x:"55%",y:"15%",w:"35%",h:"70%",examine:"Double steel doors. A sign: EMERGENCY EXIT — SOUTH STAIRWELL. Below the push bar: a heavy keyhole. The emergency key would open this."},
+      ]},
+  49:{name:"Security Office",type:"security",desc:"The security office. A wall of monitor screens, most showing static. One shows the north corridor, empty now. A key cabinet hangs open — empty. But there's a safe under the desk.",
+      items:[{id:"ch3_t3",name:"Antidote Sample",desc:"A sealed medical vial labelled ANAMNESIS — ANTIDOTE — TRIAL 1. Dr. Moss's handwriting. Evidence — or hope.",isTreasure:true}],
+      hotspots:[
+        {id:"hs1",label:"KEY CABINET",x:"60%",y:"20%",w:"25%",h:"50%",examine:"Empty. Every key gone. One hook has a label that reads EMERGENCY EXIT — SOUTH BLOCK. The key is not on it."},
+        {id:"hs2",label:"SAFE UNDER DESK",x:"15%",y:"45%",w:"35%",h:"40%",giveItem:"ch3_t3",examine:"A floor safe under the desk. The combination is 1987 — the year on the front desk plaque (founded 1987). It clicks open. Inside: a single sealed vial labelled ANAMNESIS — ANTIDOTE — TRIAL 1. You take it.",
+         readText:{title:"WALL PLAQUE — COUNTY GENERAL HOSPITAL",body:`COUNTY GENERAL HOSPITAL\nFounded 1987 — Built on the site of the old Voss Estate east wing.\n\n"Serving this community for over thirty years."\n\n[ Someone has scratched three words below the plaque in what looks like fingernail marks: ]\n\n"STILL NOT ENOUGH."`}},
+      ]},
+  50:{name:"Emergency Exit",type:"exit",desc:"A narrow landing before the final emergency exit. Red emergency lights. A countdown panel on the wall: 00:02 — 00:01 — the display is frozen, but you feel the building shift slightly as the containment system warms up. Two steel blast doors ahead. A smaller door to the right: EMERGENCY EXIT — SOUTH BLOCK.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"BLAST DOORS",x:"15%",y:"20%",w:"45%",h:"60%",examine:"The main blast doors. Already sealing — you can feel the hiss of the pressurised gaskets. These won't open again."},
+        {id:"hs2",label:"EMERGENCY EXIT",x:"62%",y:"25%",w:"28%",h:"55%",examine:"The emergency exit. A heavy steel door with a yellow push-bar. The master exit key fits the lock beside it.",ch3exit:true},
+      ]},
+
   // ══════════════════ CHAPTER 2 — THE HACKER'S HOUSE (5 rooms) ══════════════════
   // Layout: [33:Study]—[31:Entrance]—[32:Living Room]—[35:Bedroom]
   //                          |
@@ -1490,6 +1747,20 @@ const CONNECTIONS = [
   {a:31,b:33,dir:'N', state:'open'},
   {a:31,b:34,dir:'S', state:'open'},
   {a:32,b:35,dir:'E', state:'open'},
+  // ── Chapter 3 — County General Hospital (10 rooms) ──
+  // Upper wing row: 41-45
+  {a:41,b:42,dir:'E', state:'open'},
+  {a:42,b:43,dir:'E', state:'locked', keyId:'ch3_k1'},
+  {a:43,b:44,dir:'E', state:'open'},
+  {a:44,b:45,dir:'E', state:'locked', keyId:'ch3_k2'},
+  // Lower wing row: 46-50
+  {a:46,b:47,dir:'E', state:'open'},
+  {a:47,b:48,dir:'E', state:'open'},
+  {a:48,b:49,dir:'E', state:'locked', keyId:'ch3_k3'},
+  {a:49,b:50,dir:'E', state:'open'},
+  // Vertical connections between wings
+  {a:42,b:46,dir:'S', state:'open'},
+  {a:45,b:47,dir:'S', state:'open'},
 ];
 
 function buildConnectionMap(){
@@ -3878,6 +4149,8 @@ function examineHotspot(hs,foundSet){
   // ch2 special triggers
   if(hs.ch2tv){ showTvScreen(); return; }
   if(hs.ch2exit){ ch2CheckExit(); return; }
+  // ch3 special trigger
+  if(hs.ch3exit){ ch3CheckExit(); return; }
   // requireItem check (cabinet under stairs etc.)
   if(hs.requireItem && !state.inventory.find(i=>i.id===hs.requireItem)){
     const needed=Object.values(ROOM_DATA).flatMap(r=>r.items||[]).find(i=>i.id===hs.requireItem);
@@ -4022,12 +4295,48 @@ const ROOM_GRID = {
   1:24, 2:25, 3:26, 4:27, 5:28, // row 4
   11:30,12:31,13:32,14:33,15:34  // row 5
 };
-// This gives positions 0-35 in a 6-wide grid
+// Chapter 3 uses a separate 5-wide 2-row grid
+const ROOM_GRID_CH3 = {
+  41:0, 42:1, 43:2, 44:3, 45:4,  // row 0 upper wing
+  46:5, 47:6, 48:7, 49:8, 50:9   // row 1 lower wing
+};
 
 function updateMiniMap(){
   const el=document.getElementById('miniMap');
   el.innerHTML='';
-  // 6 wide, 6 rows (with gaps)
+
+  if(ch3Active){
+    // Chapter 3: 5-wide, 2-row grid
+    el.style.gridTemplateColumns='repeat(5,1fr)';
+    const totalCells=10;
+    const roomByPos={};
+    Object.entries(ROOM_GRID_CH3).forEach(([id,pos])=>roomByPos[pos]=parseInt(id));
+    for(let i=0;i<totalCells;i++){
+      const div=document.createElement('div');
+      div.className='mapRoom';
+      const roomId=roomByPos[i];
+      if(roomId){
+        const isVisited=state.visitedRooms.has(roomId);
+        const isCurrent=state.currentRoom===roomId;
+        div.title=ROOM_DATA[roomId].name;
+        if(isCurrent) div.classList.add('current');
+        else if(isVisited) div.classList.add('visited');
+        const numEl=document.createElement('span'); numEl.className='rnum'; numEl.textContent=roomId; div.appendChild(numEl);
+        if(isVisited||isCurrent){
+          const nameEl=document.createElement('span'); nameEl.className='rname';
+          const name=ROOM_DATA[roomId].name; nameEl.textContent=name.length>10?name.substring(0,9)+'…':name; div.appendChild(nameEl);
+        }
+        const found=state.roomItemsFound[roomId];
+        if(found && [...found].some(id=>state.inventory.find(i=>i.isTreasure&&i.id===id))) div.classList.add('treasure');
+        div.onclick=()=>{ if(state.visitedRooms.has(roomId)){ document.getElementById('examineResult').textContent=ROOM_DATA[roomId].name+': '+ROOM_DATA[roomId].desc.substring(0,80)+'...'; } };
+      }
+      el.appendChild(div);
+    }
+    return;
+  }
+
+  // Chapter 1 / 2: original 6-wide grid
+  el.style.gridTemplateColumns='repeat(6,1fr)';
   const totalCells=36;
   const roomByPos={};
   Object.entries(ROOM_GRID).forEach(([id,pos])=>roomByPos[pos]=parseInt(id));
@@ -4103,8 +4412,13 @@ function updateClock(){
   const el=document.getElementById('hunterClock');
   el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   el.classList.remove('urgent','critical');
-  if(timerSeconds<=120) el.classList.add('critical');
-  else if(timerSeconds<=600) el.classList.add('urgent');
+  if(ch3Active){
+    if(timerSeconds<=60) el.classList.add('critical');
+    else if(timerSeconds<=180) el.classList.add('urgent');
+  } else {
+    if(timerSeconds<=120) el.classList.add('critical');
+    else if(timerSeconds<=600) el.classList.add('urgent');
+  }
 }
 
 function togglePause(){
@@ -4353,8 +4667,25 @@ function startTimer(){
     timerSeconds=Math.max(0,timerSeconds-1);
     updateClock();
     sfxTick();
-    if(timerSeconds===120) sfxCritical();
+    if(timerSeconds===(ch3Active?60:120)) sfxCritical();
     if(timerSeconds<=0){ triggerTimerDeath(); return; }
+    if(ch3Active){
+      // Chapter 3: no hunter/idle mechanic — just timer pressure + zombie groans
+      const warn=document.getElementById('hunterWarning');
+      if(timerSeconds<=120){
+        warn.textContent='⚠ CONTAINMENT SEALING — GET OUT ⚠';
+        warn.classList.add('show');
+      } else if(timerSeconds<=300){
+        warn.textContent='⚠ GROANING GETTING CLOSER ⚠';
+        warn.classList.add('show');
+      } else {
+        warn.textContent=''; warn.classList.remove('show');
+      }
+      // Random zombie groan every 25-50 seconds
+      if(timerSeconds%35===0||(timerSeconds%17===0&&timerSeconds<300)) sfxZombieGroan();
+      setTimeout(tick,1000);
+      return;
+    }
     // Idle check — die if stuck in same room for 2 minutes
     const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
     const idleLeft=IDLE_LIMIT-idleSeconds;
@@ -4374,7 +4705,11 @@ function startTimer(){
 }
 
 function triggerTimerDeath(){
-  triggerDeathEffect(`The clock on the wall reached zero.\nCole found ${playerName} in the dark.\n${playerName} never made it to the vent.\n\nThe Voss Motor Inn claimed another guest.`);
+  if(ch3Active){
+    triggerDeathEffect(`The containment seal engaged.\nThe blast doors locked.\n${playerName} heard the groaning get closer.\n\nCounty General Hospital claimed another patient.`);
+  } else {
+    triggerDeathEffect(`The clock on the wall reached zero.\nCole found ${playerName} in the dark.\n${playerName} never made it to the vent.\n\nThe Voss Motor Inn claimed another guest.`);
+  }
 }
 
 function triggerHunterDeath(){
@@ -4459,6 +4794,7 @@ function startHunter(){
 let ch2DoorsUnlocked=false;
 let ch2TvWatched=false;
 let ch2Active=false;
+let ch3Active=false;
 
 function startChapter2(){
   // 1. Black screen — ladder descent
@@ -4973,12 +5309,161 @@ function showFinalCard(timeStr){
   const btn=document.getElementById('ovBtn');
   btn.textContent='PLAY AGAIN';
   btn.onclick=()=>location.reload();
-  document.getElementById('ovBtn2').style.display='none';
+  const btn2=document.getElementById('ovBtn2');
+  btn2.style.display='block';
+  btn2.textContent='CHAPTER 3 →';
+  btn2.style.borderColor='#40806040';
+  btn2.style.color='#60c870';
+  btn2.onclick=()=>{ closeOverlay(); startChapter3(); };
 }
 
 function fmtTime(sec){
   const m=Math.floor(sec/60),s=sec%60;
   return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER 3 — COUNTY GENERAL HOSPITAL
+// ═══════════════════════════════════════════════════════════════
+function startChapter3(){
+  const bl=document.getElementById('ch3Black');
+  const cap=document.getElementById('ch3Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0';
+  cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  // Cinematic: three days later, the lab, the accident
+  caption('Three days later.',800,2800);
+  caption('Mara knows a scientist — Dr. Victor Moss.',4400,2800);
+  caption('He had been working on a cure.',7500,2800);
+  caption('You drove to his lab together.',10800,2800);
+  caption('He administered the compound to his assistant, James.',14000,3200);
+  caption('It was not a cure.',18000,2500);
+  caption('James turned first.',21500,2200);
+  caption('Then Dr. Moss.',24500,2200);
+  caption('Mara screamed.',27500,2200);
+  caption('You do not remember anything after that.',30500,3000);
+  caption('...',34500,2000);
+  caption('You wake up in a hospital.',37500,2500);
+  caption('Mara is not in the room.',40500,2500);
+  caption('Something is groaning in the hallway.',44000,3000);
+  caption('A note on the clipboard: TEN MINUTES BEFORE CONTAINMENT SEALS.',48000,3500);
+  caption('',52500,100);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    document.getElementById('game').style.display='flex';
+    loadChapter3();
+  },53000);
+}
+
+function loadChapter3(){
+  roofMode=false; boatMode=false;
+  gameOver=false; gamePaused=false;
+  ch3Active=true; ch2Active=false;
+  state.currentRoom=41;
+  state.visitedRooms=new Set([41]);
+  state.inventory=[];
+  state.selectedItem=null;
+  state.roomItemsFound={};
+  state.unlockedDoors=new Set();
+  state.brokenDoors=new Set();
+  state.ventOpened=false; state.escaped=false;
+  state.allRoomsVisited=false; state.totalTreasure=0;
+  // 10-minute timer
+  timerSeconds=600; timerRunning=false; gameStartTime=Date.now();
+  gameOver=false;
+  updateClock();
+  connMap=buildConnectionMap();
+  // Hospital atmosphere: green-tinged darkness
+  if(S){ S.fog=new THREE.FogExp2(0x020a04,0.10); S.background=new THREE.Color(0x020a04); }
+  render();
+  addLog(`${playerName} wakes in Patient Ward A. 10 minutes until containment.`,'important');
+  addLog('Find keys. Reach the Emergency Exit. DO NOT stop.','important');
+  setTimeout(()=>{
+    showOverlay('COUNTY GENERAL HOSPITAL',`${playerName} opens their eyes.\n\nFluorescent lights flicker. The smell of antiseptic — and something underneath it. Something wrong.\n\nA clipboard on the bed: BIOHAZARD PROTOCOL ACTIVE. CONTAINMENT IN 10 MINUTES.\n\nSomething groans in the hallway. Low. Wrong.\n\nFind keys. Open every door. Get to the emergency exit.\n\nDon't let the timer hit zero.`);
+    startTimer();
+    sfxZombieGroan();
+  },800);
+}
+
+const CH3_EXIT_KEY='ch3_k4';
+function ch3CheckExit(){
+  if(!state.inventory.find(i=>i.id===CH3_EXIT_KEY)){
+    const found=state.inventory.filter(i=>i.id.startsWith('ch3_k')).length;
+    document.getElementById('examineResult').textContent=`The master exit door needs the emergency exit key. You have ${found} of 4 keys.`;
+    sfxDoorLocked();
+    return;
+  }
+  // Use the key to escape
+  gameOver=true; state.escaped=true;
+  addLog(`${playerName} pushes through the emergency exit. FREE.`,'important');
+  sfxEscape();
+  setTimeout(triggerCh3Escape,600);
+}
+
+function triggerCh3Escape(){
+  const elapsed=600-timerSeconds;
+  const timeStr=fmtTime(elapsed);
+  const bl=document.getElementById('ch3Black');
+  const cap=document.getElementById('ch3Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('The emergency door swings open.',800,2500);
+  caption('Cold morning air hits your face.',3800,2500);
+  caption('You sprint across the car park.',7000,2200);
+  caption('Behind you — the blast doors seal with a deep metallic CLUNK.',10000,3200);
+  caption('You hear something hit the inside of the doors.',14000,2800);
+  caption('Once.',16500,1200);
+  caption('Then silence.',18500,2500);
+  caption('Mara is at the perimeter fence.',22000,2500);
+  caption('"I thought you weren\'t coming out."',25000,2800);
+  caption('YOU: "I almost didn\'t."',28500,2000);
+  caption('The sun is fully up.',31500,2500);
+  caption('Somewhere, a siren starts.',34500,2000);
+  caption('You and Mara walk to the road and do not look back.',37500,3500);
+  caption('',42000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    showCh3FinalCard(timeStr);
+  },42500);
+}
+
+function showCh3FinalCard(timeStr){
+  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
+  const prevBest=parseInt(localStorage.getItem('ch3_best')||'99999',10);
+  const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
+  if(elapsed<prevBest) localStorage.setItem('ch3_best',String(elapsed));
+  const best=parseInt(localStorage.getItem('ch3_best'),10);
+  const bm=Math.floor(best/60),bs=best%60;
+  const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+
+  const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
+  function showCard(){
+    document.getElementById('ovTitle').textContent='YOU ESCAPED';
+    document.getElementById('ovText').textContent=
+      `You made it out of County General Hospital.\nYou sealed them inside.\nMara was waiting.\n\nDr. Moss and James — contained.\nThe antidote sample — recovered.\n\nYou and Mara are free.\n\n────────────────────\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nTreasures:  ${treasureCount} / 3\n────────────────────`;
+    document.getElementById('overlay').style.display='flex';
+    const btn=document.getElementById('ovBtn');
+    btn.textContent='PLAY AGAIN';
+    btn.onclick=()=>location.reload();
+    const btn2=document.getElementById('ovBtn2');
+    btn2.style.display='none';
+  }
+  if(elapsedMs) showTrophy(elapsedMs, showCard);
+  else showCard();
 }
 
 function triggerEscape(){
@@ -5229,6 +5714,38 @@ function buildDroppedItemsForRoom(roomId){
 
 
 
+// ── TITLE DUST PARTICLES ─────────────────────────────────────────
+(function(){
+  const c=document.getElementById('titleDust');
+  if(!c) return;
+  function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; }
+  resize(); window.addEventListener('resize',resize);
+  const ctx=c.getContext('2d');
+  const N=55;
+  const pts=Array.from({length:N},()=>({
+    x:Math.random()*c.width,
+    y:Math.random()*c.height,
+    r:0.4+Math.random()*1.4,
+    vx:(Math.random()-.5)*0.18,
+    vy:-0.08-Math.random()*0.18,
+    alpha:0.08+Math.random()*0.22,
+    flicker:Math.random()*Math.PI*2,
+    fspeed:0.01+Math.random()*0.025,
+  }));
+  function frame(){
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.flicker+=p.fspeed;
+      if(p.y<-4){ p.y=c.height+4; p.x=Math.random()*c.width; }
+      const a=p.alpha*(0.6+0.4*Math.sin(p.flicker));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,168,100,${a})`; ctx.fill();
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
 // ── TITLE SWORD SLASH (one-shot) + BLOOD DRIP ────────────────────
 (function(){
   const wrap=document.getElementById('titleWrap');
@@ -5442,7 +5959,7 @@ function buildDroppedItemsForRoom(roomId){
   }, 100); // end layout wait
 })();
 
-function startGame(resume){
+function startGame(resume, skipToCh2=false){
   document.getElementById('intro').style.display='none';
   document.getElementById('game').style.display='flex';
   const bc=document.getElementById('bloodCanvas');
@@ -5451,10 +5968,27 @@ function startGame(resume){
   connMap = buildConnectionMap();
 
   if(resume && loadGame()){
-    // If the save has a chapter 2 room, restore ch2 flags
-    if(state.currentRoom>=31){ ch2Active=true; }
+    // If the save has a chapter 2 or 3 room, restore flags
+    if(state.currentRoom>=41){ ch3Active=true; }
+    else if(state.currentRoom>=31){ ch2Active=true; }
     addLog('Game resumed.','important');
     if(!gameStartTime) gameStartTime=Date.now();
+  } else if(skipToCh2){
+    // Skip straight to the hacker's house
+    try{ localStorage.removeItem('awakening_save'); }catch(e){}
+    gameOver=false; gamePaused=false; gameStartTime=Date.now();
+    // Boot up then load chapter 2 after engine is ready
+    window.addEventListener('resize',resizeCanvas);
+    resizeCanvas();
+    stopTitleMusic();
+    startAmbientMusic();
+    initParticles();
+    startGameLoop();
+    loadChapter2();
+    setInterval(saveGame,10000);
+    updateClock();
+    loadA11ySettings();
+    return;
   } else {
     // New game — explicit clean reset
     try{ localStorage.removeItem('awakening_save'); }catch(e){}
@@ -5538,10 +6072,10 @@ function loadGame(){
     state.notebookRead=data.notebookRead||false;
     if(data.playerName) playerName=data.playerName;
     if(data.timerSeconds!=null) timerSeconds=data.timerSeconds;
-    if(data.timerRunning && state.notebookRead){
+    if(data.timerRunning && (state.notebookRead||ch2Active||ch3Active)){
       // Resume the timer where it left off
       startTimer();
-      startHunter();
+      if(!ch3Active) startHunter(); // no hunter in ch3
     }
     return true;
   }catch(e){ return false; }
@@ -5553,18 +6087,19 @@ function loadGame(){
     const raw=localStorage.getItem('awakening_save');
     if(raw){
       const d=JSON.parse(raw);
-      // Wipe saves from chapter 2 or test states — chapter 1 only (rooms 1-30)
-      if(!d.currentRoom || d.currentRoom > 30){
-        localStorage.removeItem('awakening_save');
-        return;
-      }
+      if(!d.currentRoom){ localStorage.removeItem('awakening_save'); return; }
       const btn=document.getElementById('continueBtn');
       const info=document.getElementById('saveInfo');
       if(btn) btn.style.display='block';
+      // Show which chapter the save is from
+      let chLabel='Ch.1';
+      let roomCount=30;
+      if(d.currentRoom>=41){ chLabel='Ch.3'; roomCount=10; }
+      else if(d.currentRoom>=31){ chLabel='Ch.2'; roomCount=5; }
       if(info&&d.savedAt){
         const mins=Math.round((Date.now()-d.savedAt)/60000);
         const rooms=(d.visitedRooms||[]).length;
-        info.textContent=`Last save: ${mins<1?'just now':mins+'m ago'} · ${rooms}/30 rooms`;
+        info.textContent=`${chLabel} · Last save: ${mins<1?'just now':mins+'m ago'} · ${rooms}/${roomCount} rooms`;
         info.style.display='block';
       }
     }
