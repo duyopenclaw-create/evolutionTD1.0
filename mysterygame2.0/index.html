@@ -235,6 +235,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div id="hunterClock">60:00</div>
     <div id="hunterWarning"></div>
     <button id="pauseBtn" onclick="togglePause()" style="position:absolute;top:62px;right:10px;background:rgba(5,3,2,0.88);border:1px solid #4a3820;color:#a08050;font-family:'Courier New',monospace;font-size:.65rem;letter-spacing:.15em;padding:.28rem .75rem;cursor:pointer;z-index:25;border-radius:3px;">⏸ PAUSE</button>
+    <button id="muteBtn" onclick="toggleMute()" style="position:absolute;top:62px;right:90px;background:rgba(5,3,2,0.88);border:1px solid #4a3820;color:#a08050;font-family:'Courier New',monospace;font-size:.65rem;letter-spacing:.15em;padding:.28rem .75rem;cursor:pointer;z-index:25;border-radius:3px;">🔊 SOUND</button>
     <button id="ventBtn" onclick="openVent()">[ OPEN VENT ]</button>
     <button id="escapeBtn" onclick="triggerEscape()">[ USE MASTER KEY — ESCAPE ]</button>
   </div>
@@ -540,6 +541,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 <div id="keypadOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,5,20,0.92);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;">
   <div style="border:1px solid #204080;padding:1.8rem 2.2rem;text-align:center;min-width:220px;background:#020a1a;">
     <div style="color:#4080c0;font-size:.65rem;letter-spacing:.35em;margin-bottom:.9rem;">ACCESS REQUIRED</div>
+    <div id="keypadHint" style="color:#506080;font-size:.6rem;letter-spacing:.12em;margin-bottom:.7rem;font-style:italic;min-height:1em;"></div>
     <div id="keypadDisplay" style="font-size:2.2rem;letter-spacing:.5em;color:#80c0ff;border:1px solid #204060;padding:.4rem 1rem;margin-bottom:1.2rem;min-width:120px;text-align:center;background:#010810;">___</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem;">
       <button onclick="keypadPress('1')" class="kpBtn">1</button><button onclick="keypadPress('2')" class="kpBtn">2</button><button onclick="keypadPress('3')" class="kpBtn">3</button>
@@ -588,11 +590,23 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 // ═══════════════════════════════════════════════════════════════
 let audioCtx = null;
 let musicNodes = [];
+let gameMuted = false;
 
 function getAudio(){
   if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
+  if(!gameMuted && audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
+}
+
+function toggleMute(){
+  gameMuted=!gameMuted;
+  const ac=audioCtx;
+  if(ac){
+    if(gameMuted) ac.suspend();
+    else ac.resume();
+  }
+  const btn=document.getElementById('muteBtn');
+  if(btn) btn.textContent=gameMuted?'🔇 MUTED':'🔊 SOUND';
 }
 
 function playTone(freq,type,dur,vol=0.15,delay=0){
@@ -2037,15 +2051,15 @@ const CONNECTIONS = [
   {a:42,b:46,dir:'S', state:'open'},
   {a:45,b:47,dir:'S', state:'open'},
   // ── Chapter 4 — The Future House (10 rooms, code-locked doors) ──
-  {a:51,b:52,dir:'E', state:'coded', code:'472'},
-  {a:52,b:53,dir:'E', state:'coded', code:'815'},
-  {a:53,b:54,dir:'E', state:'coded', code:'396'},
-  {a:54,b:55,dir:'E', state:'coded', code:'208'},
-  {a:55,b:56,dir:'E', state:'coded', code:'741'},
-  {a:56,b:57,dir:'E', state:'coded', code:'539'},
-  {a:57,b:58,dir:'E', state:'coded', code:'627'},
-  {a:58,b:59,dir:'E', state:'coded', code:'184'},
-  {a:59,b:60,dir:'E', state:'coded', code:'953'},
+  {a:51,b:52,dir:'E', state:'coded', code:'472', hint:'Check the NEWS SCREEN in this room.'},
+  {a:52,b:53,dir:'E', state:'coded', code:'815', hint:'Check the MEAL MATERIALISER in this room.'},
+  {a:53,b:54,dir:'E', state:'coded', code:'396', hint:'Check YOUR FILE on the office screens.'},
+  {a:54,b:55,dir:'E', state:'coded', code:'208', hint:'Check the FLOATING NIGHTSTAND clock.'},
+  {a:55,b:56,dir:'E', state:'coded', code:'741', hint:'Check the SPECIMEN VAULT keypad.'},
+  {a:56,b:57,dir:'E', state:'coded', code:'539', hint:'Check the TORN CONTAINER serial number.'},
+  {a:57,b:58,dir:'E', state:'coded', code:'627', hint:'Check the SECURITY MONITORS.'},
+  {a:58,b:59,dir:'E', state:'coded', code:'184', hint:'Check the COORDINATE CONSOLE.'},
+  {a:59,b:60,dir:'E', state:'coded', code:'953', hint:'Check the CRASHED ROBOT serial number.'},
   // ── Chapter 5 — One Year Later (10 rooms, Cole hunts) ──
   {a:61,b:62,dir:'E', state:'open'},
   {a:62,b:63,dir:'E', state:'open'},
@@ -4981,7 +4995,7 @@ function tryMove(toRoom){
     }
   } else if(ds==='coded'){
     const conn=getConnection(state.currentRoom,toRoom);
-    openKeypad(state.currentRoom, toRoom, conn.code, travelDir);
+    openKeypad(state.currentRoom, toRoom, conn.code, travelDir, conn.hint);
   }
 }
 
@@ -5810,9 +5824,10 @@ let ch4Active=false;
 let ch5Active=false;
 // ── Keypad state ──────────────────────────────────────────────────
 let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
-function openKeypad(from, to, code, dir){
+function openKeypad(from, to, code, dir, hint){
   _kpFrom=from; _kpTo=to; _kpCode=code; _kpDir=dir; _kpInput='';
   document.getElementById('keypadDisplay').textContent='___';
+  document.getElementById('keypadHint').textContent=hint||'';
   document.getElementById('keypadOverlay').style.display='flex';
   sfxKeypadBeep();
 }
