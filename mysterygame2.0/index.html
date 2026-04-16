@@ -1804,128 +1804,152 @@ const ROOM_DATA = {
   // Teleported here by the hacker. Robots attacking. 15-minute timer. Code-locked doors.
   // Each room has a 3-digit code visible on a panel — type it in order to unlock the next door.
   51:{name:"Arrival Chamber",type:"futlounge",desc:"You snap awake. White walls. Curved furniture. The air tastes recycled. A wall-screen plays rolling news: CLEANUP COMPLETE — ZOMBIE PATHOGEN NEUTRALISED — ROBOT UNITS DEPLOYED. Then: HACKER NEUTRALISED BY AGENT HARGROVE. Cole killed him. A proximity alarm starts screaming somewhere below you. The robots know you're here.",
-      items:[],
+      items:[{id:"hacker_tablet",name:"Hacker's Last Message",desc:"A cracked data tablet. The hacker left it here. A voice note plays on loop: 'I didn't finish the kill-switch. The codes are in the rooms. Each door has one. Find them. I'm sorry.' Then static."}],
       hotspots:[
         {id:"hs1",label:"NEWS SCREEN",x:"10%",y:"15%",w:"65%",h:"55%",examine:"The news ticker scrolls: CLEANUP UNIT DELTA — OVERRIDE DETECTED — INTRUDER ALERT. Below the ticker, a system readout in small print — this is the house's broadcast channel. In the bottom corner of the screen: a maintenance code. 4. 7. 2."},
         {id:"hs2",label:"ROBOT UNIT",x:"72%",y:"25%",w:"20%",h:"60%",examine:"A maintenance drone, roughly humanoid. Dormant — for now. Its chest panel shows a charging indicator at 34%. When it reaches 100% it will activate. The charge bar ticks upward as you watch. Move fast."},
+        {id:"hs3",label:"CURVED SOFA",x:"25%",y:"60%",w:"45%",h:"28%",giveItem:"hacker_tablet",examine:"Something is wedged between the sofa cushions. A cracked data tablet — warm, like it was just set down. A voice note plays on loop. You pocket it. The hacker was here before you."},
       ]},
   52:{name:"Nutrition Hub",type:"futkitchen",desc:"A kitchen with no recognisable appliances. Everything flush in white surfaces. A meal materialiser stands open — half-formed food rotting inside. The robot was interrupted mid-task. On the nutrition panel above the counter, a red ACCESS DENIED prompt flashes next to some digits.",
       items:[],
       hotspots:[
         {id:"hs1",label:"MEAL MATERIALISER",x:"15%",y:"35%",w:"45%",h:"45%",examine:"The half-assembled meal — something that might have been a protein pack — slowly decays in the materialiser tray. The unit's status panel reads: PROCESS INTERRUPTED 03:14:22. Below the abort timestamp: an emergency reset code. 8 — 1 — 5."},
         {id:"hs2",label:"NUTRITION PANEL",x:"65%",y:"20%",w:"25%",h:"50%",examine:"A wall panel controls the whole hub's systems. Most functions locked. One display shows the current room code required to proceed: the digits rotate — 8, 1, 5 — in the emergency override sequence."},
+        {id:"hs3",label:"COUNTER UNITS",x:"20%",y:"45%",w:"40%",h:"25%",examine:"The counter is spotless white polymer — no seams, no handles, no visible joints. The whole surface is one surface. There's a faint hum from beneath it — a refrigeration unit keeping something cold. You don't have time to find out what."},
       ]},
   53:{name:"Home Office",type:"futoffice",desc:"Three holographic screens still active. One shows your file photo — full name, address, photograph taken on the street outside your flat. Three months ago. He sent them a dossier on you before he died. A fourth screen is dark except for a blinking cursor and three glowing digits.",
-      items:[],
+      items:[{id:"ch4_t1",name:"Evidence Chip",desc:"A data chip labelled EVIDENCE — HARGROVE CASE — DO NOT DELETE. The hacker compiled everything about Cole. This is the proof that could have put him away permanently.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"YOUR FILE",x:"15%",y:"20%",w:"50%",h:"55%",examine:"Your entire life in a holographic folder. Medical records. Bank statements. The motel room where this all started, three weeks ago. And at the bottom — a note: IF SUBJECT REACHES THIS POINT, INITIATE PROTOCOL DELTA. Code: 3-9-6."},
         {id:"hs2",label:"DARK SCREEN",x:"68%",y:"25%",w:"22%",h:"45%",examine:"The screen flickers on as you approach. A text prompt: IDENTITY UNVERIFIED — EMERGENCY EXIT CODE: 396. Then it goes dark again. The robots are 40 seconds behind you."},
+        {id:"hs3",label:"DESK DRAWER",x:"20%",y:"65%",w:"45%",h:"22%",giveItem:"ch4_t1",examine:"A shallow drawer under the desk. Inside: a data chip in a protective sleeve, labelled EVIDENCE — HARGROVE CASE. The hacker compiled it all. You take it. This is why he died."},
       ]},
   54:{name:"Sleep Module",type:"futbedroom",desc:"A bed that auto-adjusts to body weight. An alarm clock on a floating nightstand reads 2:08 in electric blue. The walls are smart-glass — currently frosted. On the floor: a floor-safe hatch, cracked open and emptied. Someone else was here. Recently.",
       items:[],
       hotspots:[
         {id:"hs1",label:"FLOATING NIGHTSTAND",x:"55%",y:"30%",w:"30%",h:"45%",examine:"The alarm clock reads 2:08. An odd time to freeze on. You look closer — it's not frozen. It's displaying a static emergency code. Under the clock: a sticky note in hasty handwriting: 'If you're reading this — the code is the time. Two zero eight. Go.'"},
         {id:"hs2",label:"FLOOR SAFE (OPEN)",x:"20%",y:"60%",w:"35%",h:"25%",examine:"Empty. Scratched into the interior lining of the safe door: a child's drawing of a person running. And below it, a single word in tiny letters: HURRY."},
+        {id:"hs3",label:"AUTO BED",x:"20%",y:"30%",w:"35%",h:"35%",examine:"The bed senses your weight and begins adjusting — raising on one side, lowering on the other — as if calibrating for a different body. It was last slept in recently. The indent is still warm. You back away from it."},
       ]},
   55:{name:"Research Bay",type:"futlab",desc:"Home laboratory. Test tubes in magnetic suspension float in precise rows. A specimen vault stands sealed on the far wall. Overhead lights strobe in a repeating pattern — three pulses, four pulses, one pulse — like a distress signal, or a door code.",
       items:[],
       hotspots:[
         {id:"hs1",label:"MAGNETIC RACK",x:"15%",y:"25%",w:"50%",h:"55%",examine:"The specimens rotate slowly — each tube labelled with a compound number. The rack's control panel shows the current suspension sequence. Three units active. Four units active. One unit active. 3 — 4 — 1. The numbers cycle in order."},
         {id:"hs2",label:"SPECIMEN VAULT",x:"68%",y:"20%",w:"22%",h:"60%",examine:"Sealed biometrically. The keypad beside it has three digits glowing: 7-4-1. They flash in sequence, then reset. You commit it to memory."},
+        {id:"hs3",label:"LAB WORKBENCH",x:"15%",y:"60%",w:"40%",h:"25%",examine:"A sterile workbench. Slides, pipettes, analysis trays — all untouched. A rubber-sealed notebook lies open to a page of calculations. You can't follow the science but one line is circled twice in red pen: 'SEQUENCE CONFIRMS: ZOMBIE PATHOGEN WAS ENGINEERED.' Someone built it. Someone let it out."},
       ]},
   56:{name:"Storage Module",type:"futstorage",desc:"Rows of white polymer containers. Most empty — cleared out in a hurry. One container has been torn open from the inside, leaving scrape marks on the polymer. What came out of it is now somewhere in this house. A serial number is stamped on the torn container.",
-      items:[],
+      items:[{id:"ch4_t2",name:"Bio-Unit Core",desc:"A power core from a decommissioned robot unit. The serial number is scraped off. It pulses with faint warmth — still holding a charge.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"TORN CONTAINER",x:"15%",y:"30%",w:"40%",h:"55%",examine:"The polymer is scored from inside — something with sharp fingers. On the exterior, the container's serial barcode label: BIO-UNIT-539. Five three nine. The unit designation. Now free in the house somewhere. You should move."},
         {id:"hs2",label:"STORAGE MANIFEST",x:"60%",y:"25%",w:"30%",h:"45%",examine:"A wall terminal showing inventory. Most items checked OUT. One item checked IN with a red flag: MAINTENANCE-UNIT-539 — STATUS: ACTIVE — LAST PING: THIS FLOOR. You don't read further."},
+        {id:"hs3",label:"FLOOR PANEL",x:"25%",y:"65%",w:"35%",h:"22%",giveItem:"ch4_t2",examine:"A floor access panel, slightly raised. Underneath: a power core with the serial scraped off. Still warm. You pocket it — evidence, or at least something solid in your hand."},
       ]},
   57:{name:"Control Hub",type:"futcontrol",desc:"The house's central control room. Screens everywhere showing SECURITY BREACH — ALERT LEVEL CRITICAL. One shows a map with two blinking dots closing on your position. Another shows the exit corridor. And one terminal is open with a door override prompt.",
       items:[],
       hotspots:[
         {id:"hs1",label:"SECURITY MONITORS",x:"10%",y:"15%",w:"60%",h:"50%",examine:"Eight camera feeds. You on four of them — it's tracking you via heat signature. Two robot units converging from the south corridor. One from the storage level. On the bottom monitor: EMERGENCY MANUAL OVERRIDE — ENTER CODE: 627."},
         {id:"hs2",label:"OVERRIDE TERMINAL",x:"70%",y:"20%",w:"20%",h:"55%",examine:"The terminal prompt reads: DOOR SYSTEM OVERRIDE — INPUT: _ _ _. Below the prompt in system text: LAST MANUAL CODE: 627. The field is still lit from a previous entry. Take it."},
+        {id:"hs3",label:"ALERT UNIT",x:"40%",y:"5%",w:"20%",h:"20%",examine:"A rotating red alert light mounted on the ceiling — the source of the pulsing. It's hardwired directly to the motion sensors. Every robot in the facility knows your position in real time. Every second you stay in this room, the circle closes."},
       ]},
   58:{name:"Teleport Chamber",type:"futchamber",desc:"The room that brought you here. The teleport pad is fused and dark — useless. But the pad's control console still has power. The last coordinate entry is still displayed. You have no idea what it means, but the three-digit prefix might be the exit code.",
-      items:[],
+      items:[{id:"ch4_t3",name:"Teleport Crystal",desc:"A fractured prism from the teleport pad's core array. It still refracts light in colours that don't exist. Whatever energy moved you through space is still inside it.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"FUSED TELEPORT PAD",x:"20%",y:"40%",w:"45%",h:"40%",examine:"The pad is burned out — whatever energy brought you here destroyed the return mechanism. On the pad surface: scorch marks in a circular pattern. It smells of ozone and something else you can't name."},
         {id:"hs2",label:"COORDINATE CONSOLE",x:"68%",y:"20%",w:"22%",h:"55%",examine:"Last entry: DESTINATION — [COORDINATES REDACTED] — ORIGIN CODE 184. The origin code is the pad's emergency broadcast identifier. Written in emergency protocol manuals, it unlocks the next sealed corridor. 1 — 8 — 4."},
+        {id:"hs3",label:"SCORCH MARKS",x:"25%",y:"55%",w:"40%",h:"30%",giveItem:"ch4_t3",examine:"The scorch marks at the pad's edge — you crouch down. At the centre of one burn mark: a fractured crystal, still refracting light in colours you can't name. A shard of the mechanism that brought you here. You pick it up carefully. It hums against your palm."},
       ]},
   59:{name:"Exit Corridor",type:"futcorridor2",desc:"A white corridor. Emergency lighting pulses red. A robot unit has crashed headfirst into the wall, sparking steadily — its serial number still visible on the back of its neck. The far door to the escape platform is sealed with one final code panel.",
       items:[],
       hotspots:[
         {id:"hs1",label:"CRASHED ROBOT",x:"15%",y:"30%",w:"40%",h:"55%",examine:"The unit crashed at speed — something hit it from behind. Its neck-panel is exposed: UNIT SERIAL: MU-953. The number 953 is stamped in three places on the chassis. Maintenance unit designation. The final door code."},
         {id:"hs2",label:"FINAL CODE PANEL",x:"65%",y:"20%",w:"25%",h:"55%",examine:"A door panel with three illuminated slots. It needs the serial number of the last decommissioned unit: 953. You've seen that number."},
+        {id:"hs3",label:"WALL DAMAGE",x:"68%",y:"55%",w:"20%",h:"30%",examine:"The wall where the robot hit is cracked — genuine structural damage. Whatever speed it was moving at when it hit, it was not a maintenance routine. Something in this corridor was already wrong before you arrived. You don't know what. You don't wait to find out."},
       ]},
   60:{name:"Escape Platform",type:"futexit",desc:"The roof. Night air. City lights below — but wrong. Too clean. Too ordered. Stars above but a different sky. A single evacuation capsule sits on the launch pad, primed and ready. The launch mechanism has a biometric override — or an emergency manual release if you've cleared all nine codes.",
       items:[],
       hotspots:[
         {id:"hs1",label:"EVACUATION CAPSULE",x:"20%",y:"20%",w:"55%",h:"60%",examine:"The capsule's door is open. Seats for two. The dashboard shows: ALL SYSTEMS GO. AWAITING AUTHORIZATION. You don't have the biometric data — but you've cleared every coded door in the house. The emergency override is live. All you have to do is step in.",ch4exit:true},
         {id:"hs2",label:"CITY VIEW",x:"78%",y:"15%",w:"16%",h:"60%",examine:"The city below is too clean. Like a version of it from a film. Trees grown back in six months. Roads resurfaced. No rubble anywhere. The robots did their job well — until someone turned them against you."},
+        {id:"hs3",label:"LAUNCH PLATFORM RING",x:"15%",y:"40%",w:"25%",h:"35%",examine:"The launch ring around the capsule pad is still active — you can feel the vibration through your shoes. Directional thrusters. Guidance fins. This thing is going somewhere specific. There are coordinates pre-loaded. They correspond to somewhere on the surface. In the city. Going back."},
       ]},
 
   // ══════════════════ CHAPTER 5 — ONE YEAR LATER (10 rooms) ══════════════════
   // The city is rebuilt. Cole escaped prison. 30-minute timer. Cole hunts you.
   // Find the gun (left in ch4 storage, now in evidence) to signal the helicopter and escape.
   61:{name:"Your Apartment",type:"apartment",desc:"One year on. Your flat looks normal — books, a dying plant, takeaway containers from last night. The news plays: COLE HARGROVE ESCAPED BLACKMORE PRISON 11:47PM. Killed two guards. Last seen heading into the city. Your city. Your phone buzzes: unknown number. Three words: 'He knows. Run.'",
-      items:[],
+      items:[{id:"unknown_msg",name:"Anonymous Warning",desc:"A voicemail from an unknown number. The voice is distorted but familiar — someone who knew the hacker. 'The evidence chip. He put everything on a chip. If you have it, you're the only witness. Cole knows. Go now.'"}],
+      entryLog:"Your phone buzzes. An unknown number. You listen to the voicemail.",
       hotspots:[
         {id:"hs1",label:"NEWS BROADCAST",x:"10%",y:"15%",w:"65%",h:"50%",examine:"BREAKING: Cole Hargrove — convicted of multiple murders including the Oleander Drive incident — has escaped maximum security. Police are urging civilians to shelter in place. You are not sheltering in place. You are leaving right now."},
         {id:"hs2",label:"BOOKSHELF",x:"72%",y:"20%",w:"20%",h:"60%",examine:"Your books. A year of trying to be normal. One spine catches your eye: 'EVIDENCE LOG — COUNTY GENERAL INCIDENT'. You copied the debrief. It mentions one item: FIREARM — FUTURE-HOUSE ORIGIN — TAGGED — HELD IN CITY STORAGE FACILITY OMEGA. You know where that is."},
+        {id:"hs3",label:"YOUR PHONE",x:"38%",y:"60%",w:"22%",h:"25%",giveItem:"unknown_msg",examine:"Your phone, face down on the arm of the sofa. A voicemail notification, timestamp 11:52PM — three minutes ago. You listen. The voice is distorted but the message is clear. You pocket the phone and leave."},
       ]},
   62:{name:"Building Stairwell",type:"stairwell",desc:"The stairwell. Your downstairs neighbour Mrs Kapoor is in the doorway looking scared. She mouths: someone was here. Looking for you. Just now. The graffiti on the landing wall — new — two words: KEEP MOVING.",
       items:[],
+      entryLog:"Mrs Kapoor mouths something at you. He was here. Just now.",
       hotspots:[
         {id:"hs1",label:"MRS KAPOOR'S DOOR",x:"15%",y:"30%",w:"30%",h:"50%",examine:"She waves you away — go, go. She mouths: he was tall. Dark jacket. Very still. He left two minutes ago toward the alley side. You nod. You go."},
         {id:"hs2",label:"GRAFFITI",x:"55%",y:"20%",w:"30%",h:"45%",examine:"Fresh paint. Someone spray-canned two words in block letters: KEEP MOVING. Could be new street art. Could be a warning from someone who's been here before you. Either way: good advice."},
+        {id:"hs3",label:"STAIRWELL WINDOW",x:"72%",y:"25%",w:"18%",h:"40%",examine:"You look down through the stairwell window. The alley below. A dark jacket moving away at the corner — not running, walking. Unhurried. Cole doesn't run because he doesn't need to. He always knows where you're going."},
       ]},
   63:{name:"Rebuilt Street",type:"citystreet",desc:"Clean pavement. New trees every ten metres — they grew fast. People are out but moving away from you at speed; someone put out a description. A block north: the alley shortcut. A block east: an abandoned shop. The city smells of new concrete and rain.",
       items:[],
+      entryLog:"People move away from you on sight. Your face is on the alert.",
       hotspots:[
         {id:"hs1",label:"STREET CAMERA",x:"70%",y:"10%",w:"20%",h:"35%",examine:"A new CCTV unit on a clean bracket. The lens tracks you — automated. If Cole is watching the feeds, he's two minutes behind. A blinking red light means it's live. You duck and keep moving."},
         {id:"hs2",label:"NEWSPAPER STAND",x:"20%",y:"45%",w:"30%",h:"35%",examine:"A print newspaper — they brought them back this year. Front page: HARGROVE ESCAPE — MANHUNT UNDERWAY. Below the fold: a map of the city with three last-known positions marked. One of them is two blocks from here. From now."},
+        {id:"hs3",label:"NEW TREE PLANTING",x:"44%",y:"30%",w:"18%",h:"45%",examine:"A young tree in a metal guard, planted as part of the city's recovery scheme. A memorial plaque is attached to the guard: 'REPLANTED IN MEMORY OF THOSE LOST — ZOMBIE INCIDENT — THE CITY DOES NOT FORGET.' Neither do you."},
       ]},
   64:{name:"Side Alley",type:"alley",desc:"Narrow alley between buildings. Dumpsters. A fire escape above. Cats scatter. The shortcut route — less cameras. Wet underfoot. Something echoes at the far end: footsteps. Then nothing. Then footsteps again, slower.",
-      items:[],
+      items:[{id:"ch5_t1",name:"Survivor's Locket",desc:"A silver locket hanging on a bent nail behind the dumpster. Inside: two small photographs. A family. You don't recognise them. The locket is warm — someone left it here recently, or it's been here long enough to absorb the alley heat.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"DUMPSTERS",x:"10%",y:"30%",w:"35%",h:"55%",examine:"You check behind them. Nothing. The smell of old food and something chemical — cleaning agents from the robot cleanup, maybe. Containers are labelled: DECON AGENT TYPE-3. Not useful. Not yet dangerous."},
         {id:"hs2",label:"FIRE ESCAPE",x:"60%",y:"10%",w:"25%",h:"55%",examine:"The lowest rung is too high. You'd need a boost or something to stand on. The dumpster lid is sturdy. But you'd make a sound Cole would hear. The ground route is quieter."},
+        {id:"hs3",label:"NAIL ON WALL",x:"35%",y:"25%",w:"16%",h:"30%",giveItem:"ch5_t1",examine:"A bent nail in the alley wall at eye level. Something is hanging from it — a silver locket on a fine chain. Inside: two small photographs, a family, not yours. A year since the incident. Someone left this here and didn't come back. You take it carefully."},
       ]},
   65:{name:"Abandoned Shop",type:"shop",desc:"A convenience store, half-stocked. The owner fled during the robot incident and never came back. Shelves of tinned food, dusty magazines, a broken refrigerator humming. One section of shelving has been pushed aside — someone has been using this as a rest point. Recently.",
       items:[],
       hotspots:[
         {id:"hs1",label:"PUSHED SHELVING",x:"10%",y:"25%",w:"40%",h:"55%",examine:"The shelving was moved by hand — recently. Behind it: a sleeping bag, a water bottle, a phone charger. Not Cole's style — too comfortable. Someone else was hiding here. Maybe more than one person. The water bottle is warm."},
         {id:"hs2",label:"SHOP COUNTER",x:"58%",y:"30%",w:"30%",h:"45%",examine:"Under the counter: a city map, current year edition. The storage facility — Omega — is marked in red pen. Someone already knew you'd need this. There's an 'X' on the building and a handwritten note: 'Gun is in here. Go.'"},
+        {id:"hs3",label:"MAGAZINE RACK",x:"42%",y:"25%",w:"18%",h:"55%",examine:"Dusty magazines from a year ago — a snapshot of the world before the incident. One is face-up on the floor, open to a page: a photo spread of the Future House facility. Your future house. The headline: 'HUMANITY'S TOMORROW — EXCLUSIVE INSIDE ACCESS.' The article is about Dr Moss."},
       ]},
   66:{name:"Police Station",type:"policestation",desc:"Evacuated when the Cole alert went out — all units deployed to the search perimeter. The armoury door hangs open. Empty. Every weapon removed per the ban. The Gun Abolition Act passed eight months ago — all firearms confiscated. Except ones that got lost in the paperwork. Like the one in storage.",
-      items:[],
+      items:[{id:"ch5_t2",name:"Detective's Badge",desc:"A detective's badge from before the Robot Incident. Badge number 0071 — Detective M. Kapoor. The same surname as your neighbour. You pocket it without knowing why.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"EMPTY ARMOURY",x:"15%",y:"20%",w:"55%",h:"55%",examine:"Racks and racks of empty brackets. Each has a label: CONFISCATED. Some brackets have date stamps from the day of the Act. The room smells of gun oil and compliance. One rack has a handwritten tag: EVIDENCE — FUTURE-HOUSE ORIGIN — TRANSFERRED TO OMEGA STORAGE. Confirmed."},
         {id:"hs2",label:"DUTY DESK",x:"72%",y:"30%",w:"20%",h:"45%",examine:"A log book. Last entry: 23:51 — ALL UNITS TO PERIMETER. HARGROVE SIGHTING — GRID D7. Grid D7 is the east side. You're heading north-west. You have a window."},
+        {id:"hs3",label:"DESK DRAWER",x:"72%",y:"58%",w:"20%",h:"22%",giveItem:"ch5_t2",examine:"The desk drawer is half-open. Inside: a detective's badge — Badge 0071, Detective M. Kapoor. Kapoor. Like your neighbour. You think of her face in the doorway. You pocket the badge. Someone should have it."},
       ]},
   67:{name:"Storage Facility Omega",type:"storage2",desc:"Industrial shelving. Forklift. Polymer crates floor to ceiling. A false panel at the back wall — you find it immediately because you've read the debrief report twice in the last year. Behind it: a single firearm in a evidence bag, tagged FUTURE-HOUSE RAID — DO NOT DESTROY. Someone forgot to actually destroy it.",
       items:[{id:"gun",name:"Signal Pistol",desc:"A future-house pistol. Single shot. Enough to signal a helicopter. Or stop Cole. Hopefully the former."}],
       hotspots:[
         {id:"hs1",label:"FALSE PANEL",x:"55%",y:"20%",w:"35%",h:"60%",giveItem:"gun",examine:"The panel swings out. Evidence bag, tagged with a date from the future house. Inside: a pistol — sleek, black, heavier than it looks. You take it out of the bag. Your hands are steady. You're surprised they are."},
         {id:"hs2",label:"STORAGE CRATES",x:"10%",y:"25%",w:"40%",h:"55%",examine:"Standard city storage. Nothing useful. Though one crate is labelled ROBOT PARTS — DECOMMISSIONED. You open it: a tangle of chrome limbs. One of the robots from the future house. Dismantled but not destroyed. Its chest light blinks twice. Then stops."},
+        {id:"hs3",label:"FORKLIFT",x:"10%",y:"55%",w:"30%",h:"28%",examine:"A standard electric forklift, keys still in the ignition. You have a brief, insane thought about driving it out through the shutter. The shutter is solid steel. The forklift is not fast. You have a gun. You leave the forklift where it is."},
       ]},
   68:{name:"Underpass",type:"underpass",desc:"A concrete underpass. Water drips from acoustic tiles half-fallen from the ceiling. Good hiding spot if you need to breathe for thirty seconds. Cole is three rooms behind you. You can hear him. Not footsteps — breathing. He's not hurrying because he knows the exits.",
-      items:[],
+      items:[{id:"ch5_t3",name:"Hacker's USB",desc:"A USB drive wedged into a crack in the concrete. A yellow sticker reads: 'IF FOUND — GIVE TO POLICE. HARGROVE FILE BACKUP — FULL COPY.' The hacker hid a copy here. You have the chip and the backup now.",isTreasure:true}],
       hotspots:[
         {id:"hs1",label:"FALLEN TILES",x:"15%",y:"15%",w:"55%",h:"50%",examine:"The tiles reveal a crawlspace above. Too narrow. You'd get stuck. The tiles smash when they land — too loud. Not an option. You keep moving."},
         {id:"hs2",label:"DRAINAGE GRATE",x:"65%",y:"55%",w:"25%",h:"30%",examine:"A drainage grate — rusted shut. You try it anyway. It doesn't move. The sound of water below. The sound of footsteps above, at the entrance to the underpass. He's here."},
+        {id:"hs3",label:"CONCRETE CRACK",x:"35%",y:"40%",w:"18%",h:"30%",giveItem:"ch5_t3",examine:"A crack in the concrete pillar, something wedged inside. You pry it out: a USB drive with a yellow sticker. 'IF FOUND — GIVE TO POLICE. HARGROVE FILE BACKUP.' The hacker cached a copy here. You pocket it. Then you move."},
       ]},
   69:{name:"Parking Structure",type:"carpark",desc:"An underground car park. Empty bays. Concrete pillars. Cole would have to come through one of three entrances, and you can hear him choosing. The exit ramp ahead leads up to the rooftop. To the open sky. To the search helicopter that's been circling the city for forty minutes.",
       items:[],
       hotspots:[
         {id:"hs1",label:"CONCRETE PILLARS",x:"10%",y:"20%",w:"55%",h:"55%",examine:"You move between the pillars, staying out of the sight-lines. The car park has three entrances — you came from the east. Cole has the south. The north is clear. But the helicopter is on the roof, not at ground level. Up. You need to go up."},
         {id:"hs2",label:"EXIT RAMP",x:"68%",y:"25%",w:"22%",h:"55%",examine:"The ramp leads up to the rooftop level. Fourteen seconds to climb at a run. Exposed the whole way. But the helicopter is up there, circling, and you have something in your pocket that will make it land."},
+        {id:"hs3",label:"ABANDONED VEHICLES",x:"28%",y:"40%",w:"30%",h:"30%",examine:"Three cars, abandoned since the robot incident. Doors locked. One has a child's drawing stuck to the window — a house with a sun. The drawing has been there for a year. You look at it for exactly one second. Then you go up."},
       ]},
   70:{name:"Rooftop — Open Sky",type:"escaperooftop",desc:"The rooftop of the parking structure. Open sky. A search helicopter circles at low altitude — its searchlight sweeping. You can see the pilot. If you fire a signal, they will see you. Cole is one floor below. You have seconds.",
       items:[],
+      entryLog:"The helicopter searchlight sweeps across the rooftop. You are seen.",
       hotspots:[
         {id:"hs1",label:"HELICOPTER",x:"30%",y:"10%",w:"40%",h:"40%",examine:"The helicopter banks toward you. The searchlight hits you square. A voice on a speaker: 'CIVILIAN — IDENTIFY YOURSELF — DO YOU HAVE A SIGNAL?' You reach into your pocket.",ch5exit:true},
         {id:"hs2",label:"ROOFTOP EDGE",x:"10%",y:"50%",w:"15%",h:"35%",examine:"Twelve floors down. The street below is empty — police sealed it. Cole is not going to come up the outside of the building. He's coming up the ramp. You have one shot at this. Literally."},
+        {id:"hs3",label:"ROOFTOP DOOR",x:"62%",y:"35%",w:"22%",h:"40%",examine:"The stairwell door — you came through it thirty seconds ago. You can hear the sound from below. The door rattles once. Then again. Cole is on the other side. You step back toward the edge. Toward the helicopter. You raise the gun."},
       ]},
 };
 
@@ -3813,6 +3837,7 @@ function buildFurniture(type,P,rng){
       const sBack=box(2.8,0.55,0.18,0xe0e4e8,0.9); sBack.position.set(0,0.58,1.88); roomGroup.add(sBack);
       addClickBox(0,4.2,2.1,0.1,-1.0,1.8,-4.38); // screen hs0
       addClickBox(1,0.5,1.5,0.4,3.0,0.75,-3.5);  // robot hs1
+      addClickBox(2,2.9,0.5,1.0,0,0.25,1.5);     // sofa hs2 (hacker_tablet)
     } else if(type==='futkitchen'){
       // Counter flush white
       const ctr=box(5.5,0.06,1.0,0xe8ecf2,0.9); ctr.position.set(-0.5,0.88,-3.8); roomGroup.add(ctr);
@@ -3826,6 +3851,7 @@ function buildFurniture(type,P,rng){
       const npScr=box(0.5,0.32,0.04,0xff0000,0.99); npScr.position.set(1.5,1.3,-4.36); roomGroup.add(npScr);
       addClickBox(0,1.1,0.75,0.55,-1.5,1.25,-3.55); // materialiser hs0
       addClickBox(1,0.65,0.45,0.1,1.5,1.3,-4.38);   // panel hs1
+      addClickBox(2,5.5,0.9,1.0,-0.5,0.44,-3.8);    // counter hs2 (flavour)
     } else if(type==='futoffice'){
       // Desk
       const desk=box(2.5,0.05,1.0,0xd0d8e4,0.9); desk.position.set(0,0.75,-3.0); roomGroup.add(desk);
@@ -3839,6 +3865,7 @@ function buildFurniture(type,P,rng){
       const photo=box(0.5,0.4,0.02,0x102030,0.99); photo.position.set(0.3,1.3,-2.59); roomGroup.add(photo);
       addClickBox(0,2.2,0.8,0.05,0,1.3,-2.6);   // file screens hs0
       addClickBox(1,0.35,0.5,0.06,1.5,1.2,-2.7); // dark screen hs1
+      addClickBox(2,2.6,0.06,1.1,0,0.8,-3.0);    // desk drawer hs2 (ch4_t1)
     } else if(type==='futbedroom'){
       // Auto-adjust bed
       const bed=box(2.2,0.4,1.7,0xd8dce4,0.9); bed.position.set(0,0.2,-3.0); roomGroup.add(bed);
@@ -3853,6 +3880,7 @@ function buildFurniture(type,P,rng){
       const hatch=box(0.8,0.04,0.6,0x484850,0.8,0.2); hatch.position.set(-1.5,0.02,-1.0); hatch.rotation.x=0.8; roomGroup.add(hatch);
       addClickBox(0,0.6,0.3,0.5,1.5,0.85,-3.5); // nightstand/clock hs0
       addClickBox(1,0.85,0.1,0.65,-1.5,0.05,-1.0); // open hatch hs1
+      addClickBox(2,2.2,0.55,1.7,0,0.35,-3.0);    // auto bed hs2 (flavour)
     } else if(type==='futlab'){
       // Magnetic rack (vertical tubes)
       for(let ti=0;ti<6;ti++){
@@ -3868,6 +3896,7 @@ function buildFurniture(type,P,rng){
       const vaultDoor=box(1.0,1.6,0.08,0x585868,0.7,0.2); vaultDoor.position.set(3.5,0.9,-4.3); roomGroup.add(vaultDoor);
       addClickBox(0,3.4,0.7,0.15,-1.0,1.4,-3.5); // rack hs0
       addClickBox(1,1.25,1.9,0.25,3.5,0.9,-4.38); // vault hs1
+      addClickBox(2,4.0,0.06,0.9,0,0.8,-3.0);     // workbench hs2 (flavour)
     } else if(type==='futstorage'){
       // White polymer crates
       [[0,0.3,-3.5,1.8,0.55,0.5],[1.9,0.3,-3.5,1.8,0.55,0.5],[3.8,0.3,-3.0,1.5,0.55,0.5],
@@ -3880,6 +3909,7 @@ function buildFurniture(type,P,rng){
       const rGl=new THREE.PointLight(0xff2200,0.3,2,2); rGl.position.set(-2.0,0.6,-1.0); roomGroup.add(rGl); candleLights.push(rGl);
       addClickBox(0,1.5,0.55,0.55,-2.0,0.3,-1.0); // torn container hs0
       addClickBox(1,1.6,1.2,0.2,-0.5,0.8,-4.2);   // storage terminal hs1
+      addClickBox(2,0.5,0.08,0.5,-2.0,0.02,-1.5); // floor panel hs2 (ch4_t2)
     } else if(type==='futcontrol'){
       // Bank of monitors — back wall
       for(let mi=0;mi<5;mi++){
@@ -3894,6 +3924,7 @@ function buildFurniture(type,P,rng){
       const termGl=new THREE.PointLight(0x00ff88,0.3,1.2,2); termGl.position.set(2.0,0.88,-3.7); roomGroup.add(termGl); candleLights.push(termGl);
       addClickBox(0,5.5,0.7,0.12,0,2.0,-4.35); // monitors hs0
       addClickBox(1,0.75,0.55,0.12,2.0,0.88,-3.8); // terminal hs1
+      addClickBox(2,0.35,0.35,0.35,0,3.2,0);       // alert light hs2 (flavour)
     } else if(type==='futchamber'){
       // Teleport pad (circular platform)
       const pad=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,0.08,24),mat(0x304858,0.8,0.2)); pad.position.set(-0.5,0.04,-3.0); roomGroup.add(pad);
@@ -3909,6 +3940,7 @@ function buildFurniture(type,P,rng){
       const conGl=new THREE.PointLight(0x0080c0,0.4,1.5,2); conGl.position.set(2.5,0.9,-3.65); roomGroup.add(conGl); candleLights.push(conGl);
       addClickBox(0,2.5,0.4,2.5,-0.5,0.1,-3.0); // fused pad hs0
       addClickBox(1,0.85,0.6,0.15,2.5,0.9,-3.8); // console hs1
+      addClickBox(2,0.5,0.04,0.5,-0.5,0.06,-3.0); // scorch marks hs2 (ch4_t3)
     } else if(type==='futcorridor2'){
       // Red pulse lighting
       const rPulse=new THREE.PointLight(0xff1a00,0.9,14,1.5); rPulse.position.set(0,2.8,-2.0); roomGroup.add(rPulse); candleLights.push(rPulse);
@@ -3926,6 +3958,7 @@ function buildFurniture(type,P,rng){
       const dpScr=box(0.28,0.4,0.04,0x001020,0.99); dpScr.position.set(0.3,1.2,-4.35); roomGroup.add(dpScr);
       addClickBox(0,0.8,1.7,0.5,-3.3,0.8,-2.0); // crashed robot hs0
       addClickBox(1,0.4,0.55,0.12,0.3,1.2,-4.38); // code panel hs1
+      addClickBox(2,1.2,0.5,0.3,-2.5,0.6,-3.5);   // wall damage hs2 (flavour)
     } else {
       // futexit — escape platform rooftop
       const sky=new THREE.PointLight(0x203040,0.8,20,1); sky.position.set(0,4.0,0); roomGroup.add(sky); candleLights.push(sky);
@@ -3943,6 +3976,7 @@ function buildFurniture(type,P,rng){
       }
       addClickBox(0,1.4,2.2,1.4,0,1.1,-3.0); // capsule hs0
       addClickBox(1,0.5,2.0,0.1,4.38,1.5,-2.0); // city view hs1
+      addClickBox(2,3.2,0.15,2.5,0,0.12,-3.0);  // launch ring hs2 (flavour)
     }
   }
 
@@ -3965,6 +3999,7 @@ function buildFurniture(type,P,rng){
       const plant=box(0.02,0.45,0.02,0x3a5030,0.9); plant.position.set(-3.0,0.45,0.5); plant.rotation.z=0.5; roomGroup.add(plant);
       addClickBox(0,2.1,1.15,0.1,0,1.4,-4.38); // TV hs0
       addClickBox(1,0.6,1.8,0.3,4.4,1.2,-2.0); // bookshelf hs1
+      addClickBox(2,0.25,0.12,0.12,-3.0,0.12,0.5); // phone on sofa arm hs2 (unknown_msg)
     } else if(type==='stairwell'){
       ambGl.color.set(0xc0b890); // warmer
       const step1=box(3.0,0.18,0.5,0x585050,0.98); step1.position.set(0,0.09,-3.5); roomGroup.add(step1);
@@ -3977,6 +4012,7 @@ function buildFurniture(type,P,rng){
       const graf=box(0.06,0.5,1.2,0x2a2a30,0.99); graf.position.set(4.38,1.6,-1.5); roomGroup.add(graf);
       addClickBox(0,0.1,2.2,1.2,-4.36,1.05,-2.0); // door hs0
       addClickBox(1,0.1,0.55,1.3,4.37,1.6,-1.5);  // graffiti hs1
+      addClickBox(2,0.5,0.7,0.3,1.5,1.5,-4.3);    // stairwell window hs2 (flavour)
     } else if(type==='citystreet'){
       ambGl.color.set(0xe0dcc0); ambGl.intensity=1.4;
       // Street lamp
@@ -3990,6 +4026,7 @@ function buildFurniture(type,P,rng){
       const ns3=box(0.5,0.6,0.3,0x606858,0.9); ns3.position.set(-2.0,0.3,1.0); roomGroup.add(ns3);
       addClickBox(0,0.2,0.2,0.25,2.8,2.8,-4.35); // camera hs0
       addClickBox(1,0.6,0.65,0.35,-2.0,0.35,1.0); // newspaper hs1
+      addClickBox(2,0.2,1.6,0.15,0,1.8,-3.5);     // new tree planting hs2 (flavour)
     } else if(type==='alley'){
       ambGl.color.set(0x404858); ambGl.intensity=0.7;
       // Dumpsters
@@ -4001,6 +4038,7 @@ function buildFurniture(type,P,rng){
       for(let ri=0;ri<5;ri++){const rung=box(0.5,0.04,0.04,0x585858,0.8);rung.position.set(2.25,0.3+ri*0.4,-4.38);roomGroup.add(rung);}
       addClickBox(0,2.2,0.8,1.2,-3.0,0.35,-2.5); // dumpsters hs0
       addClickBox(1,0.6,2.1,0.1,2.25,1.0,-4.38); // fire escape hs1
+      addClickBox(2,0.12,0.16,0.04,-3.5,1.5,-3.5); // nail on wall hs2 (ch5_t1)
     } else if(type==='shop'){
       ambGl.color.set(0xb0a888); ambGl.intensity=0.8;
       // Shelves
@@ -4015,6 +4053,7 @@ function buildFurniture(type,P,rng){
       const ctrBdy=box(1.4,0.8,0.65,0x686050,0.9); ctrBdy.position.set(2.5,0.4,-3.5); roomGroup.add(ctrBdy);
       addClickBox(0,2.2,1.6,0.15,-3.0,0.75,-4.0); // pushed shelving hs0
       addClickBox(1,1.6,0.1,0.75,2.5,0.85,-3.5);  // counter hs1
+      addClickBox(2,0.5,1.8,0.08,0,-0.5,-2.5);    // magazine rack hs2 (flavour) — floor facing
     } else if(type==='policestation'){
       ambGl.color.set(0xd0d0e0); ambGl.intensity=1.1;
       // Empty armoury racks
@@ -4029,6 +4068,7 @@ function buildFurniture(type,P,rng){
       const lb=box(0.3,0.04,0.22,0xd8d0b8,0.99); lb.position.set(1.0,0.8,-2.2); lb.rotation.y=0.2; roomGroup.add(lb);
       addClickBox(0,2.8,1.6,1.0,-1.5,0.75,-4.0); // armoury racks hs0
       addClickBox(1,2.1,0.1,1.1,1.0,0.82,-2.5);  // duty desk hs1
+      addClickBox(2,2.0,0.12,1.0,1.0,0.7,-2.5);  // desk drawer hs2 (ch5_t2)
     } else if(type==='storage2'){
       ambGl.color.set(0xb0a888); ambGl.intensity=0.9;
       // Industrial shelving
@@ -4045,6 +4085,7 @@ function buildFurniture(type,P,rng){
       const fk=box(1.2,0.55,1.8,0xffa020,0.9); fk.position.set(-2.5,0.275,-1.5); roomGroup.add(fk);
       addClickBox(0,1.1,1.9,0.15,3.0,0.9,-4.28); // false panel hs0
       addClickBox(1,2.0,0.6,1.2,-1.5,0.55,-1.0); // forklift/crates hs1
+      addClickBox(2,1.3,0.65,1.9,-2.5,0.275,-1.5); // forklift hs2 (flavour)
     } else if(type==='underpass'){
       ambGl.color.set(0x404858); ambGl.intensity=0.6;
       // Concrete ceiling tiles (some fallen)
@@ -4059,6 +4100,7 @@ function buildFurniture(type,P,rng){
       const grate=box(0.5,0.04,0.4,0x484040,0.8,0.2); grate.position.set(2.5,0.02,1.0); roomGroup.add(grate);
       addClickBox(0,4.5,0.2,1.0,0,3.38,-2.0); // ceiling tiles hs0
       addClickBox(1,0.55,0.06,0.45,2.5,0.03,1.0); // grate hs1
+      addClickBox(2,0.14,0.18,0.05,-1.0,0.8,-2.0); // concrete crack hs2 (ch5_t3)
     } else if(type==='carpark'){
       ambGl.color.set(0x888898); ambGl.intensity=0.7;
       // Concrete pillars
@@ -4070,6 +4112,7 @@ function buildFurniture(type,P,rng){
       const rampGl=new THREE.PointLight(0x60ff60,0.4,2,2); rampGl.position.set(4.2,2.0,-1.0); roomGroup.add(rampGl); candleLights.push(rampGl);
       addClickBox(0,3.0,3.0,4.5,-3.0,1.5,-1.0); // pillars hs0
       addClickBox(1,0.2,0.4,0.2,4.38,2.0,-1.0); // ramp sign hs1
+      addClickBox(2,2.0,1.5,1.5,0,0.4,0);       // abandoned vehicles hs2 (flavour)
     } else {
       // escaperooftop — open sky rooftop
       ambGl.color.set(0x8090b0); ambGl.intensity=1.5;
@@ -4086,6 +4129,7 @@ function buildFurniture(type,P,rng){
       const beam=box(0.4,4.5,0.4,0xffffff,0.99); beam.material.transparent=true; beam.material.opacity=0.08; beam.position.set(0,2.25,-2.0); roomGroup.add(beam);
       addClickBox(0,1.6,3.0,1.0,0,3.5,-2.0); // helicopter hs0
       addClickBox(1,1.5,3.5,0.1,4.38,2.0,-1.5); // rooftop edge hs1
+      addClickBox(2,1.0,2.2,0.15,-4.38,1.5,0);  // stairwell door hs2 (flavour)
     }
   }
 
@@ -4872,9 +4916,15 @@ function enterRoom(toRoom, travelDir){
   addLog(`${playerName} enters the ${ROOM_DATA[toRoom].name}.`);
   if(isNew) showRoomToast(toRoom);
   if(isNew && ROOM_DATA[toRoom] && ROOM_DATA[toRoom].maraLine) maraSpeak(ROOM_DATA[toRoom].maraLine);
+  if(isNew && ROOM_DATA[toRoom] && ROOM_DATA[toRoom].entryLog) setTimeout(()=>addLog(ROOM_DATA[toRoom].entryLog,'important'),600);
   // Auto-trigger TV on first entry to room 32 (Living Room)
   if(toRoom===32 && ch2Active && !ch2TvWatched){
     setTimeout(showTvScreen, 1200);
+  }
+  // Ch4: ambient future hum + occasional robot scan beep on entry
+  if(ch4Active && isNew){
+    setTimeout(sfxFutureHum, 400);
+    if(toRoom===57||toRoom===59) setTimeout(sfxRobotBeep,1500); // Control Hub + Exit Corridor
   }
   checkHunterProximity();
 }
@@ -5066,6 +5116,68 @@ function drawItemIcon(itemId){
     x.fillRect(20,26,8,10);// grip
     x.fillRect(8,16,16,4);// slide
     x.fillStyle='#707080';x.fillRect(26,20,8,3);// barrel tip
+  } else if(itemId==='hacker_tablet'){
+    // Tablet / screen
+    x.strokeStyle='#00c8ff';x.fillStyle='#001824';x.shadowColor='#00c8ff';x.shadowBlur=6;
+    x.beginPath();x.roundRect(8,6,28,32,3);x.fill();x.stroke();
+    x.fillStyle='#004060';x.fillRect(11,9,22,22);// screen
+    x.fillStyle='#00c8ff';x.fillRect(20,33,4,2);// home button
+  } else if(itemId==='unknown_msg'){
+    // Phone / message
+    x.strokeStyle='#80c0ff';x.fillStyle='#0a0a18';x.shadowColor='#80c0ff';x.shadowBlur=5;
+    x.beginPath();x.roundRect(12,4,20,36,4);x.fill();x.stroke();
+    x.fillStyle='#1a2840';x.fillRect(14,8,16,24);// screen
+    x.fillStyle='#80c0ff';x.font='bold 8px monospace';x.fillText('!',19,24);
+  } else if(itemId==='ch4_t1'){
+    // Data chip — circuit board cyan
+    x.fillStyle='#003040';x.fillRect(8,14,28,16);
+    x.strokeStyle='#00e8c8';x.lineWidth=1;x.shadowColor='#00e8c8';x.shadowBlur=5;
+    x.strokeRect(8,14,28,16);
+    [12,18,24,30].forEach(bx=>{x.fillStyle='#00e8c8';x.fillRect(bx,12,2,4);x.fillRect(bx,24,2,4);});
+    x.fillStyle='#006060';x.fillRect(14,17,16,10);// chip body
+  } else if(itemId==='ch4_t2'){
+    // Bio-unit core — glowing orb
+    x.fillStyle='#001428';x.fillRect(0,0,44,44);
+    const g2=x.createRadialGradient(22,22,2,22,22,14);
+    g2.addColorStop(0,'#00ffcc');g2.addColorStop(0.5,'#004080');g2.addColorStop(1,'transparent');
+    x.fillStyle=g2;x.shadowColor='#00ffcc';x.shadowBlur=10;
+    x.beginPath();x.arc(22,22,13,0,Math.PI*2);x.fill();
+    x.strokeStyle='#00c0a0';x.lineWidth=1.5;x.beginPath();x.arc(22,22,13,0,Math.PI*2);x.stroke();
+  } else if(itemId==='ch4_t3'){
+    // Teleport crystal — prism with rainbow
+    x.shadowColor='#c080ff';x.shadowBlur=8;
+    x.fillStyle='#6020c0';
+    x.beginPath();x.moveTo(22,4);x.lineTo(38,32);x.lineTo(6,32);x.closePath();x.fill();
+    x.fillStyle='rgba(180,120,255,0.5)';
+    x.beginPath();x.moveTo(22,4);x.lineTo(38,32);x.lineTo(22,20);x.closePath();x.fill();
+    x.strokeStyle='#e0c0ff';x.lineWidth=1;x.beginPath();x.moveTo(22,4);x.lineTo(38,32);x.lineTo(6,32);x.closePath();x.stroke();
+  } else if(itemId==='ch5_t1'){
+    // Locket — heart/oval on chain
+    x.strokeStyle='#d0c080';x.lineWidth=1.5;x.shadowColor='#d0c080';x.shadowBlur=5;
+    x.beginPath();x.arc(22,24,10,0,Math.PI*2);x.fillStyle='#604010';x.fill();x.stroke();
+    // Chain
+    x.strokeStyle='#c0b070';x.lineWidth=1;
+    for(let ci=0;ci<4;ci++){x.beginPath();x.arc(22,14-ci*3,1.5,0,Math.PI*2);x.stroke();}
+    // Heart hint inside
+    x.fillStyle='#d0c080';x.font='9px serif';x.fillText('♡',18,27);
+  } else if(itemId==='ch5_t2'){
+    // Police badge — star
+    x.fillStyle='#c0b030';x.shadowColor='#ffe060';x.shadowBlur=7;
+    x.beginPath();
+    for(let i=0;i<5;i++){
+      const a=i*Math.PI*2/5-Math.PI/2;
+      const ai=a+Math.PI/5;
+      x.lineTo(22+Math.cos(a)*16,22+Math.sin(a)*16);
+      x.lineTo(22+Math.cos(ai)*7,22+Math.sin(ai)*7);
+    }x.closePath();x.fill();
+    x.fillStyle='#402000';x.font='bold 6px monospace';x.textAlign='center';x.fillText('DET',22,22);x.fillText('0071',22,28);
+  } else if(itemId==='ch5_t3'){
+    // USB drive
+    x.fillStyle='#303040';x.shadowColor='#8080ff';x.shadowBlur=5;
+    x.fillRect(14,14,16,22);// body
+    x.fillStyle='#484858';x.fillRect(19,8,6,8);// connector
+    x.fillStyle='#60c0ff';x.fillRect(16,18,4,4);// LED indicator
+    x.fillStyle='#505060';x.font='5px monospace';x.textAlign='center';x.fillText('USB',22,33);
   } else {
     x.fillStyle='#806040';x.shadowBlur=4;
     x.fillRect(10,10,24,24);
@@ -6524,12 +6636,13 @@ function showCh4FinalCard(timeStr){
   const best=parseInt(localStorage.getItem('ch4_best'),10);
   const bm=Math.floor(best/60),bs=best%60;
   const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
 
   const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
   function showCard(){
     document.getElementById('ovTitle').textContent='LAUNCHED';
     document.getElementById('ovText').textContent=
-      `You cracked all nine codes.\nThe evacuation capsule carried you clear.\n\nThe robots below are still searching.\n\nYou are safe. For now.\n\nBut the network is still live.\nAnd Cole is still out there.\n\n────────────────────\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\n────────────────────`;
+      `You cracked all nine codes.\nThe evacuation capsule carried you clear.\n\nThe robots below are still searching.\n\nYou are safe. For now.\n\nBut the network is still live.\nAnd Cole is still out there.\n\n────────────────────\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nRelics:     ${treasureCount} / 3\n────────────────────`;
     document.getElementById('overlay').style.display='flex';
     const btn=document.getElementById('ovBtn');
     btn.textContent='PLAY AGAIN';
@@ -6662,12 +6775,13 @@ function showCh5FinalCard(timeStr){
   const best=parseInt(localStorage.getItem('ch5_best'),10);
   const bm=Math.floor(best/60),bs=best%60;
   const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
 
   const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
   function showCard(){
     document.getElementById('ovTitle').textContent='FREE';
     document.getElementById('ovText').textContent=
-      `You signalled the helicopter.\nYou escaped.\n\nCole was arrested on the rooftop.\nThis time, no escape.\n\nMara testified. The hacker's files were recovered.\nYou were cleared of everything.\n\nFor the first time in a long time —\nyou are free.\n\n────────────────────\nFINAL CHAPTER COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\n────────────────────`;
+      `You signalled the helicopter.\nYou escaped.\n\nCole was arrested on the rooftop.\nThis time, no escape.\n\nMara testified. The hacker's files were recovered.\nYou were cleared of everything.\n\nFor the first time in a long time —\nyou are free.\n\n────────────────────\nFINAL CHAPTER COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nMemories:   ${treasureCount} / 3\n────────────────────`;
     document.getElementById('overlay').style.display='flex';
     const btn=document.getElementById('ovBtn');
     btn.textContent='PLAY AGAIN FROM START';
