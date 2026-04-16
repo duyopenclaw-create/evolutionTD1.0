@@ -67,6 +67,9 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 .invItem.selected{border-color:#e0b040;background:#1e1408;box-shadow:0 0 8px #e0b04040;}
 .invItem.selected span{color:#e0c070;}
 .invItem.treasure{border-color:#806020;}
+.kpBtn{background:#010c1e;border:1px solid #204060;color:#80c0ff;font-family:'Courier New',monospace;font-size:1.1rem;padding:.5rem .8rem;cursor:pointer;transition:background .12s;}
+.kpBtn:hover{background:#0a2040;color:#c0e8ff;}
+.kpBtn:active{background:#1a4080;}
 #invSelected{font-size:.72rem;color:#9a8060;font-style:italic;padding:.3rem 1rem .4rem;border-bottom:1px solid #1a1008;min-height:34px;line-height:1.4;}
 #mapPanel{padding:1rem;flex:1;overflow:hidden;}
 #mapPanel h3{font-size:.7rem;letter-spacing:.2em;color:#604020;margin-bottom:.6rem;}
@@ -205,6 +208,8 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div style="font-size:.5rem;letter-spacing:.3em;color:#2a1e10;margin-bottom:.1rem;">QUICK START</div>
     <button onclick="quickStartCh2()" style="background:none;border:1px solid #3a402090;color:#6a7040;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 2</button>
     <button onclick="quickStartCh3()" style="background:none;border:1px solid #2a4a2090;color:#50804060;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;color:#609060;">▶ CHAPTER 3</button>
+    <button onclick="quickStartCh4()" style="background:none;border:1px solid #20406090;color:#4080b0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 4</button>
+    <button onclick="quickStartCh5()" style="background:none;border:1px solid #30305090;color:#8080a0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 5</button>
   </div>
   <p id="saveInfo" style="font-size:.65rem;color:#3a2a18;margin-top:.5rem;display:none;"></p>
   <div id="titleVersion">VERSION 2.0 &nbsp;·&nbsp; THE AWAKENING</div>
@@ -529,6 +534,22 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 
 <div id="ch2Black"><div class="ch2cap" id="ch2Cap"></div></div>
 <div id="ch3Black" style="display:none;position:fixed;inset:0;background:#0a0d08;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch3Cap" style="color:#3a4a2a;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:520px;line-height:1.8;"></div></div>
+<div id="ch4Black" style="display:none;position:fixed;inset:0;background:#000814;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch4Cap" style="color:#4080c0;font-family:'Courier New',monospace;font-size:.82rem;letter-spacing:.2em;opacity:0;transition:opacity 1.0s;text-align:center;max-width:580px;line-height:1.9;"></div></div>
+<div id="ch5Black" style="display:none;position:fixed;inset:0;background:#080810;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch5Cap" style="color:#a0a0c0;font-family:Georgia,serif;font-size:.82rem;letter-spacing:.2em;opacity:0;transition:opacity 1.0s;text-align:center;max-width:540px;line-height:1.9;"></div></div>
+<!-- Keypad overlay for Ch4 code doors -->
+<div id="keypadOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,5,20,0.92);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;">
+  <div style="border:1px solid #204080;padding:1.8rem 2.2rem;text-align:center;min-width:220px;background:#020a1a;">
+    <div style="color:#4080c0;font-size:.65rem;letter-spacing:.35em;margin-bottom:.9rem;">ACCESS REQUIRED</div>
+    <div id="keypadDisplay" style="font-size:2.2rem;letter-spacing:.5em;color:#80c0ff;border:1px solid #204060;padding:.4rem 1rem;margin-bottom:1.2rem;min-width:120px;text-align:center;background:#010810;">___</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem;">
+      <button onclick="keypadPress('1')" class="kpBtn">1</button><button onclick="keypadPress('2')" class="kpBtn">2</button><button onclick="keypadPress('3')" class="kpBtn">3</button>
+      <button onclick="keypadPress('4')" class="kpBtn">4</button><button onclick="keypadPress('5')" class="kpBtn">5</button><button onclick="keypadPress('6')" class="kpBtn">6</button>
+      <button onclick="keypadPress('7')" class="kpBtn">7</button><button onclick="keypadPress('8')" class="kpBtn">8</button><button onclick="keypadPress('9')" class="kpBtn">9</button>
+      <button onclick="keypadDelete()" class="kpBtn" style="color:#ff6060;">DEL</button><button onclick="keypadPress('0')" class="kpBtn">0</button><button onclick="keypadSubmit()" class="kpBtn" style="color:#60ff80;">OK</button>
+    </div>
+    <button onclick="closeKeypad()" style="background:none;border:1px solid #204060;color:#4080c0;font-family:'Courier New',monospace;font-size:.65rem;letter-spacing:.2em;padding:.3rem 1rem;cursor:pointer;margin-top:.3rem;">CANCEL</button>
+  </div>
+</div>
 
 <div id="mapsScreen">
   <div id="mapsHeader">
@@ -713,6 +734,26 @@ function quickStartCh3(){
   setInterval(saveGame,10000); loadA11ySettings();
 }
 
+function quickStartCh4(){
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  loadChapter4();
+  setInterval(saveGame,10000); loadA11ySettings();
+}
+
+function quickStartCh5(){
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  loadChapter5();
+  setInterval(saveGame,10000); loadA11ySettings();
+}
+
 function retryChapter(){
   // Reset all death/flash visuals
   document.getElementById('deathScreen').style.display='none';
@@ -726,7 +767,11 @@ function retryChapter(){
   // Clear any existing music/sound
   try{ musicNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}});musicNodes=[]; }catch(e){}
   startAmbientMusic();
-  if(ch3Active){
+  if(ch5Active){
+    loadChapter5();
+  } else if(ch4Active){
+    loadChapter4();
+  } else if(ch3Active){
     loadChapter3();
   } else if(ch2Active){
     loadChapter2();
@@ -883,6 +928,82 @@ function sfxPoliceSiren(){
   o1.stop(now+3);o2.stop(now+3);
 }
 
+// ── Robot scan beep — ch4 ─────────────────────────────────────────
+function sfxRobotBeep(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(); o.type='square'; o.frequency.value=880;
+  o.frequency.setValueAtTime(880,t); o.frequency.setValueAtTime(660,t+0.08);
+  const g=ac.createGain(); g.gain.setValueAtTime(0.07,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.2);
+}
+// ── Robot attack alarm — ch4 ──────────────────────────────────────
+function sfxRobotAttack(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  [0,0.15,0.3].forEach(dt=>{
+    const o=ac.createOscillator(); o.type='sawtooth';
+    o.frequency.setValueAtTime(440+dt*200,t+dt); o.frequency.linearRampToValueAtTime(220,t+dt+0.12);
+    const g=ac.createGain(); g.gain.setValueAtTime(0.1,t+dt); g.gain.exponentialRampToValueAtTime(0.0001,t+dt+0.14);
+    o.connect(g); g.connect(ac.destination); o.start(t+dt); o.stop(t+dt+0.15);
+  });
+}
+// ── Keypad button press ───────────────────────────────────────────
+function sfxKeypadBeep(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(); o.type='sine'; o.frequency.value=1200;
+  const g=ac.createGain(); g.gain.setValueAtTime(0.06,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.08);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.09);
+}
+// ── Keypad correct code ───────────────────────────────────────────
+function sfxKeypadSuccess(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  [0,0.1,0.2].forEach((dt,i)=>{
+    const o=ac.createOscillator(); o.type='sine'; o.frequency.value=[800,1000,1400][i];
+    const g=ac.createGain(); g.gain.setValueAtTime(0.08,t+dt); g.gain.exponentialRampToValueAtTime(0.0001,t+dt+0.18);
+    o.connect(g); g.connect(ac.destination); o.start(t+dt); o.stop(t+dt+0.2);
+  });
+}
+// ── Keypad wrong code ─────────────────────────────────────────────
+function sfxKeypadError(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  [0,0.15].forEach(dt=>{
+    const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.value=180;
+    const g=ac.createGain(); g.gain.setValueAtTime(0.1,t+dt); g.gain.exponentialRampToValueAtTime(0.0001,t+dt+0.2);
+    o.connect(g); g.connect(ac.destination); o.start(t+dt); o.stop(t+dt+0.22);
+  });
+}
+// ── Gun signal shot — ch5 ─────────────────────────────────────────
+function sfxGunShot(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  const len=ac.sampleRate*0.5|0; const buf=ac.createBuffer(1,len,ac.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/ac.sampleRate*18);
+  const src=ac.createBufferSource(); src.buffer=buf;
+  const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000;
+  const g=ac.createGain(); g.gain.value=0.35;
+  src.connect(lp); lp.connect(g); g.connect(ac.destination); src.start(t);
+  // High crack on top
+  const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(800,t); o.frequency.exponentialRampToValueAtTime(80,t+0.08);
+  const og=ac.createGain(); og.gain.setValueAtTime(0.2,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
+  o.connect(og); og.connect(ac.destination); o.start(t); o.stop(t+0.12);
+}
+// ── Helicopter rotors approaching ─────────────────────────────────
+function sfxHelicopter(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(12,t); o.frequency.linearRampToValueAtTime(20,t+3.0);
+  const lfoG2=ac.createGain(); lfoG2.gain.value=30; o.connect(lfoG2);
+  const o2=ac.createOscillator(); o2.type='sine'; o2.frequency.value=80;
+  lfoG2.connect(o2.frequency);
+  const g=ac.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.15,t+1.5); g.gain.linearRampToValueAtTime(0.25,t+3.0);
+  o2.connect(g); g.connect(ac.destination);
+  o.start(t); o2.start(t); o.stop(t+3.5); o2.stop(t+3.5);
+}
+// ── Future ambient hum — ch4 ──────────────────────────────────────
+function sfxFutureHum(){
+  const ac=getAudio(); if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(); o.type='sine'; o.frequency.value=55;
+  const g=ac.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.04,t+0.5); g.gain.linearRampToValueAtTime(0,t+2.0);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+2.2);
+}
 function sfxZombieGroan(){
   const ac=getAudio(); if(!ac) return;
   const t=ac.currentTime;
@@ -1355,6 +1476,7 @@ function isDoorOpen(a,b){
   if(conn.state==='open') return true;
   if(conn.state==='locked') return state.unlockedDoors.has(k);
   if(conn.state==='boarded') return state.brokenDoors.has(k);
+  if(conn.state==='coded') return state.unlockedDoors.has(k);
   return false;
 }
 
@@ -1677,6 +1799,134 @@ const ROOM_DATA = {
         {id:"hs1",label:"PHOTO WALL",x:"10%",y:"10%",w:"55%",h:"75%",examine:"You find yourself in at least a dozen photos. The motel. Before the motel. Your home street. He knew everything about both of you before tonight started."},
         {id:"hs2",label:"MATTRESS",x:"60%",y:"50%",w:"30%",h:"35%",examine:"You flip the mattress. Taped underneath, sealed in a zip-lock bag: the fifth key. He hid it here. Maybe he thought you wouldn't look.",giveItem:"hk5"},
       ]},
+
+  // ══════════════════ CHAPTER 4 — THE FUTURE HOUSE (10 rooms) ══════════════════
+  // Teleported here by the hacker. Robots attacking. 15-minute timer. Code-locked doors.
+  // Each room has a 3-digit code visible on a panel — type it in order to unlock the next door.
+  51:{name:"Arrival Chamber",type:"futlounge",desc:"You snap awake. White walls. Curved furniture. The air tastes recycled. A wall-screen plays rolling news: CLEANUP COMPLETE — ZOMBIE PATHOGEN NEUTRALISED — ROBOT UNITS DEPLOYED. Then: HACKER NEUTRALISED BY AGENT HARGROVE. Cole killed him. A proximity alarm starts screaming somewhere below you. The robots know you're here.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"NEWS SCREEN",x:"10%",y:"15%",w:"65%",h:"55%",examine:"The news ticker scrolls: CLEANUP UNIT DELTA — OVERRIDE DETECTED — INTRUDER ALERT. Below the ticker, a system readout in small print — this is the house's broadcast channel. In the bottom corner of the screen: a maintenance code. 4. 7. 2."},
+        {id:"hs2",label:"ROBOT UNIT",x:"72%",y:"25%",w:"20%",h:"60%",examine:"A maintenance drone, roughly humanoid. Dormant — for now. Its chest panel shows a charging indicator at 34%. When it reaches 100% it will activate. The charge bar ticks upward as you watch. Move fast."},
+      ]},
+  52:{name:"Nutrition Hub",type:"futkitchen",desc:"A kitchen with no recognisable appliances. Everything flush in white surfaces. A meal materialiser stands open — half-formed food rotting inside. The robot was interrupted mid-task. On the nutrition panel above the counter, a red ACCESS DENIED prompt flashes next to some digits.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"MEAL MATERIALISER",x:"15%",y:"35%",w:"45%",h:"45%",examine:"The half-assembled meal — something that might have been a protein pack — slowly decays in the materialiser tray. The unit's status panel reads: PROCESS INTERRUPTED 03:14:22. Below the abort timestamp: an emergency reset code. 8 — 1 — 5."},
+        {id:"hs2",label:"NUTRITION PANEL",x:"65%",y:"20%",w:"25%",h:"50%",examine:"A wall panel controls the whole hub's systems. Most functions locked. One display shows the current room code required to proceed: the digits rotate — 8, 1, 5 — in the emergency override sequence."},
+      ]},
+  53:{name:"Home Office",type:"futoffice",desc:"Three holographic screens still active. One shows your file photo — full name, address, photograph taken on the street outside your flat. Three months ago. He sent them a dossier on you before he died. A fourth screen is dark except for a blinking cursor and three glowing digits.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"YOUR FILE",x:"15%",y:"20%",w:"50%",h:"55%",examine:"Your entire life in a holographic folder. Medical records. Bank statements. The motel room where this all started, three weeks ago. And at the bottom — a note: IF SUBJECT REACHES THIS POINT, INITIATE PROTOCOL DELTA. Code: 3-9-6."},
+        {id:"hs2",label:"DARK SCREEN",x:"68%",y:"25%",w:"22%",h:"45%",examine:"The screen flickers on as you approach. A text prompt: IDENTITY UNVERIFIED — EMERGENCY EXIT CODE: 396. Then it goes dark again. The robots are 40 seconds behind you."},
+      ]},
+  54:{name:"Sleep Module",type:"futbedroom",desc:"A bed that auto-adjusts to body weight. An alarm clock on a floating nightstand reads 2:08 in electric blue. The walls are smart-glass — currently frosted. On the floor: a floor-safe hatch, cracked open and emptied. Someone else was here. Recently.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"FLOATING NIGHTSTAND",x:"55%",y:"30%",w:"30%",h:"45%",examine:"The alarm clock reads 2:08. An odd time to freeze on. You look closer — it's not frozen. It's displaying a static emergency code. Under the clock: a sticky note in hasty handwriting: 'If you're reading this — the code is the time. Two zero eight. Go.'"},
+        {id:"hs2",label:"FLOOR SAFE (OPEN)",x:"20%",y:"60%",w:"35%",h:"25%",examine:"Empty. Scratched into the interior lining of the safe door: a child's drawing of a person running. And below it, a single word in tiny letters: HURRY."},
+      ]},
+  55:{name:"Research Bay",type:"futlab",desc:"Home laboratory. Test tubes in magnetic suspension float in precise rows. A specimen vault stands sealed on the far wall. Overhead lights strobe in a repeating pattern — three pulses, four pulses, one pulse — like a distress signal, or a door code.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"MAGNETIC RACK",x:"15%",y:"25%",w:"50%",h:"55%",examine:"The specimens rotate slowly — each tube labelled with a compound number. The rack's control panel shows the current suspension sequence. Three units active. Four units active. One unit active. 3 — 4 — 1. The numbers cycle in order."},
+        {id:"hs2",label:"SPECIMEN VAULT",x:"68%",y:"20%",w:"22%",h:"60%",examine:"Sealed biometrically. The keypad beside it has three digits glowing: 7-4-1. They flash in sequence, then reset. You commit it to memory."},
+      ]},
+  56:{name:"Storage Module",type:"futstorage",desc:"Rows of white polymer containers. Most empty — cleared out in a hurry. One container has been torn open from the inside, leaving scrape marks on the polymer. What came out of it is now somewhere in this house. A serial number is stamped on the torn container.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"TORN CONTAINER",x:"15%",y:"30%",w:"40%",h:"55%",examine:"The polymer is scored from inside — something with sharp fingers. On the exterior, the container's serial barcode label: BIO-UNIT-539. Five three nine. The unit designation. Now free in the house somewhere. You should move."},
+        {id:"hs2",label:"STORAGE MANIFEST",x:"60%",y:"25%",w:"30%",h:"45%",examine:"A wall terminal showing inventory. Most items checked OUT. One item checked IN with a red flag: MAINTENANCE-UNIT-539 — STATUS: ACTIVE — LAST PING: THIS FLOOR. You don't read further."},
+      ]},
+  57:{name:"Control Hub",type:"futcontrol",desc:"The house's central control room. Screens everywhere showing SECURITY BREACH — ALERT LEVEL CRITICAL. One shows a map with two blinking dots closing on your position. Another shows the exit corridor. And one terminal is open with a door override prompt.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"SECURITY MONITORS",x:"10%",y:"15%",w:"60%",h:"50%",examine:"Eight camera feeds. You on four of them — it's tracking you via heat signature. Two robot units converging from the south corridor. One from the storage level. On the bottom monitor: EMERGENCY MANUAL OVERRIDE — ENTER CODE: 627."},
+        {id:"hs2",label:"OVERRIDE TERMINAL",x:"70%",y:"20%",w:"20%",h:"55%",examine:"The terminal prompt reads: DOOR SYSTEM OVERRIDE — INPUT: _ _ _. Below the prompt in system text: LAST MANUAL CODE: 627. The field is still lit from a previous entry. Take it."},
+      ]},
+  58:{name:"Teleport Chamber",type:"futchamber",desc:"The room that brought you here. The teleport pad is fused and dark — useless. But the pad's control console still has power. The last coordinate entry is still displayed. You have no idea what it means, but the three-digit prefix might be the exit code.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"FUSED TELEPORT PAD",x:"20%",y:"40%",w:"45%",h:"40%",examine:"The pad is burned out — whatever energy brought you here destroyed the return mechanism. On the pad surface: scorch marks in a circular pattern. It smells of ozone and something else you can't name."},
+        {id:"hs2",label:"COORDINATE CONSOLE",x:"68%",y:"20%",w:"22%",h:"55%",examine:"Last entry: DESTINATION — [COORDINATES REDACTED] — ORIGIN CODE 184. The origin code is the pad's emergency broadcast identifier. Written in emergency protocol manuals, it unlocks the next sealed corridor. 1 — 8 — 4."},
+      ]},
+  59:{name:"Exit Corridor",type:"futcorridor2",desc:"A white corridor. Emergency lighting pulses red. A robot unit has crashed headfirst into the wall, sparking steadily — its serial number still visible on the back of its neck. The far door to the escape platform is sealed with one final code panel.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"CRASHED ROBOT",x:"15%",y:"30%",w:"40%",h:"55%",examine:"The unit crashed at speed — something hit it from behind. Its neck-panel is exposed: UNIT SERIAL: MU-953. The number 953 is stamped in three places on the chassis. Maintenance unit designation. The final door code."},
+        {id:"hs2",label:"FINAL CODE PANEL",x:"65%",y:"20%",w:"25%",h:"55%",examine:"A door panel with three illuminated slots. It needs the serial number of the last decommissioned unit: 953. You've seen that number."},
+      ]},
+  60:{name:"Escape Platform",type:"futexit",desc:"The roof. Night air. City lights below — but wrong. Too clean. Too ordered. Stars above but a different sky. A single evacuation capsule sits on the launch pad, primed and ready. The launch mechanism has a biometric override — or an emergency manual release if you've cleared all nine codes.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"EVACUATION CAPSULE",x:"20%",y:"20%",w:"55%",h:"60%",examine:"The capsule's door is open. Seats for two. The dashboard shows: ALL SYSTEMS GO. AWAITING AUTHORIZATION. You don't have the biometric data — but you've cleared every coded door in the house. The emergency override is live. All you have to do is step in.",ch4exit:true},
+        {id:"hs2",label:"CITY VIEW",x:"78%",y:"15%",w:"16%",h:"60%",examine:"The city below is too clean. Like a version of it from a film. Trees grown back in six months. Roads resurfaced. No rubble anywhere. The robots did their job well — until someone turned them against you."},
+      ]},
+
+  // ══════════════════ CHAPTER 5 — ONE YEAR LATER (10 rooms) ══════════════════
+  // The city is rebuilt. Cole escaped prison. 30-minute timer. Cole hunts you.
+  // Find the gun (left in ch4 storage, now in evidence) to signal the helicopter and escape.
+  61:{name:"Your Apartment",type:"apartment",desc:"One year on. Your flat looks normal — books, a dying plant, takeaway containers from last night. The news plays: COLE HARGROVE ESCAPED BLACKMORE PRISON 11:47PM. Killed two guards. Last seen heading into the city. Your city. Your phone buzzes: unknown number. Three words: 'He knows. Run.'",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"NEWS BROADCAST",x:"10%",y:"15%",w:"65%",h:"50%",examine:"BREAKING: Cole Hargrove — convicted of multiple murders including the Oleander Drive incident — has escaped maximum security. Police are urging civilians to shelter in place. You are not sheltering in place. You are leaving right now."},
+        {id:"hs2",label:"BOOKSHELF",x:"72%",y:"20%",w:"20%",h:"60%",examine:"Your books. A year of trying to be normal. One spine catches your eye: 'EVIDENCE LOG — COUNTY GENERAL INCIDENT'. You copied the debrief. It mentions one item: FIREARM — FUTURE-HOUSE ORIGIN — TAGGED — HELD IN CITY STORAGE FACILITY OMEGA. You know where that is."},
+      ]},
+  62:{name:"Building Stairwell",type:"stairwell",desc:"The stairwell. Your downstairs neighbour Mrs Kapoor is in the doorway looking scared. She mouths: someone was here. Looking for you. Just now. The graffiti on the landing wall — new — two words: KEEP MOVING.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"MRS KAPOOR'S DOOR",x:"15%",y:"30%",w:"30%",h:"50%",examine:"She waves you away — go, go. She mouths: he was tall. Dark jacket. Very still. He left two minutes ago toward the alley side. You nod. You go."},
+        {id:"hs2",label:"GRAFFITI",x:"55%",y:"20%",w:"30%",h:"45%",examine:"Fresh paint. Someone spray-canned two words in block letters: KEEP MOVING. Could be new street art. Could be a warning from someone who's been here before you. Either way: good advice."},
+      ]},
+  63:{name:"Rebuilt Street",type:"citystreet",desc:"Clean pavement. New trees every ten metres — they grew fast. People are out but moving away from you at speed; someone put out a description. A block north: the alley shortcut. A block east: an abandoned shop. The city smells of new concrete and rain.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"STREET CAMERA",x:"70%",y:"10%",w:"20%",h:"35%",examine:"A new CCTV unit on a clean bracket. The lens tracks you — automated. If Cole is watching the feeds, he's two minutes behind. A blinking red light means it's live. You duck and keep moving."},
+        {id:"hs2",label:"NEWSPAPER STAND",x:"20%",y:"45%",w:"30%",h:"35%",examine:"A print newspaper — they brought them back this year. Front page: HARGROVE ESCAPE — MANHUNT UNDERWAY. Below the fold: a map of the city with three last-known positions marked. One of them is two blocks from here. From now."},
+      ]},
+  64:{name:"Side Alley",type:"alley",desc:"Narrow alley between buildings. Dumpsters. A fire escape above. Cats scatter. The shortcut route — less cameras. Wet underfoot. Something echoes at the far end: footsteps. Then nothing. Then footsteps again, slower.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"DUMPSTERS",x:"10%",y:"30%",w:"35%",h:"55%",examine:"You check behind them. Nothing. The smell of old food and something chemical — cleaning agents from the robot cleanup, maybe. Containers are labelled: DECON AGENT TYPE-3. Not useful. Not yet dangerous."},
+        {id:"hs2",label:"FIRE ESCAPE",x:"60%",y:"10%",w:"25%",h:"55%",examine:"The lowest rung is too high. You'd need a boost or something to stand on. The dumpster lid is sturdy. But you'd make a sound Cole would hear. The ground route is quieter."},
+      ]},
+  65:{name:"Abandoned Shop",type:"shop",desc:"A convenience store, half-stocked. The owner fled during the robot incident and never came back. Shelves of tinned food, dusty magazines, a broken refrigerator humming. One section of shelving has been pushed aside — someone has been using this as a rest point. Recently.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"PUSHED SHELVING",x:"10%",y:"25%",w:"40%",h:"55%",examine:"The shelving was moved by hand — recently. Behind it: a sleeping bag, a water bottle, a phone charger. Not Cole's style — too comfortable. Someone else was hiding here. Maybe more than one person. The water bottle is warm."},
+        {id:"hs2",label:"SHOP COUNTER",x:"58%",y:"30%",w:"30%",h:"45%",examine:"Under the counter: a city map, current year edition. The storage facility — Omega — is marked in red pen. Someone already knew you'd need this. There's an 'X' on the building and a handwritten note: 'Gun is in here. Go.'"},
+      ]},
+  66:{name:"Police Station",type:"policestation",desc:"Evacuated when the Cole alert went out — all units deployed to the search perimeter. The armoury door hangs open. Empty. Every weapon removed per the ban. The Gun Abolition Act passed eight months ago — all firearms confiscated. Except ones that got lost in the paperwork. Like the one in storage.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"EMPTY ARMOURY",x:"15%",y:"20%",w:"55%",h:"55%",examine:"Racks and racks of empty brackets. Each has a label: CONFISCATED. Some brackets have date stamps from the day of the Act. The room smells of gun oil and compliance. One rack has a handwritten tag: EVIDENCE — FUTURE-HOUSE ORIGIN — TRANSFERRED TO OMEGA STORAGE. Confirmed."},
+        {id:"hs2",label:"DUTY DESK",x:"72%",y:"30%",w:"20%",h:"45%",examine:"A log book. Last entry: 23:51 — ALL UNITS TO PERIMETER. HARGROVE SIGHTING — GRID D7. Grid D7 is the east side. You're heading north-west. You have a window."},
+      ]},
+  67:{name:"Storage Facility Omega",type:"storage2",desc:"Industrial shelving. Forklift. Polymer crates floor to ceiling. A false panel at the back wall — you find it immediately because you've read the debrief report twice in the last year. Behind it: a single firearm in a evidence bag, tagged FUTURE-HOUSE RAID — DO NOT DESTROY. Someone forgot to actually destroy it.",
+      items:[{id:"gun",name:"Signal Pistol",desc:"A future-house pistol. Single shot. Enough to signal a helicopter. Or stop Cole. Hopefully the former."}],
+      hotspots:[
+        {id:"hs1",label:"FALSE PANEL",x:"55%",y:"20%",w:"35%",h:"60%",giveItem:"gun",examine:"The panel swings out. Evidence bag, tagged with a date from the future house. Inside: a pistol — sleek, black, heavier than it looks. You take it out of the bag. Your hands are steady. You're surprised they are."},
+        {id:"hs2",label:"STORAGE CRATES",x:"10%",y:"25%",w:"40%",h:"55%",examine:"Standard city storage. Nothing useful. Though one crate is labelled ROBOT PARTS — DECOMMISSIONED. You open it: a tangle of chrome limbs. One of the robots from the future house. Dismantled but not destroyed. Its chest light blinks twice. Then stops."},
+      ]},
+  68:{name:"Underpass",type:"underpass",desc:"A concrete underpass. Water drips from acoustic tiles half-fallen from the ceiling. Good hiding spot if you need to breathe for thirty seconds. Cole is three rooms behind you. You can hear him. Not footsteps — breathing. He's not hurrying because he knows the exits.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"FALLEN TILES",x:"15%",y:"15%",w:"55%",h:"50%",examine:"The tiles reveal a crawlspace above. Too narrow. You'd get stuck. The tiles smash when they land — too loud. Not an option. You keep moving."},
+        {id:"hs2",label:"DRAINAGE GRATE",x:"65%",y:"55%",w:"25%",h:"30%",examine:"A drainage grate — rusted shut. You try it anyway. It doesn't move. The sound of water below. The sound of footsteps above, at the entrance to the underpass. He's here."},
+      ]},
+  69:{name:"Parking Structure",type:"carpark",desc:"An underground car park. Empty bays. Concrete pillars. Cole would have to come through one of three entrances, and you can hear him choosing. The exit ramp ahead leads up to the rooftop. To the open sky. To the search helicopter that's been circling the city for forty minutes.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"CONCRETE PILLARS",x:"10%",y:"20%",w:"55%",h:"55%",examine:"You move between the pillars, staying out of the sight-lines. The car park has three entrances — you came from the east. Cole has the south. The north is clear. But the helicopter is on the roof, not at ground level. Up. You need to go up."},
+        {id:"hs2",label:"EXIT RAMP",x:"68%",y:"25%",w:"22%",h:"55%",examine:"The ramp leads up to the rooftop level. Fourteen seconds to climb at a run. Exposed the whole way. But the helicopter is up there, circling, and you have something in your pocket that will make it land."},
+      ]},
+  70:{name:"Rooftop — Open Sky",type:"escaperooftop",desc:"The rooftop of the parking structure. Open sky. A search helicopter circles at low altitude — its searchlight sweeping. You can see the pilot. If you fire a signal, they will see you. Cole is one floor below. You have seconds.",
+      items:[],
+      hotspots:[
+        {id:"hs1",label:"HELICOPTER",x:"30%",y:"10%",w:"40%",h:"40%",examine:"The helicopter banks toward you. The searchlight hits you square. A voice on a speaker: 'CIVILIAN — IDENTIFY YOURSELF — DO YOU HAVE A SIGNAL?' You reach into your pocket.",ch5exit:true},
+        {id:"hs2",label:"ROOFTOP EDGE",x:"10%",y:"50%",w:"15%",h:"35%",examine:"Twelve floors down. The street below is empty — police sealed it. Cole is not going to come up the outside of the building. He's coming up the ramp. You have one shot at this. Literally."},
+      ]},
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1762,6 +2012,27 @@ const CONNECTIONS = [
   // Vertical connections between wings
   {a:42,b:46,dir:'S', state:'open'},
   {a:45,b:47,dir:'S', state:'open'},
+  // ── Chapter 4 — The Future House (10 rooms, code-locked doors) ──
+  {a:51,b:52,dir:'E', state:'coded', code:'472'},
+  {a:52,b:53,dir:'E', state:'coded', code:'815'},
+  {a:53,b:54,dir:'E', state:'coded', code:'396'},
+  {a:54,b:55,dir:'E', state:'coded', code:'208'},
+  {a:55,b:56,dir:'E', state:'coded', code:'741'},
+  {a:56,b:57,dir:'E', state:'coded', code:'539'},
+  {a:57,b:58,dir:'E', state:'coded', code:'627'},
+  {a:58,b:59,dir:'E', state:'coded', code:'184'},
+  {a:59,b:60,dir:'E', state:'coded', code:'953'},
+  // ── Chapter 5 — One Year Later (10 rooms, Cole hunts) ──
+  {a:61,b:62,dir:'E', state:'open'},
+  {a:62,b:63,dir:'E', state:'open'},
+  {a:63,b:64,dir:'S', state:'open'},
+  {a:63,b:65,dir:'E', state:'open'},
+  {a:64,b:68,dir:'E', state:'open'},
+  {a:65,b:66,dir:'E', state:'open'},
+  {a:66,b:67,dir:'E', state:'open'},
+  {a:67,b:68,dir:'S', state:'open'},
+  {a:68,b:69,dir:'E', state:'open'},
+  {a:69,b:70,dir:'E', state:'open'},
 ];
 
 function buildConnectionMap(){
@@ -3521,6 +3792,303 @@ function buildFurniture(type,P,rng){
     addClickBox(1,1.2,2.5,0.15,3.5,1.2,-4.35);// emergency exit hs1
   }
 
+  // ── CHAPTER 4 — FUTURE HOUSE ROOMS ─────────────────────────────
+  else if(type==='futlounge'||type==='futkitchen'||type==='futoffice'||type==='futbedroom'||type==='futlab'||type==='futstorage'||type==='futcontrol'||type==='futchamber'||type==='futcorridor2'||type==='futexit'){
+    // Shared: cool white/blue LED ceiling light
+    const led=new THREE.PointLight(0x80c0ff,1.2,14,1.5); led.position.set(0,3.2,-1.5); roomGroup.add(led); candleLights.push(led);
+    const led2=new THREE.PointLight(0x4080c0,0.5,8,2); led2.position.set(0,3.2,1.5); roomGroup.add(led2); candleLights.push(led2);
+    // Sleek white floor
+    const fl=box(8.0,0.03,8.0,0xf0f4f8,0.99); fl.position.set(0,0.015,0); roomGroup.add(fl);
+    // Robot unit (dormant) — right back corner
+    if(type==='futlounge'){
+      const rb=box(0.45,1.4,0.35,0xd0d8e0,0.8,0.1); rb.position.set(3.0,0.7,-3.5); roomGroup.add(rb);
+      const rh=new THREE.Mesh(new THREE.SphereGeometry(0.22,10,8),mat(0xc8d0d8,0.7,0.1)); rh.position.set(3.0,1.55,-3.5); roomGroup.add(rh);
+      const eye=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.06,8),mat(0xff3300,0.9,0.8)); eye.position.set(3.0,1.6,-3.3); eye.rotation.x=Math.PI/2; roomGroup.add(eye);
+      const gl2=new THREE.PointLight(0xff2200,0.4,1.5,2); gl2.position.set(3.0,1.6,-3.2); roomGroup.add(gl2); candleLights.push(gl2);
+      // News wall screen
+      const scr=box(4.0,2.0,0.06,0x080818,0.99); scr.position.set(-1.0,1.8,-4.38); roomGroup.add(scr);
+      const scrGl=new THREE.PointLight(0x2040c0,0.5,3,2); scrGl.position.set(-1.0,1.8,-4.2); roomGroup.add(scrGl); candleLights.push(scrGl);
+      // Curved sofa
+      const sBase=box(2.8,0.4,0.9,0xe8ecf0,0.9); sBase.position.set(0,0.2,1.5); roomGroup.add(sBase);
+      const sBack=box(2.8,0.55,0.18,0xe0e4e8,0.9); sBack.position.set(0,0.58,1.88); roomGroup.add(sBack);
+      addClickBox(0,4.2,2.1,0.1,-1.0,1.8,-4.38); // screen hs0
+      addClickBox(1,0.5,1.5,0.4,3.0,0.75,-3.5);  // robot hs1
+    } else if(type==='futkitchen'){
+      // Counter flush white
+      const ctr=box(5.5,0.06,1.0,0xe8ecf2,0.9); ctr.position.set(-0.5,0.88,-3.8); roomGroup.add(ctr);
+      const ctrBody=box(5.4,0.88,0.92,0xd8dce2,0.9); ctrBody.position.set(-0.5,0.44,-3.8); roomGroup.add(ctrBody);
+      // Meal materialiser
+      const mm=box(1.0,0.7,0.5,0xc0c8d0,0.7,0.1); mm.position.set(-1.5,1.25,-3.6); roomGroup.add(mm);
+      const mmDoor=box(0.9,0.6,0.06,0x8898a8,0.5,0.1); mmDoor.position.set(-1.5,1.25,-3.35); roomGroup.add(mmDoor);
+      const mmGl=new THREE.PointLight(0x4080ff,0.3,1.2,2); mmGl.position.set(-1.5,1.3,-3.3); roomGroup.add(mmGl); candleLights.push(mmGl);
+      // Nutrition panel
+      const np=box(0.6,0.4,0.06,0x304050,0.8); np.position.set(1.5,1.3,-4.38); roomGroup.add(np);
+      const npScr=box(0.5,0.32,0.04,0xff0000,0.99); npScr.position.set(1.5,1.3,-4.36); roomGroup.add(npScr);
+      addClickBox(0,1.1,0.75,0.55,-1.5,1.25,-3.55); // materialiser hs0
+      addClickBox(1,0.65,0.45,0.1,1.5,1.3,-4.38);   // panel hs1
+    } else if(type==='futoffice'){
+      // Desk
+      const desk=box(2.5,0.05,1.0,0xd0d8e4,0.9); desk.position.set(0,0.75,-3.0); roomGroup.add(desk);
+      const dBody=box(2.3,0.75,0.9,0xc8d0dc,0.9); dBody.position.set(0,0.375,-3.0); roomGroup.add(dBody);
+      // Holo screens (glowing boxes)
+      [[-1.0,1.3,-2.6],[0.3,1.3,-2.6],[1.5,1.2,-2.7]].forEach(([hx,hy,hz],i)=>{
+        const hs2=box(0.7,0.55,0.03,[0x001020,0x001520,0x001020][i],0.99); hs2.position.set(hx,hy,hz); roomGroup.add(hs2);
+        const hgl=new THREE.PointLight(0x2060ff,0.3,1.5,2); hgl.position.set(hx,hy,hz-0.2); roomGroup.add(hgl); candleLights.push(hgl);
+      });
+      // Your photo on middle screen
+      const photo=box(0.5,0.4,0.02,0x102030,0.99); photo.position.set(0.3,1.3,-2.59); roomGroup.add(photo);
+      addClickBox(0,2.2,0.8,0.05,0,1.3,-2.6);   // file screens hs0
+      addClickBox(1,0.35,0.5,0.06,1.5,1.2,-2.7); // dark screen hs1
+    } else if(type==='futbedroom'){
+      // Auto-adjust bed
+      const bed=box(2.2,0.4,1.7,0xd8dce4,0.9); bed.position.set(0,0.2,-3.0); roomGroup.add(bed);
+      const matt2=box(2.0,0.15,1.5,0xf0f0ec,0.99); matt2.position.set(0,0.48,-3.0); roomGroup.add(matt2);
+      // Floating nightstand
+      const nsBracket=box(0.06,0.4,0.06,0xa0a8b0,0.6,0.2); nsBracket.position.set(1.5,0.6,-3.5); roomGroup.add(nsBracket);
+      const ns2=box(0.5,0.06,0.4,0xd0d8e0,0.9); ns2.position.set(1.5,0.82,-3.5); roomGroup.add(ns2);
+      // Clock
+      const clock=box(0.18,0.12,0.04,0x040408,0.99); clock.position.set(1.5,0.9,-3.32); roomGroup.add(clock);
+      const clockGl=new THREE.PointLight(0x0040ff,0.4,0.8,2); clockGl.position.set(1.5,0.9,-3.2); roomGroup.add(clockGl); candleLights.push(clockGl);
+      // Floor hatch open
+      const hatch=box(0.8,0.04,0.6,0x484850,0.8,0.2); hatch.position.set(-1.5,0.02,-1.0); hatch.rotation.x=0.8; roomGroup.add(hatch);
+      addClickBox(0,0.6,0.3,0.5,1.5,0.85,-3.5); // nightstand/clock hs0
+      addClickBox(1,0.85,0.1,0.65,-1.5,0.05,-1.0); // open hatch hs1
+    } else if(type==='futlab'){
+      // Magnetic rack (vertical tubes)
+      for(let ti=0;ti<6;ti++){
+        const tube2=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.3,8),mat(0x88d0c8,0.3,0.2));
+        tube2.material.transparent=true; tube2.material.opacity=0.7;
+        tube2.position.set(-2.0+ti*0.5,1.4,-3.5); roomGroup.add(tube2);
+      }
+      const rack=box(3.2,0.04,0.1,0x8898a8,0.7,0.3); rack.position.set(-1.0,1.1,-3.5); roomGroup.add(rack);
+      const rack2=rack.clone(); rack2.position.set(-1.0,1.6,-3.5); roomGroup.add(rack2);
+      const rackGl=new THREE.PointLight(0x00ffcc,0.4,2.5,2); rackGl.position.set(-1.0,1.5,-3.5); roomGroup.add(rackGl); candleLights.push(rackGl);
+      // Specimen vault sealed
+      const vault=box(1.2,1.8,0.2,0x485058,0.8,0.2); vault.position.set(3.5,0.9,-4.38); roomGroup.add(vault);
+      const vaultDoor=box(1.0,1.6,0.08,0x585868,0.7,0.2); vaultDoor.position.set(3.5,0.9,-4.3); roomGroup.add(vaultDoor);
+      addClickBox(0,3.4,0.7,0.15,-1.0,1.4,-3.5); // rack hs0
+      addClickBox(1,1.25,1.9,0.25,3.5,0.9,-4.38); // vault hs1
+    } else if(type==='futstorage'){
+      // White polymer crates
+      [[0,0.3,-3.5,1.8,0.55,0.5],[1.9,0.3,-3.5,1.8,0.55,0.5],[3.8,0.3,-3.0,1.5,0.55,0.5],
+       [-2,0.3,-3.0,1.5,0.5,0.5],[0,0.82,-3.5,1.5,0.5,0.45]].forEach(([cx,cy,cz,cw,ch2,cd])=>{
+        const cr=box(cw,ch2,cd,0xe8ecf0,0.9); cr.position.set(cx,cy,cz); roomGroup.add(cr);
+      });
+      // Torn container — left floor, dark scoring
+      const torn=box(1.4,0.5,0.5,0xd0d4d8,0.9); torn.position.set(-2.0,0.25,-1.0); torn.rotation.y=0.3; roomGroup.add(torn);
+      const tornSc=box(1.3,0.4,0.04,0x302830,0.99); tornSc.position.set(-2.0,0.25,-0.76); tornSc.rotation.y=0.3; roomGroup.add(tornSc);
+      const rGl=new THREE.PointLight(0xff2200,0.3,2,2); rGl.position.set(-2.0,0.6,-1.0); roomGroup.add(rGl); candleLights.push(rGl);
+      addClickBox(0,1.5,0.55,0.55,-2.0,0.3,-1.0); // torn container hs0
+      addClickBox(1,1.6,1.2,0.2,-0.5,0.8,-4.2);   // storage terminal hs1
+    } else if(type==='futcontrol'){
+      // Bank of monitors — back wall
+      for(let mi=0;mi<5;mi++){
+        const mon=box(0.8,0.6,0.08,0x0a0a14,0.99); mon.position.set(-3.2+mi*1.6,2.0,-4.35); roomGroup.add(mon);
+        const mScr=box(0.7,0.52,0.04,0x001510,0.99); mScr.position.set(-3.2+mi*1.6,2.0,-4.32); roomGroup.add(mScr);
+      }
+      const monGl=new THREE.PointLight(0x00ff44,0.6,4,2); monGl.position.set(0,2.0,-4.0); roomGroup.add(monGl); candleLights.push(monGl);
+      const alertGl=new THREE.PointLight(0xff2200,0.8,6,2); alertGl.position.set(0,3.0,0); roomGroup.add(alertGl); candleLights.push(alertGl);
+      // Override terminal
+      const term=box(0.7,0.5,0.1,0x303040,0.8); term.position.set(2.0,0.88,-3.8); roomGroup.add(term);
+      const termScr=box(0.58,0.4,0.04,0x001a10,0.99); termScr.position.set(2.0,0.88,-3.76); roomGroup.add(termScr);
+      const termGl=new THREE.PointLight(0x00ff88,0.3,1.2,2); termGl.position.set(2.0,0.88,-3.7); roomGroup.add(termGl); candleLights.push(termGl);
+      addClickBox(0,5.5,0.7,0.12,0,2.0,-4.35); // monitors hs0
+      addClickBox(1,0.75,0.55,0.12,2.0,0.88,-3.8); // terminal hs1
+    } else if(type==='futchamber'){
+      // Teleport pad (circular platform)
+      const pad=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,0.08,24),mat(0x304858,0.8,0.2)); pad.position.set(-0.5,0.04,-3.0); roomGroup.add(pad);
+      const padRing=new THREE.Mesh(new THREE.TorusGeometry(1.2,0.06,8,24),mat(0x2060a0,0.6,0.5)); padRing.position.set(-0.5,0.08,-3.0); padRing.rotation.x=Math.PI/2; roomGroup.add(padRing);
+      // Scorch marks (dark overlay boxes)
+      for(let si=0;si<4;si++){
+        const sc2=box(0.2,0.01,0.05,0x101010,0.99); sc2.position.set(-0.5+Math.cos(si*Math.PI/2)*0.7,0.1,-3.0+Math.sin(si*Math.PI/2)*0.7); sc2.rotation.y=si*Math.PI/2; roomGroup.add(sc2);
+      }
+      const ozoneGl=new THREE.PointLight(0x4080ff,0.3,2.5,2); ozoneGl.position.set(-0.5,1.0,-3.0); roomGroup.add(ozoneGl); candleLights.push(ozoneGl);
+      // Console
+      const con=box(0.8,0.55,0.12,0x283040,0.8); con.position.set(2.5,0.9,-3.8); roomGroup.add(con);
+      const conScr=box(0.68,0.45,0.05,0x001820,0.99); conScr.position.set(2.5,0.9,-3.74); roomGroup.add(conScr);
+      const conGl=new THREE.PointLight(0x0080c0,0.4,1.5,2); conGl.position.set(2.5,0.9,-3.65); roomGroup.add(conGl); candleLights.push(conGl);
+      addClickBox(0,2.5,0.4,2.5,-0.5,0.1,-3.0); // fused pad hs0
+      addClickBox(1,0.85,0.6,0.15,2.5,0.9,-3.8); // console hs1
+    } else if(type==='futcorridor2'){
+      // Red pulse lighting
+      const rPulse=new THREE.PointLight(0xff1a00,0.9,14,1.5); rPulse.position.set(0,2.8,-2.0); roomGroup.add(rPulse); candleLights.push(rPulse);
+      // Runner
+      const runner2=box(1.0,0.02,8.0,0x2a2a3a,0.99); runner2.position.set(0,0.015,0); roomGroup.add(runner2);
+      // Crashed robot in wall
+      const rBody=box(0.45,1.4,0.35,0xb0b8c0,0.8,0.1); rBody.position.set(-3.5,0.7,-2.0); rBody.rotation.z=0.6; roomGroup.add(rBody);
+      const rHead=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),mat(0xa8b0b8,0.7,0.1)); rHead.position.set(-3.2,1.5,-2.0); roomGroup.add(rHead);
+      // Sparks (orange glow)
+      const spk=new THREE.PointLight(0xff8800,0.8,1.5,2); spk.position.set(-3.5,1.0,-2.0); roomGroup.add(spk); candleLights.push(spk);
+      // Serial plate on neck
+      const plate=box(0.18,0.06,0.02,0x303038,0.99); plate.position.set(-3.5,1.25,-2.0); roomGroup.add(plate);
+      // Final door panel
+      const dpanel=box(0.35,0.5,0.08,0x203040,0.8); dpanel.position.set(0.3,1.2,-4.38); roomGroup.add(dpanel);
+      const dpScr=box(0.28,0.4,0.04,0x001020,0.99); dpScr.position.set(0.3,1.2,-4.35); roomGroup.add(dpScr);
+      addClickBox(0,0.8,1.7,0.5,-3.3,0.8,-2.0); // crashed robot hs0
+      addClickBox(1,0.4,0.55,0.12,0.3,1.2,-4.38); // code panel hs1
+    } else {
+      // futexit — escape platform rooftop
+      const sky=new THREE.PointLight(0x203040,0.8,20,1); sky.position.set(0,4.0,0); roomGroup.add(sky); candleLights.push(sky);
+      const starGl=new THREE.PointLight(0x8080c0,0.4,30,0.5); starGl.position.set(0,8.0,0); roomGroup.add(starGl); candleLights.push(starGl);
+      // Launch pad platform
+      const lpad=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,0.1,16),mat(0x303840,0.9,0.2)); lpad.position.set(0,0.05,-3.0); roomGroup.add(lpad);
+      const lpadRing=new THREE.Mesh(new THREE.TorusGeometry(1.5,0.08,8,16),mat(0x60c0ff,0.7,0.5)); lpadRing.position.set(0,0.1,-3.0); lpadRing.rotation.x=Math.PI/2; roomGroup.add(lpadRing);
+      const lgl=new THREE.PointLight(0x40a0ff,0.6,4,2); lgl.position.set(0,1.5,-3.0); roomGroup.add(lgl); candleLights.push(lgl);
+      // Capsule shape (box approximation)
+      const cap2=box(1.2,2.0,1.2,0xd0d8e0,0.8,0.1); cap2.position.set(0,1.0,-3.0); cap2.castShadow=true; roomGroup.add(cap2);
+      const capTop=new THREE.Mesh(new THREE.SphereGeometry(0.6,10,8),mat(0xd0d8e0,0.8,0.1)); capTop.position.set(0,2.1,-3.0); roomGroup.add(capTop);
+      // City view suggestion (dark edge walls with light points)
+      for(let ci=0;ci<6;ci++){
+        const cityGl=new THREE.PointLight(0x2040c0,0.15,2,2); cityGl.position.set(-4.5+ci*1.8,1.5,4.5); roomGroup.add(cityGl); candleLights.push(cityGl);
+      }
+      addClickBox(0,1.4,2.2,1.4,0,1.1,-3.0); // capsule hs0
+      addClickBox(1,0.5,2.0,0.1,4.38,1.5,-2.0); // city view hs1
+    }
+  }
+
+  // ── CHAPTER 5 — CITY ROOMS ──────────────────────────────────────
+  else if(type==='apartment'||type==='stairwell'||type==='citystreet'||type==='alley'||type==='shop'||type==='policestation'||type==='storage2'||type==='underpass'||type==='carpark'||type==='escaperooftop'){
+    const ambGl=new THREE.PointLight(0xd0c8b0,1.0,14,1.5); ambGl.position.set(0,3.0,-1.5); roomGroup.add(ambGl); candleLights.push(ambGl);
+
+    if(type==='apartment'){
+      // Sofa
+      const sofa=box(2.4,0.42,0.85,0x4a5060,0.9); sofa.position.set(0,0.21,1.5); roomGroup.add(sofa);
+      const sofaBack=box(2.4,0.55,0.2,0x404858,0.9); sofaBack.position.set(0,0.63,1.88); roomGroup.add(sofaBack);
+      // TV on wall
+      const tv3=box(2.0,1.1,0.08,0x111118,0.99); tv3.position.set(0,1.4,-4.38); roomGroup.add(tv3);
+      const tvScr2=box(1.82,1.0,0.04,0x000810,0.99); tvScr2.position.set(0,1.4,-4.35); roomGroup.add(tvScr2);
+      const tvGl2=new THREE.PointLight(0x2040a0,0.5,3,2); tvGl2.position.set(0,1.4,-4.0); roomGroup.add(tvGl2); candleLights.push(tvGl2);
+      // Bookshelf right wall
+      buildBookshelf(4.4,0,-2.0,P,rng,true);
+      // Plant (dead drooping)
+      const pot=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.1,0.22,10),mat(0x705840,0.9)); pot.position.set(-3.0,0.11,0.5); roomGroup.add(pot);
+      const plant=box(0.02,0.45,0.02,0x3a5030,0.9); plant.position.set(-3.0,0.45,0.5); plant.rotation.z=0.5; roomGroup.add(plant);
+      addClickBox(0,2.1,1.15,0.1,0,1.4,-4.38); // TV hs0
+      addClickBox(1,0.6,1.8,0.3,4.4,1.2,-2.0); // bookshelf hs1
+    } else if(type==='stairwell'){
+      ambGl.color.set(0xc0b890); // warmer
+      const step1=box(3.0,0.18,0.5,0x585050,0.98); step1.position.set(0,0.09,-3.5); roomGroup.add(step1);
+      const step2=box(3.0,0.18,0.5,0x585050,0.98); step2.position.set(0,0.27,-3.0); roomGroup.add(step2);
+      const step3=box(3.0,0.18,0.5,0x585050,0.98); step3.position.set(0,0.45,-2.5); roomGroup.add(step3);
+      const railing=box(0.06,1.0,3.2,0x686068,0.8); railing.position.set(1.4,0.65,-2.5); roomGroup.add(railing);
+      // Neighbour's door
+      const nDoor=box(0.9,2.1,0.1,0x5a4838,0.9); nDoor.position.set(-4.38,1.05,-2.0); nDoor.rotation.y=Math.PI/2; roomGroup.add(nDoor);
+      // Graffiti strip
+      const graf=box(0.06,0.5,1.2,0x2a2a30,0.99); graf.position.set(4.38,1.6,-1.5); roomGroup.add(graf);
+      addClickBox(0,0.1,2.2,1.2,-4.36,1.05,-2.0); // door hs0
+      addClickBox(1,0.1,0.55,1.3,4.37,1.6,-1.5);  // graffiti hs1
+    } else if(type==='citystreet'){
+      ambGl.color.set(0xe0dcc0); ambGl.intensity=1.4;
+      // Street lamp
+      const lampP=box(0.08,2.5,0.08,0x686868,0.8); lampP.position.set(3.0,1.25,-2.0); roomGroup.add(lampP);
+      const lampTop=box(0.5,0.12,0.12,0x585858,0.8); lampTop.position.set(3.0,2.55,-2.0); roomGroup.add(lampTop);
+      const lampGl=new THREE.PointLight(0xfff0c0,0.8,5,1.5); lampGl.position.set(3.0,2.5,-2.0); roomGroup.add(lampGl); candleLights.push(lampGl);
+      // CCTV camera
+      const cam=box(0.15,0.12,0.2,0x383838,0.9); cam.position.set(2.8,2.8,-4.35); cam.rotation.x=-0.2; roomGroup.add(cam);
+      const camGl=new THREE.PointLight(0xff0000,0.3,0.8,2); camGl.position.set(2.8,2.8,-4.2); roomGroup.add(camGl); candleLights.push(camGl);
+      // Newspaper stand
+      const ns3=box(0.5,0.6,0.3,0x606858,0.9); ns3.position.set(-2.0,0.3,1.0); roomGroup.add(ns3);
+      addClickBox(0,0.2,0.2,0.25,2.8,2.8,-4.35); // camera hs0
+      addClickBox(1,0.6,0.65,0.35,-2.0,0.35,1.0); // newspaper hs1
+    } else if(type==='alley'){
+      ambGl.color.set(0x404858); ambGl.intensity=0.7;
+      // Dumpsters
+      const d1=box(1.0,0.7,0.6,0x3a5038,0.9); d1.position.set(-2.5,0.35,-3.0); roomGroup.add(d1);
+      const d2=box(0.9,0.65,0.55,0x384838,0.9); d2.position.set(-3.5,0.325,-2.0); roomGroup.add(d2);
+      // Fire escape ladder
+      const feLt=box(0.04,2.0,0.04,0x585858,0.8); feLt.position.set(2.0,1.0,-4.38); roomGroup.add(feLt);
+      const feRt=box(0.04,2.0,0.04,0x585858,0.8); feRt.position.set(2.5,1.0,-4.38); roomGroup.add(feRt);
+      for(let ri=0;ri<5;ri++){const rung=box(0.5,0.04,0.04,0x585858,0.8);rung.position.set(2.25,0.3+ri*0.4,-4.38);roomGroup.add(rung);}
+      addClickBox(0,2.2,0.8,1.2,-3.0,0.35,-2.5); // dumpsters hs0
+      addClickBox(1,0.6,2.1,0.1,2.25,1.0,-4.38); // fire escape hs1
+    } else if(type==='shop'){
+      ambGl.color.set(0xb0a888); ambGl.intensity=0.8;
+      // Shelves
+      for(let si2=0;si2<3;si2++){
+        const sh=box(4.0,0.05,0.35,0x787060,0.9); sh.position.set(0,0.6+si2*0.55,-3.0); roomGroup.add(sh);
+        const shBody=box(4.0,0.05,0.35,0x686050,0.9); shBody.position.set(0,0.58+si2*0.55,-3.0); roomGroup.add(shBody);
+      }
+      // Pushed shelving reveal area
+      const pushed=box(2.0,1.5,0.1,0x686060,0.8); pushed.position.set(-3.0,0.75,-4.0); pushed.rotation.y=0.4; roomGroup.add(pushed);
+      // Counter
+      const ctr2=box(1.5,0.06,0.7,0x787060,0.9); ctr2.position.set(2.5,0.8,-3.5); roomGroup.add(ctr2);
+      const ctrBdy=box(1.4,0.8,0.65,0x686050,0.9); ctrBdy.position.set(2.5,0.4,-3.5); roomGroup.add(ctrBdy);
+      addClickBox(0,2.2,1.6,0.15,-3.0,0.75,-4.0); // pushed shelving hs0
+      addClickBox(1,1.6,0.1,0.75,2.5,0.85,-3.5);  // counter hs1
+    } else if(type==='policestation'){
+      ambGl.color.set(0xd0d0e0); ambGl.intensity=1.1;
+      // Empty armoury racks
+      for(let ri2=0;ri2<4;ri2++){
+        const r=box(0.04,1.5,0.04,0x505058,0.8); r.position.set(-3.0+ri2*0.7,0.75,-4.0); roomGroup.add(r);
+        const rb2=box(0.04,0.04,1.0,0x505058,0.8); rb2.position.set(-3.0+ri2*0.7,1.5,-3.7); roomGroup.add(rb2);
+      }
+      // Duty desk
+      const dd=box(2.0,0.06,1.0,0x8a8078,0.9); dd.position.set(1.0,0.75,-2.5); roomGroup.add(dd);
+      const ddBody=box(1.85,0.75,0.9,0x7a7068,0.9); ddBody.position.set(1.0,0.375,-2.5); roomGroup.add(ddBody);
+      // Log book
+      const lb=box(0.3,0.04,0.22,0xd8d0b8,0.99); lb.position.set(1.0,0.8,-2.2); lb.rotation.y=0.2; roomGroup.add(lb);
+      addClickBox(0,2.8,1.6,1.0,-1.5,0.75,-4.0); // armoury racks hs0
+      addClickBox(1,2.1,0.1,1.1,1.0,0.82,-2.5);  // duty desk hs1
+    } else if(type==='storage2'){
+      ambGl.color.set(0xb0a888); ambGl.intensity=0.9;
+      // Industrial shelving
+      for(let si3=0;si3<4;si3++){
+        const shl=box(4.5,0.04,0.4,0x686860,0.9); shl.position.set(0,0.7+si3*0.65,-3.8); roomGroup.add(shl);
+        const shlL=box(0.06,2.7,0.06,0x585850,0.8); shlL.position.set(-2.2,1.35,-3.8); roomGroup.add(shlL);
+        const shlR=box(0.06,2.7,0.06,0x585850,0.8); shlR.position.set(2.2,1.35,-3.8); roomGroup.add(shlR);
+      }
+      // False panel (slightly ajar)
+      const fp=box(1.0,1.8,0.1,0x686860,0.8); fp.position.set(3.0,0.9,-4.28); fp.rotation.y=0.25; roomGroup.add(fp);
+      const evBag=box(0.25,0.35,0.12,0x303038,0.9); evBag.position.set(3.5,0.45,-3.9); roomGroup.add(evBag);
+      const evGl=new THREE.PointLight(0xff8800,0.3,1.2,2); evGl.position.set(3.5,0.6,-3.9); roomGroup.add(evGl); candleLights.push(evGl);
+      // Forklift shape
+      const fk=box(1.2,0.55,1.8,0xffa020,0.9); fk.position.set(-2.5,0.275,-1.5); roomGroup.add(fk);
+      addClickBox(0,1.1,1.9,0.15,3.0,0.9,-4.28); // false panel hs0
+      addClickBox(1,2.0,0.6,1.2,-1.5,0.55,-1.0); // forklift/crates hs1
+    } else if(type==='underpass'){
+      ambGl.color.set(0x404858); ambGl.intensity=0.6;
+      // Concrete ceiling tiles (some fallen)
+      for(let ti2=0;ti2<5;ti2++){
+        const tile2=box(1.2,0.08,0.9,0x505058,0.98); tile2.position.set(-3.0+ti2*1.5,3.35,-2.0); tile2.rotation.z=(ti2%2===0?0.01:-0.01); roomGroup.add(tile2);
+      }
+      // Fallen tile on floor
+      const ft=box(1.1,0.07,0.8,0x484850,0.98); ft.position.set(1.5,0.035,-1.0); ft.rotation.z=0.15; roomGroup.add(ft);
+      // Drip water
+      const drip2=box(0.03,0.5,0.03,0x2030a0,0.99); drip2.material.transparent=true; drip2.material.opacity=0.5; drip2.position.set(-1.0,1.8,-2.0); roomGroup.add(drip2);
+      // Drainage grate
+      const grate=box(0.5,0.04,0.4,0x484040,0.8,0.2); grate.position.set(2.5,0.02,1.0); roomGroup.add(grate);
+      addClickBox(0,4.5,0.2,1.0,0,3.38,-2.0); // ceiling tiles hs0
+      addClickBox(1,0.55,0.06,0.45,2.5,0.03,1.0); // grate hs1
+    } else if(type==='carpark'){
+      ambGl.color.set(0x888898); ambGl.intensity=0.7;
+      // Concrete pillars
+      [[-3.0,-3.0],[-3.0,-1.0],[-3.0,1.0],[3.0,-3.0],[3.0,-1.0],[3.0,1.0]].forEach(([px,pz])=>{
+        const pil=box(0.35,3.0,0.35,0x585860,0.98); pil.position.set(px,1.5,pz); pil.castShadow=true; roomGroup.add(pil);
+      });
+      // Exit ramp indicator
+      const rampSign=box(0.8,0.3,0.06,0x3a3840,0.9); rampSign.position.set(4.38,2.0,-1.0); rampSign.rotation.y=Math.PI/2; roomGroup.add(rampSign);
+      const rampGl=new THREE.PointLight(0x60ff60,0.4,2,2); rampGl.position.set(4.2,2.0,-1.0); roomGroup.add(rampGl); candleLights.push(rampGl);
+      addClickBox(0,3.0,3.0,4.5,-3.0,1.5,-1.0); // pillars hs0
+      addClickBox(1,0.2,0.4,0.2,4.38,2.0,-1.0); // ramp sign hs1
+    } else {
+      // escaperooftop — open sky rooftop
+      ambGl.color.set(0x8090b0); ambGl.intensity=1.5;
+      const skyGl2=new THREE.PointLight(0x4060a0,1.0,30,0.5); skyGl2.position.set(0,6.0,0); roomGroup.add(skyGl2); candleLights.push(skyGl2);
+      // Parapet walls
+      for(let pi=0;pi<5;pi++){
+        const prt=box(1.4,0.8,0.2,0x585860,0.98); prt.position.set(-4.0+pi*2.0,0.4,-4.38); roomGroup.add(prt);
+      }
+      // Helicopter suggestion (distant — box at ceiling)
+      const heli=box(1.5,0.3,0.8,0xc0c8d0,0.8); heli.position.set(0,4.5,-2.0); roomGroup.add(heli);
+      const heliGl=new THREE.PointLight(0xffffff,1.5,8,1.5); heliGl.position.set(0,4.5,-2.0); roomGroup.add(heliGl); candleLights.push(heliGl);
+      const rotor=box(2.5,0.04,0.12,0x9098a0,0.7,0.2); rotor.position.set(0,4.75,-2.0); roomGroup.add(rotor);
+      // Searchlight beam
+      const beam=box(0.4,4.5,0.4,0xffffff,0.99); beam.material.transparent=true; beam.material.opacity=0.08; beam.position.set(0,2.25,-2.0); roomGroup.add(beam);
+      addClickBox(0,1.6,3.0,1.0,0,3.5,-2.0); // helicopter hs0
+      addClickBox(1,1.5,3.5,0.1,4.38,2.0,-1.5); // rooftop edge hs1
+    }
+  }
+
   // Default for any unhandled room type: add candle + basic furniture
   else {
     addCandleLight(0,2.5,-2.0,P,P.li);
@@ -4243,6 +4811,7 @@ function getDoorState(from,to){
   if(conn.state==='open') return 'open';
   if(conn.state==='locked') return state.unlockedDoors.has(k)?'open':'locked';
   if(conn.state==='boarded') return state.brokenDoors.has(k)?'open':'boarded';
+  if(conn.state==='coded') return state.unlockedDoors.has(k)?'open':'coded';
   return null;
 }
 
@@ -4360,6 +4929,9 @@ function tryMove(toRoom){
       addLog(`This door is boarded up. You need a hammer to break through.`);
       sfxDoorLocked();
     }
+  } else if(ds==='coded'){
+    const conn=getConnection(state.currentRoom,toRoom);
+    openKeypad(state.currentRoom, toRoom, conn.code, travelDir);
   }
 }
 
@@ -4390,6 +4962,9 @@ function examineHotspot(hs,foundSet){
   if(hs.ch2exit){ ch2CheckExit(); return; }
   // ch3 special trigger
   if(hs.ch3exit){ ch3CheckExit(); return; }
+  // ch4 / ch5 special triggers
+  if(hs.ch4exit){ ch4CheckExit(); return; }
+  if(hs.ch5exit){ ch5CheckExit(); return; }
   // requireItem check (cabinet under stairs etc.)
   if(hs.requireItem && !state.inventory.find(i=>i.id===hs.requireItem)){
     const needed=Object.values(ROOM_DATA).flatMap(r=>r.items||[]).find(i=>i.id===hs.requireItem);
@@ -4484,6 +5059,13 @@ function drawItemIcon(itemId){
       x.lineTo(22+Math.cos(a)*16,22+Math.sin(a)*16);
       x.lineTo(22+Math.cos(ai)*7,22+Math.sin(ai)*7);
     }x.closePath();x.fill();
+  } else if(itemId==='gun'){
+    // Handgun silhouette
+    x.fillStyle='#a0a0b0';x.shadowColor='#c0c0ff';x.shadowBlur=6;
+    x.fillRect(8,18,24,8);// barrel+body
+    x.fillRect(20,26,8,10);// grip
+    x.fillRect(8,16,16,4);// slide
+    x.fillStyle='#707080';x.fillRect(26,20,8,3);// barrel tip
   } else {
     x.fillStyle='#806040';x.shadowBlur=4;
     x.fillRect(10,10,24,24);
@@ -4549,10 +5131,42 @@ const ROOM_GRID_CH3 = {
   41:0, 42:1, 43:2, 44:3, 45:4,  // row 0 upper wing
   46:5, 47:6, 48:7, 49:8, 50:9   // row 1 lower wing
 };
+const ROOM_GRID_CH4 = {
+  51:0, 52:1, 53:2, 54:3, 55:4,  // row 0
+  56:5, 57:6, 58:7, 59:8, 60:9   // row 1
+};
+const ROOM_GRID_CH5 = {
+  61:0, 62:1, 63:2, 64:3, 65:4,  // row 0
+  66:5, 67:6, 68:7, 69:8, 70:9   // row 1
+};
 
 function updateMiniMap(){
   const el=document.getElementById('miniMap');
   el.innerHTML='';
+
+  if(ch4Active||ch5Active){
+    el.style.gridTemplateColumns='repeat(5,1fr)';
+    const totalCells=10;
+    const roomByPos={};
+    const grid=ch4Active?ROOM_GRID_CH4:ROOM_GRID_CH5;
+    Object.entries(grid).forEach(([id,pos])=>roomByPos[pos]=parseInt(id));
+    for(let i=0;i<totalCells;i++){
+      const div=document.createElement('div'); div.className='mapRoom';
+      const roomId=roomByPos[i];
+      if(roomId){
+        const isVisited=state.visitedRooms.has(roomId);
+        const isCurrent=state.currentRoom===roomId;
+        div.title=ROOM_DATA[roomId].name;
+        if(isCurrent) div.classList.add('current');
+        else if(isVisited) div.classList.add('visited');
+        const numEl=document.createElement('span'); numEl.className='rnum'; numEl.textContent=roomId; div.appendChild(numEl);
+        if(isVisited||isCurrent){const nameEl=document.createElement('span');nameEl.className='rname';const name=ROOM_DATA[roomId].name;nameEl.textContent=name.length>10?name.substring(0,9)+'…':name;div.appendChild(nameEl);}
+        div.onclick=()=>{if(state.visitedRooms.has(roomId)){document.getElementById('examineResult').textContent=ROOM_DATA[roomId].name+': '+ROOM_DATA[roomId].desc.substring(0,80)+'...';}};
+      }
+      el.appendChild(div);
+    }
+    return;
+  }
 
   if(ch3Active){
     // Chapter 3: 5-wide, 2-row grid
@@ -4878,7 +5492,7 @@ function getTrophy(elapsedMs){
 }
 
 function showTrophy(elapsedMs, cb){
-  if(!ch2Active&&!ch3Active) saveRun(elapsedMs); // only record to ch1 leaderboard for ch1 runs
+  if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active) saveRun(elapsedMs); // only record to ch1 leaderboard for ch1 runs
   const trophy=getTrophy(elapsedMs);
   if(!trophy){ if(cb) cb(); return; }
   trophyContinueCb=cb||null;
@@ -4903,7 +5517,11 @@ function closeTrophyScreen(){
 }
 
 function triggerIdleDeath(){
-  triggerDeathEffect(`${playerName} stood still for too long in Room ${state.currentRoom}.\n\nCole found them.\n\nThe Voss Motor Inn claimed another guest.`);
+  if(ch5Active){
+    triggerDeathEffect(`${playerName} stopped moving.\n\nCole's footsteps grew louder. Then silence.\n\nThen nothing.`);
+  } else {
+    triggerDeathEffect(`${playerName} stood still for too long in Room ${state.currentRoom}.\n\nCole found them.\n\nThe Voss Motor Inn claimed another guest.`);
+  }
 }
 
 function startTimer(){
@@ -4918,6 +5536,24 @@ function startTimer(){
     sfxTick();
     if(timerSeconds===(ch3Active?60:120)) sfxCritical();
     if(timerSeconds<=0){ triggerTimerDeath(); return; }
+    if(ch4Active){
+      // Chapter 4: robot warnings, no idle death
+      const warn=document.getElementById('hunterWarning');
+      if(timerSeconds<=120){
+        warn.textContent='⚠ CONTAINMENT PROTOCOL ACTIVE ⚠';
+        warn.classList.add('show');
+      } else if(timerSeconds<=300){
+        warn.textContent='⚠ DRONES CLOSING IN ⚠';
+        warn.classList.add('show');
+      } else {
+        warn.textContent=''; warn.classList.remove('show');
+      }
+      // Robot beep every ~45 seconds
+      if(timerSeconds%45===0) { sfxRobotBeep(); }
+      if(timerSeconds%90===0) { sfxRobotAttack(); addLog('[!] A maintenance drone passes close by — you hear it scanning.','important'); }
+      setTimeout(tick,1000);
+      return;
+    }
     if(ch3Active){
       // Chapter 3: no hunter/idle mechanic — just timer pressure + zombie groans
       const warn=document.getElementById('hunterWarning');
@@ -4935,8 +5571,8 @@ function startTimer(){
       setTimeout(tick,1000);
       return;
     }
-    // Idle check — only in ch1 (Cole chases you). Ch2/ch3 have no idle death.
-    if(!ch2Active){
+    // Idle check — only in ch1 and ch5. Ch2/ch3/ch4 have no idle death.
+    if(!ch2Active&&!ch4Active){
       const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
       const idleLeft=IDLE_LIMIT-idleSeconds;
       const warn=document.getElementById('hunterWarning');
@@ -4956,7 +5592,11 @@ function startTimer(){
 }
 
 function triggerTimerDeath(){
-  if(ch3Active){
+  if(ch4Active){
+    triggerDeathEffect(`The containment seal engaged.\nA maintenance drone administered the correction protocol.\n\n${playerName} was processed.\n\nThe Future House reclaimed its subject.`);
+  } else if(ch5Active){
+    triggerDeathEffect(`The timer expired.\nCole had been waiting.\n\n${playerName} never reached the rooftop.`);
+  } else if(ch3Active){
     triggerDeathEffect(`The containment seal engaged.\nThe blast doors locked.\n${playerName} heard the groaning get closer.\n\nCounty General Hospital claimed another patient.`);
   } else {
     triggerDeathEffect(`The clock on the wall reached zero.\nCole found ${playerName} in the dark.\n${playerName} never made it to the vent.\n\nThe Voss Motor Inn claimed another guest.`);
@@ -4964,7 +5604,11 @@ function triggerTimerDeath(){
 }
 
 function triggerHunterDeath(){
-  triggerDeathEffect(`Cole stepped out of the shadows of Room ${state.currentRoom}.\n${playerName} had nowhere left to run.\n\nThe Voss Motor Inn claimed another guest.`);
+  if(ch5Active){
+    triggerDeathEffect(`Cole stepped out from behind the shadows.\nHe had tracked ${playerName} across the city.\n\n${playerName} never got the chance to fire the signal.`);
+  } else {
+    triggerDeathEffect(`Cole stepped out of the shadows of Room ${state.currentRoom}.\n${playerName} had nowhere left to run.\n\nThe Voss Motor Inn claimed another guest.`);
+  }
 }
 
 // BFS through all connections (hunter ignores locks)
@@ -4997,7 +5641,11 @@ function moveHunter(){
   const path=bfsPath(hunterRoom,state.currentRoom);
   if(path&&path.length>1){
     hunterRoom=path[1];
-    addLog(`[!] You hear heavy footsteps somewhere in the motel.`,'important');
+    if(ch5Active){
+      addLog(`[!] You hear boots on concrete somewhere nearby.`,'important');
+    } else {
+      addLog(`[!] You hear heavy footsteps somewhere in the motel.`,'important');
+    }
   }
   checkHunterProximity();
 }
@@ -5046,6 +5694,44 @@ let ch2DoorsUnlocked=false;
 let ch2TvWatched=false;
 let ch2Active=false;
 let ch3Active=false;
+let ch4Active=false;
+let ch5Active=false;
+// ── Keypad state ──────────────────────────────────────────────────
+let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
+function openKeypad(from, to, code, dir){
+  _kpFrom=from; _kpTo=to; _kpCode=code; _kpDir=dir; _kpInput='';
+  document.getElementById('keypadDisplay').textContent='___';
+  document.getElementById('keypadOverlay').style.display='flex';
+  sfxKeypadBeep();
+}
+function closeKeypad(){ document.getElementById('keypadOverlay').style.display='none'; _kpInput=''; }
+function keypadPress(d){
+  if(_kpInput.length>=3) return;
+  _kpInput+=d;
+  const disp=_kpInput.padEnd(3,'_').split('').join('');
+  document.getElementById('keypadDisplay').textContent=disp;
+  sfxKeypadBeep();
+}
+function keypadDelete(){
+  if(_kpInput.length>0){ _kpInput=_kpInput.slice(0,-1); }
+  const disp=(_kpInput||'').padEnd(3,'_');
+  document.getElementById('keypadDisplay').textContent=disp;
+}
+function keypadSubmit(){
+  if(_kpInput.length<3){ sfxKeypadError(); return; }
+  if(_kpInput===_kpCode){
+    sfxKeypadSuccess();
+    state.unlockedDoors.add(doorKey(_kpFrom,_kpTo));
+    addLog(`ACCESS GRANTED — door unlocks.`,'important');
+    closeKeypad();
+    setTimeout(()=>enterRoom(_kpTo,_kpDir),400);
+  } else {
+    sfxKeypadError();
+    _kpInput='';
+    document.getElementById('keypadDisplay').textContent='___';
+    addLog('ACCESS DENIED. Try again.');
+  }
+}
 
 function startChapter2(){
   // 1. Black screen — ladder descent
@@ -5711,6 +6397,282 @@ function showCh3FinalCard(timeStr){
     btn.textContent='PLAY AGAIN';
     btn.onclick=()=>location.reload();
     const btn2=document.getElementById('ovBtn2');
+    btn2.style.display='inline-block';
+    btn2.textContent='CHAPTER 4 →';
+    btn2.onclick=()=>{
+      document.getElementById('overlay').style.display='none';
+      startChapter4();
+    };
+  }
+  if(elapsedMs) showTrophy(elapsedMs, showCard);
+  else showCard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER 4 — FUTURE HOUSE
+// ═══════════════════════════════════════════════════════════════
+
+function loadChapter4(){
+  ch2Active=false; ch3Active=false; ch4Active=true; ch5Active=false;
+  gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
+  state.currentRoom=51;
+  state.visitedRooms=new Set([51]);
+  state.inventory=[];
+  state.selectedItem=null;
+  state.roomItemsFound={};
+  state.unlockedDoors=new Set();
+  state.brokenDoors=new Set();
+  state.ventOpened=false; state.escaped=false; state.allRoomsVisited=false;
+  state.totalTreasure=0; state.notebookRead=true;
+  timerSeconds=900; // 15 minutes
+  hunterRoom=null;
+  gameStartTime=Date.now();
+  connMap=buildConnectionMap();
+  render();
+  sfxFutureHum();
+  addLog(`${playerName} finds themselves in the Future House. The robots are online.`,'important');
+  addLog('SOLVE THE CODES — escape before the timer hits zero.');
+  startTimer();
+}
+
+function startChapter4(){
+  const bl=document.getElementById('ch4Black');
+  const cap=document.getElementById('ch4Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('BREAKING NEWS: The zombie outbreak is over.',800,2800);
+  caption('Containment units have been deployed worldwide.',4200,2800);
+  caption('Experimental cleaning robots are sanitising the infected zones.',7500,3000);
+  caption('All units are networked. Coordinated. Efficient.',11000,2500);
+  caption('Then someone hacked the network.',14000,2500);
+  caption('The hacker — the same one who helped you before — is dead.',17500,3000);
+  caption('Killed by Cole, just before transmitting the kill-switch.',21500,3000);
+  caption('The robots have new orders.',25000,2500);
+  caption('You wake up in a white room.',28000,2500);
+  caption('The Future House. One of the containment facilities.',31000,3000);
+  caption('The robots are coming.',35000,2000);
+  caption('Each door in this facility is code-locked.',38000,2800);
+  caption('The codes are hidden in each room.',41500,2500);
+  caption('Find them. Type them in. Get out.',45000,2500);
+  caption('',49000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    loadChapter4();
+  },49500);
+}
+
+function ch4CheckExit(){
+  // All 9 coded doors must be unlocked
+  const codedDoors=[
+    doorKey(51,52),doorKey(52,53),doorKey(53,54),doorKey(54,55),
+    doorKey(55,56),doorKey(56,57),doorKey(57,58),doorKey(58,59),doorKey(59,60)
+  ];
+  const allUnlocked=codedDoors.every(k=>state.unlockedDoors.has(k));
+  if(allUnlocked){
+    triggerCh4Escape();
+  } else {
+    const remaining=codedDoors.filter(k=>!state.unlockedDoors.has(k)).length;
+    addLog(`The evacuation capsule is locked. ${remaining} door${remaining!==1?'s':''} still secured.`,'important');
+    sfxDoorLocked();
+  }
+}
+
+function triggerCh4Escape(){
+  if(gameOver) return;
+  state.escaped=true; gameOver=true;
+  const elapsed=900-timerSeconds;
+  const timeStr=fmtTime(elapsed);
+  const bl=document.getElementById('ch4Black');
+  const cap=document.getElementById('ch4Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  sfxFutureHum();
+  caption('You reach the evacuation capsule.',800,2500);
+  caption('Your fingers fly across the final keypad.',3800,2500);
+  caption('ACCESS GRANTED.',6800,2000);
+  caption('The capsule seal breaks with a hiss.',9500,2500);
+  caption('You drop inside. The hatch locks above you.',12500,2500);
+  caption('G-force. Acceleration. Then — sky.',16000,2000);
+  caption('The Future House shrinks below.',19000,2500);
+  caption('The robots are swarming the launch site.',22000,2500);
+  caption('But you are already gone.',25500,2000);
+  caption('',29000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    showCh4FinalCard(timeStr);
+  },29500);
+}
+
+function showCh4FinalCard(timeStr){
+  const prevBest=parseInt(localStorage.getItem('ch4_best')||'99999',10);
+  const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
+  if(elapsed<prevBest) localStorage.setItem('ch4_best',String(elapsed));
+  const best=parseInt(localStorage.getItem('ch4_best'),10);
+  const bm=Math.floor(best/60),bs=best%60;
+  const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+
+  const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
+  function showCard(){
+    document.getElementById('ovTitle').textContent='LAUNCHED';
+    document.getElementById('ovText').textContent=
+      `You cracked all nine codes.\nThe evacuation capsule carried you clear.\n\nThe robots below are still searching.\n\nYou are safe. For now.\n\nBut the network is still live.\nAnd Cole is still out there.\n\n────────────────────\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\n────────────────────`;
+    document.getElementById('overlay').style.display='flex';
+    const btn=document.getElementById('ovBtn');
+    btn.textContent='PLAY AGAIN';
+    btn.onclick=()=>location.reload();
+    const btn2=document.getElementById('ovBtn2');
+    btn2.style.display='inline-block';
+    btn2.textContent='CHAPTER 5 →';
+    btn2.onclick=()=>{
+      document.getElementById('overlay').style.display='none';
+      startChapter5();
+    };
+  }
+  if(elapsedMs) showTrophy(elapsedMs, showCard);
+  else showCard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER 5 — ONE YEAR LATER
+// ═══════════════════════════════════════════════════════════════
+
+function loadChapter5(){
+  ch2Active=false; ch3Active=false; ch4Active=false; ch5Active=true;
+  gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
+  state.currentRoom=61;
+  state.visitedRooms=new Set([61]);
+  state.inventory=[];
+  state.selectedItem=null;
+  state.roomItemsFound={};
+  state.unlockedDoors=new Set();
+  state.brokenDoors=new Set();
+  state.ventOpened=false; state.escaped=false; state.allRoomsVisited=false;
+  state.totalTreasure=0; state.notebookRead=true;
+  timerSeconds=1800; // 30 minutes
+  hunterRoom=70; // Cole starts at the far end
+  gameStartTime=Date.now();
+  connMap=buildConnectionMap();
+  render();
+  addLog(`${playerName} steps out of the safe house. One year later. Cole is free.`,'important');
+  addLog('Find the gun in Storage Omega — then signal the helicopter from the rooftop.');
+  startTimer();
+  startHunter();
+}
+
+function startChapter5(){
+  const bl=document.getElementById('ch5Black');
+  const cap=document.getElementById('ch5Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('ONE YEAR LATER.',800,2500);
+  caption('The city was rebuilt. The robots were shut down.',4000,3000);
+  caption('Manually. Every single unit. It took nine months.',7500,3000);
+  caption('The population returned. Life resumed.',11200,2500);
+  caption('You thought it was over.',14200,2500);
+  caption('Then the prison called.',17000,2500);
+  caption('Cole had escaped.',20000,2500);
+  caption('Three guards dead. No trail.',22800,2500);
+  caption('But you know him.',25600,2500);
+  caption('He is coming for you.',28400,2500);
+  caption('Guns are banned. Confiscated after the robot uprising.',32000,3000);
+  caption('But the evidence vault in Storage Omega still has one.',35500,3000);
+  caption('The gun used to disable the first drone. Proof of your innocence.',39500,3200);
+  caption('Get it. Signal the helicopter.',43500,2500);
+  caption('Thirty minutes. Then Cole arrives.',47000,2800);
+  caption('',51000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    loadChapter5();
+  },51500);
+}
+
+function ch5CheckExit(){
+  if(!state.inventory.find(i=>i.id==='gun')){
+    addLog('The helicopter is circling but you have no signal flare. Find the gun first.','important');
+    sfxDoorLocked();
+    return;
+  }
+  triggerCh5Escape();
+}
+
+function triggerCh5Escape(){
+  if(gameOver) return;
+  state.escaped=true; gameOver=true;
+  const elapsed=1800-timerSeconds;
+  const timeStr=fmtTime(elapsed);
+  const bl=document.getElementById('ch5Black');
+  const cap=document.getElementById('ch5Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  sfxGunShot();
+  setTimeout(sfxHelicopter, 3000);
+  caption('You fire the signal gun into the sky.',800,2500);
+  caption('Three shots. The signal pattern.',3800,2500);
+  caption('A searchlight sweeps across the rooftop.',7500,2500);
+  caption('The helicopter banks toward you.',10500,2500);
+  caption('You can hear Cole on the stairwell below.',14000,2500);
+  caption('He is close.',17000,1500);
+  caption('The helicopter hovers. A rope drops.',19000,2500);
+  caption('You grab it.',22000,1500);
+  caption('Cole bursts through the rooftop door.',24000,2500);
+  caption('He sees you rising out of reach.',27000,2500);
+  caption('He screams.',30000,1500);
+  caption('You do not look down.',32500,2500);
+  caption('It is over.',36000,2500);
+  caption('It is finally over.',39500,2800);
+  caption('',44000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    showCh5FinalCard(timeStr);
+  },44500);
+}
+
+function showCh5FinalCard(timeStr){
+  const prevBest=parseInt(localStorage.getItem('ch5_best')||'99999',10);
+  const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
+  if(elapsed<prevBest) localStorage.setItem('ch5_best',String(elapsed));
+  const best=parseInt(localStorage.getItem('ch5_best'),10);
+  const bm=Math.floor(best/60),bs=best%60;
+  const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+
+  const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
+  function showCard(){
+    document.getElementById('ovTitle').textContent='FREE';
+    document.getElementById('ovText').textContent=
+      `You signalled the helicopter.\nYou escaped.\n\nCole was arrested on the rooftop.\nThis time, no escape.\n\nMara testified. The hacker's files were recovered.\nYou were cleared of everything.\n\nFor the first time in a long time —\nyou are free.\n\n────────────────────\nFINAL CHAPTER COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\n────────────────────`;
+    document.getElementById('overlay').style.display='flex';
+    const btn=document.getElementById('ovBtn');
+    btn.textContent='PLAY AGAIN FROM START';
+    btn.onclick=()=>location.reload();
+    const btn2=document.getElementById('ovBtn2');
     btn2.style.display='none';
   }
   if(elapsedMs) showTrophy(elapsedMs, showCard);
@@ -6231,8 +7193,10 @@ function startGame(resume, skipToCh2=false){
   connMap = buildConnectionMap();
 
   if(resume && loadGame()){
-    // If the save has a chapter 2 or 3 room, restore flags
-    if(state.currentRoom>=41){ ch3Active=true; }
+    // If the save has a chapter room, restore flags
+    if(state.currentRoom>=61){ ch5Active=true; }
+    else if(state.currentRoom>=51){ ch4Active=true; }
+    else if(state.currentRoom>=41){ ch3Active=true; }
     else if(state.currentRoom>=31){ ch2Active=true; }
     addLog('Game resumed.','important');
     if(!gameStartTime) gameStartTime=Date.now();
@@ -6335,10 +7299,11 @@ function loadGame(){
     state.notebookRead=data.notebookRead||false;
     if(data.playerName) playerName=data.playerName;
     if(data.timerSeconds!=null) timerSeconds=data.timerSeconds;
-    if(data.timerRunning && (state.notebookRead||ch2Active||ch3Active)){
+    if(data.timerRunning && (state.notebookRead||ch2Active||ch3Active||ch4Active||ch5Active)){
       // Resume the timer where it left off
       startTimer();
-      if(!ch2Active&&!ch3Active) startHunter(); // no hunter in ch2 or ch3
+      // Hunter: ch1 always, ch5 always, ch2/ch3/ch4 never
+      if(!ch2Active&&!ch3Active&&!ch4Active) startHunter();
     }
     return true;
   }catch(e){ return false; }
