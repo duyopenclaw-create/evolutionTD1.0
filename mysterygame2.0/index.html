@@ -3879,7 +3879,7 @@ function buildFurniture(type,P,rng){
       const photo=box(0.5,0.4,0.02,0x102030,0.99); photo.position.set(0.3,1.3,-2.59); roomGroup.add(photo);
       addClickBox(0,2.2,0.8,0.05,0,1.3,-2.6);   // file screens hs0
       addClickBox(1,0.35,0.5,0.06,1.5,1.2,-2.7); // dark screen hs1
-      addClickBox(2,2.6,0.06,1.1,0,0.8,-3.0);    // desk drawer hs2 (ch4_t1)
+      addClickBox(2,2.6,0.55,1.1,0,0.55,-3.0);    // desk drawer hs2 (ch4_t1)
     } else if(type==='futbedroom'){
       // Auto-adjust bed
       const bed=box(2.2,0.4,1.7,0xd8dce4,0.9); bed.position.set(0,0.2,-3.0); roomGroup.add(bed);
@@ -3910,7 +3910,7 @@ function buildFurniture(type,P,rng){
       const vaultDoor=box(1.0,1.6,0.08,0x585868,0.7,0.2); vaultDoor.position.set(3.5,0.9,-4.3); roomGroup.add(vaultDoor);
       addClickBox(0,3.4,0.7,0.15,-1.0,1.4,-3.5); // rack hs0
       addClickBox(1,1.25,1.9,0.25,3.5,0.9,-4.38); // vault hs1
-      addClickBox(2,4.0,0.06,0.9,0,0.8,-3.0);     // workbench hs2 (flavour)
+      addClickBox(2,4.0,0.55,0.9,0,0.55,-3.0);     // workbench hs2 (flavour)
     } else if(type==='futstorage'){
       // White polymer crates
       [[0,0.3,-3.5,1.8,0.55,0.5],[1.9,0.3,-3.5,1.8,0.55,0.5],[3.8,0.3,-3.0,1.5,0.55,0.5],
@@ -3923,7 +3923,7 @@ function buildFurniture(type,P,rng){
       const rGl=new THREE.PointLight(0xff2200,0.3,2,2); rGl.position.set(-2.0,0.6,-1.0); roomGroup.add(rGl); candleLights.push(rGl);
       addClickBox(0,1.5,0.55,0.55,-2.0,0.3,-1.0); // torn container hs0
       addClickBox(1,1.6,1.2,0.2,-0.5,0.8,-4.2);   // storage terminal hs1
-      addClickBox(2,0.5,0.08,0.5,-2.0,0.02,-1.5); // floor panel hs2 (ch4_t2)
+      addClickBox(2,1.6,0.35,1.6,-2.0,0.18,-1.0); // floor panel hs2 (ch4_t2)
     } else if(type==='futcontrol'){
       // Bank of monitors — back wall
       for(let mi=0;mi<5;mi++){
@@ -3938,7 +3938,7 @@ function buildFurniture(type,P,rng){
       const termGl=new THREE.PointLight(0x00ff88,0.3,1.2,2); termGl.position.set(2.0,0.88,-3.7); roomGroup.add(termGl); candleLights.push(termGl);
       addClickBox(0,5.5,0.7,0.12,0,2.0,-4.35); // monitors hs0
       addClickBox(1,0.75,0.55,0.12,2.0,0.88,-3.8); // terminal hs1
-      addClickBox(2,0.35,0.35,0.35,0,3.2,0);       // alert light hs2 (flavour)
+      addClickBox(2,1.5,1.2,1.5,0,2.8,0);           // alert light hs2 (flavour)
     } else if(type==='futchamber'){
       // Teleport pad (circular platform)
       const pad=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,0.08,24),mat(0x304858,0.8,0.2)); pad.position.set(-0.5,0.04,-3.0); roomGroup.add(pad);
@@ -3954,7 +3954,7 @@ function buildFurniture(type,P,rng){
       const conGl=new THREE.PointLight(0x0080c0,0.4,1.5,2); conGl.position.set(2.5,0.9,-3.65); roomGroup.add(conGl); candleLights.push(conGl);
       addClickBox(0,2.5,0.4,2.5,-0.5,0.1,-3.0); // fused pad hs0
       addClickBox(1,0.85,0.6,0.15,2.5,0.9,-3.8); // console hs1
-      addClickBox(2,0.5,0.04,0.5,-0.5,0.06,-3.0); // scorch marks hs2 (ch4_t3)
+      addClickBox(2,1.6,0.18,1.6,-0.5,0.09,-3.0); // scorch marks hs2 (ch4_t3)
     } else if(type==='futcorridor2'){
       // Red pulse lighting
       const rPulse=new THREE.PointLight(0xff1a00,0.9,14,1.5); rPulse.position.set(0,2.8,-2.0); roomGroup.add(rPulse); candleLights.push(rPulse);
@@ -4013,7 +4013,7 @@ function buildFurniture(type,P,rng){
       const plant=box(0.02,0.45,0.02,0x3a5030,0.9); plant.position.set(-3.0,0.45,0.5); plant.rotation.z=0.5; roomGroup.add(plant);
       addClickBox(0,2.1,1.15,0.1,0,1.4,-4.38); // TV hs0
       addClickBox(1,0.6,1.8,0.3,4.4,1.2,-2.0); // bookshelf hs1
-      addClickBox(2,0.25,0.12,0.12,-3.0,0.12,0.5); // phone on sofa arm hs2 (unknown_msg)
+      addClickBox(2,0.8,0.6,0.6,-3.0,0.5,0.5); // phone on sofa arm hs2 (unknown_msg)
     } else if(type==='stairwell'){
       ambGl.color.set(0xc0b890); // warmer
       const step1=box(3.0,0.18,0.5,0x585050,0.98); step1.position.set(0,0.09,-3.5); roomGroup.add(step1);
@@ -4040,7 +4040,7 @@ function buildFurniture(type,P,rng){
       const ns3=box(0.5,0.6,0.3,0x606858,0.9); ns3.position.set(-2.0,0.3,1.0); roomGroup.add(ns3);
       addClickBox(0,0.2,0.2,0.25,2.8,2.8,-4.35); // camera hs0
       addClickBox(1,0.6,0.65,0.35,-2.0,0.35,1.0); // newspaper hs1
-      addClickBox(2,0.2,1.6,0.15,0,1.8,-3.5);     // new tree planting hs2 (flavour)
+      addClickBox(2,0.9,2.5,0.5,0,1.5,-2.0);       // new tree planting hs2 (flavour)
     } else if(type==='alley'){
       ambGl.color.set(0x404858); ambGl.intensity=0.7;
       // Dumpsters
@@ -4052,7 +4052,7 @@ function buildFurniture(type,P,rng){
       for(let ri=0;ri<5;ri++){const rung=box(0.5,0.04,0.04,0x585858,0.8);rung.position.set(2.25,0.3+ri*0.4,-4.38);roomGroup.add(rung);}
       addClickBox(0,2.2,0.8,1.2,-3.0,0.35,-2.5); // dumpsters hs0
       addClickBox(1,0.6,2.1,0.1,2.25,1.0,-4.38); // fire escape hs1
-      addClickBox(2,0.12,0.16,0.04,-3.5,1.5,-3.5); // nail on wall hs2 (ch5_t1)
+      addClickBox(2,0.9,0.9,0.5,-3.5,1.5,-3.0);    // nail on wall hs2 (ch5_t1)
     } else if(type==='shop'){
       ambGl.color.set(0xb0a888); ambGl.intensity=0.8;
       // Shelves
@@ -4067,7 +4067,7 @@ function buildFurniture(type,P,rng){
       const ctrBdy=box(1.4,0.8,0.65,0x686050,0.9); ctrBdy.position.set(2.5,0.4,-3.5); roomGroup.add(ctrBdy);
       addClickBox(0,2.2,1.6,0.15,-3.0,0.75,-4.0); // pushed shelving hs0
       addClickBox(1,1.6,0.1,0.75,2.5,0.85,-3.5);  // counter hs1
-      addClickBox(2,0.5,1.8,0.08,0,-0.5,-2.5);    // magazine rack hs2 (flavour) — floor facing
+      addClickBox(2,1.2,1.6,0.5,0,0.8,-2.8);       // magazine rack hs2 (flavour)
     } else if(type==='policestation'){
       ambGl.color.set(0xd0d0e0); ambGl.intensity=1.1;
       // Empty armoury racks
@@ -4082,7 +4082,7 @@ function buildFurniture(type,P,rng){
       const lb=box(0.3,0.04,0.22,0xd8d0b8,0.99); lb.position.set(1.0,0.8,-2.2); lb.rotation.y=0.2; roomGroup.add(lb);
       addClickBox(0,2.8,1.6,1.0,-1.5,0.75,-4.0); // armoury racks hs0
       addClickBox(1,2.1,0.1,1.1,1.0,0.82,-2.5);  // duty desk hs1
-      addClickBox(2,2.0,0.12,1.0,1.0,0.7,-2.5);  // desk drawer hs2 (ch5_t2)
+      addClickBox(2,2.0,0.55,1.0,1.0,0.55,-2.5);  // desk drawer hs2 (ch5_t2)
     } else if(type==='storage2'){
       ambGl.color.set(0xb0a888); ambGl.intensity=0.9;
       // Industrial shelving
@@ -4114,7 +4114,7 @@ function buildFurniture(type,P,rng){
       const grate=box(0.5,0.04,0.4,0x484040,0.8,0.2); grate.position.set(2.5,0.02,1.0); roomGroup.add(grate);
       addClickBox(0,4.5,0.2,1.0,0,3.38,-2.0); // ceiling tiles hs0
       addClickBox(1,0.55,0.06,0.45,2.5,0.03,1.0); // grate hs1
-      addClickBox(2,0.14,0.18,0.05,-1.0,0.8,-2.0); // concrete crack hs2 (ch5_t3)
+      addClickBox(2,1.2,0.9,0.6,-1.0,0.8,-2.0);    // concrete crack hs2 (ch5_t3)
     } else if(type==='carpark'){
       ambGl.color.set(0x888898); ambGl.intensity=0.7;
       // Concrete pillars
@@ -5038,7 +5038,7 @@ function examineHotspot(hs,foundSet){
   const result=document.getElementById('examineResult');
   sfxExamine();
   result.textContent=hs.examine;
-  addLog(`[${hs.label}] ${hs.examine.substring(0,50)}...`);
+  addLog(`[${hs.label}] ${hs.examine}`);
   setReadableHotspot(hs);
 
   // Show readable text in overlay (books, journals, letters)
@@ -5083,7 +5083,7 @@ function examineHotspot(hs,foundSet){
         const fSet=state.roomItemsFound[state.currentRoom]||new Set();
         objEl.innerHTML=room.hotspots.map(h=>{
           const hasIt=h.giveItem&&!fSet.has(h.giveItem);
-          return `<span style="color:${hasIt?'#c8a06090':'#3a2a1890'}">${hasIt?'◆ ':'· '}${h.label}</span>`;
+          return `<span style="color:${hasIt?'#c8a060':'#6a5a3a'}">${hasIt?'◆ ':'· '}${h.label}</span>`;
         }).join('&nbsp;&nbsp;');
       }
     }
@@ -6946,7 +6946,7 @@ function render(){
     const lines=room.hotspots.map(hs=>{
       const hasItem=hs.giveItem && !foundSet.has(hs.giveItem);
       const prefix=hasItem?'◆ ':'· ';
-      const color=hasItem?'#c8a06090':'#3a2a1890';
+      const color=hasItem?'#c8a060':'#6a5a3a';
       return `<span style="color:${color}">${prefix}${hs.label}</span>`;
     });
     objEl.innerHTML=lines.join('&nbsp;&nbsp;');
