@@ -255,6 +255,10 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <h3>INVENTORY <span id="invCount" style="color:#3a2a18;font-size:.6rem;letter-spacing:.05em;">0/5</span></h3>
       <div id="invItems"></div>
     </div>
+    <div id="treasureChestPanel" style="margin-top:.5rem;padding:.4rem .5rem;border-top:1px solid #3a2a1040;">
+      <h3 style="margin-bottom:.3rem;">🎒 CHEST <span id="chestCount" style="color:#3a2a18;font-size:.6rem;letter-spacing:.05em;">0/10</span></h3>
+      <div id="chestItems" style="display:flex;flex-direction:column;gap:.2rem;"></div>
+    </div>
     <div id="invSelected"></div>
     <button id="throwBtn" onclick="throwSelectedItem()" style="display:none;margin:.3rem 1.2rem 0;width:calc(100% - 2.4rem);background:none;border:1px solid #6a201090;color:#c04030;font-family:Georgia,serif;font-size:.7rem;letter-spacing:.18em;padding:.28rem 0;cursor:pointer;border-radius:2px;">⚡ THROW</button>
     <div id="mapPanel">
@@ -639,6 +643,23 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div id="hammerResult" style="margin-top:.8rem;font-size:.72rem;letter-spacing:.18em;min-height:1.2em;"></div>
   </div>
 </div>
+<!-- Key memorization minigame overlay -->
+<div id="keyMinigameOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;">
+  <div style="border:1px solid #6a5030;padding:1.8rem 2.2rem;max-width:320px;width:90%;text-align:center;background:#060400;">
+    <div style="color:#c8a870;font-size:.85rem;letter-spacing:.3em;margin-bottom:.4rem;" id="kmTitle">MEMORISE THE CODE</div>
+    <div style="color:#5a4a30;font-size:.6rem;letter-spacing:.15em;margin-bottom:1rem;" id="kmSubtitle">Remember it — then type it</div>
+    <div id="kmCodeDisplay" style="font-size:2.4rem;color:#d4b050;letter-spacing:.5em;margin-bottom:.8rem;min-height:2.8rem;transition:opacity .4s;">----</div>
+    <div id="kmInputDisplay" style="font-size:1.8rem;color:#90c080;letter-spacing:.5em;margin-bottom:.8rem;display:none;">____</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem;" id="kmPad" style="display:none;">
+      <button onclick="kmPress('1')" class="kpBtn">1</button><button onclick="kmPress('2')" class="kpBtn">2</button><button onclick="kmPress('3')" class="kpBtn">3</button>
+      <button onclick="kmPress('4')" class="kpBtn">4</button><button onclick="kmPress('5')" class="kpBtn">5</button><button onclick="kmPress('6')" class="kpBtn">6</button>
+      <button onclick="kmPress('7')" class="kpBtn">7</button><button onclick="kmPress('8')" class="kpBtn">8</button><button onclick="kmPress('9')" class="kpBtn">9</button>
+      <button onclick="kmDelete()" class="kpBtn" style="color:#ff6060;">DEL</button><button onclick="kmPress('0')" class="kpBtn">0</button><button onclick="kmSubmit()" class="kpBtn" style="color:#60ff80;">OK</button>
+    </div>
+    <div id="kmStatus" style="font-size:.65rem;letter-spacing:.15em;color:#7a6040;min-height:1.2em;"></div>
+    <div id="kmAttempts" style="font-size:.58rem;letter-spacing:.12em;color:#3a2a18;margin-top:.3rem;"></div>
+  </div>
+</div>
 <!-- Keypad overlay for Ch4 code doors -->
 <div id="keypadOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,5,20,0.92);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;">
   <div style="border:1px solid #204080;padding:1.8rem 2.2rem;text-align:center;min-width:220px;background:#020a1a;">
@@ -933,7 +954,7 @@ function retryChapter(){
   } else {
     // Chapter 1 — reset to room 1
     try{ localStorage.removeItem('awakening_save'); }catch(e){}
-    state.currentRoom=1; state.visitedRooms=new Set([1]); state.inventory=[];
+    state.currentRoom=1; state.visitedRooms=new Set([1]); state.inventory=[]; state.treasureChest=[];
     state.selectedItem=null; state.roomItemsFound={}; state.unlockedDoors=new Set();
     state.brokenDoors=new Set(); state.ventOpened=false; state.escaped=false;
     state.allRoomsVisited=false; state.totalTreasure=0; state.notebookRead=false;
@@ -1633,6 +1654,7 @@ function pn(str){ return str.replace(/^You\b/,playerName); }
 let state = {
   currentRoom: 1,
   inventory: [],
+  treasureChest: [],
   selectedItem: null,
   visitedRooms: new Set([1]),
   roomItemsFound: {}, // roomId -> [itemIds found]
@@ -5144,14 +5166,7 @@ function tryMove(toRoom){
     const conn=getConnection(state.currentRoom,toRoom);
     const needed=conn.keyId;
     if(state.selectedItem && state.selectedItem.id===needed){
-      sfxDoorUnlock();
-      state.unlockedDoors.add(doorKey(state.currentRoom,toRoom));
-      addLog(`${playerName} uses the ${state.selectedItem.name} — the door unlocks with a heavy CLICK.`,'important');
-      state.inventory=state.inventory.filter(i=>i.id!==state.selectedItem.id);
-      state.selectedItem=null;
-      updateInventory();
-      buildHands(PAL[ROOM_DATA[state.currentRoom].type]||PAL.hallway);
-      enterRoom(toRoom,travelDir);
+      startKeyMinigame(state.currentRoom, toRoom, travelDir, state.selectedItem);
     } else if(state.inventory.find(i=>i.id===needed)){
       addLog(`This door needs a key. Select the right key from your inventory first.`);
       sfxDoorLocked();
@@ -5241,9 +5256,20 @@ function examineHotspot(hs,foundSet){
     Object.values(ROOM_DATA).forEach(r=>allItems.push(...(r.items||[])));
     const itemData=allItems.find(it=>it.id===hs.giveItem);
     if(itemData){
+      if(itemData.isTreasure){
+        if(state.treasureChest.length>=10){
+          addLog(`Your treasure chest is full! (Max 10 treasures)`);
+          foundSet.delete(hs.giveItem);
+          state.roomItemsFound[state.currentRoom]?.delete(hs.giveItem);
+          return;
+        }
+        sfxPickup();
+        state.treasureChest.push(itemData);
+        addLog(`💎 Treasure found: ${itemData.name}`,'important');
+        updateInventory();
+      } else {
       if(state.inventory.length>=5){
         addLog(`${playerName}'s hands are full — drop or use something first. (Max 5 items)`);
-        // Mark item as NOT found so it can be picked up later
         foundSet.delete(hs.giveItem);
         state.roomItemsFound[state.currentRoom]?.delete(hs.giveItem);
         return;
@@ -5252,6 +5278,7 @@ function examineHotspot(hs,foundSet){
       state.inventory.push(itemData);
       addLog(`Found: ${itemData.name}`,'important');
       updateInventory();
+      }
       // Refresh objects list to grey out the found item
       const objEl=document.getElementById('roomObjects');
       const room=ROOM_DATA[state.currentRoom];
@@ -5386,7 +5413,6 @@ function updateInventory(){
   state.inventory.forEach(item=>{
     const div=document.createElement('div');
     div.className='invItem'+(state.selectedItem?.id===item.id?' selected':'');
-    if(item.isTreasure) div.classList.add('treasure');
     const icon=drawItemIcon(item.id);
     div.appendChild(icon);
     const lbl=document.createElement('span');
@@ -5409,9 +5435,33 @@ function updateInventory(){
     empty.textContent='empty';
     el.appendChild(empty);
   }
-  // Show throw button only when something is selected
   const throwBtn=document.getElementById('throwBtn');
   if(throwBtn) throwBtn.style.display=state.selectedItem?'block':'none';
+  // Render chest
+  const chestEl=document.getElementById('chestItems');
+  const chestCount=document.getElementById('chestCount');
+  if(chestEl){
+    chestEl.innerHTML='';
+    if(chestCount){ chestCount.textContent=`${state.treasureChest.length}/10`; chestCount.style.color=state.treasureChest.length>=10?'#c06030':'#3a2a18'; }
+    if(!state.treasureChest.length){
+      const empty=document.createElement('span');
+      empty.style.cssText='font-size:.6rem;color:#3a2a18;padding:.1rem;';
+      empty.textContent='empty';
+      chestEl.appendChild(empty);
+    } else {
+      state.treasureChest.forEach(item=>{
+        const div=document.createElement('div');
+        div.className='invItem treasure';
+        const icon=drawItemIcon(item.id);
+        div.appendChild(icon);
+        const lbl=document.createElement('span');
+        lbl.textContent=item.name;
+        div.appendChild(lbl);
+        div.title=item.desc;
+        chestEl.appendChild(div);
+      });
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -5492,7 +5542,7 @@ function updateMiniMap(){
           const name=ROOM_DATA[roomId].name; nameEl.textContent=name.length>10?name.substring(0,9)+'…':name; div.appendChild(nameEl);
         }
         const found=state.roomItemsFound[roomId];
-        if(found && [...found].some(id=>state.inventory.find(i=>i.isTreasure&&i.id===id))) div.classList.add('treasure');
+        if(found && [...found].some(id=>state.treasureChest.find(i=>i.id===id))) div.classList.add('treasure');
         div.onclick=()=>{ if(state.visitedRooms.has(roomId)){ document.getElementById('examineResult').textContent=ROOM_DATA[roomId].name+': '+ROOM_DATA[roomId].desc.substring(0,80)+'...'; } };
       }
       el.appendChild(div);
@@ -5530,7 +5580,7 @@ function updateMiniMap(){
         div.appendChild(nameEl);
       }
       const found=state.roomItemsFound[roomId];
-      if(found && [...found].some(id=>state.inventory.find(i=>i.isTreasure&&i.id===id)))
+      if(found && [...found].some(id=>state.treasureChest.find(i=>i.id===id)))
         div.classList.add('treasure');
       div.onclick=()=>{
         if(state.visitedRooms.has(roomId)){
@@ -6080,6 +6130,88 @@ let ch5Active=false;
 // ── Keypad state ──────────────────────────────────────────────────
 let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
 // ═══════════════════════════════════════════════════════════════
+// KEY MEMORISATION MINIGAME
+// ═══════════════════════════════════════════════════════════════
+let _kmFrom=null,_kmTo=null,_kmDir=null,_kmKey=null;
+let _kmCode='',_kmInput='',_kmAttempts=0,_kmMax=50,_kmPhase='memorise';
+
+function startKeyMinigame(fromRoom,toRoom,dir,key){
+  _kmFrom=fromRoom; _kmTo=toRoom; _kmDir=dir; _kmKey=key;
+  _kmCode=String(Math.floor(1000+Math.random()*9000)); // random 4-digit
+  _kmInput=''; _kmAttempts=0; _kmPhase='memorise';
+  const ov=document.getElementById('keyMinigameOverlay');
+  document.getElementById('kmTitle').textContent='MEMORISE THE CODE';
+  document.getElementById('kmSubtitle').textContent='The lock shows a code — remember it!';
+  document.getElementById('kmCodeDisplay').textContent=_kmCode;
+  document.getElementById('kmCodeDisplay').style.opacity='1';
+  document.getElementById('kmCodeDisplay').style.display='block';
+  document.getElementById('kmInputDisplay').style.display='none';
+  document.getElementById('kmInputDisplay').textContent='____';
+  document.getElementById('kmPad').style.display='none';
+  document.getElementById('kmStatus').textContent='';
+  document.getElementById('kmAttempts').textContent=`${_kmMax} attempts remaining`;
+  ov.style.display='flex';
+  gamePaused=true;
+  sfxKeypadBeep();
+  setTimeout(()=>{
+    if(_kmPhase!=='memorise') return;
+    document.getElementById('kmCodeDisplay').style.opacity='0';
+    setTimeout(()=>{
+      document.getElementById('kmCodeDisplay').style.display='none';
+      document.getElementById('kmTitle').textContent='ENTER THE CODE';
+      document.getElementById('kmSubtitle').textContent='Type the code from memory';
+      document.getElementById('kmInputDisplay').style.display='block';
+      document.getElementById('kmPad').style.display='grid';
+      _kmPhase='enter';
+    },420);
+  },2500);
+}
+
+function _kmDisplay(){ document.getElementById('kmInputDisplay').textContent=(_kmInput+'____').slice(0,4); }
+function kmPress(d){
+  if(_kmPhase!=='enter') return;
+  if(_kmInput.length>=4) return;
+  _kmInput+=d; _kmDisplay(); sfxKeypadBeep();
+}
+function kmDelete(){
+  if(_kmPhase!=='enter') return;
+  _kmInput=_kmInput.slice(0,-1); _kmDisplay();
+}
+function kmSubmit(){
+  if(_kmPhase!=='enter'||_kmInput.length<4) return;
+  _kmAttempts++;
+  if(_kmInput===_kmCode){
+    document.getElementById('kmStatus').textContent='✓ CORRECT!';
+    document.getElementById('kmStatus').style.color='#80c030';
+    gamePaused=false;
+    _kmPhase='done';
+    sfxKeypadSuccess();
+    setTimeout(()=>{
+      document.getElementById('keyMinigameOverlay').style.display='none';
+      state.unlockedDoors.add(doorKey(_kmFrom,_kmTo));
+      addLog(`${playerName} uses the ${_kmKey.name} — the door unlocks with a heavy CLICK.`,'important');
+      state.inventory=state.inventory.filter(i=>i.id!==_kmKey.id);
+      state.selectedItem=null;
+      updateInventory();
+      buildHands(PAL[ROOM_DATA[state.currentRoom].type]||PAL.hallway);
+      enterRoom(_kmTo,_kmDir);
+    },600);
+  } else {
+    const left=_kmMax-_kmAttempts;
+    document.getElementById('kmStatus').textContent=`✗ Wrong — try again`;
+    document.getElementById('kmStatus').style.color='#c03020';
+    document.getElementById('kmAttempts').textContent=`${left} attempt${left===1?'':'s'} remaining`;
+    document.getElementById('kmInputDisplay').textContent='____';
+    _kmInput='';
+    sfxKeypadError();
+    if(left<=0){
+      document.getElementById('kmStatus').textContent='No attempts left!';
+      setTimeout(()=>{ document.getElementById('keyMinigameOverlay').style.display='none'; gamePaused=false; },1200);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // HAMMER MINIGAME
 // ═══════════════════════════════════════════════════════════════
 let _hmFromRoom=null,_hmToRoom=null,_hmDir=null,_hmHammer=null;
@@ -6345,7 +6477,7 @@ function loadChapter2(){
   roofMode=false;
   state.currentRoom=31;
   state.visitedRooms=new Set([31]);
-  state.inventory=[];
+  state.inventory=[]; state.treasureChest=[];
   state.selectedItem=null;
   state.roomItemsFound={};
   // 30-minute timer
@@ -6818,7 +6950,7 @@ function loadChapter3(){
   ch3Active=true; ch2Active=false;
   state.currentRoom=41;
   state.visitedRooms=new Set([41]);
-  state.inventory=[];
+  state.inventory=[]; state.treasureChest=[];
   state.selectedItem=null;
   state.roomItemsFound={};
   state.unlockedDoors=new Set();
@@ -6893,7 +7025,7 @@ function triggerCh3Escape(){
 
 function showCh3FinalCard(timeStr){
   unlockAchievement('ach_ch3');
-  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
+  const treasureCount=state.treasureChest.length;
   const prevBest=parseInt(localStorage.getItem('ch3_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
   if(elapsed<prevBest) localStorage.setItem('ch3_best',String(elapsed));
@@ -6931,7 +7063,7 @@ function loadChapter4(){
   gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
   state.currentRoom=51;
   state.visitedRooms=new Set([51]);
-  state.inventory=[];
+  state.inventory=[]; state.treasureChest=[];
   state.selectedItem=null;
   state.roomItemsFound={};
   state.unlockedDoors=new Set();
@@ -7034,7 +7166,7 @@ function triggerCh4Escape(){
 
 function showCh4FinalCard(timeStr){
   unlockAchievement('ach_ch4');
-  const relicCount=state.inventory.filter(i=>i.isTreasure).length;
+  const relicCount=state.treasureChest.length;
   if(relicCount>=3) unlockAchievement('ach_relics');
   const prevBest=parseInt(localStorage.getItem('ch4_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
@@ -7042,7 +7174,7 @@ function showCh4FinalCard(timeStr){
   const best=parseInt(localStorage.getItem('ch4_best'),10);
   const bm=Math.floor(best/60),bs=best%60;
   const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
-  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
+  const treasureCount=state.treasureChest.length;
 
   const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
   function showCard(){
@@ -7074,7 +7206,7 @@ function loadChapter5(){
   gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
   state.currentRoom=61;
   state.visitedRooms=new Set([61]);
-  state.inventory=[];
+  state.inventory=[]; state.treasureChest=[];
   state.selectedItem=null;
   state.roomItemsFound={};
   state.unlockedDoors=new Set();
@@ -7176,7 +7308,7 @@ function triggerCh5Escape(){
 
 function showCh5FinalCard(timeStr){
   unlockAchievement('ach_ch5');
-  const memCount=state.inventory.filter(i=>i.isTreasure).length;
+  const memCount=state.treasureChest.length;
   if(memCount>=3) unlockAchievement('ach_memories');
   const prevBest=parseInt(localStorage.getItem('ch5_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
@@ -7184,7 +7316,7 @@ function showCh5FinalCard(timeStr){
   const best=parseInt(localStorage.getItem('ch5_best'),10);
   const bm=Math.floor(best/60),bs=best%60;
   const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
-  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
+  const treasureCount=state.treasureChest.length;
 
   const elapsedMs=gameStartTime?Date.now()-gameStartTime:null;
   function showCard(){
@@ -7216,7 +7348,7 @@ function triggerEscape(){
   const isNewBest=elapsed<prevBest;
   if(isNewBest) localStorage.setItem('awakening_best',String(elapsed));
   const bestStr=fmtTime(isNewBest?elapsed:prevBest);
-  const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
+  const treasureCount=state.treasureChest.length;
 
   // — Phase 1: black screen + vent crawl sounds —
   const vc=document.getElementById('ventCrawl');
@@ -7778,6 +7910,7 @@ function saveGame(){
     const data={
       currentRoom:s.currentRoom,
       inventory:s.inventory,
+      treasureChest:s.treasureChest,
       selectedItem:s.selectedItem,
       visitedRooms:[...s.visitedRooms],
       roomItemsFound:Object.fromEntries(
@@ -7808,6 +7941,7 @@ function loadGame(){
     const data=JSON.parse(raw);
     state.currentRoom=data.currentRoom||1;
     state.inventory=data.inventory||[];
+    state.treasureChest=data.treasureChest||[];
     state.selectedItem=data.selectedItem||null;
     state.visitedRooms=new Set(data.visitedRooms||[1]);
     state.roomItemsFound={};
