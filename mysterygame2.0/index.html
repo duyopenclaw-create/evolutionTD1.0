@@ -514,7 +514,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🔌</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The hacker left a USB drive in the underpass before he died. He knew Cole would track him to the Future House. He hid the backup on a route he calculated you would have to take, one year later. He planned ahead for a future he didn't live to see.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🪖</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The signal pistol was never meant to fire bullets. It fires a high-intensity flare round — visible at 3km altitude, the operational height of the search helicopter. One shot is enough. You only have one shot.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🚁</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The search helicopter has been circling for forty minutes before you reach the rooftop. It was dispatched the moment Cole's prison escape was confirmed. Someone expected this would happen. Someone made sure the helicopter was already in the air.</span></div>
-    <div id="vincent-fact" style="display:flex;flex-direction:row;gap:.8rem;align-items:flex-start;border:1px solid #60402060;background:#1a100550;border-radius:4px;padding:.5rem .8rem;"><span style="font-size:1.1rem;min-width:1.5rem;">👤</span><span style="color:#d4a050;font-size:.68rem;letter-spacing:.1em;line-height:1.7;font-style:italic;">If you name yourself Vincent, knocking on locked doors gives a surprise. Vincent is creating a knock knock knock... WAIT WHAT!!!!</span></div>
+    <div id="vincent-fact" style="display:none;flex-direction:row;gap:.8rem;align-items:flex-start;border:1px solid #60402060;background:#1a100550;border-radius:4px;padding:.5rem .8rem;"><span style="font-size:1.1rem;min-width:1.5rem;">👤</span><span style="color:#d4a050;font-size:.68rem;letter-spacing:.1em;line-height:1.7;font-style:italic;">If you name yourself Vincent, knocking on locked doors gives a surprise. Vincent is creating a knock knock knock... WAIT WHAT!!!!</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🪟</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The graffiti in the stairwell — KEEP MOVING — is fresh. Mrs Kapoor says she noticed it that evening. Nobody on the floor claims to have painted it. The paint is the same brand as a can found in the alley dumpster behind your building.</span></div>
   </div>
 
@@ -6053,6 +6053,7 @@ function keypadPress(d){
   const disp=_kpInput.padEnd(3,'_').split('').join('');
   document.getElementById('keypadDisplay').textContent=disp;
   sfxKeypadBeep();
+  if(playerIsVincent){ addLog(`Knock knock knock... WAIT WHAT!!!!`,'important'); unlockAchievement('ach_vincent'); document.getElementById('vincent-fact').style.display='flex'; }
 }
 function keypadDelete(){
   if(_kpInput.length>0){ _kpInput=_kpInput.slice(0,-1); }
