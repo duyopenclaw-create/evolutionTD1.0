@@ -34,6 +34,8 @@ body{background:#0d0b08;color:#c8b99a;font-family:'Georgia',serif;overflow:hidde
 #titleBot{clip-path:polygon(-5% 30%,105% 50%,105% 110%,-5% 110%);transition:transform 0.18s ease-out;}
 #titleTop.cut{transform:translate(1px,-3px);}
 #titleBot.cut{transform:translate(-1px,3px);}
+.titleHalf.forsaken{color:#8a2020!important;text-decoration:line-through;text-decoration-color:#cc0000;text-decoration-thickness:3px;}
+#forsakenSub{display:none;position:absolute;width:100%;text-align:center;top:105%;font-size:.75rem;color:#8a2020;letter-spacing:.4em;font-family:Georgia,serif;animation:titleGlow 2s ease-in-out infinite;}
 #bloodCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:101;}
 #intro p{color:#6a5a4a;font-size:1rem;letter-spacing:.15em;margin-bottom:.8rem;}
 #intro button{background:none;border:1px solid #60402090;color:#a08060;padding:.8rem 2.5rem;font-family:Georgia,serif;font-size:1rem;letter-spacing:.2em;cursor:pointer;transition:all .25s;}
@@ -194,6 +196,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
   <div id="titleWrap">
     <div class="titleHalf" id="titleTop">THE AWAKENING</div>
     <div class="titleHalf" id="titleBot">THE AWAKENING</div>
+    <div id="forsakenSub">THAT'S FORSAKEN</div>
   </div>
   <canvas id="bloodCanvas"></canvas>
   <div id="titleDivider"></div>
@@ -204,6 +207,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
   <button onclick="toggleRecords()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">🏆 RECORDS</button>
   <button onclick="toggleExtraStuff()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">✦ EXTRA STUFF</button>
   <button onclick="toggleA11y()" style="margin-top:.6rem;background:none;border:1px solid #4a382090;color:#7a6040;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">♿ ACCESSIBILITY</button>
+  <button onclick="toggleAchievements()" style="margin-top:.6rem;background:none;border:1px solid #60501090;color:#a08030;font-family:Georgia,serif;font-size:.75rem;letter-spacing:.2em;padding:.45rem 1.4rem;cursor:pointer;">🏅 ACHIEVEMENTS</button>
   <div style="margin-top:1.2rem;border-top:1px solid #2a1e0a50;padding-top:.9rem;display:flex;flex-direction:column;align-items:center;gap:.4rem;">
     <div style="font-size:.5rem;letter-spacing:.3em;color:#2a1e10;margin-bottom:.1rem;">QUICK START</div>
     <button onclick="quickStartCh2()" style="background:none;border:1px solid #3a402090;color:#6a7040;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 2</button>
@@ -510,6 +514,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🔌</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The hacker left a USB drive in the underpass before he died. He knew Cole would track him to the Future House. He hid the backup on a route he calculated you would have to take, one year later. He planned ahead for a future he didn't live to see.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🪖</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The signal pistol was never meant to fire bullets. It fires a high-intensity flare round — visible at 3km altitude, the operational height of the search helicopter. One shot is enough. You only have one shot.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🚁</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The search helicopter has been circling for forty minutes before you reach the rooftop. It was dispatched the moment Cole's prison escape was confirmed. Someone expected this would happen. Someone made sure the helicopter was already in the air.</span></div>
+    <div id="vincent-fact" style="display:none;flex-direction:row;gap:.8rem;align-items:flex-start;border:1px solid #60402060;background:#1a100550;border-radius:4px;padding:.5rem .8rem;"><span style="font-size:1.1rem;min-width:1.5rem;">👤</span><span style="color:#d4a050;font-size:.68rem;letter-spacing:.1em;line-height:1.7;font-style:italic;">If you name yourself Vincent, knocking on locked doors gives a surprise. Vincent is creating a knock knock knock... WAIT WHAT!!!!</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🪟</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The graffiti in the stairwell — KEEP MOVING — is fresh. Mrs Kapoor says she noticed it that evening. Nobody on the floor claims to have painted it. The paint is the same brand as a can found in the alley dumpster behind your building.</span></div>
   </div>
 
@@ -533,6 +538,13 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
   </div>
 
   <button onclick="toggleRecords()" style="margin-top:1.8rem;background:none;border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;padding:.55rem 1.8rem;cursor:pointer;">CLOSE</button>
+</div>
+
+<div id="achievementsPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:900;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:3vh;font-family:Georgia,serif;overflow-y:auto;">
+  <h2 style="color:#c8a870;letter-spacing:.35em;font-size:1.4rem;margin-bottom:.15rem;">ACHIEVEMENTS</h2>
+  <p style="color:#5a4a30;font-size:.62rem;letter-spacing:.2em;margin-bottom:1.4rem;">THE AWAKENING — ALL CHAPTERS</p>
+  <div id="achievementsList" style="width:460px;max-width:92vw;display:flex;flex-direction:column;gap:.7rem;"></div>
+  <button onclick="toggleAchievements()" style="margin-top:1.8rem;margin-bottom:2rem;background:none;border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;padding:.55rem 1.8rem;cursor:pointer;">CLOSE</button>
 </div>
 
 <div id="howToPlayPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:900;flex-direction:column;align-items:center;justify-content:center;font-family:Georgia,serif;">
@@ -643,6 +655,19 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div class="tv-text" id="tvText"></div>
   </div>
   <button class="tv-close" id="tvClose" style="display:none" onclick="closeTvScreen()">[ CLOSE ]</button>
+</div>
+
+<div id="newsScreen" style="display:none;position:fixed;inset:0;background:#000;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="border:6px solid #1a2a4a;border-radius:4px;background:#02060f;padding:1.5rem 2rem;max-width:580px;width:90%;box-shadow:0 0 60px #0044ff18,inset 0 0 20px #000;">
+    <div style="font-family:'Courier New',monospace;font-size:.62rem;color:#103060;margin-bottom:.5rem;line-height:1.2;" id="newsTicker">▓▒░▒▓░▒▓▒░▒▓░▒▓▒░▒▓░▒▓▒░</div>
+    <div style="background:#0a1020;border:1px solid #102040;padding:.4rem .6rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.8rem;">
+      <span style="font-family:'Courier New',monospace;font-size:.55rem;color:#ff2020;letter-spacing:.15em;animation:blink .6s infinite;">⬤ LIVE</span>
+      <span style="font-family:'Courier New',monospace;font-size:.6rem;color:#4080c0;letter-spacing:.12em;">WORLD NEWS BROADCAST — PRIORITY ALERT</span>
+    </div>
+    <div id="newsText" style="font-family:'Courier New',monospace;font-size:.82rem;color:#60a0e0;line-height:1.9;min-height:220px;white-space:pre-wrap;"></div>
+    <div style="border-top:1px solid #102040;margin-top:.6rem;padding-top:.4rem;font-family:'Courier New',monospace;font-size:.52rem;color:#203050;letter-spacing:.1em;" id="newsTicker2">BREAKING: CLEANUP COMPLETE &nbsp;·&nbsp; ROBOT UNITS DEPLOYED &nbsp;·&nbsp; TELEPORT INCIDENTS CONFIRMED &nbsp;·&nbsp; INTRUDER ALERT ACTIVE &nbsp;·&nbsp; BREAKING: CLEANUP COMPLETE</div>
+  </div>
+  <button style="margin-top:1.2rem;background:none;border:1px solid #10304060;color:#204060;font-family:'Courier New',monospace;cursor:pointer;font-size:.8rem;padding:.4rem 1.2rem;" id="newsClose" style="display:none" onclick="closeNewsScreen()">[ CLOSE BROADCAST ]</button>
 </div>
 
 <div id="overlay">
@@ -1514,13 +1539,45 @@ function randomizeName(){
   document.getElementById('nameError').textContent='';
 }
 const _badWords=/\b(fuck|shit|ass|bitch|cunt|dick|cock|pussy|nigger|nigga|faggot|fag|retard|whore|slut|bastard|piss|cum|rape|sex|porn|nazi|hitler|penis|vagina|anus|boob|tit|nude|naked)\b/i;
+
+function forsakeTitle(){
+  document.getElementById('titleTop').classList.add('forsaken');
+  document.getElementById('titleBot').classList.add('forsaken');
+  document.getElementById('forsakenSub').style.display='block';
+}
+function unforsakeTitle(){
+  document.getElementById('titleTop').classList.remove('forsaken');
+  document.getElementById('titleBot').classList.remove('forsaken');
+  document.getElementById('forsakenSub').style.display='none';
+}
+
 function confirmName(){
   const raw=document.getElementById('nameInput').value.trim();
   const err=document.getElementById('nameError');
   if(!raw){ err.textContent='Please enter a name.'; return; }
-  if(_badWords.test(raw)){ err.textContent='Please choose an appropriate name.'; return; }
+  if(_badWords.test(raw)){
+    err.textContent='Please choose an appropriate name.';
+    forsakeTitle();
+    return;
+  }
   if(/[^a-zA-Z0-9 '\-_.]/u.test(raw)){ err.textContent='Letters, numbers, and basic punctuation only.'; return; }
+  unforsakeTitle();
+  // Easter egg: naming yourself Cole triggers instant "death"
+  if(raw.toLowerCase()==='cole'){
+    closeNameEntry();
+    unlockAchievement('ach_cole');
+    playerName=raw;
+    setTimeout(()=>{
+      document.getElementById('game').style.display='none';
+      document.getElementById('intro').style.display='flex';
+      const el=document.getElementById('intro');
+      el.innerHTML='<p style="color:#cc2020;font-size:1.3rem;letter-spacing:.3em;">YOU ARE COLE.</p><p style="color:#660000;font-size:.8rem;letter-spacing:.2em;margin-top:.6rem;">This was never your game to win.</p><button onclick="location.reload()" style="margin-top:1.2rem;background:none;border:1px solid #660000;color:#cc2020;font-family:Georgia,serif;font-size:.8rem;letter-spacing:.2em;padding:.5rem 1.6rem;cursor:pointer;">RETURN</button>';
+    },300);
+    return;
+  }
   playerName=raw;
+  playerIsVincent=(raw.toLowerCase()==='vincent');
+  if(playerIsVincent) document.getElementById('vincent-fact').style.display='flex';
   closeNameEntry();
   if(_nameEntryCallback){ _nameEntryCallback(); _nameEntryCallback=null; }
 }
@@ -1892,7 +1949,7 @@ const ROOM_DATA = {
   51:{name:"Arrival Chamber",type:"futlounge",desc:"You snap awake. White walls. Curved furniture. The air tastes recycled. A wall-screen plays rolling news: CLEANUP COMPLETE — ZOMBIE PATHOGEN NEUTRALISED — ROBOT UNITS DEPLOYED. Then: HACKER NEUTRALISED BY AGENT HARGROVE. Cole killed him. A proximity alarm starts screaming somewhere below you. The robots know you're here.",
       items:[{id:"hacker_tablet",name:"Hacker's Last Message",desc:"A cracked data tablet. The hacker left it here. A voice note plays on loop: 'I didn't finish the kill-switch. The codes are in the rooms. Each door has one. Find them. I'm sorry.' Then static."}],
       hotspots:[
-        {id:"hs1",label:"NEWS SCREEN",x:"10%",y:"15%",w:"65%",h:"55%",examine:"The news ticker scrolls: CLEANUP UNIT DELTA — OVERRIDE DETECTED — INTRUDER ALERT. Below the ticker, a system readout in small print — this is the house's broadcast channel. In the bottom corner of the screen: a maintenance code. 4. 7. 2."},
+        {id:"hs1",label:"NEWS SCREEN",x:"10%",y:"15%",w:"65%",h:"55%",ch4news:true,examine:"The news ticker scrolls: CLEANUP UNIT DELTA — OVERRIDE DETECTED — INTRUDER ALERT. Below the ticker, a system readout in small print — this is the house's broadcast channel. In the bottom corner of the screen: a maintenance code. 4. 7. 2."},
         {id:"hs2",label:"ROBOT UNIT",x:"72%",y:"25%",w:"20%",h:"60%",examine:"A maintenance drone, roughly humanoid. Dormant — for now. Its chest panel shows a charging indicator at 34%. When it reaches 100% it will activate. The charge bar ticks upward as you watch. Move fast."},
         {id:"hs3",label:"CURVED SOFA",x:"25%",y:"60%",w:"45%",h:"28%",giveItem:"hacker_tablet",examine:"Something is wedged between the sofa cushions. A cracked data tablet — warm, like it was just set down. A voice note plays on loop. You pocket it. The hacker was here before you."},
       ]},
@@ -5026,6 +5083,11 @@ function tryMove(toRoom){
     sfxDoorLocked();
     return;
   }
+  if(ch4Active && !ch4NewsWatched && state.currentRoom===51){
+    addLog('[!] The news screen is playing. Watch it before you move — the code is on the screen.','important');
+    sfxDoorLocked();
+    return;
+  }
   const neighbors=getNeighbors(state.currentRoom);
   const entry=neighbors.find(n=>n.to===toRoom);
   const travelDir=entry?entry.dir:null;
@@ -5053,6 +5115,7 @@ function tryMove(toRoom){
     } else {
       sfxDoorLocked();
       addLog(`The door is locked. You need a key you haven't found yet.`);
+      if(playerIsVincent){ addLog(`Knock knock knock... WAIT WHAT!!!!`,'important'); unlockAchievement('ach_vincent'); }
     }
   } else if(ds==='boarded'){
     const hammer=state.inventory.find(i=>i.id==='hammer1'||i.id==='hammer2');
@@ -5095,6 +5158,7 @@ function updateHotspots(){
 function examineHotspot(hs,foundSet){
   // ch2 special triggers
   if(hs.ch2tv){ showTvScreen(); return; }
+  if(hs.ch4news){ showCh4NewsScreen(); return; }
   if(hs.ch2exit){ ch2CheckExit(); return; }
   // ch3 special trigger
   if(hs.ch3exit){ ch3CheckExit(); return; }
@@ -5508,6 +5572,75 @@ function saveRun(elapsedMs){
   localStorage.setItem('awakening_runs',JSON.stringify(runs));
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ACHIEVEMENTS
+// ═══════════════════════════════════════════════════════════════
+const ACHIEVEMENTS=[
+  {id:'ach_ch1', icon:'🏠', name:'The Awakening', desc:'Escape Chapter 1 — the Voss mansion.'},
+  {id:'ach_ch2', icon:'💻', name:'Digital Fugitive', desc:'Escape Chapter 2 — the Hacker\'s House.'},
+  {id:'ach_ch3', icon:'🧪', name:'Patient Zero', desc:'Escape Chapter 3 — County General Hospital.'},
+  {id:'ach_ch4', icon:'🤖', name:'Future Proof', desc:'Escape Chapter 4 — the Future House.'},
+  {id:'ach_ch5', icon:'🚁', name:'Final Justice', desc:'Escape Chapter 5 — and fire the signal.'},
+  {id:'ach_allch', icon:'⭐', name:'The Full Story', desc:'Complete all five chapters.'},
+  {id:'ach_relics', icon:'💎', name:'Relic Hunter', desc:'Find all 3 relics in Chapter 4.'},
+  {id:'ach_memories', icon:'🔮', name:'Memory Keeper', desc:'Find all 3 memory items in Chapter 5.'},
+  {id:'ach_platinum', icon:'🏆', name:'Ghost', desc:'Earn a Platinum trophy in Chapter 1.'},
+  {id:'ach_cole', icon:'🔪', name:'You Chose Cole', desc:'Name yourself Cole on the title screen.'},
+  {id:'ach_vincent', icon:'👤', name:'The Creator Knocks', desc:'Name yourself Vincent and knock on a locked door.'},
+];
+
+function getAchievements(){
+  try{ return new Set(JSON.parse(localStorage.getItem('awakening_ach')||'[]')); }catch(e){ return new Set(); }
+}
+function unlockAchievement(id){
+  const set=getAchievements();
+  if(set.has(id)) return;
+  set.add(id);
+  try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
+  // Check if all 5 chapters done
+  if(['ach_ch1','ach_ch2','ach_ch3','ach_ch4','ach_ch5'].every(a=>set.has(a))){
+    set.add('ach_allch');
+    try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
+  }
+  const ach=ACHIEVEMENTS.find(a=>a.id===id);
+  if(ach) showAchievementPopup(ach);
+}
+function showAchievementPopup(ach){
+  let pop=document.getElementById('achPopup');
+  if(!pop){
+    pop=document.createElement('div');
+    pop.id='achPopup';
+    pop.style.cssText='position:fixed;bottom:60px;right:16px;background:#0a0800;border:1px solid #a08030;color:#c8a870;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.15em;padding:.5rem .9rem;z-index:500;pointer-events:none;opacity:0;transition:opacity .4s;max-width:220px;';
+    document.body.appendChild(pop);
+  }
+  pop.innerHTML=`<span style="font-size:1rem;">${ach.icon}</span> <b style="color:#d4b050;">ACHIEVEMENT</b><br>${ach.name}`;
+  pop.style.opacity='1';
+  clearTimeout(pop._t);
+  pop._t=setTimeout(()=>{ pop.style.opacity='0'; },3500);
+}
+function toggleAchievements(){
+  const panel=document.getElementById('achievementsPanel');
+  const open=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=open?'flex':'none';
+  if(!open) return;
+  const unlocked=getAchievements();
+  const list=document.getElementById('achievementsList');
+  list.innerHTML='';
+  ACHIEVEMENTS.forEach(ach=>{
+    const done=unlocked.has(ach.id);
+    const el=document.createElement('div');
+    el.style.cssText='display:flex;align-items:center;gap:.9rem;padding:.55rem .8rem;border:1px solid '+(done?'#80601090':'#2a1e0a50')+';border-radius:3px;background:'+(done?'#18120280':'transparent')+';';
+    el.innerHTML=`<span style="font-size:1.4rem;min-width:2rem;text-align:center;filter:${done?'none':'grayscale(1) opacity(.2)'};">${ach.icon}</span><div><div style="color:${done?'#c8a870':'#3a2a18'};font-size:.72rem;letter-spacing:.2em;">${done?ach.name:'???'}</div><div style="color:${done?'#7a6040':'#2a1a08'};font-size:.6rem;letter-spacing:.1em;margin-top:.2rem;">${done?ach.desc:'Locked'}</div></div>${done?'<span style="margin-left:auto;color:#80a030;font-size:.7rem;">✓</span>':''}`;
+    list.appendChild(el);
+  });
+  const total=unlocked.size;
+  const max=ACHIEVEMENTS.length;
+  const hdr=document.createElement('div');
+  hdr.style.cssText='text-align:center;color:#5a4a30;font-size:.6rem;letter-spacing:.2em;margin-bottom:.4rem;';
+  hdr.textContent=`${total} / ${max} UNLOCKED`;
+  list.prepend(hdr);
+}
+
 function toggleRecords(){
   const panel=document.getElementById('recordsPanel');
   const open=panel.style.display==='none'||panel.style.display==='';
@@ -5690,8 +5823,9 @@ function getTrophy(elapsedMs){
 }
 
 function showTrophy(elapsedMs, cb){
-  if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active) saveRun(elapsedMs); // only record to ch1 leaderboard for ch1 runs
+  if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active) saveRun(elapsedMs);
   const trophy=getTrophy(elapsedMs);
+  if(trophy && trophy.name==='PLATINUM' && !ch2Active&&!ch3Active&&!ch4Active&&!ch5Active) unlockAchievement('ach_platinum');
   if(!trophy){ if(cb) cb(); return; }
   trophyContinueCb=cb||null;
   // Save best trophy
@@ -5769,8 +5903,8 @@ function startTimer(){
       setTimeout(tick,1000);
       return;
     }
-    // Idle check — only in ch1 and ch5. Ch2/ch3/ch4 have no idle death.
-    if(!ch2Active&&!ch4Active){
+    // Idle check — only in ch1. Ch2/ch3/ch4/ch5 have no idle death.
+    if(!ch2Active&&!ch4Active&&!ch5Active){
       const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
       const idleLeft=IDLE_LIMIT-idleSeconds;
       const warn=document.getElementById('hunterWarning');
@@ -5853,8 +5987,15 @@ function checkHunterProximity(){
   const dist=hunterDistanceTo(state.currentRoom);
   const warn=document.getElementById('hunterWarning');
   if(dist===0){
-    warn.textContent='';warn.classList.remove('show');
-    triggerHunterDeath();
+    if(ch5Active){
+      warn.textContent='⚠ COLE IS HERE — RUN ⚠';
+      warn.classList.add('show');
+      addLog('[!!] Cole has found you — GET OUT OF THIS ROOM NOW!','important');
+      sfxHunterClose();
+    } else {
+      warn.textContent='';warn.classList.remove('show');
+      triggerHunterDeath();
+    }
   } else if(dist===1){
     warn.textContent='⚠ COLE IS RIGHT OUTSIDE ⚠';
     warn.classList.add('show');
@@ -5890,6 +6031,8 @@ function startHunter(){
 // ═══════════════════════════════════════════════════════════════
 let ch2DoorsUnlocked=false;
 let ch2TvWatched=false;
+let ch4NewsWatched=false;
+let playerIsVincent=false;
 let ch2Active=false;
 let ch3Active=false;
 let ch4Active=false;
@@ -6130,11 +6273,43 @@ function closeTvScreen(){
   tv.onclick=null;
   if(tv._keyHandler){ window.removeEventListener('keydown',tv._keyHandler); tv._keyHandler=null; }
   ch2TvWatched=true;
-  buildObjectiveArrow(); // remove TV arrow
-  // Timer starts when player closes the TV
+  buildObjectiveArrow();
   if(!timerRunning){ startTimer(); }
   maraSpeak("Mara: \"30 minutes. Five keys. We split up — you go right, I'll go left.\"");
   addLog('Timer started. Find the five door keys.','important');
+}
+
+function showCh4NewsScreen(){
+  const ns=document.getElementById('newsScreen');
+  const txt=document.getElementById('newsText');
+  const close=document.getElementById('newsClose');
+  ns.style.display='flex';
+  txt.textContent='';
+  close.style.display='none';
+  const msg=`> WORLD NEWS NETWORK — EMERGENCY BROADCAST\n\n> ZOMBIE PATHOGEN FULLY NEUTRALISED.\n  GLOBAL CLEANUP: COMPLETE.\n\n> ROBOT CLEANUP UNITS: DEPLOYED.\n  97% URBAN AREAS: CLEARED.\n\n> BREAKING: AGENT HARGROVE TERMINATES\n  ANONYMOUS HACKER — CODE NAME: GHOST.\n  OPERATION: CLOSED.\n\n> BREAKING: TELEPORTATION INCIDENT.\n  CIVILIAN TRANSPORTED TO\n  DESIGNATED FUTURE HOUSE UNIT 7.\n  YOU.\n\n> PROXIMITY ALARM ACTIVE.\n  ROBOT UNITS RE-TASKED: INTRUDER HUNT.\n\n> MAINTENANCE CODE VISIBLE ON SCREEN\n  BOTTOM-RIGHT CORNER: 4 · 7 · 2\n\n> GOOD LUCK. YOU'LL NEED IT.\n`;
+  let i=0; let done=false;
+  function finish(){ if(done) return; done=true; txt.textContent=msg; close.style.display='block'; }
+  function typeChar(){
+    if(done) return;
+    if(i<msg.length){ txt.textContent+=msg[i]; i++; if(i%4===0) sfxTick(); setTimeout(typeChar,i<100?28:18); }
+    else { finish(); }
+  }
+  sfxRobotBeep();
+  setTimeout(typeChar,400);
+  function skip(){ if(!done){ finish(); } else { closeNewsScreen(); } }
+  ns.onclick=skip;
+  function nsKey(e){ if(ns.style.display!=='none'){ skip(); } }
+  ns._keyHandler=nsKey;
+  window.addEventListener('keydown',nsKey);
+}
+
+function closeNewsScreen(){
+  const ns=document.getElementById('newsScreen');
+  ns.style.display='none';
+  ns.onclick=null;
+  if(ns._keyHandler){ window.removeEventListener('keydown',ns._keyHandler); ns._keyHandler=null; }
+  ch4NewsWatched=true;
+  addLog('[TV] The broadcast cuts. The code is 4-7-2. The robots know you\'re here. MOVE.','important');
 }
 
 const CH2_KEYS=['hk1','hk2','hk3','hk4','hk5'];
@@ -6430,6 +6605,7 @@ function showIslandSequence(timeStr){
 }
 
 function showFinalCard(timeStr){
+  unlockAchievement('ach_ch2');
   // Best time tracking
   const prevBest=parseInt(localStorage.getItem('ch2_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
@@ -6578,6 +6754,7 @@ function triggerCh3Escape(){
 }
 
 function showCh3FinalCard(timeStr){
+  unlockAchievement('ach_ch3');
   const treasureCount=state.inventory.filter(i=>i.isTreasure).length;
   const prevBest=parseInt(localStorage.getItem('ch3_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
@@ -6625,12 +6802,13 @@ function loadChapter4(){
   state.totalTreasure=0; state.notebookRead=true;
   timerSeconds=900; // 15 minutes
   hunterRoom=null;
+  ch4NewsWatched=false;
   gameStartTime=Date.now();
   connMap=buildConnectionMap();
   render();
   sfxFutureHum();
   addLog(`${playerName} finds themselves in the Future House. The robots are online.`,'important');
-  addLog('SOLVE THE CODES — escape before the timer hits zero.');
+  addLog('The news screen is playing. Watch it first.');
   startTimer();
 }
 
@@ -6717,6 +6895,9 @@ function triggerCh4Escape(){
 }
 
 function showCh4FinalCard(timeStr){
+  unlockAchievement('ach_ch4');
+  const relicCount=state.inventory.filter(i=>i.isTreasure).length;
+  if(relicCount>=3) unlockAchievement('ach_relics');
   const prevBest=parseInt(localStorage.getItem('ch4_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
   if(elapsed<prevBest) localStorage.setItem('ch4_best',String(elapsed));
@@ -6856,6 +7037,9 @@ function triggerCh5Escape(){
 }
 
 function showCh5FinalCard(timeStr){
+  unlockAchievement('ach_ch5');
+  const memCount=state.inventory.filter(i=>i.isTreasure).length;
+  if(memCount>=3) unlockAchievement('ach_memories');
   const prevBest=parseInt(localStorage.getItem('ch5_best')||'99999',10);
   const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
   if(elapsed<prevBest) localStorage.setItem('ch5_best',String(elapsed));
@@ -6885,6 +7069,7 @@ function triggerEscape(){
   if(gameOver) return;
   state.escaped=true;
   gameOver=true;
+  unlockAchievement('ach_ch1');
 
   const elapsed=3600-timerSeconds;
   const timeStr=fmtTime(elapsed);
