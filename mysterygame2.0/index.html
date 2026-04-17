@@ -6106,8 +6106,12 @@ function startHammerMinigame(fromRoom,toRoom,dir,hammer){
   window.addEventListener('keydown',_hammerKeyHandler);
 }
 
+let _hmLastPress=0;
 function _hammerKeyHandler(e){
-  if((e.key==='h'||e.key==='H') && !_hmDone){
+  if((e.key==='h'||e.key==='H') && !_hmDone && !e.repeat){
+    const now=Date.now();
+    if(now-_hmLastPress<180) return; // must release between presses
+    _hmLastPress=now;
     _hmCount++;
     sfxHammer();
     const pct=Math.min(100,(_hmCount/_hmTarget)*100);
