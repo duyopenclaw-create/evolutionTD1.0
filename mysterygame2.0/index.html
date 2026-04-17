@@ -6295,6 +6295,7 @@ function showCh4NewsScreen(){
     if(i<msg.length){ txt.textContent+=msg[i]; i++; if(i%4===0) sfxTick(); setTimeout(typeChar,i<100?28:18); }
     else { finish(); }
   }
+  gamePaused=true;
   sfxRobotBeep();
   setTimeout(typeChar,400);
   function skip(){ if(!done){ finish(); } else { closeNewsScreen(); } }
@@ -6309,6 +6310,7 @@ function closeNewsScreen(){
   ns.style.display='none';
   ns.onclick=null;
   if(ns._keyHandler){ window.removeEventListener('keydown',ns._keyHandler); ns._keyHandler=null; }
+  gamePaused=false;
   ch4NewsWatched=true;
   addLog('[TV] The broadcast cuts. The code is 4-7-2. The robots know you\'re here. MOVE.','important');
 }
