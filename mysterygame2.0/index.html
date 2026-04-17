@@ -621,6 +621,24 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 <div id="ch3Black" style="display:none;position:fixed;inset:0;background:#0a0d08;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch3Cap" style="color:#3a4a2a;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:520px;line-height:1.8;"></div></div>
 <div id="ch4Black" style="display:none;position:fixed;inset:0;background:#000814;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch4Cap" style="color:#4080c0;font-family:'Courier New',monospace;font-size:.82rem;letter-spacing:.2em;opacity:0;transition:opacity 1.0s;text-align:center;max-width:580px;line-height:1.9;"></div></div>
 <div id="ch5Black" style="display:none;position:fixed;inset:0;background:#080810;z-index:400;flex-direction:column;align-items:center;justify-content:center;"><div class="ch2cap" id="ch5Cap" style="color:#a0a0c0;font-family:Georgia,serif;font-size:.82rem;letter-spacing:.2em;opacity:0;transition:opacity 1.0s;text-align:center;max-width:540px;line-height:1.9;"></div></div>
+<!-- Recap overlay for quick-start intros -->
+<div id="recapBlack" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;align-items:center;justify-content:center;">
+  <div id="recapCap" style="color:#8a7050;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.22em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:540px;line-height:1.9;padding:0 2rem;"></div>
+  <button id="recapSkip" onclick="skipRecap()" style="position:absolute;bottom:2rem;right:2rem;background:none;border:1px solid #3a2a1050;color:#3a2a18;font-family:Georgia,serif;font-size:.6rem;letter-spacing:.2em;padding:.3rem .8rem;cursor:pointer;">SKIP ›</button>
+</div>
+<!-- Hammer minigame overlay -->
+<div id="hammerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:Georgia,serif;">
+  <div style="border:1px solid #6a5030;padding:2rem 2.5rem;max-width:340px;width:90%;text-align:center;">
+    <div style="color:#c8a870;font-size:.9rem;letter-spacing:.3em;margin-bottom:.4rem;">SMASH THE DOOR</div>
+    <div style="color:#7a6040;font-size:.65rem;letter-spacing:.18em;margin-bottom:1.2rem;">Press <b style="color:#d4b050;">H</b> rapidly to break through!</div>
+    <div id="hammerCount" style="font-size:2.2rem;color:#d4903a;margin-bottom:.8rem;">0</div>
+    <div style="background:#1a1008;border:1px solid #3a2a10;border-radius:2px;height:10px;width:100%;margin-bottom:.8rem;overflow:hidden;">
+      <div id="hammerBar" style="height:100%;background:#c07820;width:0%;transition:width .1s;"></div>
+    </div>
+    <div id="hammerTimer" style="color:#6a5030;font-size:.68rem;letter-spacing:.15em;">10s</div>
+    <div id="hammerResult" style="margin-top:.8rem;font-size:.72rem;letter-spacing:.18em;min-height:1.2em;"></div>
+  </div>
+</div>
 <!-- Keypad overlay for Ch4 code doors -->
 <div id="keypadOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,5,20,0.92);z-index:600;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;">
   <div style="border:1px solid #204080;padding:1.8rem 2.2rem;text-align:center;min-width:220px;background:#020a1a;">
@@ -825,44 +843,69 @@ function triggerDeathEffect(msg){
   },2400);
 }
 
-function quickStartCh2(){
+function _quickStartInit(loadFn){
   stopTitleMusic();
   document.getElementById('intro').style.display='none';
   document.getElementById('game').style.display='flex';
   window.addEventListener('resize',resizeCanvas); resizeCanvas();
   startAmbientMusic(); initParticles(); startGameLoop();
-  loadChapter2();
+  loadFn();
   setInterval(saveGame,10000); loadA11ySettings();
+}
+
+function quickStartCh2(){
+  _quickStartInit(()=>{
+    showRecap([
+      {t:0,    txt:'You escaped the Voss mansion through the attic vent.'},
+      {t:2800, txt:'Mara pulled you down the fire escape ladder.\nThe motel burned behind you.'},
+      {t:5600, txt:'She had a map on her phone — satellite view.\nA house. Isolated. Someone had been watching you both.'},
+      {t:8400, txt:'You drove through the night.\nNeither of you spoke much.'},
+      {t:11200,txt:'The GPS stopped working two blocks away.\nYou walked the rest on foot.'},
+      {t:14000,txt:'The front door was unlocked.\nThat should have been the first warning.'},
+      {t:16800,txt:'CHAPTER 2 — THE HACKER\'S HOUSE'},
+    ], ()=>loadChapter2());
+  });
 }
 
 function quickStartCh3(){
-  stopTitleMusic();
-  document.getElementById('intro').style.display='none';
-  document.getElementById('game').style.display='flex';
-  window.addEventListener('resize',resizeCanvas); resizeCanvas();
-  startAmbientMusic(); initParticles(); startGameLoop();
-  loadChapter3();
-  setInterval(saveGame,10000); loadA11ySettings();
+  _quickStartInit(()=>{
+    showRecap([
+      {t:0,    txt:'The hacker\'s house burned.\nYou and Mara got out through the back window.'},
+      {t:2800, txt:'Police scanners crackled — a biohazard alert.\nCounty General. Three blocks north.'},
+      {t:5600, txt:'Something had gotten into the hospital water supply.\nPatients were changing.'},
+      {t:8400, txt:'The city went quiet around midnight.\nContainment Protocol: Active.'},
+      {t:11200,txt:'You were closest. You had to go in.\nMara stayed outside with the car running.'},
+      {t:14000,txt:'CHAPTER 3 — COUNTY GENERAL HOSPITAL'},
+    ], ()=>loadChapter3());
+  });
 }
 
 function quickStartCh4(){
-  stopTitleMusic();
-  document.getElementById('intro').style.display='none';
-  document.getElementById('game').style.display='flex';
-  window.addEventListener('resize',resizeCanvas); resizeCanvas();
-  startAmbientMusic(); initParticles(); startGameLoop();
-  loadChapter4();
-  setInterval(saveGame,10000); loadA11ySettings();
+  _quickStartInit(()=>{
+    showRecap([
+      {t:0,    txt:'You escaped the hospital with seconds to spare.\nThe containment doors sealed behind you.'},
+      {t:2800, txt:'The news that night: zombie pathogen neutralised.\nRobot cleanup units deployed worldwide.'},
+      {t:5600, txt:'Cole killed the hacker — confirmed.\nOperation closed.'},
+      {t:8400, txt:'Then your phone lit up.\nCoordinates. Unknown sender. Then static.'},
+      {t:11200,txt:'You remember a flash of white light.\nThen nothing. Then white walls.'},
+      {t:14000,txt:'The air tasted recycled.\nA wall-screen played rolling news.'},
+      {t:16800,txt:'CHAPTER 4 — THE FUTURE HOUSE'},
+    ], ()=>loadChapter4());
+  });
 }
 
 function quickStartCh5(){
-  stopTitleMusic();
-  document.getElementById('intro').style.display='none';
-  document.getElementById('game').style.display='flex';
-  window.addEventListener('resize',resizeCanvas); resizeCanvas();
-  startAmbientMusic(); initParticles(); startGameLoop();
-  loadChapter5();
-  setInterval(saveGame,10000); loadA11ySettings();
+  _quickStartInit(()=>{
+    showRecap([
+      {t:0,    txt:'You escaped the Future House through the evacuation capsule.'},
+      {t:2800, txt:'One year passed.\nThe robots shut down. People rebuilt.'},
+      {t:5600, txt:'Streets cleared. Populations grew.\nYou thought it was finally over.'},
+      {t:8400, txt:'Then the news alert:\nCOLE HARGROVE — PRISON BREAK CONFIRMED.'},
+      {t:11200,txt:'He had been tracking you the whole time.\nHe just had to wait.'},
+      {t:14000,txt:'Your building. Your floor.\nOne year later — it starts again.'},
+      {t:16800,txt:'CHAPTER 5 — ONE YEAR LATER'},
+    ], ()=>loadChapter5());
+  });
 }
 
 function retryChapter(){
@@ -5120,10 +5163,7 @@ function tryMove(toRoom){
   } else if(ds==='boarded'){
     const hammer=state.inventory.find(i=>i.id==='hammer1'||i.id==='hammer2');
     if(hammer){
-      sfxHammer();
-      state.brokenDoors.add(doorKey(state.currentRoom,toRoom));
-      addLog(`${playerName} swings the ${hammer.name} — the boards SPLINTER and fall!`,'important');
-      enterRoom(toRoom,travelDir);
+      startHammerMinigame(state.currentRoom, toRoom, travelDir, hammer);
     } else {
       addLog(`This door is boarded up. You need a hammer to break through.`);
       sfxDoorLocked();
@@ -6039,6 +6079,97 @@ let ch4Active=false;
 let ch5Active=false;
 // ── Keypad state ──────────────────────────────────────────────────
 let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
+// ═══════════════════════════════════════════════════════════════
+// HAMMER MINIGAME
+// ═══════════════════════════════════════════════════════════════
+let _hmFromRoom=null,_hmToRoom=null,_hmDir=null,_hmHammer=null;
+let _hmTarget=0,_hmCount=0,_hmSecondsLeft=0,_hmDone=false,_hmTimerInterval=null;
+
+function startHammerMinigame(fromRoom,toRoom,dir,hammer){
+  _hmFromRoom=fromRoom; _hmToRoom=toRoom; _hmDir=dir; _hmHammer=hammer;
+  _hmTarget=Math.floor(Math.random()*7)+6; // 6-12
+  _hmCount=0; _hmSecondsLeft=10; _hmDone=false;
+  const ov=document.getElementById('hammerOverlay');
+  document.getElementById('hammerCount').textContent='0';
+  document.getElementById('hammerBar').style.width='0%';
+  document.getElementById('hammerTimer').textContent='10s';
+  document.getElementById('hammerResult').textContent=`Hit ${_hmTarget} times!`;
+  document.getElementById('hammerResult').style.color='#7a6040';
+  ov.style.display='flex';
+  gamePaused=true;
+  addLog(`${_hmHammer.name} ready. Press H rapidly — ${_hmTarget} hits needed in 10 seconds!`,'important');
+  _hmTimerInterval=setInterval(()=>{
+    _hmSecondsLeft--;
+    document.getElementById('hammerTimer').textContent=`${_hmSecondsLeft}s`;
+    if(_hmSecondsLeft<=0){ hammerFail(); }
+  },1000);
+  window.addEventListener('keydown',_hammerKeyHandler);
+}
+
+function _hammerKeyHandler(e){
+  if((e.key==='h'||e.key==='H') && !_hmDone){
+    _hmCount++;
+    sfxHammer();
+    const pct=Math.min(100,(_hmCount/_hmTarget)*100);
+    document.getElementById('hammerCount').textContent=_hmCount;
+    document.getElementById('hammerBar').style.width=pct+'%';
+    if(_hmCount>=_hmTarget){ hammerSuccess(); }
+  }
+}
+
+function hammerSuccess(){
+  if(_hmDone) return; _hmDone=true;
+  clearInterval(_hmTimerInterval);
+  window.removeEventListener('keydown',_hammerKeyHandler);
+  document.getElementById('hammerResult').textContent='DOOR SMASHED!';
+  document.getElementById('hammerResult').style.color='#80c030';
+  document.getElementById('hammerBar').style.background='#40c020';
+  setTimeout(()=>{
+    document.getElementById('hammerOverlay').style.display='none';
+    gamePaused=false;
+    state.brokenDoors.add(doorKey(_hmFromRoom,_hmToRoom));
+    addLog(`${playerName} swings the ${_hmHammer.name} — the boards SPLINTER and fall!`,'important');
+    enterRoom(_hmToRoom,_hmDir);
+  },700);
+}
+
+function hammerFail(){
+  if(_hmDone) return; _hmDone=true;
+  clearInterval(_hmTimerInterval);
+  window.removeEventListener('keydown',_hammerKeyHandler);
+  document.getElementById('hammerResult').textContent='NOT ENOUGH FORCE — try again!';
+  document.getElementById('hammerResult').style.color='#c03020';
+  setTimeout(()=>{
+    document.getElementById('hammerOverlay').style.display='none';
+    gamePaused=false;
+    addLog(`${playerName} pounds the boards but they hold. Try again.`);
+  },900);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUICK-START RECAPS
+// ═══════════════════════════════════════════════════════════════
+let _recapCb=null, _recapSkipped=false, _recapTimeouts=[];
+function skipRecap(){
+  _recapSkipped=true;
+  _recapTimeouts.forEach(t=>clearTimeout(t));
+  _recapTimeouts=[];
+  document.getElementById('recapBlack').style.display='none';
+  document.getElementById('recapCap').style.opacity='0';
+  if(_recapCb){ _recapCb(); _recapCb=null; }
+}
+function showRecap(captions, cb){
+  _recapSkipped=false; _recapCb=cb; _recapTimeouts=[];
+  const bl=document.getElementById('recapBlack');
+  const cap=document.getElementById('recapCap');
+  bl.style.display='flex'; cap.style.opacity='0'; cap.textContent='';
+  captions.forEach(({t,txt})=>{
+    _recapTimeouts.push(setTimeout(()=>{ if(_recapSkipped) return; cap.textContent=txt; cap.style.opacity='1'; setTimeout(()=>{ cap.style.opacity='0'; },1800); },t));
+  });
+  const total=captions[captions.length-1].t+2800;
+  _recapTimeouts.push(setTimeout(()=>{ if(_recapSkipped) return; bl.style.display='none'; if(_recapCb){_recapCb();_recapCb=null;} },total));
+}
+
 function openKeypad(from, to, code, dir, hint){
   _kpFrom=from; _kpTo=to; _kpCode=code; _kpDir=dir; _kpInput='';
   document.getElementById('keypadDisplay').textContent='___';
