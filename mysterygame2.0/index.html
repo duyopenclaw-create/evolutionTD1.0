@@ -140,6 +140,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
 #tvScreen .tv-close{margin-top:1.5rem;background:none;border:1px solid #00440044;color:#006600;padding:.4rem 1.2rem;font-family:'Courier New',monospace;cursor:pointer;font-size:.8rem;}
 #tvScreen .tv-close:hover{border-color:#00cc00;color:#00cc00;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+@keyframes tickerScroll{0%{transform:translateX(100%);}100%{transform:translateX(-100%);}}
 
 /* ── ULTRA REALISM OVERLAYS ── */
 /* Vignette — dark corners */
@@ -214,6 +215,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <button onclick="quickStartCh3()" style="background:none;border:1px solid #2a4a2090;color:#50804060;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;color:#609060;">▶ CHAPTER 3</button>
     <button onclick="quickStartCh4()" style="background:none;border:1px solid #20406090;color:#4080b0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 4</button>
     <button onclick="quickStartCh5()" style="background:none;border:1px solid #30305090;color:#8080a0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 5</button>
+    <button onclick="quickStartCh6()" style="background:none;border:1px solid #20406090;color:#6090c0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 6</button>
   </div>
   <p id="saveInfo" style="font-size:.65rem;color:#3a2a18;margin-top:.5rem;display:none;"></p>
   <div id="titleVersion">VERSION 2.0 &nbsp;·&nbsp; THE AWAKENING</div>
@@ -288,6 +290,26 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
   <p style="color:#7a6040;font-size:.75rem;letter-spacing:.2em;margin-bottom:2rem;">PRESS  ESC  OR  P  TO RESUME</p>
   <button onclick="togglePause()" style="background:none;border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;padding:.55rem 1.8rem;cursor:pointer;">RESUME</button>
   <button onclick="location.reload()" style="margin-top:.8rem;background:none;border:1px solid #4a2020;color:#a06040;font-family:Georgia,serif;font-size:.8rem;letter-spacing:.2em;padding:.45rem 1.6rem;cursor:pointer;">QUIT TO MENU</button>
+</div>
+
+<!-- CHAPTER 6 BLACK SCREEN -->
+<div id="ch6Black" style="display:none;position:fixed;inset:0;background:#000;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div id="ch6Cap" class="ch2cap" style="color:#3a3a4a;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:500px;"></div>
+</div>
+
+<!-- CHAPTER 6 NEWS SCREEN -->
+<div id="ch6NewsScreen" style="display:none;position:fixed;inset:0;background:#000;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:680px;width:92%;background:#0a0c10;border:2px solid #2040a0;border-radius:4px;padding:1.5rem 1.8rem;font-family:'Courier New',monospace;">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+      <div style="background:#c02020;color:#fff;font-size:.65rem;letter-spacing:.3em;padding:.18rem .55rem;border-radius:2px;animation:blink .8s infinite;">⬤ LIVE</div>
+      <div style="color:#8090c0;font-size:.7rem;letter-spacing:.2em;">WORLD EMERGENCY BROADCAST</div>
+    </div>
+    <div id="ch6NewsText" style="color:#a0b8e0;font-size:.82rem;line-height:1.9;min-height:180px;white-space:pre-wrap;"></div>
+    <div style="margin-top:1rem;overflow:hidden;border-top:1px solid #2040a080;padding-top:.5rem;">
+      <div id="ch6NewsTicker" style="color:#6080c0;font-size:.62rem;letter-spacing:.12em;white-space:nowrap;animation:tickerScroll 18s linear infinite;">UFO CONFIRMED OVER PACIFIC OCEAN &nbsp;&nbsp;·&nbsp;&nbsp; SPACEX EMERGENCY LAUNCH IN PROGRESS &nbsp;&nbsp;·&nbsp;&nbsp; ALIEN VESSEL DECELERATING — MILITARY TRACKING &nbsp;&nbsp;·&nbsp;&nbsp; WORLD LEADERS IN EMERGENCY SESSION &nbsp;&nbsp;·&nbsp;&nbsp; EVACUATION ORDERS ISSUED FOR COASTAL REGIONS &nbsp;&nbsp;·&nbsp;&nbsp;</div>
+    </div>
+    <button onclick="closeCh6NewsScreen()" style="margin-top:1.2rem;background:none;border:1px solid #2040a080;color:#4060a0;padding:.38rem 1.1rem;font-family:'Courier New',monospace;cursor:pointer;font-size:.75rem;letter-spacing:.12em;">[ CLOSE BROADCAST ]</button>
+  </div>
 </div>
 
 <!-- ACCESSIBILITY PANEL -->
@@ -928,6 +950,31 @@ function quickStartCh5(){
     ], ()=>loadChapter5());
   });
 }
+function quickStartCh6(){
+  // Ch6 quick start: ask for name first (like ch1), then show recap
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  setInterval(saveGame,10000); loadA11ySettings();
+  _nameEntryCallback=()=>_quickStartCh6AfterName();
+  document.getElementById('nameEntryTitle').textContent='WHAT IS YOUR NAME?';
+  document.getElementById('nameInput').value='';
+  document.getElementById('nameError').textContent='';
+  document.getElementById('nameEntryPanel').style.display='flex';
+  setTimeout(()=>document.getElementById('nameInput').focus(),80);
+}
+function _quickStartCh6AfterName(){
+  showRecap([
+    {t:0,    txt:'Cole is dead. The hacker is dead.'},
+    {t:2800, txt:'But before dying, the hacker transmitted a name\nto alien radio frequencies.\nThe name was Mara.'},
+    {t:5600, txt:'Seven months later — they answered.\nTonight, the vessel arrives.'},
+    {t:8400, txt:'SpaceX has an emergency rocket.\nTwenty minutes. Ten seats. Two are yours.'},
+    {t:11200,txt:'Get to the launch pad.\nGet out of here.'},
+    {t:14000,txt:'CHAPTER 6 — SPACE ESCAPE'},
+  ], ()=>loadChapter6());
+}
 
 function retryChapter(){
   // Reset all death/flash visuals
@@ -942,7 +989,9 @@ function retryChapter(){
   // Clear any existing music/sound
   try{ musicNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}});musicNodes=[]; }catch(e){}
   startAmbientMusic();
-  if(ch5Active){
+  if(ch6Active){
+    loadChapter6();
+  } else if(ch5Active){
     loadChapter5();
   } else if(ch4Active){
     loadChapter4();
@@ -2159,6 +2208,98 @@ const ROOM_DATA = {
         {id:"hs2",label:"ROOFTOP EDGE",x:"10%",y:"50%",w:"15%",h:"35%",examine:"Twelve floors down. The street below is empty — police sealed it. Cole is not going to come up the outside of the building. He's coming up the ramp. You have one shot at this. Literally."},
         {id:"hs3",label:"ROOFTOP DOOR",x:"62%",y:"35%",w:"22%",h:"40%",examine:"The stairwell door — you came through it thirty seconds ago. You can hear the sound from below. The door rattles once. Then again. Cole is on the other side. You step back toward the edge. Toward the helicopter. You raise the gun."},
       ]},
+  // ── CHAPTER 6 — SPACE ESCAPE (rooms 71-85) ──
+  71:{name:"Emergency Shelter",type:"spacexshelter",desc:"A converted gym near the SpaceX site. Hundreds of people crammed in. Every screen shows the same feed: a massive triangular craft hovering over the Pacific. The military confirmed it an hour ago. The countdown on the wall: 18 minutes until the Falcon Heavy launches. Mara finds you in the crowd — she heard from someone in the facility. There are still two seats left. But you need clearance.",
+    items:[{id:"ch6_badge",name:"Press Badge",desc:"A press credential badge that fell from a journalist's pocket. It might get you past the first gate."}],
+    hotspots:[
+      {id:"hs1",label:"TV SCREENS",x:"30%",y:"20%",w:"40%",h:"35%",examine:"Every channel. The triangular craft rotates slowly over the ocean. A military spokesperson says: 'Evacuation to SpaceX site is the only option. The creature specifically asked for Mara. We do not know how it knows that name.'"},
+      {id:"hs2",label:"FLOOR",x:"20%",y:"60%",w:"30%",h:"25%",examine:"You scan the floor. A press badge fell from a fleeing journalist — it has a barcode and reads CLEARANCE LEVEL A. You pocket it.",giveItem:"ch6_badge"},
+      {id:"hs3",label:"MARA",x:"60%",y:"40%",w:"20%",h:"40%",examine:"Mara grabs your arm. 'I know why they're looking for me. Before he died — the hacker — he transmitted my name to their comms. I don't know what they want. But we can't be here when they arrive. Move.'"},
+    ]},
+  72:{name:"Parking Lot",type:"spacexparking",desc:"Outside. The air tastes metallic. A distant hum fills the sky — low, resonant, like a horn played on a planet-sized instrument. People are running toward the facility entrance. Armed guards at the gate. A fallen security drone sparks near the barrier.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"SECURITY DRONE",x:"55%",y:"50%",w:"25%",h:"30%",examine:"The drone's casing is cracked open. Inside: a note — FUEL LINE OVERRIDE CODE: 512. Stamped on a laminated card. You take it."},
+      {id:"hs2",label:"CROWD",x:"15%",y:"30%",w:"35%",h:"50%",examine:"Hundreds of people trying to push through. A guard shouts: 'Badge holders only past this point!' You grip the press badge tighter."},
+    ]},
+  73:{name:"Security Gate",type:"spacexgate",desc:"A steel security gate with a number pad. A display shows live camera feeds from the launch pad. One camera faces the access code — you can just make it out.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"SECURITY DISPLAY",x:"25%",y:"25%",w:"35%",h:"40%",examine:"You squint at the security monitor. Feed 7 — access control room. The code sheet taped to the console reads: GATE ALPHA — 8 3 9. You memorise it."},
+      {id:"hs2",label:"GATE MECHANISM",x:"65%",y:"30%",w:"20%",h:"40%",examine:"Heavy steel roller mechanism. Keypad-locked. You'll need the code."},
+    ]},
+  74:{name:"Administration Block",type:"spacexadmin",desc:"Fluorescent-lit corridor. Clipboards everywhere. Whoever was working here left fast — coffee still steaming on a desk. A whiteboard reads: LAUNCH CHECKLIST — SEQ 4 REMAINING: FUEL CONFIRM / SUIT UP / PAD CLEAR.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"WHITEBOARD",x:"20%",y:"20%",w:"40%",h:"40%",examine:"LAUNCH CHECKLIST — three tasks remain before ignition. One of them: SUIT UP. There's a storage room marked ASTRONAUT PREP at the far end of the facility. That's where the suits are."},
+      {id:"hs2",label:"DESK",x:"65%",y:"45%",w:"20%",h:"35%",examine:"A half-drunk coffee. A printed memo: 'Per emergency protocol, two spare seats have been held for civilian VIPs. The launch director has final say. Suite code changes hourly — check the server room.' Someone underlined 'server room' twice."},
+    ]},
+  75:{name:"Server Room",type:"spacexserver",desc:"Racks of blinking hardware. Cold air blasts from overhead vents. The systems monitor all facility systems. One terminal is still logged in, the screen reading: LAUNCH AUTH CODE — SEQUENCE B: 7-7-4-1.",
+    items:[{id:"ch6_codes",name:"Launch Code Sequence",desc:"The launch authorisation code: 7741. This unlocks the final launch sequence."}],
+    hotspots:[
+      {id:"hs1",label:"TERMINAL",x:"30%",y:"30%",w:"40%",h:"40%",examine:"The terminal flickers. On screen: 'EMERGENCY LAUNCH AUTH — CODE B: 7-7-4-1. Do not share outside authorised personnel.' You photograph it on your phone. You have the launch codes.",giveItem:"ch6_codes"},
+      {id:"hs2",label:"SERVER RACKS",x:"70%",y:"20%",w:"20%",h:"55%",examine:"Blinking lights. The hum of fans. These servers track everything — communications, fuel levels, orbital windows. One folder on screen: HACKER — TRANSMITTED DATA — ALIEN ORIGIN CONFIRMED."},
+    ]},
+  76:{name:"Staff Cafeteria",type:"spacexcafe",desc:"Tables overturned. Half-eaten trays. Someone left a TV on — the news anchor is crying. Outside the cafeteria windows the sky has turned a deep amber colour, nothing natural about it.",
+    items:[{id:"ch6_t1",name:"Mission Patch",desc:"A SpaceX mission patch from the table. A small piece of history.",isTreasure:true}],
+    hotspots:[
+      {id:"hs1",label:"TV",x:"25%",y:"15%",w:"30%",h:"35%",examine:"The anchor wipes their eyes. 'Sources confirm the alien vessel matched every radio signal ever broadcast from Earth. They decoded every one. Every one. They are looking for a specific person. A woman named Mara.' The anchor looks directly at camera. 'If you are watching this and you know a Mara — run.'"},
+      {id:"hs2",label:"TABLE",x:"55%",y:"45%",w:"25%",h:"35%",examine:"Knocked-over coffee. An abandoned jacket. Under a tray — a SpaceX mission patch. You pocket it.",giveItem:"ch6_t1"},
+    ]},
+  77:{name:"Engineering Bay",type:"spacexengineering",desc:"High-ceilinged workshop. A Merlin engine component sits in a cradle. Tool racks. A second Falcon Heavy booster section painted in white. A technician is still here — hiding under a workbench, earbuds in, apparently unaware of what is happening outside.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"TECHNICIAN",x:"30%",y:"50%",w:"25%",h:"35%",examine:"You tap them on the shoulder. They yank out their earbuds. 'Oh. OH. Is it time?' You nod. They scramble up and run. They drop a keycard — FUEL WING ACCESS — as they go. You pick it up."},
+      {id:"hs2",label:"ENGINE COMPONENT",x:"60%",y:"20%",w:"25%",h:"45%",examine:"The Merlin engine component sits in its cradle, gleaming. Nine of these are in the first stage of the rocket currently on the pad. You'll be riding on top of nine of them very shortly."},
+    ]},
+  78:{name:"Fuel Control Room",type:"spacexfuel",desc:"Banks of dials and pressure gauges. A large console with a number pad — the fuel pressurisation sequence must be confirmed before launch. The code is handwritten on a sticky note on the panel: it was 512. You know this.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"FUEL CONSOLE",x:"25%",y:"25%",w:"45%",h:"45%",examine:"FUEL PRESSURISATION — CODE REQUIRED. The sticky note reads 512. That was the code you found on the drone. You enter it. A green light: FUEL SEQUENCE CONFIRMED."},
+      {id:"hs2",label:"PRESSURE GAUGES",x:"70%",y:"15%",w:"20%",h:"50%",examine:"Gauges reading nominal across every line. Whoever designed this system made it fast to pressurise. Twenty seconds after ignition and you'll be going 60mph. In two minutes, 17,000mph."},
+    ]},
+  79:{name:"Hangar Approach",type:"spacexapproach",desc:"A wide concrete corridor leading to the main hangar. Through the windows: the rocket standing on the pad, bathed in searchlights. Steam venting from the base. The clock above the door: 8 MINUTES TO LAUNCH WINDOW.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"WINDOW",x:"20%",y:"20%",w:"55%",h:"45%",examine:"The Falcon Heavy stands on the pad. Three cores, each as tall as a twenty-storey building. Steam pours from the base. You have never seen anything so simultaneously beautiful and terrifying."},
+      {id:"hs2",label:"CLOCK",x:"78%",y:"10%",w:"15%",h:"25%",examine:"Eight minutes. You need the suit. You need the codes. Then the launch director's override. Move."},
+    ]},
+  80:{name:"Hangar A",type:"spacexhangar",desc:"Main assembly hangar — empty now, the rocket rolled out hours ago. The floor is stained with hydraulic fluid and hope. A lone security camera watches the door. In the corner: a trolley with two space suits still in their bags.",
+    items:[{id:"ch6_suit",name:"Space Suit",desc:"A SpaceX Dragon crew suit. Fully sealed. It will keep you alive for the first forty-eight hours in orbit."}],
+    hotspots:[
+      {id:"hs1",label:"SUIT TROLLEY",x:"60%",y:"40%",w:"25%",h:"40%",examine:"Two suits in sealed bags on a trolley. The second bag has your name on it — written in marker. Mara's name is on the first. Someone planned for this. You take yours.",giveItem:"ch6_suit"},
+      {id:"hs2",label:"HANGAR FLOOR",x:"10%",y:"55%",w:"35%",h:"30%",examine:"The floor stain map of a year's worth of assembly work. You can trace the outline of where the rocket stood. You are standing inside the footprint of something that's about to save your life."},
+    ]},
+  81:{name:"Pre-launch Corridor",type:"spacexcorridor",desc:"The final interior corridor. Blast doors, now open. A sign: AUTHORISED PERSONNEL ONLY — LAUNCH SEQUENCE ACTIVE. A countdown display: 6 MINUTES. The air smells of RP-1 rocket fuel.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"BLAST DOORS",x:"30%",y:"25%",w:"40%",h:"50%",examine:"Massive blast doors, currently retracted into the walls. When they close — and they will, the moment ignition begins — nothing gets in or out of this corridor for twelve hours."},
+      {id:"hs2",label:"COUNTDOWN",x:"72%",y:"15%",w:"20%",h:"25%",examine:"Six minutes. Once the rocket clears the tower, you're safe. Until then, you are standing next to the most explosive object ever assembled in human history."},
+    ]},
+  82:{name:"Mission Control Annex",type:"spacexcontrol",desc:"Banks of screens tracking telemetry, orbital path, alien vessel approach vector. The launch director is here — she looks at you, then at Mara, and says: 'You're the two. We need the auth code.'",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"LAUNCH DIRECTOR",x:"35%",y:"30%",w:"30%",h:"45%",examine:"She holds out her hand. 'Code B. The server room terminal.' You hand her the launch code. She enters it. A low tone: 'LAUNCH SEQUENCE AUTHORISED.' She looks at both of you. 'Get to the pad. Now.'"},
+      {id:"hs2",label:"ALIEN APPROACH SCREEN",x:"68%",y:"15%",w:"25%",h:"50%",examine:"A trajectory plot. The alien vessel is decelerating — it will achieve stable orbit in eleven minutes. Right now it is broadcasting one word on every frequency: MARA. Over and over. MARA. MARA. MARA."},
+    ]},
+  83:{name:"Astronaut Prep Room",type:"spacexprep",desc:"White walls. Suit-up stations. A mirror on one wall. You've seen this room in documentaries. You never imagined you'd be here. Mara is already suited up ahead of you.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"MIRROR",x:"60%",y:"20%",w:"20%",h:"55%",examine:"You look at yourself in the suit. Visor up. Heart rate: you can't tell. Mara appears beside you in the mirror. She doesn't say anything. She doesn't need to."},
+      {id:"hs2",label:"SUIT STATION",x:"15%",y:"30%",w:"35%",h:"45%",examine:"The station confirms: suit integrity nominal. Oxygen: 48 hours. Thermal: nominal. You are as ready as a person who has never trained for space can possibly be."},
+    ]},
+  84:{name:"Launch Pad Approach",type:"spacexpadapproach",desc:"Outside. The rocket is close enough now that you can feel the vibration through your boots. The walkway stretches ahead — the White Room at the end, the crew access arm, the Dragon capsule door. Two minutes on the clock.",
+    items:[{id:"ch6_t2",name:"Launch Site Gravel",desc:"A piece of gravel from the SpaceX launch pad. You grabbed it as you crossed. Some things you just take.",isTreasure:true}],
+    hotspots:[
+      {id:"hs1",label:"ROCKET",x:"25%",y:"10%",w:"50%",h:"60%",examine:"Up close the rocket is alive. Steam, creak of metal, hiss of pressure vents. The nine Merlin engines pointing down are already warm. You run."},
+      {id:"hs2",label:"GRAVEL",x:"65%",y:"65%",w:"20%",h:"25%",examine:"Without thinking you reach down and grab a piece of launch pad gravel. You put it in your suit pocket. Mara watches. 'Really?' she says. You shrug.",giveItem:"ch6_t2"},
+    ]},
+  85:{name:"Launch Pad — Dragon Capsule",type:"spacexpad",desc:"The White Room. The Dragon capsule hatch. A technician helps you through. Mara is already strapped in. The hatch seals. The countdown voice: ONE MINUTE. The alien vessel is visible through the porthole — a vast triangle against the night sky. It is waiting.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"PORTHOLE",x:"30%",y:"20%",w:"40%",h:"40%",examine:"Through the porthole: the alien vessel, massive, triangular, every light on its hull pulsing slowly. It isn't moving toward you. It's watching. It has been watching since it arrived."},
+      {id:"hs2",label:"LAUNCH BUTTON",x:"55%",y:"55%",w:"25%",h:"30%",examine:"The launch director's voice on comms: 'Auth confirmed. You have the codes. Initiate when ready.' You look at Mara. She nods. Your hand moves to the panel. This is it."},
+    ]},
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2265,6 +2406,28 @@ const CONNECTIONS = [
   {a:67,b:68,dir:'S', state:'open'},
   {a:68,b:69,dir:'E', state:'open'},
   {a:69,b:70,dir:'E', state:'open'},
+  // ── Chapter 6 — Space Escape (15 rooms, SpaceX launch) ──
+  // Row 0: 71-75
+  {a:71,b:72,dir:'E', state:'open'},
+  {a:72,b:73,dir:'E', state:'open'},
+  {a:73,b:74,dir:'E', state:'coded', code:'839', hint:'Check the SECURITY DISPLAY near the gate.'},
+  {a:74,b:75,dir:'E', state:'open'},
+  // Row 1: 76-80
+  {a:76,b:77,dir:'E', state:'open'},
+  {a:77,b:78,dir:'E', state:'open'},
+  {a:78,b:79,dir:'E', state:'coded', code:'512', hint:'Check the FUEL CONTROL PANEL.'},
+  {a:79,b:80,dir:'E', state:'open'},
+  // Row 2: 81-85
+  {a:81,b:82,dir:'E', state:'open'},
+  {a:82,b:83,dir:'E', state:'open'},
+  {a:83,b:84,dir:'E', state:'open'},
+  {a:84,b:85,dir:'E', state:'open'},
+  // Verticals
+  {a:71,b:76,dir:'S', state:'open'},
+  {a:72,b:77,dir:'S', state:'open'},
+  {a:75,b:80,dir:'S', state:'open'},
+  {a:76,b:81,dir:'S', state:'open'},
+  {a:80,b:85,dir:'S', state:'open'},
 ];
 
 function buildConnectionMap(){
@@ -2355,6 +2518,21 @@ const PAL={
   attic3:  {w:0x786040,f:0x604828,c:0x2e2010,lr:0.8,lg:0.6,lb:0.2,li:2.0},
   secret:  {w:0x604040,f:0x402828,c:0x201818,lr:1.0,lg:0.65,lb:0.1,li:3.5},
   vent:    {w:0x686868,f:0x585858,c:0x383838,lr:0.55,lg:0.55,lb:0.55,li:1.5},
+  spacexshelter:{w:0x707880,f:0x505860,c:0x282c32,lr:0.7,lg:0.7,lb:0.85,li:2.0},
+  spacexparking:{w:0x505858,f:0x404848,c:0x1e2222,lr:0.5,lg:0.6,lb:0.5,li:1.4},
+  spacexgate:   {w:0x607080,f:0x485868,c:0x202830,lr:0.55,lg:0.65,lb:0.8,li:1.8},
+  spacexadmin:  {w:0x8090a0,f:0x687080,c:0x2c3040,lr:0.6,lg:0.7,lb:0.95,li:2.2},
+  spacexserver: {w:0x204060,f:0x182838,c:0x0a1420,lr:0.2,lg:0.5,lb:0.9,li:1.5},
+  spacexcafe:   {w:0x707868,f:0x606858,c:0x282c22,lr:0.75,lg:0.75,lb:0.6,li:2.0},
+  spacexengineering:{w:0x6a7880,f:0x586068,c:0x242830,lr:0.6,lg:0.65,lb:0.75,li:1.8},
+  spacexfuel:   {w:0x506878,f:0x405868,c:0x1c2430,lr:0.45,lg:0.6,lb:0.8,li:1.6},
+  spacexapproach:{w:0x808898,f:0x686878,c:0x2c2e38,lr:0.7,lg:0.7,lb:0.9,li:2.2},
+  spacexhangar: {w:0x909aa8,f:0x787888,c:0x303038,lr:0.8,lg:0.8,lb:0.9,li:2.5},
+  spacexcorridor:{w:0xb0b8c0,f:0x909898,c:0x383c40,lr:0.9,lg:0.9,lb:1.0,li:2.8},
+  spacexcontrol:{w:0x1c3050,f:0x142238,c:0x080e1a,lr:0.3,lg:0.5,lb:1.0,li:1.8},
+  spacexprep:   {w:0xd0d8e0,f:0xb0b8c0,c:0x484c50,lr:0.95,lg:0.95,lb:1.0,li:3.0},
+  spacexpadapproach:{w:0x505860,f:0x383c40,c:0x141618,lr:0.5,lg:0.55,lb:0.6,li:1.4},
+  spacexpad:    {w:0x202428,f:0x181c20,c:0x080a0c,lr:0.3,lg:0.35,lb:0.4,li:1.0},
 };
 
 // ── MAT helpers ──────────────────────────────────────────────────
@@ -4339,6 +4517,34 @@ function buildFurniture(type,P,rng){
       addClickBox(1,1.5,3.5,0.1,4.38,2.0,-1.5); // rooftop edge hs1
       addClickBox(2,1.0,2.2,0.15,-4.38,1.5,0);  // stairwell door hs2 (flavour)
     }
+  } else if(type==='spacexshelter'||type==='spacexparking'||type==='spacexgate'||type==='spacexadmin'||type==='spacexserver'||type==='spacexcafe'||type==='spacexengineering'||type==='spacexfuel'||type==='spacexapproach'||type==='spacexhangar'||type==='spacexcorridor'||type==='spacexcontrol'||type==='spacexprep'||type==='spacexpadapproach'||type==='spacexpad'){
+      const ambGl=new THREE.PointLight(0xc0d0ff,1.2,14,1.5); ambGl.position.set(0,3.8,0); roomGroup.add(ambGl); candleLights.push(ambGl);
+      // Fluorescent overhead light strip
+      const strip=box(3.0,0.06,0.3,0xd0e0ff,0.9); strip.position.set(0,3.85,0); roomGroup.add(strip);
+      const stripGl=new THREE.PointLight(0xd0e8ff,1.2,8,1.5); stripGl.position.set(0,3.8,0); roomGroup.add(stripGl); candleLights.push(stripGl);
+      // Floor marking stripe
+      const stripe=box(5.0,0.01,0.15,0xf0d000,0.8); stripe.position.set(0,0.01,0); roomGroup.add(stripe);
+      // Metal wall panel
+      const panel2=box(0.06,2.8,3.5,0x808898,0.7,0.3); panel2.position.set(-4.37,1.4,0); roomGroup.add(panel2);
+      // Equipment box
+      const eqBox=box(0.8,0.6,0.5,0x607080,0.8,0.1); eqBox.position.set(3.0,0.3,-3.0); roomGroup.add(eqBox);
+      // Add different props per sub-type
+      if(type==='spacexpad'){
+        // Dark pad — dramatic orange glow from engines below
+        ambGl.color.set(0xff8020); ambGl.intensity=2.0;
+        const engineGl=new THREE.PointLight(0xff6010,3.0,12,1.5); engineGl.position.set(0,-1.0,0); roomGroup.add(engineGl); candleLights.push(engineGl);
+      } else if(type==='spacexcontrol'){
+        // Blue screen glow
+        ambGl.color.set(0x2040a0); ambGl.intensity=1.5;
+        const scrGl=new THREE.PointLight(0x1030d0,1.5,6,2); scrGl.position.set(0,1.5,-4.0); roomGroup.add(scrGl); candleLights.push(scrGl);
+      } else if(type==='spacexserver'){
+        // Green/blue blink
+        ambGl.color.set(0x103040); ambGl.intensity=1.0;
+        const srvGl=new THREE.PointLight(0x00ff80,0.5,4,2); srvGl.position.set(-2.0,2.0,-3.0); roomGroup.add(srvGl); candleLights.push(srvGl);
+      }
+      addClickBox(0,2.0,1.5,0.5,-1.0,0.8,-3.5);
+      addClickBox(1,1.5,1.4,0.6,2.0,0.7,-2.5);
+      addClickBox(2,1.8,1.6,0.8,0,0.8,1.5);
   }
 
   // Default for any unhandled room type: add candle + basic furniture
@@ -5220,6 +5426,8 @@ function examineHotspot(hs,foundSet){
   // ch4 / ch5 special triggers
   if(hs.ch4exit){ ch4CheckExit(); return; }
   if(hs.ch5exit){ ch5CheckExit(); return; }
+  // ch6 launch trigger
+  if(state.currentRoom===85 && hs.label==='LAUNCH BUTTON'){ ch6LaunchEscape(); return; }
   // requireItem check (cabinet under stairs etc.)
   if(hs.requireItem && !state.inventory.find(i=>i.id===hs.requireItem)){
     const needed=Object.values(ROOM_DATA).flatMap(r=>r.items||[]).find(i=>i.id===hs.requireItem);
@@ -5491,16 +5699,21 @@ const ROOM_GRID_CH5 = {
   61:0, 62:1, 63:2, 64:3, 65:4,  // row 0
   66:5, 67:6, 68:7, 69:8, 70:9   // row 1
 };
+const ROOM_GRID_CH6 = {
+  71:0,  72:1,  73:2,  74:3,  75:4,   // row 0
+  76:5,  77:6,  78:7,  79:8,  80:9,   // row 1
+  81:10, 82:11, 83:12, 84:13, 85:14   // row 2
+};
 
 function updateMiniMap(){
   const el=document.getElementById('miniMap');
   el.innerHTML='';
 
-  if(ch4Active||ch5Active){
+  if(ch4Active||ch5Active||ch6Active){
     el.style.gridTemplateColumns='repeat(5,1fr)';
-    const totalCells=10;
+    const totalCells=ch6Active?15:10;
     const roomByPos={};
-    const grid=ch4Active?ROOM_GRID_CH4:ROOM_GRID_CH5;
+    const grid=ch6Active?ROOM_GRID_CH6:ch4Active?ROOM_GRID_CH4:ROOM_GRID_CH5;
     Object.entries(grid).forEach(([id,pos])=>roomByPos[pos]=parseInt(id));
     for(let i=0;i<totalCells;i++){
       const div=document.createElement('div'); div.className='mapRoom';
@@ -5671,7 +5884,8 @@ const ACHIEVEMENTS=[
   {id:'ach_ch3', icon:'🧪', name:'Patient Zero', desc:'Escape Chapter 3 — County General Hospital.'},
   {id:'ach_ch4', icon:'🤖', name:'Future Proof', desc:'Escape Chapter 4 — the Future House.'},
   {id:'ach_ch5', icon:'🚁', name:'Final Justice', desc:'Escape Chapter 5 — and fire the signal.'},
-  {id:'ach_allch', icon:'⭐', name:'The Full Story', desc:'Complete all five chapters.'},
+  {id:'ach_ch6', icon:'🚀', name:'Beyond Earth', desc:'Complete Chapter 6 — escape to space.'},
+  {id:'ach_allch', icon:'⭐', name:'The Full Story', desc:'Complete all six chapters.'},
   {id:'ach_relics', icon:'💎', name:'Relic Hunter', desc:'Find all 3 relics in Chapter 4.'},
   {id:'ach_memories', icon:'🔮', name:'Memory Keeper', desc:'Find all 3 memory items in Chapter 5.'},
   {id:'ach_platinum', icon:'🏆', name:'Ghost', desc:'Earn a Platinum trophy in Chapter 1.'},
@@ -5688,7 +5902,7 @@ function unlockAchievement(id){
   set.add(id);
   try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
   // Check if all 5 chapters done
-  if(['ach_ch1','ach_ch2','ach_ch3','ach_ch4','ach_ch5'].every(a=>set.has(a))){
+  if(['ach_ch1','ach_ch2','ach_ch3','ach_ch4','ach_ch5','ach_ch6'].every(a=>set.has(a))){
     set.add('ach_allch');
     try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
   }
@@ -6127,6 +6341,7 @@ let ch2Active=false;
 let ch3Active=false;
 let ch4Active=false;
 let ch5Active=false;
+let ch6Active=false;
 // ── Keypad state ──────────────────────────────────────────────────
 let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
 // ═══════════════════════════════════════════════════════════════
@@ -7325,13 +7540,179 @@ function showCh5FinalCard(timeStr){
       `You signalled the helicopter.\nYou escaped.\n\nCole was arrested on the rooftop.\nThis time, no escape.\n\nMara testified. The hacker's files were recovered.\nYou were cleared of everything.\n\nFor the first time in a long time —\nyou are free.\n\n────────────────────\nFINAL CHAPTER COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nMemories:   ${treasureCount} / 3\n────────────────────`;
     document.getElementById('overlay').style.display='flex';
     const btn=document.getElementById('ovBtn');
-    btn.textContent='PLAY AGAIN FROM START';
-    btn.onclick=()=>location.reload();
+    btn.textContent='BEGIN CHAPTER 6 ›';
+    btn.onclick=()=>{ document.getElementById('overlay').style.display='none'; startChapter6(); };
     const btn2=document.getElementById('ovBtn2');
-    btn2.style.display='none';
+    btn2.style.display='inline-block';
+    btn2.textContent='PLAY AGAIN FROM START';
+    btn2.onclick=()=>location.reload();
   }
   if(elapsedMs) showTrophy(elapsedMs, showCard);
   else showCard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER 6 — SPACE ESCAPE
+// ═══════════════════════════════════════════════════════════════
+let ch6NewsWatched=false;
+
+function loadChapter6(){
+  ch2Active=false; ch3Active=false; ch4Active=false; ch5Active=false; ch6Active=true;
+  gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
+  state.currentRoom=71;
+  state.visitedRooms=new Set([71]);
+  state.inventory=[]; state.treasureChest=[];
+  state.selectedItem=null;
+  state.roomItemsFound={};
+  state.unlockedDoors=new Set();
+  state.brokenDoors=new Set();
+  state.ventOpened=false; state.escaped=false; state.allRoomsVisited=false;
+  state.totalTreasure=0; state.notebookRead=true;
+  ch6NewsWatched=false;
+  timerSeconds=1200; // 20 minutes
+  gameStartTime=Date.now();
+  connMap=buildConnectionMap();
+  render();
+  addLog(`${playerName} is in the emergency shelter. The sky has changed colour.`,'important');
+  addLog('Watch the news broadcast. Then move — twenty minutes to launch.');
+  setTimeout(()=>showCh6NewsScreen(),1200);
+  startTimer();
+}
+
+function showCh6NewsScreen(){
+  gamePaused=true;
+  const el=document.getElementById('ch6NewsScreen');
+  el.style.display='flex';
+  const txt=document.getElementById('ch6NewsText');
+  txt.textContent='';
+  const lines=[
+    'BREAKING: Unidentified aerial phenomena confirmed\nover the Pacific Ocean. Triangular craft. 800 metres\nacross. Military tracking since 02:14 this morning.',
+    '',
+    'The vessel has been broadcasting on all human radio\nfrequencies. The message decodes to a single name:',
+    '',
+    '          M A R A',
+    '',
+    'SpaceX has confirmed an emergency launch window.\nFalcon Heavy — 10 seats — departs in 20 minutes.',
+    '',
+    'Location: SpaceX Launch Facility, Bay Area.',
+    'Entry requires clearance. Unauthorised personnel\nwill be removed by security.',
+    '',
+    'If you are near the facility — go now.',
+  ];
+  let i=0;
+  const interval=setInterval(()=>{
+    if(i<lines.length){ txt.textContent+=lines[i]+'\n'; i++; }
+    else clearInterval(interval);
+  },320);
+}
+
+function closeCh6NewsScreen(){
+  gamePaused=false;
+  ch6NewsWatched=true;
+  document.getElementById('ch6NewsScreen').style.display='none';
+  addLog('[TV] SpaceX emergency launch — 20 minutes. Get the badge. Get the suit. Get the codes. Go.','important');
+}
+
+function ch6LaunchEscape(){
+  if(!state.inventory.find(i=>i.id==='ch6_suit')){
+    addLog('You need the space suit before boarding.','important');
+    sfxDoorLocked(); return;
+  }
+  if(!state.inventory.find(i=>i.id==='ch6_codes')){
+    addLog('You need the launch codes from the server room.','important');
+    sfxDoorLocked(); return;
+  }
+  triggerCh6Escape();
+}
+
+function triggerCh6Escape(){
+  if(gameOver) return;
+  state.escaped=true; gameOver=true;
+  const elapsed=1200-timerSeconds;
+  const timeStr=fmtTime(elapsed);
+  const bl=document.getElementById('ch6Black');
+  const cap=document.getElementById('ch6Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('You enter the launch codes.',800,2500);
+  caption('IGNITION SEQUENCE CONFIRMED.',3800,2500);
+  caption('The engines ignite.',7000,2000);
+  caption('Nine Merlin engines — 1.7 million pounds of thrust.',9500,3000);
+  caption('The pad disappears below.',13000,2500);
+  caption('The sky turns dark blue. Then black.',16000,2500);
+  caption('Through the porthole: Earth.',19500,2500);
+  caption('And the alien vessel — still watching.',23000,2500);
+  caption('Then it turns.',26000,2500);
+  caption('And moves away.',28500,2500);
+  caption('It got what it came for.',31000,2500);
+  caption('You realise, watching it go: it never meant to harm anyone.',34000,3000);
+  caption('It just came to see if she was real.',38000,3000);
+  caption('Mara laughs. First time in years.',42000,2500);
+  caption('You laugh too.',45000,2500);
+  caption('',49000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    showCh6FinalCard(timeStr);
+  },49500);
+}
+
+function showCh6FinalCard(timeStr){
+  unlockAchievement('ach_ch6');
+  if(state.treasureChest.length>=3) unlockAchievement('ach_memories');
+  const prevBest=parseInt(localStorage.getItem('ch6_best')||'99999',10);
+  const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
+  if(elapsed<prevBest) localStorage.setItem('ch6_best',String(elapsed));
+  const best=parseInt(localStorage.getItem('ch6_best'),10);
+  const bm=Math.floor(best/60),bs=best%60;
+  const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+  const treasureCount=state.treasureChest.length;
+
+  document.getElementById('ovTitle').textContent='ESCAPED';
+  document.getElementById('ovText').textContent=
+    `You launched.\n\nThe alien vessel watched you go — then turned and left.\nIt never came back.\n\nMara says nothing for the first hour.\nThen: "He gave them my name to save me. Even dying, he was trying to help."\n\nYou orbit Earth three times before the rescue capsule arrives.\n\n────────────────────\nCHAPTER 6 COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nTreasures:  ${treasureCount}\n────────────────────`;
+  document.getElementById('overlay').style.display='flex';
+  const btn=document.getElementById('ovBtn');
+  btn.textContent='PLAY AGAIN FROM START';
+  btn.onclick=()=>location.reload();
+  const btn2=document.getElementById('ovBtn2');
+  btn2.style.display='none';
+}
+
+function startChapter6(){
+  const bl=document.getElementById('ch6Black');
+  const cap=document.getElementById('ch6Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('FIVE YEARS LATER.',800,2500);
+  caption('Cole died in prison. Heart failure, they said.',4000,3000);
+  caption('You believed it.',7500,2500);
+  caption('The hacker died too — earlier, in hospital.',10500,3000);
+  caption('But before he died, he did one last thing.',14000,3000);
+  caption('He cracked alien radio frequencies.',17500,3000);
+  caption('And transmitted a name.',21000,2500);
+  caption('Mara.',24000,2000);
+  caption('Seven months ago, something answered.',26500,3000);
+  caption('Tonight it arrives.',30500,2500);
+  caption('Twenty minutes. One rocket. Two seats.',33500,3000);
+  caption('',38000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    loadChapter6();
+  },38500);
 }
 
 function triggerEscape(){
@@ -7602,17 +7983,22 @@ function buildDroppedItemsForRoom(roomId){
   function resize(){ c.width=window.innerWidth; c.height=window.innerHeight; }
   resize(); window.addEventListener('resize',resize);
   const ctx=c.getContext('2d');
-  const N=55;
-  const pts=Array.from({length:N},()=>({
-    x:Math.random()*c.width,
-    y:Math.random()*c.height,
-    r:0.4+Math.random()*1.4,
-    vx:(Math.random()-.5)*0.18,
-    vy:-0.08-Math.random()*0.18,
-    alpha:0.08+Math.random()*0.22,
-    flicker:Math.random()*Math.PI*2,
-    fspeed:0.01+Math.random()*0.025,
-  }));
+  const N=120;
+  const bronzeCols=['200,168,100','180,120,50','220,190,120'];
+  const pts=Array.from({length:N},()=>{
+    const isEmber=Math.random()<0.2;
+    return {
+      x:Math.random()*c.width,
+      y:Math.random()*c.height,
+      r:isEmber?1.5+Math.random()*2.0:0.3+Math.random()*2.2,
+      vx:(Math.random()-.5)*0.18,
+      vy:isEmber?-0.04-Math.random()*0.08:-0.08-Math.random()*0.18,
+      alpha:isEmber?0.12+Math.random()*0.18:0.08+Math.random()*0.22,
+      flicker:Math.random()*Math.PI*2,
+      fspeed:0.01+Math.random()*0.025,
+      col:bronzeCols[Math.floor(Math.random()*bronzeCols.length)],
+    };
+  });
   function frame(){
     ctx.clearRect(0,0,c.width,c.height);
     pts.forEach(p=>{
@@ -7620,7 +8006,7 @@ function buildDroppedItemsForRoom(roomId){
       if(p.y<-4){ p.y=c.height+4; p.x=Math.random()*c.width; }
       const a=p.alpha*(0.6+0.4*Math.sin(p.flicker));
       ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(200,168,100,${a})`; ctx.fill();
+      ctx.fillStyle=`rgba(${p.col},${a})`; ctx.fill();
     });
     requestAnimationFrame(frame);
   }
@@ -7850,7 +8236,8 @@ function startGame(resume, skipToCh2=false){
 
   if(resume && loadGame()){
     // If the save has a chapter room, restore flags
-    if(state.currentRoom>=61){ ch5Active=true; }
+    if(state.currentRoom>=71){ ch6Active=true; }
+    else if(state.currentRoom>=61){ ch5Active=true; }
     else if(state.currentRoom>=51){ ch4Active=true; }
     else if(state.currentRoom>=41){ ch3Active=true; }
     else if(state.currentRoom>=31){ ch2Active=true; }
