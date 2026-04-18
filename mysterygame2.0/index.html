@@ -4574,33 +4574,325 @@ function buildFurniture(type,P,rng){
       addClickBox(2,1.0,2.2,0.15,-4.38,1.5,0);  // stairwell door hs2 (flavour)
     }
   } else if(type==='spacexshelter'||type==='spacexparking'||type==='spacexgate'||type==='spacexadmin'||type==='spacexserver'||type==='spacexcafe'||type==='spacexengineering'||type==='spacexfuel'||type==='spacexapproach'||type==='spacexhangar'||type==='spacexcorridor'||type==='spacexcontrol'||type==='spacexprep'||type==='spacexpadapproach'||type==='spacexpad'){
-      const ambGl=new THREE.PointLight(0xc0d0ff,1.2,14,1.5); ambGl.position.set(0,3.8,0); roomGroup.add(ambGl); candleLights.push(ambGl);
-      // Fluorescent overhead light strip
-      const strip=box(3.0,0.06,0.3,0xd0e0ff,0.9); strip.position.set(0,3.85,0); roomGroup.add(strip);
-      const stripGl=new THREE.PointLight(0xd0e8ff,1.2,8,1.5); stripGl.position.set(0,3.8,0); roomGroup.add(stripGl); candleLights.push(stripGl);
-      // Floor marking stripe
-      const stripe=box(5.0,0.01,0.15,0xf0d000,0.8); stripe.position.set(0,0.01,0); roomGroup.add(stripe);
-      // Metal wall panel
-      const panel2=box(0.06,2.8,3.5,0x808898,0.7,0.3); panel2.position.set(-4.37,1.4,0); roomGroup.add(panel2);
-      // Equipment box
-      const eqBox=box(0.8,0.6,0.5,0x607080,0.8,0.1); eqBox.position.set(3.0,0.3,-3.0); roomGroup.add(eqBox);
-      // Add different props per sub-type
-      if(type==='spacexpad'){
-        // Dark pad — dramatic orange glow from engines below
-        ambGl.color.set(0xff8020); ambGl.intensity=2.0;
-        const engineGl=new THREE.PointLight(0xff6010,3.0,12,1.5); engineGl.position.set(0,-1.0,0); roomGroup.add(engineGl); candleLights.push(engineGl);
-      } else if(type==='spacexcontrol'){
-        // Blue screen glow
-        ambGl.color.set(0x2040a0); ambGl.intensity=1.5;
-        const scrGl=new THREE.PointLight(0x1030d0,1.5,6,2); scrGl.position.set(0,1.5,-4.0); roomGroup.add(scrGl); candleLights.push(scrGl);
-      } else if(type==='spacexserver'){
-        // Green/blue blink
-        ambGl.color.set(0x103040); ambGl.intensity=1.0;
-        const srvGl=new THREE.PointLight(0x00ff80,0.5,4,2); srvGl.position.set(-2.0,2.0,-3.0); roomGroup.add(srvGl); candleLights.push(srvGl);
+    // Helper: canvas-texture screen with visible text
+    function makeScreenTex(lines,bg,fg,size){
+      const c2=document.createElement('canvas'); c2.width=256; c2.height=128;
+      const x2=c2.getContext('2d');
+      x2.fillStyle=bg; x2.fillRect(0,0,256,128);
+      x2.fillStyle=fg; x2.font='bold '+(size||22)+'px monospace'; x2.textAlign='center';
+      lines.forEach((ln,i)=>x2.fillText(ln,128,28+i*(size||22)+8));
+      return new THREE.CanvasTexture(c2);
+    }
+    function screenMesh(tex,w,h){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,depthWrite:false})); }
+    // Shared: cool fluorescent ceiling
+    const ambGl=new THREE.PointLight(0xc0d0ff,1.2,14,1.5); ambGl.position.set(0,3.8,0); roomGroup.add(ambGl); candleLights.push(ambGl);
+    const strip=box(3.0,0.06,0.3,0xd0e0ff,0.9); strip.position.set(0,3.85,0); roomGroup.add(strip);
+    const stripGl=new THREE.PointLight(0xd0e8ff,1.0,8,1.5); stripGl.position.set(0,3.8,0); roomGroup.add(stripGl); candleLights.push(stripGl);
+    // Yellow floor safety stripe
+    const stripe=box(5.0,0.01,0.12,0xf0d000,0.8); stripe.position.set(0,0.011,0); roomGroup.add(stripe);
+
+    if(type==='spacexshelter'){
+      // Gym shelter — benches, TV screens showing news
+      for(let bi=0;bi<3;bi++){
+        const bench=box(2.2,0.06,0.4,0x808890,0.9); bench.position.set(-1.5+bi*1.5,0.45,-2.8); roomGroup.add(bench);
+        const bleg1=box(0.06,0.44,0.06,0x686878,0.8); bleg1.position.set(-2.4+bi*1.5,0.22,-2.6); roomGroup.add(bleg1);
+        const bleg2=bleg1.clone(); bleg2.position.set(-0.6+bi*1.5,0.22,-2.6); roomGroup.add(bleg2);
       }
-      addClickBox(0,2.0,1.5,0.5,-1.0,0.8,-3.5);
-      addClickBox(1,1.5,1.4,0.6,2.0,0.7,-2.5);
-      addClickBox(2,1.8,1.6,0.8,0,0.8,1.5);
+      // Big TV wall — back wall, 3 screens
+      for(let si=0;si<3;si++){
+        const tv=box(1.6,0.95,0.07,0x080810,0.99); tv.position.set(-3.0+si*3.0,2.1,-4.36); roomGroup.add(tv);
+        const tvTex=makeScreenTex(['⚠ EMERGENCY','UFO CONFIRMED','EVACUATE NOW','→ SPACEX SITE'],'#0a0418','#ff4488',18);
+        const tvScr=screenMesh(tvTex,1.45,0.85); tvScr.position.set(-3.0+si*3.0,2.1,-4.32); roomGroup.add(tvScr);
+      }
+      const tvGl=new THREE.PointLight(0x8040a0,0.7,5,2); tvGl.position.set(0,2.1,-4.0); roomGroup.add(tvGl); candleLights.push(tvGl);
+      // Badge on floor (glinting)
+      const badge=box(0.14,0.01,0.1,0xe0e8c0,0.6,0.3); badge.position.set(-1.5,0.015,-1.5); badge.rotation.y=0.4; roomGroup.add(badge);
+      const bdgGl=new THREE.PointLight(0xfff080,0.5,1.0,2); bdgGl.position.set(-1.5,0.2,-1.5); roomGroup.add(bdgGl); candleLights.push(bdgGl);
+      addClickBox(0,5.0,1.1,0.12,0,2.1,-4.36);   // TV screens hs0
+      addClickBox(1,0.3,0.1,0.2,-1.5,0.05,-1.5); // badge on floor hs1
+      addClickBox(2,1.2,0.9,0.15,3.0,2.0,-4.3);  // Mara figure hs2
+    } else if(type==='spacexparking'){
+      // Parking lot — barriers, fallen drone, crowd shapes
+      // Barrier posts
+      for(let pi=0;pi<4;pi++){
+        const post=box(0.08,1.0,0.08,0xf0d000,0.8); post.position.set(-3.0+pi*2.0,0.5,0.5); roomGroup.add(post);
+        const topBar=box(1.8,0.06,0.06,0xf0d000,0.8); topBar.position.set(-2.0+pi*2.0,0.98,0.5); roomGroup.add(topBar);
+      }
+      // Fallen security drone — visible on floor, sparking
+      const droneBody=box(0.55,0.18,0.35,0x485860,0.8,0.2); droneBody.position.set(2.0,0.09,-2.5); droneBody.rotation.y=0.5; droneBody.rotation.z=0.3; roomGroup.add(droneBody);
+      const droneHead=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,6),mat(0x404c58,0.7,0.2)); droneHead.position.set(2.15,0.28,-2.38); roomGroup.add(droneHead);
+      const droneLens=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.05,8),mat(0xff0000,0.9,0.8)); droneLens.position.set(2.2,0.3,-2.28); droneLens.rotation.x=Math.PI/2; roomGroup.add(droneLens);
+      const droneGl=new THREE.PointLight(0xff4400,0.8,1.5,2); droneGl.position.set(2.1,0.4,-2.4); roomGroup.add(droneGl); candleLights.push(droneGl);
+      // Laminated card near drone — shows 512
+      const card=box(0.12,0.01,0.08,0xf0ead0,0.9); card.position.set(2.4,0.015,-2.2); card.rotation.y=0.2; roomGroup.add(card);
+      const cardTex=makeScreenTex(['512'],'#f0e8c0','#1a1a00',32);
+      const cardScr=screenMesh(cardTex,0.11,0.07); cardScr.rotation.x=-Math.PI/2; cardScr.position.set(2.4,0.02,-2.2); roomGroup.add(cardScr);
+      addClickBox(0,0.8,0.5,0.6,2.0,0.2,-2.5);  // drone hs0
+      addClickBox(1,1.5,0.9,0.8,-1.5,0.5,0.5);  // crowd barrier hs1
+      addClickBox(2,0.3,0.2,0.2,2.4,0.05,-2.2); // laminated card hs2 (not used but visible)
+    } else if(type==='spacexgate'){
+      // Steel gate barrier across the room, security monitor showing 839
+      const gateBar=box(8.8,2.2,0.12,0x606870,0.8,0.2); gateBar.position.set(0,1.1,-1.5); roomGroup.add(gateBar);
+      // Gate frame posts
+      const gPost1=box(0.18,3.0,0.18,0x505860,0.8,0.2); gPost1.position.set(-4.38,1.5,-1.5); roomGroup.add(gPost1);
+      const gPost2=gPost1.clone(); gPost2.position.set(4.38,1.5,-1.5); roomGroup.add(gPost2);
+      // Gate warning stripe
+      const gStripe=box(8.6,0.18,0.08,0xf0d000,0.8); gStripe.position.set(0,2.0,-1.5); roomGroup.add(gStripe);
+      // Keypad on right post
+      const kpad=box(0.2,0.28,0.1,0x303840,0.9); kpad.position.set(3.5,1.4,-1.42); roomGroup.add(kpad);
+      const kpadGl=new THREE.PointLight(0x00ff88,0.5,0.8,2); kpadGl.position.set(3.5,1.4,-1.3); roomGroup.add(kpadGl); candleLights.push(kpadGl);
+      // Security monitor left wall — showing code 839 prominently
+      const monFrame=box(1.4,0.9,0.1,0x1a1a22,0.99); monFrame.position.set(-3.5,1.7,-4.36); roomGroup.add(monFrame);
+      const monTex=makeScreenTex(['GATE ALPHA','ACCESS CODE','  8  3  9  ','[CLEARANCE A]'],'#000814','#60c8ff',20);
+      const monScr=screenMesh(monTex,1.25,0.78); monScr.position.set(-3.5,1.7,-4.32); roomGroup.add(monScr);
+      const monGl=new THREE.PointLight(0x2060c0,0.8,3,2); monGl.position.set(-3.5,1.7,-4.1); roomGroup.add(monGl); candleLights.push(monGl);
+      // Camera feeds panel (small)
+      const camRow=box(1.0,0.55,0.08,0x0a0a12,0.99); camRow.position.set(1.0,2.2,-4.36); roomGroup.add(camRow);
+      const camTex=makeScreenTex(['CAM 1','CAM 7 ▶'],'#050508','#206040',16);
+      const camScr=screenMesh(camTex,0.88,0.46); camScr.position.set(1.0,2.2,-4.32); roomGroup.add(camScr);
+      addClickBox(0,1.5,1.0,0.15,-3.5,1.7,-4.36); // security display hs0
+      addClickBox(1,8.8,2.2,0.25,0,1.1,-1.5);      // gate mechanism hs1
+      addClickBox(2,1.1,0.6,0.12,1.0,2.2,-4.36);   // cam feeds hs2
+    } else if(type==='spacexadmin'){
+      // Office desks, whiteboard
+      for(let di=0;di<2;di++){
+        const desk=box(2.0,0.06,0.9,0x9898a8,0.9); desk.position.set(-1.5+di*3.0,0.75,-3.0); roomGroup.add(desk);
+        const dBody=box(1.8,0.75,0.8,0x888898,0.9); dBody.position.set(-1.5+di*3.0,0.375,-3.0); roomGroup.add(dBody);
+        const mon=box(0.55,0.42,0.08,0x1a1a22,0.99); mon.position.set(-1.5+di*3.0,1.1,-2.62); roomGroup.add(mon);
+        const mScr=box(0.46,0.35,0.04,0x001510,0.99); mScr.position.set(-1.5+di*3.0,1.1,-2.6); roomGroup.add(mScr);
+        const mGl=new THREE.PointLight(0x00ff80,0.25,1.2,2); mGl.position.set(-1.5+di*3.0,1.1,-2.5); roomGroup.add(mGl); candleLights.push(mGl);
+      }
+      // Whiteboard — shows checklist
+      const wb=box(2.2,1.2,0.06,0xf0f0f0,0.98); wb.position.set(0,1.9,-4.36); roomGroup.add(wb);
+      const wbTex=makeScreenTex(['LAUNCH CHECKLIST','✓ FUEL','✓ PAYLOAD','→ SUIT UP','→ PAD CLEAR'],'#f8f8f4','#1a1a40',18);
+      const wbScr=screenMesh(wbTex,2.1,1.1); wbScr.position.set(0,1.9,-4.33); roomGroup.add(wbScr);
+      // Coffee cup on desk
+      const cup=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.035,0.09,8),mat(0xc8b890,0.8)); cup.position.set(-0.8,0.82,-3.1); roomGroup.add(cup);
+      addClickBox(0,2.3,1.3,0.1,0,1.9,-4.36);  // whiteboard hs0
+      addClickBox(1,2.2,0.5,0.95,1.5,0.55,-3.0); // right desk hs1
+      addClickBox(2,0.15,0.12,0.1,-0.8,0.84,-3.1); // coffee cup hs2
+    } else if(type==='spacexserver'){
+      ambGl.color.set(0x103040); ambGl.intensity=0.9;
+      // Server racks — left wall
+      for(let ri=0;ri<3;ri++){
+        const rack=box(0.5,2.2,0.8,0x282c34,0.9,0.1); rack.position.set(-4.1,1.1,-3.0+ri*1.2); roomGroup.add(rack);
+        const rFront=box(0.44,2.1,0.06,0x202430,0.99); rFront.position.set(-3.83,1.1,-3.0+ri*1.2); roomGroup.add(rFront);
+        // Blinking LED strip
+        const led=new THREE.PointLight(ri===1?0x00ff80:0x0040ff,0.4,0.8,2); led.position.set(-3.8,1.5+ri*0.2,-3.0+ri*1.2); roomGroup.add(led); candleLights.push(led);
+      }
+      // Unlocked terminal — shows launch codes 7741
+      const termBody=box(0.65,0.5,0.1,0x181c24,0.99); termBody.position.set(1.5,1.05,-4.36); roomGroup.add(termBody);
+      const termTex=makeScreenTex(['LAUNCH AUTH','CODE  B:','7  7  4  1','[LOGGED IN]'],'#000c06','#00ff88',20);
+      const termScr=screenMesh(termTex,0.58,0.44); termScr.position.set(1.5,1.05,-4.32); roomGroup.add(termScr);
+      const termGl=new THREE.PointLight(0x00ff80,1.0,2.5,2); termGl.position.set(1.5,1.05,-4.1); roomGroup.add(termGl); candleLights.push(termGl);
+      // Second monitor (normal)
+      const mon2=box(0.55,0.42,0.08,0x1a1a22,0.99); mon2.position.set(3.0,1.6,-4.36); roomGroup.add(mon2);
+      const m2Scr=box(0.46,0.35,0.04,0x001208,0.99); m2Scr.position.set(3.0,1.6,-4.33); roomGroup.add(m2Scr);
+      const m2Gl=new THREE.PointLight(0x00cc60,0.3,1.5,2); m2Gl.position.set(3.0,1.6,-4.2); roomGroup.add(m2Gl); candleLights.push(m2Gl);
+      addClickBox(0,0.7,0.55,0.15,1.5,1.05,-4.36); // terminal hs0
+      addClickBox(1,1.6,2.2,0.85,-4.1,1.1,-2.5);   // server racks hs1
+      addClickBox(2,0.6,0.48,0.12,3.0,1.6,-4.36);  // second monitor hs2
+    } else if(type==='spacexcafe'){
+      // Tables and chairs, TV on wall
+      for(let ti=0;ti<3;ti++){
+        const t2=box(1.2,0.05,0.8,0x8090a0,0.9); t2.position.set(-2.5+ti*2.5,0.72,-2.5); roomGroup.add(t2);
+        const tBody=box(1.1,0.72,0.7,0x707888,0.9); tBody.position.set(-2.5+ti*2.5,0.36,-2.5); roomGroup.add(tBody);
+        // Knocked items
+        const tray=box(0.5,0.03,0.35,0xa0a8b0,0.9); tray.position.set(-2.5+ti*2.5,0.77,-2.2); tray.rotation.z=ti===1?0.5:0; roomGroup.add(tray);
+      }
+      // TV on back wall
+      const tv2=box(2.2,1.2,0.1,0x0c0c14,0.99); tv2.position.set(-1.5,2.2,-4.36); roomGroup.add(tv2);
+      const tvTex2=makeScreenTex(['BREAKING','ALIEN VESSEL','CONFIRMED','MARA — RUN'],'#08020e','#ff60cc',20);
+      const tvScr2=screenMesh(tvTex2,2.0,1.06); tvScr2.position.set(-1.5,2.2,-4.32); roomGroup.add(tvScr2);
+      const tv2Gl=new THREE.PointLight(0xa030c0,0.7,4,2); tv2Gl.position.set(-1.5,2.2,-4.0); roomGroup.add(tv2Gl); candleLights.push(tv2Gl);
+      // Mission patch on table
+      const patch=box(0.1,0.01,0.1,0x2040a0,0.8); patch.position.set(0,0.78,-2.5); roomGroup.add(patch);
+      addClickBox(0,2.4,1.3,0.12,-1.5,2.2,-4.36); // TV hs0
+      addClickBox(1,1.3,0.8,0.85,0,0.5,-2.5);     // centre table hs1
+      addClickBox(2,0.2,0.1,0.2,0,0.79,-2.5);     // mission patch hs2
+    } else if(type==='spacexengineering'){
+      // Merlin engine component on cradle
+      const cradle=box(2.0,0.3,1.2,0x707880,0.8,0.2); cradle.position.set(-1.0,0.15,-3.0); roomGroup.add(cradle);
+      const engine=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.35,1.0,12),mat(0xc0c8d0,0.5,0.4)); engine.position.set(-1.0,0.8,-3.0); roomGroup.add(engine);
+      const engineNozzle=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.55,0.5,12),mat(0xa8b0b8,0.6,0.3)); engineNozzle.position.set(-1.0,0.2,-3.0); roomGroup.add(engineNozzle);
+      const engGl=new THREE.PointLight(0x8090c0,0.5,3,2); engGl.position.set(-1.0,1.5,-3.0); roomGroup.add(engGl); candleLights.push(engGl);
+      // Tool racks right wall
+      for(let ti=0;ti<4;ti++){
+        const tr=box(0.05,1.8,0.05,0x686878,0.8); tr.position.set(3.8,0.9,-4.0+ti*0.8); roomGroup.add(tr);
+        const trBar=box(0.05,0.05,0.7,0x686878,0.8); trBar.position.set(3.8,1.6,-4.0+ti*0.8); roomGroup.add(trBar);
+      }
+      // Dropped keycard on floor
+      const kcard=box(0.1,0.01,0.07,0xe8e0c8,0.8); kcard.position.set(1.5,0.015,-1.0); kcard.rotation.y=0.6; roomGroup.add(kcard);
+      const kcTex=makeScreenTex(['FUEL WING','ACCESS'],'#e8e0c8','#1a1000',18);
+      const kcScr=screenMesh(kcTex,0.09,0.06); kcScr.rotation.x=-Math.PI/2; kcScr.position.set(1.5,0.02,-1.0); roomGroup.add(kcScr);
+      addClickBox(0,0.6,1.0,0.5,1.5,0.6,-3.0);  // technician area hs0
+      addClickBox(1,1.5,1.1,1.4,-1.0,0.7,-3.0); // engine hs1
+      addClickBox(2,0.2,0.1,0.15,1.5,0.05,-1.0); // keycard hs2
+    } else if(type==='spacexfuel'){
+      ambGl.color.set(0x4060a0); ambGl.intensity=1.0;
+      // Pressure gauge wall — left side
+      for(let gi=0;gi<5;gi++){
+        const gFrame=box(0.25,0.25,0.06,0x404850,0.8,0.1); gFrame.position.set(-4.38,1.8-gi*0.35,-2.5); gFrame.rotation.y=Math.PI/2; roomGroup.add(gFrame);
+        const gDial=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.04,12),mat(0xd0d8e0,0.4,0.2)); gDial.position.set(-4.33,1.8-gi*0.35,-2.5); gDial.rotation.z=Math.PI/2; roomGroup.add(gDial);
+      }
+      // Main fuel console — centre back
+      const consoleBody=box(2.5,1.1,0.6,0x384050,0.8,0.1); consoleBody.position.set(0,0.55,-4.0); roomGroup.add(consoleBody);
+      const consoleFace=box(2.5,1.1,0.08,0x283040,0.9); consoleFace.position.set(0,0.55,-3.72); roomGroup.add(consoleFace);
+      const consoleTex=makeScreenTex(['FUEL LINE','ENTER CODE','_ _ _','[PRESSURIZE]'],'#060c18','#4090d0',20);
+      const consoleScr=screenMesh(consoleTex,2.3,1.0); consoleScr.position.set(0,0.55,-3.68); roomGroup.add(consoleScr);
+      const cGl=new THREE.PointLight(0x2060d0,0.8,3,2); cGl.position.set(0,0.55,-3.4); roomGroup.add(cGl); candleLights.push(cGl);
+      // Sticky note on console — shows 512
+      const note=box(0.2,0.01,0.16,0xffee88,0.9); note.position.set(0.9,1.07,-3.7); note.rotation.y=-0.2; roomGroup.add(note);
+      const noteTex=makeScreenTex(['512'],'#ffee88','#1a0a00',36);
+      const noteScr=screenMesh(noteTex,0.19,0.15); noteScr.rotation.x=-Math.PI/2+0.1; noteScr.position.set(0.9,1.085,-3.7); roomGroup.add(noteScr);
+      addClickBox(0,2.6,1.2,0.65,0,0.55,-4.0);    // fuel console hs0
+      addClickBox(1,0.5,2.0,0.15,-4.36,0.9,-2.5); // pressure gauges hs1
+      addClickBox(2,0.3,0.2,0.2,0.9,1.1,-3.7);   // sticky note hs2
+    } else if(type==='spacexapproach'){
+      // Wide windows back wall showing rocket on pad
+      const winFrame=box(5.5,2.2,0.1,0x505860,0.8,0.1); winFrame.position.set(0,2.0,-4.36); roomGroup.add(winFrame);
+      const winTex=makeScreenTex(['FALCON HEAVY','ON PAD','T-08:00','STEAM VENTING'],'#040810','#a0c8ff',20);
+      const winScr=screenMesh(winTex,5.3,2.0); winScr.position.set(0,2.0,-4.32); roomGroup.add(winScr);
+      const winGl=new THREE.PointLight(0x6090e0,1.0,6,1.5); winGl.position.set(0,2.0,-3.8); roomGroup.add(winGl); candleLights.push(winGl);
+      // Countdown clock on wall
+      const clkFrame=box(0.7,0.35,0.06,0x181c24,0.99); clkFrame.position.set(3.5,2.5,-4.35); roomGroup.add(clkFrame);
+      const clkTex=makeScreenTex(['T-08:00','TO LAUNCH'],'#020408','#ff4020',22);
+      const clkScr=screenMesh(clkTex,0.62,0.3); clkScr.position.set(3.5,2.5,-4.32); roomGroup.add(clkScr);
+      const clkGl=new THREE.PointLight(0xff3000,0.6,1.5,2); clkGl.position.set(3.5,2.5,-4.2); roomGroup.add(clkGl); candleLights.push(clkGl);
+      addClickBox(0,5.6,2.3,0.15,0,2.0,-4.36); // window hs0
+      addClickBox(1,0.75,0.4,0.1,3.5,2.5,-4.35); // countdown clock hs1
+      addClickBox(2,0.4,0.15,0.4,0,0.05,-2.0);  // floor (flavour) hs2
+    } else if(type==='spacexhangar'){
+      ambGl.color.set(0xd0e0ff); ambGl.intensity=1.4;
+      const hangarGl=new THREE.PointLight(0xd0e8ff,1.0,18,1); hangarGl.position.set(0,4.0,0); roomGroup.add(hangarGl); candleLights.push(hangarGl);
+      // Vast open floor — hydraulic stain
+      const stain=box(4.0,0.01,3.0,0x383028,0.99); stain.position.set(-0.5,0.012,-2.5); roomGroup.add(stain);
+      // Suit trolley — right side, two bags on it
+      const trolley=box(0.8,0.06,0.5,0xa0a8b0,0.7,0.2); trolley.position.set(3.0,0.85,-3.0); roomGroup.add(trolley);
+      const tLeg1=box(0.06,0.85,0.06,0x909098,0.7,0.1); tLeg1.position.set(2.65,0.425,-2.8); roomGroup.add(tLeg1);
+      const tLeg2=tLeg1.clone(); tLeg2.position.set(3.35,0.425,-2.8); roomGroup.add(tLeg2);
+      // Two suit bags on trolley
+      const bag1=box(0.32,0.22,0.42,0xd8e0e8,0.9); bag1.position.set(2.8,1.0,-3.0); roomGroup.add(bag1);
+      const bag2=box(0.32,0.22,0.42,0xd8e0e8,0.9); bag2.position.set(3.2,1.0,-3.0); roomGroup.add(bag2);
+      // Subtle name labels on bags (canvas tex)
+      const nameTex1=makeScreenTex(['MARA'],'#d8e0e8','#203060',20);
+      const nameScr1=screenMesh(nameTex1,0.3,0.08); nameScr1.position.set(2.8,1.13,-2.79); roomGroup.add(nameScr1);
+      const nameTex2=makeScreenTex(['YOU'],'#d8e0e8','#203060',20);
+      const nameScr2=screenMesh(nameTex2,0.3,0.08); nameScr2.position.set(3.2,1.13,-2.79); roomGroup.add(nameScr2);
+      // Security camera still watching
+      const cam=box(0.15,0.12,0.2,0x383838,0.9); cam.position.set(-4.36,2.8,-1.0); cam.rotation.y=Math.PI/2; roomGroup.add(cam);
+      const camLed=new THREE.PointLight(0xff0000,0.3,0.8,2); camLed.position.set(-4.2,2.8,-1.0); roomGroup.add(camLed); candleLights.push(camLed);
+      addClickBox(0,1.0,0.6,0.55,3.0,1.0,-3.0);  // suit trolley hs0
+      addClickBox(1,4.2,0.02,3.2,-0.5,0.015,-2.5);// floor stain hs1
+      addClickBox(2,0.1,0.3,0.25,-4.36,2.8,-1.0); // camera hs2
+    } else if(type==='spacexcorridor'){
+      ambGl.color.set(0xe0eeff); ambGl.intensity=1.5;
+      // Blast doors — retracted into walls (visible as thick side slabs)
+      const bd1=box(0.4,3.0,4.0,0x585868,0.8,0.2); bd1.position.set(-4.38,1.5,-2.0); roomGroup.add(bd1);
+      const bd2=box(0.4,3.0,4.0,0x585868,0.8,0.2); bd2.position.set(4.38,1.5,-2.0); roomGroup.add(bd2);
+      // Warning stripes on blast door edges
+      const bdStripe1=box(0.1,3.0,0.18,0xf0c000,0.9); bdStripe1.position.set(-4.18,1.5,-2.0); roomGroup.add(bdStripe1);
+      const bdStripe2=box(0.1,3.0,0.18,0xf0c000,0.9); bdStripe2.position.set(4.18,1.5,-2.0); roomGroup.add(bdStripe2);
+      // RP-1 hazard sign
+      const sign=box(0.35,0.28,0.06,0xff8800,0.9); sign.position.set(0,2.0,-4.36); roomGroup.add(sign);
+      const signTex=makeScreenTex(['⚠ RP-1','FUEL HAZARD'],'#ff8800','#1a0400',18);
+      const signScr=screenMesh(signTex,0.32,0.25); signScr.position.set(0,2.0,-4.32); roomGroup.add(signScr);
+      // Countdown display
+      const clk2=box(0.65,0.32,0.06,0x080a0e,0.99); clk2.position.set(-2.5,2.6,-4.35); roomGroup.add(clk2);
+      const clk2Tex=makeScreenTex(['T-06:00'],'#020406','#ff2200',28);
+      const clk2Scr=screenMesh(clk2Tex,0.58,0.28); clk2Scr.position.set(-2.5,2.6,-4.31); roomGroup.add(clk2Scr);
+      const clk2Gl=new THREE.PointLight(0xff2200,0.5,2,2); clk2Gl.position.set(-2.5,2.6,-4.2); roomGroup.add(clk2Gl); candleLights.push(clk2Gl);
+      addClickBox(0,4.0,3.1,0.45,-4.38,1.5,-2.0); // blast doors hs0
+      addClickBox(1,0.7,0.35,0.1,-2.5,2.6,-4.35); // countdown hs1
+      addClickBox(2,0.4,0.32,0.1,0,2.0,-4.36);    // hazard sign hs2
+    } else if(type==='spacexcontrol'){
+      ambGl.color.set(0x1030a0); ambGl.intensity=1.5;
+      // Bank of mission-control screens back wall
+      for(let mi=0;mi<5;mi++){
+        const mon=box(1.0,0.65,0.08,0x080814,0.99); mon.position.set(-4.0+mi*2.0,2.1,-4.35); roomGroup.add(mon);
+        const mTex=makeScreenTex(['ORBITAL','TRACK '+mi],'#020210','#2060ff',16);
+        const mScr=screenMesh(mTex,0.88,0.56); mScr.position.set(-4.0+mi*2.0,2.1,-4.31); roomGroup.add(mScr);
+      }
+      const screenGl=new THREE.PointLight(0x2050ff,1.2,6,2); screenGl.position.set(0,2.1,-4.0); roomGroup.add(screenGl); candleLights.push(screenGl);
+      // Alien approach screen — prominent, red
+      const alienMon=box(1.6,1.0,0.08,0x100808,0.99); alienMon.position.set(3.5,2.0,-4.35); roomGroup.add(alienMon);
+      const alienTex=makeScreenTex(['⚠ VESSEL','APPROACH','T-11:00'],'#120000','#ff2020',22);
+      const alienScr=screenMesh(alienTex,1.5,0.9); alienScr.position.set(3.5,2.0,-4.31); roomGroup.add(alienScr);
+      const alienGl=new THREE.PointLight(0xff1000,0.8,4,2); alienGl.position.set(3.5,2.0,-4.0); roomGroup.add(alienGl); candleLights.push(alienGl);
+      // Launch director desk
+      const ldDesk=box(2.0,0.06,0.9,0x909098,0.9); ldDesk.position.set(-1.5,0.75,-2.5); roomGroup.add(ldDesk);
+      const ldBody=box(1.8,0.75,0.8,0x808088,0.9); ldBody.position.set(-1.5,0.375,-2.5); roomGroup.add(ldBody);
+      // Director figure (basic shape)
+      const torso=box(0.35,0.55,0.25,0x304060,0.9); torso.position.set(-1.5,1.15,-1.8); roomGroup.add(torso);
+      const head=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,6),mat(0xb08060,0.8)); head.position.set(-1.5,1.82,-1.8); roomGroup.add(head);
+      addClickBox(0,0.5,0.8,0.5,-1.5,1.5,-1.8);  // launch director hs0
+      addClickBox(1,1.7,1.1,0.12,3.5,2.0,-4.35); // alien screen hs1
+      addClickBox(2,5.0,0.7,0.12,0,2.1,-4.35);   // main screens hs2
+    } else if(type==='spacexprep'){
+      ambGl.color.set(0xffffff); ambGl.intensity=1.8;
+      const whiteGl=new THREE.PointLight(0xffffff,1.2,12,1.5); whiteGl.position.set(0,3.5,0); roomGroup.add(whiteGl); candleLights.push(whiteGl);
+      // Suit-up stations — left wall
+      for(let si=0;si<2;si++){
+        const sStation=box(0.8,0.06,0.6,0xe8ecf0,0.9); sStation.position.set(-3.0+si*6.0,0.85,-3.0); roomGroup.add(sStation);
+        const sPost=box(0.06,0.88,0.06,0xd0d4d8,0.8,0.1); sPost.position.set(-3.0+si*6.0,0.44,-2.7); roomGroup.add(sPost);
+        // Helmet on station
+        const helm=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),mat(0xfafafa,0.4,0.1)); helm.material.transparent=true; helm.material.opacity=0.85; helm.position.set(-3.0+si*6.0,1.05,-3.0); roomGroup.add(helm);
+        const visor=new THREE.Mesh(new THREE.SphereGeometry(0.17,10,8),mat(0x203060,0.2,0.1)); visor.material.transparent=true; visor.material.opacity=0.5; visor.position.set(-3.0+si*6.0,1.05,-2.82); roomGroup.add(visor);
+      }
+      // Full-length mirror — right wall
+      const mirror=box(0.06,2.4,1.0,0xc8d0d8,0.2,0.5); mirror.position.set(4.36,1.2,-2.0); roomGroup.add(mirror);
+      const mirrorGl=new THREE.PointLight(0xffffff,0.6,3,2); mirrorGl.position.set(3.8,1.5,-2.0); roomGroup.add(mirrorGl); candleLights.push(mirrorGl);
+      // Mara suit up (figure)
+      const mtorso=box(0.32,0.5,0.22,0xd8e0e8,0.9); mtorso.position.set(-2.0,1.2,-2.0); roomGroup.add(mtorso);
+      const mhead=new THREE.Mesh(new THREE.SphereGeometry(0.13,8,6),mat(0xb89070,0.8)); mhead.position.set(-2.0,1.77,-2.0); roomGroup.add(mhead);
+      addClickBox(0,0.4,0.85,0.9,-3.0,0.55,-3.0); // left suit station hs0
+      addClickBox(1,0.1,2.5,1.1,4.36,1.2,-2.0);   // mirror hs1
+      addClickBox(2,0.4,0.6,0.3,-2.0,1.4,-2.0);   // Mara hs2
+    } else if(type==='spacexpadapproach'){
+      ambGl.color.set(0x202830); ambGl.intensity=0.8;
+      const nightGl=new THREE.PointLight(0x304060,0.6,14,1); nightGl.position.set(0,4.0,0); roomGroup.add(nightGl); candleLights.push(nightGl);
+      // Walkway (white room access arm style)
+      const walkway=box(2.5,0.05,5.0,0xd0d8e0,0.9); walkway.position.set(0,0.025,0); roomGroup.add(walkway);
+      const wRail1=box(0.05,1.1,5.0,0x909aa0,0.7); wRail1.position.set(-1.2,0.55,0); roomGroup.add(wRail1);
+      const wRail2=wRail1.clone(); wRail2.position.set(1.2,0.55,0); roomGroup.add(wRail2);
+      // Big rocket view through window
+      const rocketWin=box(3.5,2.5,0.08,0x080c10,0.99); rocketWin.position.set(0,1.8,-4.36); roomGroup.add(rocketWin);
+      const rocketTex=makeScreenTex(['FALCON HEAVY','[ PAD LIVE ]','IGNITION','T-02:00'],'#020408','#a0d8ff',20);
+      const rocketScr=screenMesh(rocketTex,3.3,2.35); rocketScr.position.set(0,1.8,-4.32); roomGroup.add(rocketScr);
+      const rocketGl=new THREE.PointLight(0x4080d0,1.2,6,1.5); rocketGl.position.set(0,1.8,-3.8); roomGroup.add(rocketGl); candleLights.push(rocketGl);
+      // Gravel on floor (handful)
+      for(let gi=0;gi<6;gi++){
+        const g=box(0.04,0.02,0.04,0x585860,0.99); g.position.set(2.5+gi*0.08,0.01,-1.5+gi*0.1); roomGroup.add(g);
+      }
+      addClickBox(0,3.6,2.6,0.12,0,1.8,-4.36);  // rocket window hs0
+      addClickBox(1,0.5,0.1,0.5,2.5,0.02,-1.5); // gravel hs1
+      addClickBox(2,0.5,0.1,0.3,0,0.02,-3.5);   // walkway floor hs2
+    } else if(type==='spacexpad'){
+      ambGl.color.set(0xff8020); ambGl.intensity=2.5;
+      const engineGl=new THREE.PointLight(0xff6010,3.5,14,1.5); engineGl.position.set(0,-1.0,0); roomGroup.add(engineGl); candleLights.push(engineGl);
+      const steamGl=new THREE.PointLight(0xc0d8ff,0.6,8,1.5); steamGl.position.set(0,3.0,2.0); roomGroup.add(steamGl); candleLights.push(steamGl);
+      // Hatch door — back wall (White Room style)
+      const hatch=box(1.2,1.6,0.12,0xe8ecf0,0.7,0.1); hatch.position.set(0,1.1,-4.35); roomGroup.add(hatch);
+      const hatchSeal=box(1.0,1.4,0.08,0xd0d8e0,0.6,0.1); hatchSeal.position.set(0,1.1,-4.3); roomGroup.add(hatchSeal);
+      const hatchGl=new THREE.PointLight(0xffffff,0.8,3,2); hatchGl.position.set(0,1.1,-4.1); roomGroup.add(hatchGl); candleLights.push(hatchGl);
+      // Launch panel right side
+      const lpanel=box(0.5,0.7,0.12,0x202830,0.9); lpanel.position.set(3.5,1.2,-4.35); roomGroup.add(lpanel);
+      const lpTex=makeScreenTex(['LAUNCH','AUTH OK','▶ INITIATE'],'#04080e','#00ff88',20);
+      const lpScr=screenMesh(lpTex,0.44,0.62); lpScr.position.set(3.5,1.2,-4.29); roomGroup.add(lpScr);
+      const lpGl=new THREE.PointLight(0x00ff88,0.8,2,2); lpGl.position.set(3.5,1.2,-4.2); roomGroup.add(lpGl); candleLights.push(lpGl);
+      // Porthole window showing alien vessel
+      const portholeFrame=new THREE.Mesh(new THREE.TorusGeometry(0.45,0.06,8,20),mat(0x808898,0.7,0.2)); portholeFrame.position.set(-2.5,1.8,-4.35); roomGroup.add(portholeFrame);
+      const portholeTex=makeScreenTex(['▲ VESSEL','WATCHING','72 km'],'#000010','#a0a8ff',20);
+      const porthole=screenMesh(portholeTex,0.85,0.85); porthole.position.set(-2.5,1.8,-4.31); roomGroup.add(porthole);
+      const portholeGl=new THREE.PointLight(0x8090ff,0.6,2,2); portholeGl.position.set(-2.5,1.8,-4.2); roomGroup.add(portholeGl); candleLights.push(portholeGl);
+      // Mara strapped in (figure, side)
+      const mSeat=box(0.5,0.4,0.4,0x303840,0.9); mSeat.position.set(-1.5,0.7,0.5); roomGroup.add(mSeat);
+      const mT2=box(0.3,0.45,0.2,0xd0d8e0,0.9); mT2.position.set(-1.5,1.1,0.5); roomGroup.add(mT2);
+      const mH2=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,6),mat(0xfafafa,0.4,0.1)); mH2.material.transparent=true; mH2.material.opacity=0.88; mH2.position.set(-1.5,1.62,0.5); roomGroup.add(mH2);
+      addClickBox(0,0.96,0.96,0.1,-2.5,1.8,-4.35); // porthole hs0
+      addClickBox(1,0.55,0.75,0.15,3.5,1.2,-4.35); // launch panel hs1
+      addClickBox(2,1.3,1.7,0.15,0,1.1,-4.35);     // hatch hs2
+    }
   }
 
   // Default for any unhandled room type: add candle + basic furniture
