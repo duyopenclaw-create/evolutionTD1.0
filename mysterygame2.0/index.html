@@ -2498,7 +2498,7 @@ function buildConnectionMap(){
     if((c.a===12&&c.b===17)||(c.a===17&&c.b===12)) return;
     if(!map[c.a]) map[c.a]=[];
     if(!map[c.b]) map[c.b]=[];
-    const conn = {state:c.state,keyId:c.keyId};
+    const conn = {state:c.state,keyId:c.keyId,code:c.code,hint:c.hint};
     map[c.a].push({to:c.b,dir:c.dir,conn});
     const revDir = {E:'W',W:'E',N:'S',S:'N'}[c.dir];
     map[c.b].push({to:c.a,dir:revDir,conn});
