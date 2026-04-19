@@ -6555,8 +6555,8 @@ function startTimer(){
       setTimeout(tick,1000);
       return;
     }
-    // Idle check — only in ch1. Ch2/ch3/ch4/ch5 have no idle death.
-    if(!ch2Active&&!ch4Active&&!ch5Active){
+    // Idle check — only in ch1. All other chapters have no idle death.
+    if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active&&!ch6Active){
       const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
       const idleLeft=IDLE_LIMIT-idleSeconds;
       const warn=document.getElementById('hunterWarning');
@@ -6622,6 +6622,8 @@ function hunterDistanceTo(targetRoom){
 
 function moveHunter(){
   if(gameOver||state.escaped||gamePaused) return;
+  // Cole only hunts in ch1 (no chapter flag) and ch5
+  if(ch2Active||ch3Active||ch4Active||ch6Active) return;
   const path=bfsPath(hunterRoom,state.currentRoom);
   if(path&&path.length>1){
     hunterRoom=path[1];
@@ -6636,6 +6638,12 @@ function moveHunter(){
 
 function checkHunterProximity(){
   if(gameOver||state.escaped) return;
+  // Cole only active in ch1 and ch5
+  if(ch2Active||ch3Active||ch4Active||ch6Active){
+    const warn=document.getElementById('hunterWarning');
+    warn.textContent=''; warn.classList.remove('show');
+    return;
+  }
   const dist=hunterDistanceTo(state.currentRoom);
   const warn=document.getElementById('hunterWarning');
   if(dist===0){
