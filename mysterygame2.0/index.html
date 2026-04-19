@@ -3089,8 +3089,12 @@ function makeScreenTex(lines,bg,fg,size){
   const c2=document.createElement('canvas'); c2.width=256; c2.height=128;
   const x2=c2.getContext('2d');
   x2.fillStyle=bg; x2.fillRect(0,0,256,128);
-  x2.fillStyle=fg; x2.font='bold '+(size||22)+'px monospace'; x2.textAlign='center';
-  lines.forEach((ln,i)=>x2.fillText(ln,128,28+i*(size||22)+8));
+  const fs=size||22;
+  const lh=Math.ceil(fs*1.5);
+  const totalH=lh*lines.length;
+  const startY=Math.max(fs+4, (128-totalH)/2+fs);
+  x2.fillStyle=fg; x2.font='bold '+fs+'px monospace'; x2.textAlign='center';
+  lines.forEach((ln,i)=>x2.fillText(ln,128,startY+i*lh));
   return new THREE.CanvasTexture(c2);
 }
 function screenMesh(tex,w,h){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,depthWrite:false})); }
