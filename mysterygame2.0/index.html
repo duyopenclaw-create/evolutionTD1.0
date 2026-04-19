@@ -3084,6 +3084,17 @@ function onCanvasMouseMove(e){
   }
 }
 
+// ── CANVAS SCREEN HELPERS ────────────────────────────────────────
+function makeScreenTex(lines,bg,fg,size){
+  const c2=document.createElement('canvas'); c2.width=256; c2.height=128;
+  const x2=c2.getContext('2d');
+  x2.fillStyle=bg; x2.fillRect(0,0,256,128);
+  x2.fillStyle=fg; x2.font='bold '+(size||22)+'px monospace'; x2.textAlign='center';
+  lines.forEach((ln,i)=>x2.fillText(ln,128,28+i*(size||22)+8));
+  return new THREE.CanvasTexture(c2);
+}
+function screenMesh(tex,w,h){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,depthWrite:false})); }
+
 // ── ROOM FURNITURE ───────────────────────────────────────────────
 function buildFurniture(type,P,rng){
   const found=state.roomItemsFound[state.currentRoom]||new Set();
@@ -4274,6 +4285,9 @@ function buildFurniture(type,P,rng){
       // News wall screen
       const scr=box(4.0,2.0,0.06,0x080818,0.99); scr.position.set(-1.0,1.8,-4.38); roomGroup.add(scr);
       const scrGl=new THREE.PointLight(0x2040c0,0.5,3,2); scrGl.position.set(-1.0,1.8,-4.2); roomGroup.add(scrGl); candleLights.push(scrGl);
+      // News screen canvas texture showing exit code
+      const nsTex=makeScreenTex(['EMERGENCY ALERT','EXIT CODE:','4  7  2','→ KEYPAD EAST'],'#000820','#60a0ff',20);
+      const nsScr=screenMesh(nsTex,3.8,1.85); nsScr.position.set(-1.0,1.8,-4.35); roomGroup.add(nsScr);
       // Curved sofa
       const sBase=box(2.8,0.4,0.9,0xe8ecf0,0.9); sBase.position.set(0,0.2,1.5); roomGroup.add(sBase);
       const sBack=box(2.8,0.55,0.18,0xe0e4e8,0.9); sBack.position.set(0,0.58,1.88); roomGroup.add(sBack);
@@ -4291,6 +4305,9 @@ function buildFurniture(type,P,rng){
       // Nutrition panel
       const np=box(0.6,0.4,0.06,0x304050,0.8); np.position.set(1.5,1.3,-4.38); roomGroup.add(np);
       const npScr=box(0.5,0.32,0.04,0xff0000,0.99); npScr.position.set(1.5,1.3,-4.36); roomGroup.add(npScr);
+      // Nutrition panel canvas texture showing exit code
+      const npTex=makeScreenTex(['ACCESS DENIED','CODE:  815',''],'#200000','#ff6060',20);
+      const npScrTex=screenMesh(npTex,0.48,0.30); npScrTex.position.set(1.5,1.3,-4.34); roomGroup.add(npScrTex);
       addClickBox(0,1.1,0.75,0.55,-1.5,1.25,-3.55); // materialiser hs0
       addClickBox(1,0.65,0.45,0.1,1.5,1.3,-4.38);   // panel hs1
       addClickBox(2,5.5,0.9,1.0,-0.5,0.44,-3.8);    // counter hs2 (flavour)
@@ -4305,6 +4322,9 @@ function buildFurniture(type,P,rng){
       });
       // Your photo on middle screen
       const photo=box(0.5,0.4,0.02,0x102030,0.99); photo.position.set(0.3,1.3,-2.59); roomGroup.add(photo);
+      // Dark 4th screen shows blinking cursor and door code
+      const osTex=makeScreenTex(['> DOSSIER LOADED','EXIT CODE:','3  9  6','_'],'#001020','#00e0ff',20);
+      const osScr=screenMesh(osTex,0.65,0.52); osScr.position.set(1.5,1.2,-2.68); roomGroup.add(osScr);
       addClickBox(0,2.2,0.8,0.05,0,1.3,-2.6);   // file screens hs0
       addClickBox(1,0.35,0.5,0.06,1.5,1.2,-2.7); // dark screen hs1
       addClickBox(2,2.6,0.55,1.1,0,0.55,-3.0);    // desk drawer hs2 (ch4_t1)
@@ -4318,6 +4338,9 @@ function buildFurniture(type,P,rng){
       // Clock
       const clock=box(0.18,0.12,0.04,0x040408,0.99); clock.position.set(1.5,0.9,-3.32); roomGroup.add(clock);
       const clockGl=new THREE.PointLight(0x0040ff,0.4,0.8,2); clockGl.position.set(1.5,0.9,-3.2); roomGroup.add(clockGl); candleLights.push(clockGl);
+      // Clock face shows 2:08 in electric blue
+      const clkTex=makeScreenTex(['2:08'],'#000408','#2080ff',34);
+      const clkScr=screenMesh(clkTex,0.16,0.10); clkScr.position.set(1.5,0.9,-3.30); roomGroup.add(clkScr);
       // Floor hatch open
       const hatch=box(0.8,0.04,0.6,0x484850,0.8,0.2); hatch.position.set(-1.5,0.02,-1.0); hatch.rotation.x=0.8; roomGroup.add(hatch);
       addClickBox(0,0.6,0.3,0.5,1.5,0.85,-3.5); // nightstand/clock hs0
@@ -4336,6 +4359,10 @@ function buildFurniture(type,P,rng){
       // Specimen vault sealed
       const vault=box(1.2,1.8,0.2,0x485058,0.8,0.2); vault.position.set(3.5,0.9,-4.38); roomGroup.add(vault);
       const vaultDoor=box(1.0,1.6,0.08,0x585868,0.7,0.2); vaultDoor.position.set(3.5,0.9,-4.3); roomGroup.add(vaultDoor);
+      // Vault keypad showing code
+      const vkPad=box(0.18,0.18,0.06,0x303840,0.9); vkPad.position.set(3.05,1.4,-4.27); roomGroup.add(vkPad);
+      const vkTex=makeScreenTex(['LOCK:','7 4 1'],'#080c10','#00ffcc',26);
+      const vkScr=screenMesh(vkTex,0.16,0.16); vkScr.position.set(3.05,1.4,-4.24); roomGroup.add(vkScr);
       addClickBox(0,3.4,0.7,0.15,-1.0,1.4,-3.5); // rack hs0
       addClickBox(1,1.25,1.9,0.25,3.5,0.9,-4.38); // vault hs1
       addClickBox(2,4.0,0.55,0.9,0,0.55,-3.0);     // workbench hs2 (flavour)
@@ -4348,6 +4375,9 @@ function buildFurniture(type,P,rng){
       // Torn container — left floor, dark scoring
       const torn=box(1.4,0.5,0.5,0xd0d4d8,0.9); torn.position.set(-2.0,0.25,-1.0); torn.rotation.y=0.3; roomGroup.add(torn);
       const tornSc=box(1.3,0.4,0.04,0x302830,0.99); tornSc.position.set(-2.0,0.25,-0.76); tornSc.rotation.y=0.3; roomGroup.add(tornSc);
+      // Serial number stamped on torn container face
+      const snTex=makeScreenTex(['SN-539-BIO','UNIT: ALPHA'],'#181018','#ff8040',20);
+      const snScr=screenMesh(snTex,1.2,0.38); snScr.rotation.y=0.3; snScr.position.set(-2.0,0.25,-0.74); roomGroup.add(snScr);
       const rGl=new THREE.PointLight(0xff2200,0.3,2,2); rGl.position.set(-2.0,0.6,-1.0); roomGroup.add(rGl); candleLights.push(rGl);
       addClickBox(0,1.5,0.55,0.55,-2.0,0.3,-1.0); // torn container hs0
       addClickBox(1,1.6,1.2,0.2,-0.5,0.8,-4.2);   // storage terminal hs1
@@ -4363,6 +4393,9 @@ function buildFurniture(type,P,rng){
       // Override terminal
       const term=box(0.7,0.5,0.1,0x303040,0.8); term.position.set(2.0,0.88,-3.8); roomGroup.add(term);
       const termScr=box(0.58,0.4,0.04,0x001a10,0.99); termScr.position.set(2.0,0.88,-3.76); roomGroup.add(termScr);
+      // Override terminal shows door code
+      const tmTex=makeScreenTex(['OVERRIDE:','6  2  7','ENTER CODE'],'#001a10','#00ff88',20);
+      const tmScrTex=screenMesh(tmTex,0.56,0.38); tmScrTex.position.set(2.0,0.88,-3.74); roomGroup.add(tmScrTex);
       const termGl=new THREE.PointLight(0x00ff88,0.3,1.2,2); termGl.position.set(2.0,0.88,-3.7); roomGroup.add(termGl); candleLights.push(termGl);
       addClickBox(0,5.5,0.7,0.12,0,2.0,-4.35); // monitors hs0
       addClickBox(1,0.75,0.55,0.12,2.0,0.88,-3.8); // terminal hs1
@@ -4379,6 +4412,9 @@ function buildFurniture(type,P,rng){
       // Console
       const con=box(0.8,0.55,0.12,0x283040,0.8); con.position.set(2.5,0.9,-3.8); roomGroup.add(con);
       const conScr=box(0.68,0.45,0.05,0x001820,0.99); conScr.position.set(2.5,0.9,-3.74); roomGroup.add(conScr);
+      // Console shows coordinate prefix = door code
+      const ccTex=makeScreenTex(['LAST COORD:','184-XX-0091','PREFIX: 184'],'#001820','#40c0ff',18);
+      const ccScrTex=screenMesh(ccTex,0.65,0.43); ccScrTex.position.set(2.5,0.9,-3.72); roomGroup.add(ccScrTex);
       const conGl=new THREE.PointLight(0x0080c0,0.4,1.5,2); conGl.position.set(2.5,0.9,-3.65); roomGroup.add(conGl); candleLights.push(conGl);
       addClickBox(0,2.5,0.4,2.5,-0.5,0.1,-3.0); // fused pad hs0
       addClickBox(1,0.85,0.6,0.15,2.5,0.9,-3.8); // console hs1
@@ -4393,8 +4429,10 @@ function buildFurniture(type,P,rng){
       const rHead=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8),mat(0xa8b0b8,0.7,0.1)); rHead.position.set(-3.2,1.5,-2.0); roomGroup.add(rHead);
       // Sparks (orange glow)
       const spk=new THREE.PointLight(0xff8800,0.8,1.5,2); spk.position.set(-3.5,1.0,-2.0); roomGroup.add(spk); candleLights.push(spk);
-      // Serial plate on neck
+      // Serial plate on neck with visible code
       const plate=box(0.18,0.06,0.02,0x303038,0.99); plate.position.set(-3.5,1.25,-2.0); roomGroup.add(plate);
+      const plateTex=makeScreenTex(['SN-953'],'#202028','#e0e0ff',22);
+      const plateScrTex=screenMesh(plateTex,0.16,0.055); plateScrTex.position.set(-3.5,1.25,-1.99); roomGroup.add(plateScrTex);
       // Final door panel
       const dpanel=box(0.35,0.5,0.08,0x203040,0.8); dpanel.position.set(0.3,1.2,-4.38); roomGroup.add(dpanel);
       const dpScr=box(0.28,0.4,0.04,0x001020,0.99); dpScr.position.set(0.3,1.2,-4.35); roomGroup.add(dpScr);
@@ -4574,16 +4612,6 @@ function buildFurniture(type,P,rng){
       addClickBox(2,1.0,2.2,0.15,-4.38,1.5,0);  // stairwell door hs2 (flavour)
     }
   } else if(type==='spacexshelter'||type==='spacexparking'||type==='spacexgate'||type==='spacexadmin'||type==='spacexserver'||type==='spacexcafe'||type==='spacexengineering'||type==='spacexfuel'||type==='spacexapproach'||type==='spacexhangar'||type==='spacexcorridor'||type==='spacexcontrol'||type==='spacexprep'||type==='spacexpadapproach'||type==='spacexpad'){
-    // Helper: canvas-texture screen with visible text
-    function makeScreenTex(lines,bg,fg,size){
-      const c2=document.createElement('canvas'); c2.width=256; c2.height=128;
-      const x2=c2.getContext('2d');
-      x2.fillStyle=bg; x2.fillRect(0,0,256,128);
-      x2.fillStyle=fg; x2.font='bold '+(size||22)+'px monospace'; x2.textAlign='center';
-      lines.forEach((ln,i)=>x2.fillText(ln,128,28+i*(size||22)+8));
-      return new THREE.CanvasTexture(c2);
-    }
-    function screenMesh(tex,w,h){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,depthWrite:false})); }
     // Shared: cool fluorescent ceiling
     const ambGl=new THREE.PointLight(0xc0d0ff,1.2,14,1.5); ambGl.position.set(0,3.8,0); roomGroup.add(ambGl); candleLights.push(ambGl);
     const strip=box(3.0,0.06,0.3,0xd0e0ff,0.9); strip.position.set(0,3.85,0); roomGroup.add(strip);
