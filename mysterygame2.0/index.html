@@ -4631,28 +4631,25 @@ function buildFurniture(type,P,rng){
       addClickBox(1,1.5,0.9,0.8,-1.5,0.5,0.5);  // crowd barrier hs1
       addClickBox(2,0.3,0.2,0.2,2.4,0.05,-2.2); // laminated card hs2 (not used but visible)
     } else if(type==='spacexgate'){
-      // Steel gate barrier across the room, security monitor showing 839
-      const gateBar=box(8.8,2.2,0.12,0x606870,0.8,0.2); gateBar.position.set(0,1.1,-1.5); roomGroup.add(gateBar);
-      // Gate frame posts
-      const gPost1=box(0.18,3.0,0.18,0x505860,0.8,0.2); gPost1.position.set(-4.38,1.5,-1.5); roomGroup.add(gPost1);
-      const gPost2=gPost1.clone(); gPost2.position.set(4.38,1.5,-1.5); roomGroup.add(gPost2);
-      // Gate warning stripe
-      const gStripe=box(8.6,0.18,0.08,0xf0d000,0.8); gStripe.position.set(0,2.0,-1.5); roomGroup.add(gStripe);
-      // Keypad on right post
-      const kpad=box(0.2,0.28,0.1,0x303840,0.9); kpad.position.set(3.5,1.4,-1.42); roomGroup.add(kpad);
-      const kpadGl=new THREE.PointLight(0x00ff88,0.5,0.8,2); kpadGl.position.set(3.5,1.4,-1.3); roomGroup.add(kpadGl); candleLights.push(kpadGl);
-      // Security monitor left wall — showing code 839 prominently
-      const monFrame=box(1.4,0.9,0.1,0x1a1a22,0.99); monFrame.position.set(-3.5,1.7,-4.36); roomGroup.add(monFrame);
-      const monTex=makeScreenTex(['GATE ALPHA','ACCESS CODE','  8  3  9  ','[CLEARANCE A]'],'#000814','#60c8ff',20);
-      const monScr=screenMesh(monTex,1.25,0.78); monScr.position.set(-3.5,1.7,-4.32); roomGroup.add(monScr);
-      const monGl=new THREE.PointLight(0x2060c0,0.8,3,2); monGl.position.set(-3.5,1.7,-4.1); roomGroup.add(monGl); candleLights.push(monGl);
-      // Camera feeds panel (small)
-      const camRow=box(1.0,0.55,0.08,0x0a0a12,0.99); camRow.position.set(1.0,2.2,-4.36); roomGroup.add(camRow);
-      const camTex=makeScreenTex(['CAM 1','CAM 7 ▶'],'#050508','#206040',16);
-      const camScr=screenMesh(camTex,0.88,0.46); camScr.position.set(1.0,2.2,-4.32); roomGroup.add(camScr);
-      addClickBox(0,1.5,1.0,0.15,-3.5,1.7,-4.36); // security display hs0
-      addClickBox(1,8.8,2.2,0.25,0,1.1,-1.5);      // gate mechanism hs1
-      addClickBox(2,1.1,0.6,0.12,1.0,2.2,-4.36);   // cam feeds hs2
+      // Steel gate barrier across the room
+      const gateBar=box(8.8,2.2,0.12,0x606870,0.8,0.2); gateBar.position.set(0,1.1,-2.5); roomGroup.add(gateBar);
+      const gPost1=box(0.18,3.0,0.18,0x505860,0.8,0.2); gPost1.position.set(-4.38,1.5,-2.5); roomGroup.add(gPost1);
+      const gPost2=gPost1.clone(); gPost2.position.set(4.38,1.5,-2.5); roomGroup.add(gPost2);
+      const gStripe=box(8.6,0.18,0.08,0xf0d000,0.8); gStripe.position.set(0,2.15,-2.5); roomGroup.add(gStripe);
+      // Keypad on right post — clearly visible
+      const kpad=box(0.22,0.32,0.12,0x303840,0.9); kpad.position.set(3.5,1.4,-2.42); roomGroup.add(kpad);
+      const kpadGl=new THREE.PointLight(0x00ff88,0.6,1.2,2); kpadGl.position.set(3.5,1.4,-2.2); roomGroup.add(kpadGl); candleLights.push(kpadGl);
+      // Security monitor on LEFT SIDE WALL facing player — code 839 visible on entry
+      const monBracket=box(0.08,0.1,1.4,0x505860,0.8,0.1); monBracket.position.set(-4.3,1.65,-0.8); roomGroup.add(monBracket);
+      const monFrame=box(0.1,1.0,1.5,0x1a1a22,0.99); monFrame.position.set(-4.28,1.7,-0.8); roomGroup.add(monFrame);
+      const monTex=makeScreenTex(['GATE ALPHA','CODE:  839','CLEARANCE A','→ ENTER CODE'],'#000814','#60c8ff',22);
+      const monScr=screenMesh(monTex,1.35,0.88);
+      monScr.rotation.y=Math.PI/2; // face toward player (+X direction)
+      monScr.position.set(-4.22,1.7,-0.8); roomGroup.add(monScr);
+      const monGl=new THREE.PointLight(0x2080ff,1.2,3.5,2); monGl.position.set(-3.8,1.7,-0.8); roomGroup.add(monGl); candleLights.push(monGl);
+      addClickBox(0,0.2,1.05,1.6,-4.28,1.7,-0.8); // security display hs0
+      addClickBox(1,8.8,2.2,0.25,0,1.1,-2.5);      // gate mechanism hs1
+      addClickBox(2,0.25,0.35,0.15,3.5,1.4,-2.42); // keypad hs2
     } else if(type==='spacexadmin'){
       // Office desks, whiteboard
       for(let di=0;di<2;di++){
