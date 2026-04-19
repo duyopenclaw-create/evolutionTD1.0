@@ -216,6 +216,7 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <button onclick="quickStartCh4()" style="background:none;border:1px solid #20406090;color:#4080b0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 4</button>
     <button onclick="quickStartCh5()" style="background:none;border:1px solid #30305090;color:#8080a0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 5</button>
     <button onclick="quickStartCh6()" style="background:none;border:1px solid #20406090;color:#6090c0;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 6</button>
+    <button onclick="quickStartCh7()" style="background:none;border:1px solid #30501890;color:#70a040;font-family:Georgia,serif;font-size:.68rem;letter-spacing:.18em;padding:.3rem 1.1rem;cursor:pointer;">▶ CHAPTER 7</button>
   </div>
   <p id="saveInfo" style="font-size:.65rem;color:#3a2a18;margin-top:.5rem;display:none;"></p>
   <div id="titleVersion">VERSION 2.0 &nbsp;·&nbsp; THE AWAKENING</div>
@@ -309,6 +310,41 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <div id="ch6NewsTicker" style="color:#6080c0;font-size:.62rem;letter-spacing:.12em;white-space:nowrap;animation:tickerScroll 18s linear infinite;">UFO CONFIRMED OVER PACIFIC OCEAN &nbsp;&nbsp;·&nbsp;&nbsp; SPACEX EMERGENCY LAUNCH IN PROGRESS &nbsp;&nbsp;·&nbsp;&nbsp; ALIEN VESSEL DECELERATING — MILITARY TRACKING &nbsp;&nbsp;·&nbsp;&nbsp; WORLD LEADERS IN EMERGENCY SESSION &nbsp;&nbsp;·&nbsp;&nbsp; EVACUATION ORDERS ISSUED FOR COASTAL REGIONS &nbsp;&nbsp;·&nbsp;&nbsp;</div>
     </div>
     <button onclick="closeCh6NewsScreen()" style="margin-top:1.2rem;background:none;border:1px solid #2040a080;color:#4060a0;padding:.38rem 1.1rem;font-family:'Courier New',monospace;cursor:pointer;font-size:.75rem;letter-spacing:.12em;">[ CLOSE BROADCAST ]</button>
+  </div>
+</div>
+
+<!-- CHAPTER 7 CINEMATIC BLACK SCREEN -->
+<div id="ch7Black" style="display:none;position:fixed;inset:0;background:#0a0400;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div id="ch7Cap" class="ch2cap" style="color:#c08040;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;opacity:0;transition:opacity 1.2s;text-align:center;max-width:500px;"></div>
+</div>
+
+<!-- CHAPTER 7 OPENING NEWS SCREEN -->
+<div id="ch7NewsScreen" style="display:none;position:fixed;inset:0;background:#000;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:680px;width:92%;background:#080c08;border:2px solid #408040;border-radius:4px;padding:1.5rem 1.8rem;font-family:'Courier New',monospace;">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+      <div style="background:#c02020;color:#fff;font-size:.65rem;letter-spacing:.3em;padding:.18rem .55rem;border-radius:2px;animation:blink .8s infinite;">⬤ LIVE</div>
+      <div style="color:#80b080;font-size:.7rem;letter-spacing:.2em;">EMERGENCY MARS BROADCAST — DAY 1</div>
+    </div>
+    <div id="ch7NewsText" style="color:#a0d0a0;font-size:.82rem;line-height:1.9;min-height:180px;white-space:pre-wrap;"></div>
+    <div style="margin-top:1rem;overflow:hidden;border-top:1px solid #40804080;padding-top:.5rem;">
+      <div style="color:#508050;font-size:.62rem;letter-spacing:.12em;white-space:nowrap;animation:tickerScroll 18s linear infinite;">DRAGON CAPSULE LANDED — MARS SURFACE — ALL 10 SURVIVORS CONFIRMED &nbsp;·&nbsp; EARTH STATUS: UNKNOWN &nbsp;·&nbsp; ALIEN VESSEL: STATIONARY ORBIT &nbsp;·&nbsp; FOOD ESTIMATE: 7-8 DAYS &nbsp;·&nbsp; WATER SOURCE SEARCH UNDERWAY &nbsp;·&nbsp;</div>
+    </div>
+    <button onclick="closeCh7NewsScreen()" style="margin-top:1.2rem;background:none;border:1px solid #40804080;color:#60a060;padding:.38rem 1.1rem;font-family:'Courier New',monospace;cursor:pointer;font-size:.75rem;letter-spacing:.12em;">[ BEGIN SURVIVAL ]</button>
+  </div>
+</div>
+
+<!-- CHAPTER 7 MID-CHAPTER NEWS (5 DAYS LATER) -->
+<div id="ch7MidNewsScreen" style="display:none;position:fixed;inset:0;background:#000;z-index:400;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:680px;width:92%;background:#080c08;border:2px solid #408040;border-radius:4px;padding:1.5rem 1.8rem;font-family:'Courier New',monospace;">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+      <div style="background:#204820;color:#80d080;font-size:.65rem;letter-spacing:.3em;padding:.18rem .55rem;border-radius:2px;">DAY 6</div>
+      <div style="color:#80b080;font-size:.7rem;letter-spacing:.2em;">MARS COMMS — INCOMING SIGNAL</div>
+    </div>
+    <div id="ch7MidNewsText" style="color:#a0d0a0;font-size:.82rem;line-height:1.9;min-height:180px;white-space:pre-wrap;"></div>
+    <div style="margin-top:1rem;overflow:hidden;border-top:1px solid #40804080;padding-top:.5rem;">
+      <div style="color:#508050;font-size:.62rem;letter-spacing:.12em;white-space:nowrap;animation:tickerScroll 18s linear infinite;">ALIEN VESSELS DEPARTED SOLAR SYSTEM &nbsp;·&nbsp; EARTH ORBIT CLEAR &nbsp;·&nbsp; HUMAN POPULATION ESTIMATE: 10+ &nbsp;·&nbsp; RETURN WINDOW OPEN &nbsp;·&nbsp; FUEL CONFIRMED &nbsp;·&nbsp;</div>
+    </div>
+    <button onclick="closeCh7MidNews()" style="margin-top:1.2rem;background:none;border:1px solid #40804080;color:#60a060;padding:.38rem 1.1rem;font-family:'Courier New',monospace;cursor:pointer;font-size:.75rem;letter-spacing:.12em;">[ RETURN TO EARTH ]</button>
   </div>
 </div>
 
@@ -460,6 +496,26 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">Convicted. Sentenced. Incarcerated at Blackmore maximum security. Escaped at 11:47pm — killed two guards, left no trail. The police log shows his last confirmed sighting was Grid D7 (east side) — but he was at your building by midnight. Nobody knows how he found you so fast. He doesn't run. He never needed to.</div></div>
     </div>
 
+    <div style="font-size:.58rem;letter-spacing:.2em;color:#204020;margin-top:.4rem;margin-bottom:.5rem;border-bottom:1px solid #204820;padding-bottom:.4rem;">CHAPTER 7 — MARS: NEW EARTH</div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🌿</span>
+      <div><div style="color:#70a040;font-size:.78rem;letter-spacing:.2em;">THE BOTANIST</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">She was seat number eight on the manifest. A seed vault researcher working at a facility near the launch site when the aliens came. She had already packed her field kit — not out of preparation for escape, but because she was moving offices that day. She spent the transit to Mars mapping growing conditions from orbital data. By the time you landed, she had already selected a valley.</div></div>
+    </div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🌍</span>
+      <div><div style="color:#70a040;font-size:.78rem;letter-spacing:.2em;">EARTH AFTER</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">What the aliens did to Earth was not destruction in the traditional sense. The structures are gone. The people are gone. But the soil remains — richer than before. The water table is clean. The air has a higher oxygen ratio than any recorded period in human history. Whatever they did, it wasn't damage. It was a reset. Nobody knows if they intended it that way.</div></div>
+    </div>
+
+    <div style="display:flex;gap:1rem;align-items:flex-start;">
+      <span style="font-size:2rem;min-width:2.4rem;text-align:center;">🪨</span>
+      <div><div style="color:#70a040;font-size:.78rem;letter-spacing:.2em;">MARS — THE FIVE DAYS</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;margin-top:.2rem;">You spent five days on Mars waiting for the alien signal to drop. The water beneath the surface kept you alive. The snacks kept you going. Mara spent most of the time writing. She won't show you what. The hacker's voice note played on loop from the comms array from day two onward — the tablet jammed on its repeat function and nobody fixed it. Nobody wanted to.</div></div>
+    </div>
+
     <div style="font-size:.58rem;letter-spacing:.2em;color:#204868;margin-top:.4rem;margin-bottom:.5rem;border-bottom:1px solid #1a3050;padding-bottom:.4rem;">CHAPTER 6 — SPACE ESCAPE</div>
 
     <div style="display:flex;gap:1rem;align-items:flex-start;">
@@ -556,6 +612,18 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
       <div style="color:#6090c0;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE PRESS BADGE</div>
       <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">The journalist who dropped it was accredited for a profile piece on SpaceX's upcoming commercial launch — the satellite one, before the scrub. Her name was not on the emergency manifest. She never got past the first gate. The badge's CLEARANCE LEVEL A was originally intended for press access to the launch pad viewing area. It was never supposed to open a security gate. Nobody updated the access permissions when the emergency was declared. It was an oversight. It saved your life.</div>
     </div>
+    <div style="border-left:2px solid #305020;padding-left:1rem;margin-top:.8rem;">
+      <div style="color:#80c050;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE MARS ICE DISCOVERY</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">The geological scanner was left by an unmanned survey mission six months prior. Nobody knew its data would matter. The subsurface ice reservoir it detected — bearing 304, depth 182 metres — was enough to sustain ten people indefinitely. It was already there. The mission that found it never made the news. It was a quiet discovery filed in a dataset nobody read. It saved ten lives anyway.</div>
+    </div>
+    <div style="border-left:2px solid #305020;padding-left:1rem;">
+      <div style="color:#80c050;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE SEED VAULT BATCH 7</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">Batch 7 of the global seed vault program was distributed to sealed waterproof containers across eighteen countries in the year before the alien arrival. The program was a standard agricultural continuity measure — drought insurance, essentially. Nobody involved in distributing Batch 7 knew what it was actually for. The container in the greenhouse ruins survived because it was placed in the deepest soil bed, insulated from the pressure wave that destroyed the rest of the facility. One out of eighteen containers survived. It was yours.</div>
+    </div>
+    <div style="border-left:2px solid #305020;padding-left:1rem;">
+      <div style="color:#80c050;font-size:.76rem;letter-spacing:.2em;margin-bottom:.35rem;">THE EDEN STREET CODE</div>
+      <div style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.8;">The 761 on the street sign was a logistics identifier — the city block number for municipal maintenance. It had been there for forty years. The aliens didn't plan it. The botanist says she thinks the universe leaves breadcrumbs sometimes. Mara says that's not how the universe works. You don't say anything. You used the code either way.</div>
+    </div>
   </div>
 
   <!-- FUN FACTS tab -->
@@ -598,6 +666,13 @@ button:hover{border-color:#d4903a !important;color:#f0c060 !important;box-shadow
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🚀</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">You need three things to launch: the press badge (to get inside), the space suit (to board), and the launch codes (to fire). The badge is found on the floor. The suit has your name on it. The codes were on an unlocked terminal the whole time.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">⏱</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">Chapter 6 has the shortest timer of any chapter — 20 minutes for 15 rooms. The fastest recorded completion is under 4 minutes if you know exactly where everything is. The alien vessel is still watching the whole time.</span></div>
     <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">💬</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">In the escape cinematic, Mara says: "He gave them my name to save me. Even dying, he was trying to help." This is the only time anyone in the game says anything kind about the hacker. He is never named. He is never seen. He changed everything.</span></div>
+    <div style="color:#305020;font-size:.6rem;letter-spacing:.2em;margin-top:.4rem;margin-bottom:.2rem;">CHAPTER 7 — MARS: NEW EARTH</div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🪨</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The geological scanner code (304) is also the bearing to the ice cavern. It's not a coincidence — whoever programmed the scanner used the bearing as the lock PIN so it was impossible to forget.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🌱</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">You need the seed packet to trigger the escape. The trowel isn't mechanically required — but the botanist uses it. She takes it from you without asking.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">📡</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The departure authorisation is transmitted automatically when the comms array confirms Earth orbit is clear. You don't do anything to earn it — you just wait. Five days of waiting is the entire mid-chapter arc.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🗺</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">Room 100 (New Eden) is the only room in any chapter where the escape requires no key, no code, and no locked door. You just have to get there with the seeds and choose to begin.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🌍</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">Earth's city lights photo (treasure in room 90) was carried by the pilot. He's never seen on screen. He flies you there and back and never says a word. The photo is the only thing he packed.</span></div>
+    <div style="display:flex;gap:.8rem;align-items:flex-start;"><span style="font-size:1.1rem;min-width:1.5rem;">🎙</span><span style="color:#7a6040;font-size:.68rem;letter-spacing:.1em;line-height:1.7;">The hacker's voice recording in the Comms Hub is the third and final appearance of his voice in the story. He died before Chapter 6. He speaks in Chapter 7. He is present throughout.</span></div>
   </div>
 
   <button onclick="toggleExtraStuff()" style="margin-top:1.8rem;margin-bottom:2rem;background:none;border:1px solid #6a5030;color:#c8a870;font-family:Georgia,serif;font-size:.85rem;letter-spacing:.2em;padding:.55rem 1.8rem;cursor:pointer;">CLOSE</button>
@@ -935,7 +1010,11 @@ function triggerDeathEffect(msg){
     // Label the retry button for the current chapter
     const retryBtn=document.getElementById('deathRetryBtn');
     if(retryBtn){
-      if(ch3Active) retryBtn.textContent='RETRY CHAPTER 3';
+      if(ch7Active) retryBtn.textContent='RETRY CHAPTER 7';
+      else if(ch6Active) retryBtn.textContent='RETRY CHAPTER 6';
+      else if(ch5Active) retryBtn.textContent='RETRY CHAPTER 5';
+      else if(ch4Active) retryBtn.textContent='RETRY CHAPTER 4';
+      else if(ch3Active) retryBtn.textContent='RETRY CHAPTER 3';
       else if(ch2Active) retryBtn.textContent='RETRY CHAPTER 2';
       else retryBtn.textContent='RETRY CHAPTER 1';
     }
@@ -1021,6 +1100,32 @@ function quickStartCh6(){
   document.getElementById('nameEntryPanel').style.display='flex';
   setTimeout(()=>document.getElementById('nameInput').focus(),80);
 }
+function quickStartCh7(){
+  stopTitleMusic();
+  document.getElementById('intro').style.display='none';
+  document.getElementById('game').style.display='flex';
+  window.addEventListener('resize',resizeCanvas); resizeCanvas();
+  startAmbientMusic(); initParticles(); startGameLoop();
+  setInterval(saveGame,10000); loadA11ySettings();
+  _nameEntryCallback=()=>_quickStartCh7AfterName();
+  document.getElementById('nameEntryTitle').textContent='WHAT IS YOUR NAME?';
+  document.getElementById('nameInput').value='';
+  document.getElementById('nameError').textContent='';
+  document.getElementById('nameEntryPanel').style.display='flex';
+  setTimeout(()=>document.getElementById('nameInput').focus(),80);
+}
+function _quickStartCh7AfterName(){
+  showRecap([
+    {t:0,    txt:'You launched from Earth.\nThe alien vessel watched you go.'},
+    {t:2800, txt:'It left. So did they all.\nYou never found out why they came.'},
+    {t:5600, txt:'You landed on Mars with nine others.\nFive days. Waiting.'},
+    {t:8400, txt:'Then: the signal dropped.\nEarth orbit: clear. Return window: open.'},
+    {t:11200,txt:'You went back.\nEarth was green. Completely, silently green.'},
+    {t:14000,txt:'Human population: 10.\nSomewhere out there — maybe more.'},
+    {t:16800,txt:'CHAPTER 7 — MARS: NEW EARTH'},
+  ], ()=>loadChapter7());
+}
+
 function _quickStartCh6AfterName(){
   showRecap([
     {t:0,    txt:'Cole is dead. The hacker is dead.'},
@@ -1045,7 +1150,9 @@ function retryChapter(){
   // Clear any existing music/sound
   try{ musicNodes.forEach(n=>{try{n.stop?n.stop():n.disconnect();}catch(e){}});musicNodes=[]; }catch(e){}
   startAmbientMusic();
-  if(ch6Active){
+  if(ch7Active){
+    loadChapter7();
+  } else if(ch6Active){
     loadChapter6();
   } else if(ch5Active){
     loadChapter5();
@@ -2356,6 +2463,99 @@ const ROOM_DATA = {
       {id:"hs1",label:"PORTHOLE",x:"30%",y:"20%",w:"40%",h:"40%",examine:"Through the porthole: the alien vessel, massive, triangular, every light on its hull pulsing slowly. It isn't moving toward you. It's watching. It has been watching since it arrived."},
       {id:"hs2",label:"LAUNCH BUTTON",x:"55%",y:"55%",w:"25%",h:"30%",examine:"The launch director's voice on comms: 'Auth confirmed. You have the codes. Initiate when ready.' You look at Mara. She nods. Your hand moves to the panel. This is it."},
     ]},
+
+  // ── CHAPTER 7 — MARS: NEW EARTH ──────────────────────────────
+  86:{name:"Mars Landing Zone",type:"marslandingzone",desc:"The Dragon capsule hatch opens. Red dust settles around your boots. The sky is the wrong colour — thin and pink. Earth is visible in the distance, or what's left of it: a dim crescent where continents used to be. Mara stands beside you. Nine survivors from ten seats. You don't ask about the tenth.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"EARTH IN DISTANCE",x:"10%",y:"10%",w:"35%",h:"35%",examine:"A pale crescent where Earth used to glow blue. The oceans dried in hours — that's what the last broadcasts said. The continents are still there. But whatever was on them isn't. You stare at it for too long. Mara puts a hand on your arm."},
+      {id:"hs2",label:"CAPSULE HATCH",x:"55%",y:"35%",w:"35%",h:"45%",examine:"The Dragon capsule on its landing struts. Fuel tanks at 100%. The return window will open when Earth is clear. You don't know when that will be. You wait."},
+    ]},
+  87:{name:"Rocket Airlock",type:"marsairlock",desc:"The airlock holds recycled air — warm and stale after a 6-month flight. Emergency ration packs line the wall. Someone has written on the top pack: ONE WEEK FOR TEN PEOPLE. MAYBE EIGHT DAYS IF WE'RE CAREFUL.",
+    items:[{id:"ch7_snacks",name:"Rocket Snacks",desc:"An emergency ration pack: compressed nutrient bars, two water pouches, a small packet of crisps. The crisps taste like cardboard. You eat three.",isTreasure:false}],
+    hotspots:[
+      {id:"hs1",label:"RATION PACKS",x:"15%",y:"30%",w:"55%",h:"45%",examine:"Emergency rations. Counted, stacked, rationed. Enough for eight days — nine if the stress kills your appetite. Someone has been tracking the count already. They started on day one."},
+      {id:"hs2",label:"AIRLOCK PANEL",x:"65%",y:"15%",w:"28%",h:"45%",examine:"Airlock status: SEALED. Exterior atmosphere: 0.6% oxygen, 95% CO2. You will need your suit outside. Fuel status: FULL. Return trajectory: LOCKED — awaiting departure authorisation."},
+    ]},
+  88:{name:"Mars North Surface",type:"marssurface",desc:"Mars surface. Real and still. A geological scanner on a tripod reads the subsurface — ice detected 200 metres northwest. The nav-lock display on the scanner shows the bearing number clearly. Beside the tripod, a rust-red rock with deep crystalline veins catches the thin light.",
+    items:[{id:"ch7_t1",name:"Mars Rock Sample",desc:"A chunk of Martian basalt with crystalline orange veins. The hacker would have loved this. You take it as proof you were here.",isTreasure:true}],
+    hotspots:[
+      {id:"hs1",label:"GEOLOGICAL SCANNER",x:"35%",y:"20%",w:"35%",h:"55%",examine:"Screen reads: SUBSURFACE ICE DETECTED — DEPTH 182m — BEARING 304. The access nav-lock shows the same number: 304. You memorise it."},
+      {id:"hs2",label:"MARS HORIZON",x:"0%",y:"5%",w:"100%",h:"30%",examine:"The horizon curves faster than Earth's. The sky is pale orange fading to near-black overhead. No clouds. No birds. Just you and the dust and the silence."},
+    ]},
+  89:{name:"Ice Cavern",type:"marscave",desc:"The subsurface ice cavern. Cold drops of pure water form on the walls and fall to shallow pools. You catch some in your suit's mesh. It is cold and clear and the best thing you have tasted in years. Mara says quietly: 'We're not dead yet.'",
+    items:[{id:"ch7_water",name:"Mars Water",desc:"Pure subsurface ice-melt. Cold, clean, safe. The geological survey confirmed no contaminants. It tastes better than anything from Earth ever did.",isTreasure:false}],
+    hotspots:[
+      {id:"hs1",label:"ICE FORMATION",x:"20%",y:"15%",w:"55%",h:"50%",examine:"Thick ice columns formed over thousands of years, still and blue-white in your suit lamp. The water trickling from them is pure. The survey was right. There is enough here for decades."},
+      {id:"hs2",label:"CAVE WALLS",x:"0%",y:"25%",w:"22%",h:"55%",examine:"Mineral layers in the rock — rust, cream, grey. Time compressed into stone. You press your glove against the wall. Something solid and old that was here long before any of this happened."},
+    ]},
+  90:{name:"Base Camp",type:"marsbasecamp",desc:"The makeshift camp. Mara writes in her notebook. The others rest — quiet, most of them. Someone has pinned a small photograph of Earth at night from orbit to the fabric wall. All those city lights. All those people.",
+    items:[{id:"ch7_t2",name:"Earth Night Photo",desc:"A small photograph of Earth's city lights seen from orbit — North America ablaze. Someone brought this all the way to Mars. It is the last image anyone has of what that looked like.",isTreasure:true}],
+    hotspots:[
+      {id:"hs1",label:"SURVIVORS",x:"25%",y:"15%",w:"50%",h:"60%",examine:"Nine people. A doctor, a pilot, two engineers, a botanist, and four others. They are quiet. There isn't much to say when the world you left is gone. The botanist is staring at the floor. You learn later she's planning."},
+      {id:"hs2",label:"EARTH PHOTO",x:"65%",y:"10%",w:"30%",h:"45%",examine:"City lights from orbit. North America. Pinned with bent wire. On the back, in marker: DON'T FORGET WHAT WE'RE GOING BACK TO BUILD."},
+    ]},
+  91:{name:"Comms Hub",type:"marscomms",desc:"The communications array from the rocket cargo. Screens scroll through frequencies — mostly silence. But on one narrow band, a stored voice note plays on loop. The hacker's voice. You thought everything he left was gone.",
+    items:[{id:"ch7_t3",name:"Hacker's Voice Recording",desc:"Scratchy audio: 'If anyone's listening from somewhere impossible — good. You made it. I knew you would.' Timestamp: three hours before he died.",isTreasure:true}],
+    hotspots:[
+      {id:"hs1",label:"COMMS ARRAY",x:"20%",y:"15%",w:"55%",h:"50%",examine:"Frequencies scrolling. Alien signal status: PRESENT — STATIONARY. Earth orbit: OCCUPIED. The window will open when the alien signal drops. Until then, you wait."},
+      {id:"hs2",label:"VOICE RECORDER",x:"65%",y:"40%",w:"28%",h:"40%",examine:"A cracked data tablet on loop. 'If anyone is listening from somewhere impossible — good. You made it.' He didn't live to know he was right. He almost certainly knew anyway."},
+    ]},
+  92:{name:"Departure Bay",type:"marsdep",desc:"Day 6. The display updates mid-sentence: ALIEN SIGNAL DROPPED — EARTH ORBIT CLEAR. Human population estimate appears below: 10 CONFIRMED. UNKNOWN IN SHELTERS. RETURN WINDOW: OPEN. You stand at the return airlock for a long moment before you move.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"DEPARTURE DISPLAY",x:"25%",y:"15%",w:"50%",h:"45%",examine:"ALIEN DEPARTURE: CONFIRMED. EARTH ORBIT: CLEAR. ESTIMATED SURVIVORS: 10+. RETURN WINDOW: OPEN. 12 MINUTES ELAPSED. The window is open. You're the one who has to walk through it."},
+      {id:"hs2",label:"RETURN AIRLOCK",x:"58%",y:"30%",w:"35%",h:"50%",examine:"Sealed. Waiting for departure authorisation. Once the comms array confirms Earth is clear and generates the signal key, this opens. The signal key was transmitted to you twelve minutes ago."},
+    ]},
+
+  93:{name:"Earth — New Meadow",type:"earthlanding",desc:"Earth. Not how you remember it. The spaceport runway is gone — replaced with grass, uniform and impossibly green. No rubble. No bodies. No buildings on the horizon. Just grass and a pale sky and a silence that is somehow not empty.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"GRASS EVERYWHERE",x:"5%",y:"45%",w:"90%",h:"40%",examine:"Just grass. Dense, uniform, green. No weeds. No variation. The land was reset. As if it was waiting for someone to decide what to do with it."},
+      {id:"hs2",label:"DISTANT HORIZON",x:"0%",y:"5%",w:"100%",h:"35%",examine:"No smoke. No buildings. No movement. Just the pale curve of the earth and a sky that looks washed clean. Mara says: 'It's beautiful.' She's not wrong. It just hurts."},
+    ]},
+  94:{name:"Former City",type:"earthruins",desc:"Ruins. But low ones — knee-height at most, and all of it overgrown. Grass through every crack. A rusted street sign is half-visible in the green: EDEN ST — and below it, stencilled in faded yellow: 761.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"STREET SIGN",x:"30%",y:"25%",w:"40%",h:"55%",examine:"EDEN ST. Rusted, leaning, mostly buried. Below it in yellow stencil, still readable: 761. You don't know what it originally meant. Now it feels like a door code."},
+      {id:"hs2",label:"FOUNDATION WALL",x:"0%",y:"35%",w:"28%",h:"45%",examine:"Knee-height concrete. Grass from every crack. Whatever stood here — an apartment block? an office? — is completely gone. Dissolved. As if it were never there."},
+    ]},
+  95:{name:"Old Farm",type:"earthfarm",desc:"Farmland, or what was farmland. The soil is dark and rich. A collapsed barn frame stands at the edge — just the skeleton. Leaning against the frame: a hand trowel, blade clean and sharp, handle worn smooth. Someone left it here.",
+    items:[{id:"ch7_trowel",name:"Planting Trowel",desc:"Small, worn, sharp. The kind of thing you'd use to plant seeds. It was left here deliberately — handle facing outward, easy to take.",isTreasure:false}],
+    hotspots:[
+      {id:"hs1",label:"FARM SOIL",x:"10%",y:"50%",w:"80%",h:"35%",examine:"Dark, deep, volcanic soil. The whole field is like this. Rich enough to grow anything. As if the land has been preparing itself for planting."},
+      {id:"hs2",label:"BARN FRAME",x:"55%",y:"15%",w:"40%",h:"60%",examine:"Just the skeleton. All the wood rotted or absorbed. The trowel leaning against it doesn't belong here — it's too clean. Someone left it recently."},
+    ]},
+  96:{name:"Greenhouse Ruins",type:"earthgreenhouse",desc:"The greenhouse framework survived — steel arches standing over empty soil beds. In the far corner, in a cracked waterproof container: a seed packet. Label: MIXED GRAIN — BATCH 7 — FOR RESEEDING. It was waiting for exactly this.",
+    items:[{id:"ch7_seeds",name:"Seed Packet",desc:"Mixed grain seeds — wheat, maize, barley. Label: FOR RESEEDING. Someone prepared this before everything. Someone knew the world would need a start.",isTreasure:false}],
+    hotspots:[
+      {id:"hs1",label:"SEED CONTAINER",x:"55%",y:"30%",w:"35%",h:"50%",examine:"Cracked but intact. Inside: the seed packet, sealed. Batch 7. Someone prepared this from a seed vault program — long before the aliens came. They thought ahead."},
+      {id:"hs2",label:"GREENHOUSE ARCHES",x:"5%",y:"5%",w:"85%",h:"55%",examine:"Steel arches, structurally sound. The glass is gone. But the soil beds are deep and ready. This place was built to grow things. It still is."},
+    ]},
+  97:{name:"Hilltop",type:"earthhill",desc:"A low hill — the highest point for miles. Below: the green plain, the river valley, the dark farmland. Mara stands beside you and doesn't say anything. Neither do you. Sometimes there's nothing that needs saying.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"HILLTOP VIEW",x:"0%",y:"5%",w:"100%",h:"50%",examine:"Green and river and dark soil and pale sky. Ten people and a trowel and a packet of seeds. It isn't much. But the view from here looks like a beginning."},
+      {id:"hs2",label:"MARA",x:"40%",y:"15%",w:"25%",h:"65%",examine:"She's looking at the horizon again. She's good at this — standing somewhere that feels like the end and deciding it's the start instead. You're learning from her."},
+    ]},
+  98:{name:"Riverside",type:"earthriver",desc:"A river. Clear and fast and cold over smooth stones. No contamination — the same process that cleared everything else also cleaned the water table. You fill your bottle. The seeds are in your pocket. You know where you're going.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"RIVER",x:"5%",y:"50%",w:"90%",h:"35%",examine:"Cold, fast, clean. The river curves toward the valley — past the farmland, toward the flat ground below. If you were going to plant something, you'd want it near here."},
+      {id:"hs2",label:"SMOOTH STONES",x:"30%",y:"55%",w:"40%",h:"35%",examine:"Smooth and round from water. Completely ordinary. Also the most beautiful things you have seen in a long time."},
+    ]},
+  99:{name:"Valley Floor",type:"earthvalley",desc:"The valley floor — flat, sheltered, river close, hill overhead. Dark soil. Strong light. The others have gathered. Someone has started clearing a space. The botanist is crouching over the soil, running her hands through it. Mara holds the trowel out to you.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"GATHERED SURVIVORS",x:"15%",y:"15%",w:"70%",h:"60%",examine:"All ten of you. Quiet. Looking at the same patch of ground. The botanist says: 'This soil is perfect. Someone needs to go first.' Everyone looks at you."},
+      {id:"hs2",label:"CLEARED EARTH",x:"30%",y:"50%",w:"40%",h:"35%",examine:"A rough rectangle of cleared earth. Stones moved to the edge. Dark and deep. All it needs is seeds and water and someone who decides to begin."},
+    ]},
+  100:{name:"New Eden",type:"eartheden",desc:"The planting ground. Flat, sheltered valley. River water close. Rich dark earth underfoot. Ten people watching. You take the seed packet from your pocket. You kneel down. This is where it starts — not what was lost, but what comes next.",
+    items:[],
+    hotspots:[
+      {id:"hs1",label:"PLANTING GROUND",x:"15%",y:"45%",w:"70%",h:"40%",examine:"Dark earth. River close. Sky open. The others watching. You kneel down and begin."},
+      {id:"hs2",label:"NEW HORIZON",x:"0%",y:"5%",w:"100%",h:"35%",examine:"Pale sky. Green land. A river. Ten people. A beginning."},
+    ]},
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2484,6 +2684,29 @@ const CONNECTIONS = [
   {a:75,b:80,dir:'S', state:'open'},
   {a:76,b:81,dir:'S', state:'open'},
   {a:80,b:85,dir:'S', state:'open'},
+
+  // ── Chapter 7 — Mars: New Earth (15 rooms) ───────────────────
+  // Row 0: 86-90 (Mars)
+  {a:86,b:87,dir:'E', state:'open'},
+  {a:87,b:88,dir:'E', state:'open'},
+  {a:88,b:89,dir:'E', state:'coded', code:'304', hint:'Check the GEOLOGICAL SCANNER bearing display.'},
+  {a:89,b:90,dir:'E', state:'open'},
+  // Row 1: 91-95
+  {a:91,b:92,dir:'E', state:'open'},
+  {a:92,b:93,dir:'E', state:'locked', keyId:'ch7_departure'},
+  {a:93,b:94,dir:'E', state:'open'},
+  {a:94,b:95,dir:'E', state:'coded', code:'761', hint:'Check the RUINED STREET SIGN.'},
+  // Row 2: 96-100
+  {a:96,b:97,dir:'E', state:'open'},
+  {a:97,b:98,dir:'E', state:'open'},
+  {a:98,b:99,dir:'E', state:'open'},
+  {a:99,b:100,dir:'E', state:'open'},
+  // Verticals
+  {a:86,b:91,dir:'S', state:'open'},
+  {a:88,b:93,dir:'S', state:'open'},
+  {a:90,b:95,dir:'S', state:'open'},
+  {a:91,b:96,dir:'S', state:'open'},
+  {a:95,b:100,dir:'S', state:'open'},
 ];
 
 function buildConnectionMap(){
@@ -4924,6 +5147,236 @@ function buildFurniture(type,P,rng){
     }
   }
 
+  // ── CHAPTER 7 — MARS & EARTH ROOMS ──────────────────────────────
+  else if(type==='marslandingzone'||type==='marsairlock'||type==='marssurface'||type==='marscave'||type==='marsbasecamp'||type==='marscomms'||type==='marsdep'||type==='earthlanding'||type==='earthruins'||type==='earthfarm'||type==='earthgreenhouse'||type==='earthhill'||type==='earthriver'||type==='earthvalley'||type==='eartheden'){
+    const isMars=type.startsWith('mars');
+    // Mars: dim pinkish-orange ambient; Earth: soft white daylight
+    const ambCol=isMars?0xd08050:0xd0e8c0;
+    const ambGl=new THREE.PointLight(isMars?0xd06030:0xc0d8a0,isMars?0.9:1.2,16,1.5); ambGl.position.set(0,3.6,0); roomGroup.add(ambGl); candleLights.push(ambGl);
+    if(!isMars){
+      const sunGl=new THREE.PointLight(0xffe8c0,0.6,20,1); sunGl.position.set(3,4,-1); roomGroup.add(sunGl); candleLights.push(sunGl);
+    }
+
+    if(type==='marslandingzone'){
+      // Red/orange rocky floor
+      const dust=box(8.5,0.04,8.5,0xb04020,0.99); dust.position.set(0,0.02,0); roomGroup.add(dust);
+      // Dragon capsule silhouette (back left)
+      const cap=box(1.6,2.8,1.6,0xd0d8e0,0.8,0.1); cap.position.set(-2.5,1.4,-3.5); roomGroup.add(cap);
+      const capTop=new THREE.Mesh(new THREE.SphereGeometry(0.8,8,6),mat(0xd0d8e0,0.8,0.1)); capTop.position.set(-2.5,2.85,-3.5); roomGroup.add(capTop);
+      const capGl=new THREE.PointLight(0xffa060,0.5,3,2); capGl.position.set(-2.5,2.0,-3.5); roomGroup.add(capGl); candleLights.push(capGl);
+      // Landing struts
+      [[-1.8,-3.3],[-3.2,-3.3],[-2.5,-2.8],[-2.5,-4.2]].forEach(([lx,lz])=>{
+        const strut=box(0.06,0.5,0.06,0xb0b8c0,0.7,0.2); strut.position.set(lx,0.25,lz); strut.rotation.z=0.2; roomGroup.add(strut);
+      });
+      // Earth in distance — tiny glowing sphere
+      const earthGeo=new THREE.SphereGeometry(0.22,10,8); const earthMat=new THREE.MeshBasicMaterial({color:0x3060c0}); const earthSph=new THREE.Mesh(earthGeo,earthMat); earthSph.position.set(-3.8,2.8,-4.38); roomGroup.add(earthSph);
+      const earthGl=new THREE.PointLight(0x3060c0,0.3,2,2); earthGl.position.set(-3.8,2.8,-4.2); roomGroup.add(earthGl); candleLights.push(earthGl);
+      // Rocks scattered
+      [[1.5,0.12,-2.0],[2.8,0.1,-3.5],[-1.0,0.08,-1.5],[3.2,0.08,-1.0]].forEach(([rx,ry,rz])=>{
+        const r=box(0.25+Math.random()*0.2,0.14,0.2,0xa04020,0.9); r.position.set(rx,ry,rz); roomGroup.add(r);
+      });
+      addClickBox(0,0.5,0.5,0.3,-3.8,2.8,-4.38); // Earth hs0
+      addClickBox(1,1.7,3.0,1.7,-2.5,1.5,-3.5);  // capsule hs1
+    } else if(type==='marsairlock'){
+      // Metal corridor walls (grey-blue)
+      const floor2=box(7.0,0.04,7.0,0x484c54,0.99); floor2.position.set(0,0.02,0); roomGroup.add(floor2);
+      // Ration pack stacks left wall
+      [[0,-2.5],[0,-3.2],[0,-4.0]].forEach(([px,pz])=>{
+        const rack=box(2.0,0.25,0.5,0xd0a840,0.9); rack.position.set(px,0.125,pz); roomGroup.add(rack);
+        const r2=box(2.0,0.25,0.5,0xd0a840,0.9); r2.position.set(px,0.375,pz); roomGroup.add(r2);
+      });
+      const rGl=new THREE.PointLight(0xffa030,0.4,3,2); rGl.position.set(0,0.7,-3.0); roomGroup.add(rGl); candleLights.push(rGl);
+      // Control panel right wall
+      const cpanel=box(0.8,0.55,0.08,0x303844,0.9); cpanel.position.set(4.3,1.3,-2.0); cpanel.rotation.y=-Math.PI/2; roomGroup.add(cpanel);
+      const cpScr=box(0.65,0.42,0.04,0x001020,0.99); cpScr.position.set(4.27,1.3,-2.0); cpScr.rotation.y=-Math.PI/2; roomGroup.add(cpScr);
+      const cpTex=makeScreenTex(['AIRLOCK: SEALED','FUEL: 100%','RETURN: LOCKED'],'#001020','#60c0ff',20);
+      const cpScrTex=screenMesh(cpTex,0.63,0.40); cpScrTex.rotation.y=-Math.PI/2; cpScrTex.position.set(4.24,1.3,-2.0); roomGroup.add(cpScrTex);
+      addClickBox(0,2.2,0.6,0.6,0,0.35,-3.0);       // rations hs0
+      addClickBox(1,0.1,0.6,0.48,4.3,1.3,-2.0);     // panel hs1
+    } else if(type==='marssurface'){
+      const dust2=box(8.5,0.04,8.5,0xb04018,0.99); dust2.position.set(0,0.02,0); roomGroup.add(dust2);
+      // Scanner tripod
+      const t1=box(0.04,1.4,0.04,0x909898,0.8); t1.position.set(0,0.7,-2.5); roomGroup.add(t1);
+      const t2=box(0.04,1.2,0.04,0x909898,0.8); t2.position.set(-0.25,0.6,-2.25); t2.rotation.z=0.2; roomGroup.add(t2);
+      const t3=box(0.04,1.2,0.04,0x909898,0.8); t3.position.set(0.25,0.6,-2.25); t3.rotation.z=-0.2; roomGroup.add(t3);
+      const scanHead=box(0.5,0.28,0.35,0x606870,0.8,0.1); scanHead.position.set(0,1.5,-2.5); roomGroup.add(scanHead);
+      const scanScr=box(0.4,0.22,0.04,0x001808,0.99); scanScr.position.set(0,1.5,-2.33); roomGroup.add(scanScr);
+      const scanTex=makeScreenTex(['ICE: 182m','BEARING: 304','NAV-LOCK: 304'],'#001808','#40ff80',18);
+      const scanScrTex=screenMesh(scanTex,0.38,0.20); scanScrTex.position.set(0,1.5,-2.31); roomGroup.add(scanScrTex);
+      const scanGl=new THREE.PointLight(0x40ff60,0.4,1.5,2); scanGl.position.set(0,1.5,-2.2); roomGroup.add(scanGl); candleLights.push(scanGl);
+      // Mars rock cluster right
+      [[2.5,0.12,-2.5],[3.0,0.1,-3.0],[2.2,0.1,-3.5]].forEach(([rx,ry,rz])=>{
+        const r=box(0.3+Math.random()*0.2,0.15,0.25,0xa03010,0.9); r.position.set(rx,ry,rz); roomGroup.add(r);
+      });
+      addClickBox(0,0.55,0.35,0.4,0,1.5,-2.5);    // scanner hs0
+      addClickBox(1,0.1,0.5,0.1,0,3.3,-4.38);     // horizon hs1
+    } else if(type==='marscave'){
+      // Cave: dark, blue-white ice
+      const caveGl=new THREE.PointLight(0x80c0ff,0.8,10,1.5); caveGl.position.set(0,2.5,-2.0); roomGroup.add(caveGl); candleLights.push(caveGl);
+      const iceGl=new THREE.PointLight(0xaaddff,0.5,5,2); iceGl.position.set(-1.5,1.5,-3.5); roomGroup.add(iceGl); candleLights.push(iceGl);
+      // Ice columns
+      [[-1.5,0,-3.0],[1.0,0,-3.8],[-0.5,0,-4.2],[2.0,0,-2.5]].forEach(([ix,iy,iz])=>{
+        const ic=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.18,2.2+Math.random()*0.5,8),mat(0xaaddff,0.3,0.1)); ic.material.transparent=true; ic.material.opacity=0.75; ic.position.set(ix,1.1,iz); roomGroup.add(ic);
+      });
+      // Ice pools on floor
+      const pool=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,0.04,16),mat(0x80b8ff,0.2,0.1)); pool.material.transparent=true; pool.material.opacity=0.6; pool.position.set(0.5,0.02,-2.5); roomGroup.add(pool);
+      // Cave wall texture (dark rocky)
+      const caveFloor=box(8.5,0.04,8.5,0x202028,0.99); caveFloor.position.set(0,0.02,0); roomGroup.add(caveFloor);
+      addClickBox(0,2.8,2.2,1.0,-0.3,1.1,-3.3); // ice columns hs0
+      addClickBox(1,0.1,3.6,9.0,-4.4,1.8,0);    // cave walls hs1
+    } else if(type==='marsbasecamp'){
+      const campFloor=box(8.5,0.04,8.5,0xb04018,0.99); campFloor.position.set(0,0.02,0); roomGroup.add(campFloor);
+      // Fabric shelter partitions
+      [[0,1.0,-3.5,2.5,1.8,0.1],[2.8,1.0,-2.0,0.1,1.8,3.0]].forEach(([fx,fy,fz,fw,fh,fd])=>{
+        const fab=box(fw,fh,fd,0xc8a068,0.9); fab.material.transparent=true; fab.material.opacity=0.8; fab.position.set(fx,fy,fz); roomGroup.add(fab);
+      });
+      // Sleeping mats
+      [[-1.5,0.03,-3.0],[1.0,0.03,-3.2],[-0.5,0.03,-4.0],[2.5,0.03,-3.5]].forEach(([mx,my,mz])=>{
+        const mat2=box(0.9,0.05,0.6,0x486040,0.9); mat2.position.set(mx,my,mz); roomGroup.add(mat2);
+      });
+      // Earth photo on fabric wall (canvas tex)
+      const photoFrame=box(0.28,0.2,0.02,0x303030,0.99); photoFrame.position.set(-0.4,1.5,-3.51); roomGroup.add(photoFrame);
+      const photoTex=makeScreenTex(['NORTH AMERICA','[NIGHT LIGHTS]','DON\'T FORGET'],'#000010','#f0d060',16);
+      const photoScrTex=screenMesh(photoTex,0.26,0.18); photoScrTex.position.set(-0.4,1.5,-3.50); roomGroup.add(photoScrTex);
+      const photoGl=new THREE.PointLight(0xf0d040,0.3,1.2,2); photoGl.position.set(-0.4,1.5,-3.3); roomGroup.add(photoGl); candleLights.push(photoGl);
+      addClickBox(0,4.5,1.9,2.0,0.5,0.9,-3.5); // survivors hs0
+      addClickBox(1,0.3,0.22,0.05,-0.4,1.5,-3.51); // photo hs1
+    } else if(type==='marscomms'){
+      const commsFloor=box(8.5,0.04,8.5,0x303038,0.99); commsFloor.position.set(0,0.02,0); roomGroup.add(commsFloor);
+      // Bank of comms screens back wall
+      for(let ci=0;ci<4;ci++){
+        const cs=box(0.9,0.65,0.08,0x0a0a14,0.99); cs.position.set(-2.0+ci*1.35,1.8,-4.35); roomGroup.add(cs);
+        const csScr=box(0.78,0.55,0.04,0x001018,0.99); csScr.position.set(-2.0+ci*1.35,1.8,-4.32); roomGroup.add(csScr);
+      }
+      // One screen shows alien signal status
+      const sigTex=makeScreenTex(['ALIEN SIGNAL:','PRESENT','EARTH: OCCUPIED'],'#001018','#60c0ff',18);
+      const sigScrTex=screenMesh(sigTex,0.76,0.53); sigScrTex.position.set(-2.0,1.8,-4.30); roomGroup.add(sigScrTex);
+      const comGl=new THREE.PointLight(0x4090ff,0.7,5,2); comGl.position.set(0,1.8,-4.0); roomGroup.add(comGl); candleLights.push(comGl);
+      // Cracked tablet on bench
+      const bench=box(2.5,0.06,0.8,0x484850,0.9); bench.position.set(1.5,0.82,-3.5); roomGroup.add(bench);
+      const tablet=box(0.28,0.02,0.2,0x181820,0.99); tablet.position.set(1.5,0.86,-3.5); tablet.rotation.z=0.1; roomGroup.add(tablet);
+      const tabGl=new THREE.PointLight(0x4080ff,0.2,0.8,2); tabGl.position.set(1.5,0.9,-3.4); roomGroup.add(tabGl); candleLights.push(tabGl);
+      addClickBox(0,4.0,0.7,0.12,0,1.8,-4.35);    // comms screens hs0
+      addClickBox(1,0.3,0.1,0.22,1.5,0.86,-3.5);  // tablet hs1
+    } else if(type==='marsdep'){
+      const depFloor=box(8.5,0.04,8.5,0x303040,0.99); depFloor.position.set(0,0.02,0); roomGroup.add(depFloor);
+      // Large departure status screen
+      const dScr=box(2.4,1.4,0.08,0x0a0a18,0.99); dScr.position.set(-1.0,1.8,-4.35); roomGroup.add(dScr);
+      const dTex=makeScreenTex(['ALIEN DEPART: ✓','EARTH: CLEAR','SURVIVORS: 10+','RETURN: OPEN'],'#000814','#80ff80',18);
+      const dScrTex=screenMesh(dTex,2.3,1.3); dScrTex.position.set(-1.0,1.8,-4.33); roomGroup.add(dScrTex);
+      const dGl=new THREE.PointLight(0x40ff40,0.7,5,2); dGl.position.set(-1.0,1.8,-4.0); roomGroup.add(dGl); candleLights.push(dGl);
+      // Return airlock hatch right wall
+      const hatch=box(1.5,2.2,0.12,0x484858,0.8); hatch.position.set(4.3,1.1,-1.5); hatch.rotation.y=-Math.PI/2; roomGroup.add(hatch);
+      const hatchGl=new THREE.PointLight(0x80ff80,0.3,2,2); hatchGl.position.set(4.0,1.5,-1.5); roomGroup.add(hatchGl); candleLights.push(hatchGl);
+      addClickBox(0,2.5,1.5,0.12,-1.0,1.8,-4.35); // departure display hs0
+      addClickBox(1,0.15,2.3,1.6,4.3,1.1,-1.5);   // return airlock hs1
+
+    // ── Earth rooms ──────────────────────────────────────────────
+    } else if(type==='earthlanding'){
+      // Flat green grass floor
+      const grass=box(8.5,0.04,8.5,0x60a040,0.99); grass.position.set(0,0.02,0); roomGroup.add(grass);
+      const grass2=box(8.5,0.015,8.5,0x70b050,0.99); grass2.position.set(0,0.03,0); roomGroup.add(grass2);
+      const skyGl=new THREE.PointLight(0xe0f0d0,0.8,20,1); skyGl.position.set(0,8,0); roomGroup.add(skyGl); candleLights.push(skyGl);
+      // Capsule struts visible in background
+      const cap2=box(1.2,2.2,1.2,0xd0d8e0,0.8,0.1); cap2.position.set(3.0,1.1,-4.0); roomGroup.add(cap2);
+      // Distant horizon (pale band)
+      const horiz=box(9.0,0.5,0.1,0xe8f8e0,0.99); horiz.material.transparent=true; horiz.material.opacity=0.3; horiz.position.set(0,1.8,-4.38); roomGroup.add(horiz);
+      addClickBox(0,8.0,0.06,8.0,0,0.04,0);     // grass hs0
+      addClickBox(1,0.1,0.6,9.0,0,1.8,-4.38);   // horizon hs1
+    } else if(type==='earthruins'){
+      const rGrass=box(8.5,0.04,8.5,0x60a040,0.99); rGrass.position.set(0,0.02,0); roomGroup.add(rGrass);
+      // Low foundation walls
+      [[-2.0,0.18,-3.5,3.0,0.36,0.3],[1.5,0.15,-2.5,0.3,0.3,2.5],[-1.0,0.12,-4.0,2.5,0.24,0.25]].forEach(([wx,wy,wz,ww,wh,wd])=>{
+        const w=box(ww,wh,wd,0x707068,0.9); w.position.set(wx,wy,wz); roomGroup.add(w);
+      });
+      // Street sign — rusted, leaning
+      const signPost=box(0.05,1.4,0.05,0x806040,0.8); signPost.position.set(1.5,0.7,-2.0); signPost.rotation.z=0.12; roomGroup.add(signPost);
+      const signPanel=box(0.8,0.28,0.04,0x805028,0.9); signPanel.position.set(1.52,1.35,-2.0); signPanel.rotation.z=0.12; roomGroup.add(signPanel);
+      const signTex=makeScreenTex(['EDEN ST','761'],'#805028','#f0f0c0',22);
+      const signScrTex=screenMesh(signTex,0.77,0.26); signScrTex.position.set(1.52,1.35,-1.99); signScrTex.rotation.z=0.12; roomGroup.add(signScrTex);
+      addClickBox(0,0.9,0.35,0.1,1.5,1.35,-2.0); // street sign hs0
+      addClickBox(1,3.1,0.4,0.4,-2.0,0.22,-3.5); // foundation wall hs1
+    } else if(type==='earthfarm'){
+      const fGrass=box(8.5,0.04,8.5,0x508030,0.99); fGrass.position.set(0,0.02,0); roomGroup.add(fGrass);
+      const soil=box(5.0,0.035,4.0,0x3a2810,0.99); soil.position.set(0,0.023,-2.0); roomGroup.add(soil);
+      // Barn skeleton
+      const bPost1=box(0.12,2.5,0.12,0x7a5020,0.8); bPost1.position.set(3.0,1.25,-3.5); roomGroup.add(bPost1);
+      const bPost2=bPost1.clone(); bPost2.position.set(3.0,1.25,-4.2); roomGroup.add(bPost2);
+      const bBeam=box(0.1,0.1,0.75,0x7a5020,0.8); bBeam.position.set(3.0,2.5,-3.85); roomGroup.add(bBeam);
+      // Trowel leaning against barn
+      const trowelHandle=box(0.04,0.5,0.04,0x8a6030,0.9); trowelHandle.position.set(3.05,0.8,-3.3); trowelHandle.rotation.z=-0.2; roomGroup.add(trowelHandle);
+      const trowelBlade=box(0.12,0.18,0.02,0x909898,0.7,0.2); trowelBlade.position.set(3.05,0.35,-3.3); trowelBlade.rotation.z=-0.2; roomGroup.add(trowelBlade);
+      addClickBox(0,5.0,0.05,4.0,0,0.03,-2.0);    // soil hs0
+      addClickBox(1,0.5,2.5,1.2,3.0,1.25,-3.75);  // barn hs1
+    } else if(type==='earthgreenhouse'){
+      const ghFloor=box(8.5,0.04,8.5,0x3a2810,0.99); ghFloor.position.set(0,0.02,0); roomGroup.add(ghFloor);
+      // Steel arch frames
+      for(let ai=0;ai<4;ai++){
+        const arch1=box(0.06,2.8,0.06,0x707880,0.8); arch1.position.set(-3.0+ai*2.0,1.4,-3.5); roomGroup.add(arch1);
+        const arch2=box(0.06,2.8,0.06,0x707880,0.8); arch2.position.set(-3.0+ai*2.0,1.4,-1.5); roomGroup.add(arch2);
+        const archTop=box(0.06,0.06,2.06,0x707880,0.8); archTop.position.set(-3.0+ai*2.0,2.8,-2.5); roomGroup.add(archTop);
+      }
+      // Soil beds
+      const bed1=box(2.5,0.18,1.2,0x3a2808,0.9); bed1.position.set(-2.0,0.09,-3.0); roomGroup.add(bed1);
+      const bed2=box(2.5,0.18,1.2,0x3a2808,0.9); bed2.position.set(1.5,0.09,-3.0); roomGroup.add(bed2);
+      // Seed container far corner
+      const seedBox=box(0.4,0.3,0.3,0x608050,0.9); seedBox.position.set(3.0,0.29,-4.0); roomGroup.add(seedBox);
+      const seedBoxLid=box(0.42,0.06,0.32,0x507040,0.9); seedBoxLid.position.set(3.0,0.47,-4.0); roomGroup.add(seedBoxLid);
+      const seedGl=new THREE.PointLight(0x80c040,0.4,2.0,2); seedGl.position.set(3.0,0.8,-4.0); roomGroup.add(seedGl); candleLights.push(seedGl);
+      const seedTex=makeScreenTex(['MIXED GRAIN','BATCH 7','FOR RESEEDING'],'#304820','#c0ff80',18);
+      const seedScrTex=screenMesh(seedTex,0.38,0.28); seedScrTex.position.set(3.0,0.30,-3.85); roomGroup.add(seedScrTex);
+      addClickBox(0,0.45,0.38,0.35,3.0,0.32,-4.0); // seed container hs0
+      addClickBox(1,7.0,2.8,2.2,0,1.4,-2.5);        // arch frame hs1
+    } else if(type==='earthhill'){
+      const hGrass=box(8.5,0.04,8.5,0x70b050,0.99); hGrass.position.set(0,0.02,0); roomGroup.add(hGrass);
+      // Raised hill suggestion — slightly elevated platform
+      const hill=box(5.0,0.3,4.0,0x689050,0.99); hill.position.set(0,0.15,-2.0); roomGroup.add(hill);
+      // Mara figure (two boxes — body+head)
+      const maraBody=box(0.32,0.8,0.28,0x485870,0.9); maraBody.position.set(0.8,1.1,-3.2); roomGroup.add(maraBody);
+      const maraHead=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,6),mat(0xd0a880,0.9)); maraHead.position.set(0.8,1.72,-3.2); roomGroup.add(maraHead);
+      addClickBox(0,9.0,0.6,9.0,0,0.1,-2.0);      // view hs0
+      addClickBox(1,0.35,0.95,0.32,0.8,1.35,-3.2); // Mara hs1
+    } else if(type==='earthriver'){
+      const rGrass2=box(8.5,0.04,8.5,0x70b050,0.99); rGrass2.position.set(0,0.02,0); roomGroup.add(rGrass2);
+      // River channel across room
+      const riverBed=box(2.2,0.04,8.5,0x6090b0,0.9); riverBed.material.transparent=true; riverBed.material.opacity=0.75; riverBed.position.set(0.5,0.04,0); roomGroup.add(riverBed);
+      const waterGl=new THREE.PointLight(0x60b0e0,0.5,5,2); waterGl.position.set(0.5,0.5,0); roomGroup.add(waterGl); candleLights.push(waterGl);
+      // Stones in river
+      for(let si=0;si<8;si++){
+        const st=box(0.2+Math.random()*0.15,0.08,0.18,0x808880,0.9); st.position.set(-0.8+Math.random()*2.6,0.07,-4.0+si*1.1); roomGroup.add(st);
+      }
+      addClickBox(0,2.3,0.1,8.5,0.5,0.05,0);    // river hs0
+      addClickBox(1,2.0,0.12,7.0,0.5,0.09,0);   // stones hs1
+    } else if(type==='earthvalley'){
+      const vGrass=box(8.5,0.04,8.5,0x608040,0.99); vGrass.position.set(0,0.02,0); roomGroup.add(vGrass);
+      const cleared=box(4.0,0.04,3.0,0x3a2808,0.99); cleared.position.set(0,0.025,-2.0); roomGroup.add(cleared);
+      // Gathered survivors (simple boxes)
+      [[-2.0,0.5,-1.0],[-1.0,0.5,0.5],[1.0,0.5,-0.5],[2.0,0.5,-1.0],[-1.5,0.5,-2.5]].forEach(([px,py,pz])=>{
+        const sb=box(0.28,0.7,0.22,0x485068,0.9); sb.position.set(px,py,pz); roomGroup.add(sb);
+        const sh=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,5),mat(0xd0a080,0.9)); sh.position.set(px,py+0.5,pz); roomGroup.add(sh);
+      });
+      addClickBox(0,5.5,1.3,2.5,-0.3,0.65,-0.5); // survivors hs0
+      addClickBox(1,4.1,0.06,3.1,0,0.03,-2.0);   // cleared earth hs1
+    } else {
+      // eartheden — the planting ground
+      const eGrass=box(8.5,0.04,8.5,0x608040,0.99); eGrass.position.set(0,0.02,0); roomGroup.add(eGrass);
+      const planting=box(5.0,0.05,4.0,0x2a1c06,0.99); planting.position.set(0,0.027,-2.0); roomGroup.add(planting);
+      // Rich soil lines (planting rows)
+      for(let ri=0;ri<5;ri++){
+        const row=box(4.5,0.04,0.1,0x1e1408,0.99); row.position.set(0,0.03,-0.7+ri*(-0.8)); roomGroup.add(row);
+      }
+      const edenGl=new THREE.PointLight(0xd0ff80,0.7,10,1.5); edenGl.position.set(0,4.0,0); roomGroup.add(edenGl); candleLights.push(edenGl);
+      const sunBeam=new THREE.PointLight(0xfff8d0,0.5,20,0.8); sunBeam.position.set(3,5,-2); roomGroup.add(sunBeam); candleLights.push(sunBeam);
+      // Mara + others watching
+      [[-2.5,0.5,0.5],[2.5,0.5,0.5],[-1.5,0.5,1.2],[1.5,0.5,1.2],[0,0.5,1.5]].forEach(([px,py,pz])=>{
+        const eb=box(0.28,0.7,0.22,0x485068,0.9); eb.position.set(px,py,pz); roomGroup.add(eb);
+        const eh=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,5),mat(0xd0a080,0.9)); eh.position.set(px,py+0.5,pz); roomGroup.add(eh);
+      });
+      addClickBox(0,5.1,0.07,4.1,0,0.03,-2.0);    // planting ground hs0
+      addClickBox(1,0.1,1.5,9.0,0,1.5,-4.38);     // new horizon hs1
+    }
+  }
+
   // Default for any unhandled room type: add candle + basic furniture
   else {
     addCandleLight(0,2.5,-2.0,P,P.li);
@@ -5717,6 +6170,11 @@ function enterRoom(toRoom, travelDir){
     setTimeout(sfxFutureHum, 400);
     if(toRoom===57||toRoom===59) setTimeout(sfxRobotBeep,1500); // Control Hub + Exit Corridor
   }
+  // Ch7: trigger mid-chapter news when first entering Departure Bay (rm 92)
+  if(ch7Active && toRoom===92 && !ch7MidNewsWatched && !ch7MidNewsShown){
+    ch7MidNewsShown=true;
+    setTimeout(showCh7MidNews, 800);
+  }
   checkHunterProximity();
 }
 
@@ -5805,6 +6263,8 @@ function examineHotspot(hs,foundSet){
   if(hs.ch5exit){ ch5CheckExit(); return; }
   // ch6 launch trigger
   if(state.currentRoom===85 && hs.label==='LAUNCH BUTTON'){ ch6LaunchEscape(); return; }
+  // ch7 planting ground escape trigger
+  if(ch7Active && state.currentRoom===100 && hs.label==='PLANTING GROUND'){ ch7PlantSeeds(); return; }
   // requireItem check (cabinet under stairs etc.)
   if(hs.requireItem && !state.inventory.find(i=>i.id===hs.requireItem)){
     const needed=Object.values(ROOM_DATA).flatMap(r=>r.items||[]).find(i=>i.id===hs.requireItem);
@@ -6081,16 +6541,21 @@ const ROOM_GRID_CH6 = {
   76:5,  77:6,  78:7,  79:8,  80:9,   // row 1
   81:10, 82:11, 83:12, 84:13, 85:14   // row 2
 };
+const ROOM_GRID_CH7 = {
+  86:0,  87:1,  88:2,  89:3,  90:4,   // row 0 (Mars)
+  91:5,  92:6,  93:7,  94:8,  95:9,   // row 1 (transition)
+  96:10, 97:11, 98:12, 99:13, 100:14  // row 2 (Earth)
+};
 
 function updateMiniMap(){
   const el=document.getElementById('miniMap');
   el.innerHTML='';
 
-  if(ch4Active||ch5Active||ch6Active){
+  if(ch4Active||ch5Active||ch6Active||ch7Active){
     el.style.gridTemplateColumns='repeat(5,1fr)';
-    const totalCells=ch6Active?15:10;
+    const totalCells=15;
     const roomByPos={};
-    const grid=ch6Active?ROOM_GRID_CH6:ch4Active?ROOM_GRID_CH4:ROOM_GRID_CH5;
+    const grid=ch7Active?ROOM_GRID_CH7:ch6Active?ROOM_GRID_CH6:ch4Active?ROOM_GRID_CH4:ROOM_GRID_CH5;
     Object.entries(grid).forEach(([id,pos])=>roomByPos[pos]=parseInt(id));
     for(let i=0;i<totalCells;i++){
       const div=document.createElement('div'); div.className='mapRoom';
@@ -6262,7 +6727,8 @@ const ACHIEVEMENTS=[
   {id:'ach_ch4', icon:'🤖', name:'Future Proof', desc:'Escape Chapter 4 — the Future House.'},
   {id:'ach_ch5', icon:'🚁', name:'Final Justice', desc:'Escape Chapter 5 — and fire the signal.'},
   {id:'ach_ch6', icon:'🚀', name:'Beyond Earth', desc:'Complete Chapter 6 — escape to space.'},
-  {id:'ach_allch', icon:'⭐', name:'The Full Story', desc:'Complete all six chapters.'},
+  {id:'ach_ch7', icon:'🌱', name:'New Eden', desc:'Complete Chapter 7 — plant the first seeds.'},
+  {id:'ach_allch', icon:'⭐', name:'The Full Story', desc:'Complete all seven chapters.'},
   {id:'ach_relics', icon:'💎', name:'Relic Hunter', desc:'Find all 3 relics in Chapter 4.'},
   {id:'ach_memories', icon:'🔮', name:'Memory Keeper', desc:'Find all 3 memory items in Chapter 5.'},
   {id:'ach_platinum', icon:'🏆', name:'Ghost', desc:'Earn a Platinum trophy in Chapter 1.'},
@@ -6279,7 +6745,7 @@ function unlockAchievement(id){
   set.add(id);
   try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
   // Check if all 5 chapters done
-  if(['ach_ch1','ach_ch2','ach_ch3','ach_ch4','ach_ch5','ach_ch6'].every(a=>set.has(a))){
+  if(['ach_ch1','ach_ch2','ach_ch3','ach_ch4','ach_ch5','ach_ch6','ach_ch7'].every(a=>set.has(a))){
     set.add('ach_allch');
     try{ localStorage.setItem('awakening_ach',JSON.stringify([...set])); }catch(e){}
   }
@@ -6585,7 +7051,7 @@ function startTimer(){
       return;
     }
     // Idle check — only in ch1. All other chapters have no idle death.
-    if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active&&!ch6Active){
+    if(!ch2Active&&!ch3Active&&!ch4Active&&!ch5Active&&!ch6Active&&!ch7Active){
       const idleSeconds=Math.floor((Date.now()-lastRoomChangeTime)/1000);
       const idleLeft=IDLE_LIMIT-idleSeconds;
       const warn=document.getElementById('hunterWarning');
@@ -6652,7 +7118,7 @@ function hunterDistanceTo(targetRoom){
 function moveHunter(){
   if(gameOver||state.escaped||gamePaused) return;
   // Cole only hunts in ch1 (no chapter flag) and ch5
-  if(ch2Active||ch3Active||ch4Active||ch6Active) return;
+  if(ch2Active||ch3Active||ch4Active||ch6Active||ch7Active) return;
   const path=bfsPath(hunterRoom,state.currentRoom);
   if(path&&path.length>1){
     hunterRoom=path[1];
@@ -6668,7 +7134,7 @@ function moveHunter(){
 function checkHunterProximity(){
   if(gameOver||state.escaped) return;
   // Cole only active in ch1 and ch5
-  if(ch2Active||ch3Active||ch4Active||ch6Active){
+  if(ch2Active||ch3Active||ch4Active||ch6Active||ch7Active){
     const warn=document.getElementById('hunterWarning');
     warn.textContent=''; warn.classList.remove('show');
     return;
@@ -6727,6 +7193,7 @@ let ch3Active=false;
 let ch4Active=false;
 let ch5Active=false;
 let ch6Active=false;
+let ch7Active=false;
 // ── Keypad state ──────────────────────────────────────────────────
 let _kpFrom=null, _kpTo=null, _kpCode='', _kpDir=null, _kpInput='';
 // ═══════════════════════════════════════════════════════════════
@@ -8098,6 +8565,203 @@ function startChapter6(){
     bl.style.display='none';
     loadChapter6();
   },38500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTER 7 — MARS: NEW EARTH
+// ═══════════════════════════════════════════════════════════════
+let ch7NewsWatched=false;
+let ch7MidNewsWatched=false;
+let ch7MidNewsShown=false;
+
+function loadChapter7(){
+  ch2Active=false; ch3Active=false; ch4Active=false; ch5Active=false; ch6Active=false; ch7Active=true;
+  gameOver=false; gamePaused=false; timerRunning=false; _critBeepPlayed=false;
+  ch7NewsWatched=false; ch7MidNewsWatched=false; ch7MidNewsShown=false;
+  state.currentRoom=86;
+  state.visitedRooms=new Set([86]);
+  state.inventory=[]; state.treasureChest=[];
+  state.selectedItem=null;
+  state.roomItemsFound={};
+  state.unlockedDoors=new Set();
+  state.brokenDoors=new Set();
+  state.ventOpened=false; state.escaped=false;
+  state.allRoomsVisited=false; state.totalTreasure=0;
+  timerSeconds=1500; timerRunning=false; gameStartTime=Date.now();
+  updateClock();
+  connMap=buildConnectionMap();
+  if(S){ S.fog=new THREE.FogExp2(0x180c04,0.07); S.background=new THREE.Color(0x180c04); }
+  render();
+  addLog(`${playerName} steps onto the Martian surface. 25 minutes to find water, survive, and return to Earth.`,'important');
+  addLog('Find water. Wait for the return window. Plant seeds. Survive.','important');
+  setTimeout(()=>{
+    showCh7NewsScreen();
+    startTimer();
+  },800);
+}
+
+function showCh7NewsScreen(){
+  gamePaused=true;
+  const el=document.getElementById('ch7NewsScreen');
+  el.style.display='flex';
+  const txt=document.getElementById('ch7NewsText');
+  txt.textContent='';
+  const lines=[
+    'MARS MISSION — EMERGENCY STATUS REPORT',
+    '',
+    'Dragon capsule has landed successfully on Mars surface.',
+    'All 10 survivors confirmed. Supplies for approximately 7-8 days.',
+    '',
+    'Earth status: surface conditions UNINHABITABLE.',
+    'Alien vessel: STATIONARY ORBIT. No hostile action.',
+    '',
+    'Subsurface water detected at bearing 304.',
+    'Return window: PENDING alien signal departure.',
+    '',
+    'Estimated wait: 5-7 days.',
+    'You are humanity\'s last confirmed survivors.',
+    '',
+    'Find water. Wait for the signal. Come home.',
+  ];
+  let i=0;
+  const t=setInterval(()=>{
+    if(i<lines.length){ txt.textContent+=lines[i]+'\n'; i++; } else clearInterval(t);
+  },130);
+}
+
+function closeCh7NewsScreen(){
+  ch7NewsWatched=true;
+  gamePaused=false;
+  document.getElementById('ch7NewsScreen').style.display='none';
+}
+
+function showCh7MidNews(){
+  gamePaused=true;
+  const el=document.getElementById('ch7MidNewsScreen');
+  el.style.display='flex';
+  const txt=document.getElementById('ch7MidNewsText');
+  txt.textContent='';
+  const lines=[
+    'DAY 6 — MARS COMMS ARRAY — INCOMING SIGNAL',
+    '',
+    '*** ALIEN VESSELS HAVE LEFT SOLAR SYSTEM ***',
+    '',
+    'All tracked vessels: DEPARTED. Earth orbit: CLEAR.',
+    'Atmosphere: stabilising. Surface: accessible.',
+    '',
+    'Human population estimate: 10 confirmed.',
+    'Unknown numbers in underground shelters.',
+    '',
+    'Return window: OPEN.',
+    'Fuel reserves: sufficient for return trajectory.',
+    '',
+    'Departure authorisation: TRANSMITTED.',
+    'This is your window. Go home.',
+  ];
+  let i=0;
+  const t=setInterval(()=>{
+    if(i<lines.length){ txt.textContent+=lines[i]+'\n'; i++; } else clearInterval(t);
+  },150);
+}
+
+function closeCh7MidNews(){
+  ch7MidNewsWatched=true;
+  gamePaused=false;
+  document.getElementById('ch7MidNewsScreen').style.display='none';
+  // Give the player the departure authorisation key
+  const dep={id:'ch7_departure',name:'Departure Authorisation',desc:'Alien signal dropped — Earth orbit clear. Return window open. The rocket is ready to take you home.'};
+  state.inventory.push(dep);
+  updateInventory();
+  addLog(`[COMMS] Departure authorisation received. The return airlock is now unlocked.`,'important');
+  addLog(`Select DEPARTURE AUTHORISATION in inventory, then open the East door to board the return capsule.`);
+}
+
+function ch7PlantSeeds(){
+  if(gameOver || state.escaped) return;
+  if(!state.inventory.find(i=>i.id==='ch7_seeds')){
+    addLog('You kneel down — but you have nothing to plant. Find seeds first.');
+    return;
+  }
+  state.escaped=true;
+  gameOver=true;
+  triggerCh7Escape();
+}
+
+function triggerCh7Escape(){
+  const elapsed=1500-timerSeconds;
+  const timeStr=fmtTime(elapsed);
+  const bl=document.getElementById('ch7Black');
+  const cap=document.getElementById('ch7Cap');
+  bl.style.display='flex';
+  cap.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('You kneel in the dark soil.',800,2500);
+  caption('The seeds go in one by one.',3800,2500);
+  caption('Mara watches. Then kneels beside you.',6800,2500);
+  caption('Then all of them.',9500,2500);
+  caption('Ten people. Ten pairs of hands.',12200,2500);
+  caption('Planting the beginning.',15000,3000);
+  caption('',18500,200);
+
+  setTimeout(()=>{ bl.style.display='none'; showCh7FinalCard(timeStr); }, 19000);
+}
+
+function showCh7FinalCard(timeStr){
+  unlockAchievement('ach_ch7');
+  const prevBest=parseInt(localStorage.getItem('ch7_best')||'99999',10);
+  const elapsed=parseInt(timeStr.split(':')[0])*60+parseInt(timeStr.split(':')[1]);
+  if(elapsed<prevBest) localStorage.setItem('ch7_best',String(elapsed));
+  const best=parseInt(localStorage.getItem('ch7_best'),10);
+  const bm=Math.floor(best/60),bs=best%60;
+  const bestStr=String(bm).padStart(2,'0')+':'+String(bs).padStart(2,'0');
+  const treasureCount=state.treasureChest.length;
+
+  document.getElementById('ovTitle').textContent='NEW EDEN';
+  document.getElementById('ovText').textContent=
+    `You planted the first seeds.\n\nMara says nothing for a long time.\nThen: "He'd have loved to see this."\nYou think she's right.\n\nSomewhere underground, the water the aliens left behind feeds the roots.\nYou don't know yet that it will work.\nBut you plant anyway.\n\nThat's how everything starts.\n\n────────────────────\nCHAPTER 7 COMPLETE\nYOUR TIME:  ${timeStr}\nBEST TIME:  ${bestStr}${elapsed<prevBest?' ★ NEW BEST!':''}\nTreasures:  ${treasureCount} / 3\n────────────────────`;
+  document.getElementById('overlay').style.display='flex';
+  const btn=document.getElementById('ovBtn');
+  btn.textContent='PLAY AGAIN FROM START';
+  btn.onclick=()=>location.reload();
+  const btn2=document.getElementById('ovBtn2');
+  btn2.style.display='none';
+}
+
+function startChapter7(){
+  const bl=document.getElementById('ch7Black');
+  const cap=document.getElementById('ch7Cap');
+  bl.style.display='flex';
+  cap.style.opacity='0'; cap.textContent='';
+
+  function caption(txt,delay,dur){
+    setTimeout(()=>{cap.textContent=txt;cap.style.opacity='1';},delay);
+    setTimeout(()=>{cap.style.opacity='0';},delay+dur);
+  }
+
+  caption('The rocket cleared the tower.',800,2500);
+  caption('The alien vessel watched.',3800,2500);
+  caption('Then turned and left.',7000,2500);
+  caption('Just like that.',10000,2500);
+  caption('Nobody knows why they came.',12800,3000);
+  caption('Nobody knows why they left.',16500,2500);
+  caption('The capsule reaches Mars in six months.',19500,3000);
+  caption('Earth is still visible from the porthole.',23000,3000);
+  caption('It looks different now.',26500,2500);
+  caption('Smaller.',29000,2000);
+  caption('You land in the red dust.',31500,2500);
+  caption('Ten people. One week of food.',34500,3000);
+  caption('Somewhere below the surface: water.',38000,3000);
+  caption('',42000,200);
+
+  setTimeout(()=>{
+    bl.style.display='none';
+    loadChapter7();
+  },42500);
 }
 
 function triggerEscape(){
