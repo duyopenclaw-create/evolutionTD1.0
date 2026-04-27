@@ -450,6 +450,7 @@ window.addEventListener('keyup',e=>{keys[e.code]=false;});
 //  CAMERA / SCREEN SHAKE
 // ═══════════════════════════════════════════════
 let camYaw=0,camPitch=.22;
+let rocketYaw=0,rocketPitch=0;
 const CAM_DIST=50,CAM_H=14,CAM_SPEED=4.5;
 let shakeAmt=0;
 
@@ -1298,60 +1299,60 @@ function update(time){
     }
   }
 
-  // ── ROCKET MOVEMENT (arrow keys + physics)
+  // ── ROCKET MOVEMENT — free steering
   if(gs.inRocket){
-    // Build look-right vector from camera yaw
-    const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
-    const up=new THREE.Vector3(0,1,0);
-    if(keys['ArrowLeft']) rocketVel.addScaledVector(right,-MOVE_ACCEL*dt);
-    if(keys['ArrowRight'])rocketVel.addScaledVector(right, MOVE_ACCEL*dt);
-    if(keys['ArrowUp'])   rocketVel.addScaledVector(up,    MOVE_ACCEL*dt);
-    if(keys['ArrowDown']) rocketVel.addScaledVector(up,   -MOVE_ACCEL*dt);
-    // Lateral drag (not forward)
-    rocketVel.x*=1-MOVE_DRAG*dt;
-    rocketVel.y*=1-MOVE_DRAG*dt;
+    const STEER=2.2;
+    if(keys['ArrowLeft']) { rocketYaw+=STEER*dt; camYaw+=STEER*dt; }
+    if(keys['ArrowRight']){ rocketYaw-=STEER*dt; camYaw-=STEER*dt; }
+    if(keys['ArrowUp'])   rocketPitch=Math.min( Math.PI/2.1,rocketPitch+STEER*dt);
+    if(keys['ArrowDown']) rocketPitch=Math.max(-Math.PI/2.1,rocketPitch-STEER*dt);
+
+    // Forward direction from heading
+    const fwdX=-Math.sin(rocketYaw)*Math.cos(rocketPitch);
+    const fwdY= Math.sin(rocketPitch);
+    const fwdZ=-Math.cos(rocketYaw)*Math.cos(rocketPitch);
+
     const spd=gs.boosting?ROCKET_SPEED*5:ROCKET_SPEED;
-    rocketVel.z=-spd;
+    rocketVel.set(fwdX*spd,fwdY*spd,fwdZ*spd);
     rocket.position.addScaledVector(rocketVel,dt);
     gs.travelDist+=spd*dt;
-    // Boost visuals: scale engine glow + warp line opacity
-    if(engineGlow){
-      const s=gs.boosting?2.8:1;
-      engineGlow.scale.set(s,s,s);
-      engineGlow.material.opacity=gs.boosting?.55:.22;
-    }
+
+    // Align rocket mesh to heading + visual bank
+    rocket.rotation.order='YXZ';
+    rocket.rotation.y=rocketYaw;
+    rocket.rotation.x=-Math.PI/2+rocketPitch;
+    const bank=keys['ArrowLeft']?.45:keys['ArrowRight']?-.45:0;
+    rocket.rotation.z+=(bank-rocket.rotation.z)*10*dt;
+
+    // Boost visuals
+    if(engineGlow){const s=gs.boosting?2.8:1;engineGlow.scale.set(s,s,s);engineGlow.material.opacity=gs.boosting?.55:.22;}
     if(engineLight)engineLight.intensity=gs.boosting?18:5;
 
-    // 3D nav arrow — floats ahead, points at destination
+    // 3D nav arrow — floats 120u ahead in heading direction
     if(navArrow3D&&planetMeshes[gs.planetIdx]){
-      const ahead=new THREE.Vector3(rocket.position.x,rocket.position.y,rocket.position.z-120);
+      const ahead=new THREE.Vector3(rocket.position.x+fwdX*120,rocket.position.y+fwdY*120,rocket.position.z+fwdZ*120);
       navArrow3D.position.copy(ahead);
       const dir=planetMeshes[gs.planetIdx].position.clone().sub(ahead).normalize();
       navArrow3D.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
       navArrow3D.visible=true;
     }
 
-    // Warp streaks — recycle lines that have passed behind the rocket
+    // Warp streaks — recycle by dot product with heading (behind = positive dot)
     if(warpLines){
       warpLines.visible=true;
       const pa=warpLines.geometry.attributes.position;
-      const rz=rocket.position.z;
+      const rx=rocket.position.x,ry=rocket.position.y,rz=rocket.position.z;
       for(let i=0;i<600;i++){
-        if(pa.getZ(i*2)>rz+80){
-          const a=Math.random()*Math.PI*2,r=40+Math.random()*700;
-          const nz=rz-(200+Math.random()*2800),len=40+Math.random()*160;
-          pa.setXYZ(i*2,  Math.cos(a)*r,Math.sin(a)*r+rocket.position.y,nz);
-          pa.setXYZ(i*2+1,Math.cos(a)*r,Math.sin(a)*r+rocket.position.y,nz-len);
+        const lx=pa.getX(i*2)-rx,ly=pa.getY(i*2)-ry,lz=pa.getZ(i*2)-rz;
+        if(lx*fwdX+ly*fwdY+lz*fwdZ>100){
+          const a=Math.random()*Math.PI*2,r=40+Math.random()*700,dist=300+Math.random()*2500,len=40+Math.random()*160;
+          const ox=Math.cos(a)*r,oy=Math.sin(a)*r;
+          pa.setXYZ(i*2,  rx+fwdX*dist+ox,ry+fwdY*dist+oy,rz+fwdZ*dist);
+          pa.setXYZ(i*2+1,rx+fwdX*(dist-len)+ox,ry+fwdY*(dist-len)+oy,rz+fwdZ*(dist-len));
         }
       }
       pa.needsUpdate=true;
     }
-
-    // Rocket visual roll
-    const targetRoll=keys['ArrowLeft']?.45:keys['ArrowRight']?-.45:0;
-    const targetPitch=-Math.PI/2+(keys['ArrowUp']?-.2:keys['ArrowDown']?.2:0);
-    rocket.rotation.z+=(targetRoll-rocket.rotation.z)*10*dt;
-    rocket.rotation.x+=(targetPitch-rocket.rotation.x)*10*dt;
 
   } else if(gs.onSurface&&surfaceMesh){
     if(warpLines)warpLines.visible=false;
@@ -1672,7 +1673,7 @@ function restartGame(){
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
   playerMesh.visible=false;clearHazards();removePlanetSurface();
-  camYaw=0;camPitch=.22;shakeAmt=0;lastAsteroidSpawn=0;lastCometSpawn=0;
+  camYaw=0;camPitch=.22;rocketYaw=0;rocketPitch=0;shakeAmt=0;lastAsteroidSpawn=0;lastCometSpawn=0;
   document.getElementById('gameOverScreen').style.display='none';
   document.getElementById('hud').style.display='block';
   gs.screen='playing';prevTime=performance.now();lastSave=prevTime;
