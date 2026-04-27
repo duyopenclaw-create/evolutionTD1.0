@@ -8,12 +8,30 @@
 body{background:#000;overflow:hidden;font-family:'Courier New',monospace;user-select:none}
 canvas{display:block;position:fixed;top:0;left:0}
 
+/* ── VIGNETTE (damage flash) ── */
+#vignette{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:6;opacity:0;
+  transition:opacity .08s;
+  background:radial-gradient(ellipse at center,transparent 35%,rgba(220,0,0,.75) 100%);
+}
+#vignette.blue{background:radial-gradient(ellipse at center,transparent 35%,rgba(0,50,255,.65) 100%)}
+#vignette.breathe{background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,180,.5) 100%)}
+
+/* ── DAMAGE NUMBERS ── */
+.dmg-num{
+  position:fixed;pointer-events:none;z-index:300;
+  font-size:24px;font-weight:bold;font-family:'Courier New',monospace;
+  transform:translate(-50%,-50%);
+  transition:transform 1.1s ease-out,opacity 1.1s ease-out;
+  text-shadow:0 2px 8px #000;
+}
+
 /* ── MAIN MENU ── */
 #mainMenu{
   position:fixed;top:0;left:0;width:100%;height:100%;
   background:rgba(0,0,0,.9);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  z-index:200
+  display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200
 }
 #mainMenu h1{
   font-size:clamp(2.5em,6vw,5em);color:#00c8ff;
@@ -36,16 +54,12 @@ canvas{display:block;position:fixed;top:0;left:0}
 #storyPanel{
   position:fixed;top:0;left:0;width:100%;height:100%;
   background:rgba(0,0,10,.95);
-  display:none;flex-direction:column;align-items:center;justify-content:center;
-  z-index:190;padding:40px
+  display:none;flex-direction:column;align-items:center;justify-content:center;z-index:190;padding:40px
 }
-#storyPanel .story-box{
-  max-width:700px;border:1px solid #00aaff33;
-  background:rgba(0,10,30,.8);padding:40px;
-}
-#storyPanel h2{color:#00c8ff;font-size:1.6em;margin-bottom:20px;letter-spacing:3px}
-#storyPanel p{color:#ccc;line-height:2;font-size:.95em;margin-bottom:14px}
-#storyPanel .red{color:#ff4444}
+.story-box{max-width:700px;border:1px solid #00aaff33;background:rgba(0,10,30,.8);padding:40px}
+.story-box h2{color:#00c8ff;font-size:1.6em;margin-bottom:20px;letter-spacing:3px}
+.story-box p{color:#ccc;line-height:2;font-size:.95em;margin-bottom:14px}
+.red{color:#ff4444}
 
 /* ── HUD ── */
 #hud{
@@ -57,17 +71,14 @@ canvas{display:block;position:fixed;top:0;left:0}
 #sb-rocket{top:100px}
 #sb-breath{top:180px}
 .stat-label{color:#667;font-size:11px;margin-bottom:3px;letter-spacing:1px}
-.bar-wrap{width:220px;height:14px;background:#00000088;border:1px solid #222;border-radius:2px;overflow:hidden}
-.bar{height:100%;transition:width .3s;border-radius:1px}
-#bar-player{background:linear-gradient(90deg,#880000,#ff2222)}
-#bar-rocket{background:linear-gradient(90deg,#003388,#0077ff)}
-#bar-breath{background:linear-gradient(90deg,#006622,#00ee55)}
-.stat-val{color:#aaa;font-size:11px;margin-top:2px}
+.bar-wrap{width:230px;height:15px;background:#00000099;border:1px solid #1a1a2e;border-radius:3px;overflow:hidden;box-shadow:inset 0 1px 3px #000}
+.bar{height:100%;transition:width .25s;border-radius:2px}
+#bar-player{background:linear-gradient(90deg,#880000,#ff3333)}
+#bar-rocket{background:linear-gradient(90deg,#003388,#0088ff)}
+#bar-breath{background:linear-gradient(90deg,#006622,#00ff66)}
+.stat-val{color:#889;font-size:11px;margin-top:2px}
 
-#hud-center{
-  position:absolute;top:18px;left:50%;transform:translateX(-50%);
-  text-align:center;min-width:260px
-}
+#hud-center{position:absolute;top:18px;left:50%;transform:translateX(-50%);text-align:center;min-width:280px}
 #dest-label{color:#00c8ff;font-size:1.1em;letter-spacing:2px}
 #dist-label{color:#556;font-size:.85em;margin-top:4px}
 #food-label{color:#ffaa00;font-size:.85em;margin-top:3px}
@@ -76,48 +87,43 @@ canvas{display:block;position:fixed;top:0;left:0}
 #hud-tr{position:absolute;top:18px;right:20px;text-align:right}
 #eva-indicator{color:#ff6600;font-size:.9em;display:none;animation:blink 1s infinite}
 #breath-warn{color:#ff2222;font-size:.85em;display:none;animation:blink .5s infinite}
+#surface-indicator{color:#cc8844;font-size:.9em;display:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-#crosshair{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:20px;height:20px;pointer-events:none
+#repair-hint{
+  position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+  color:#66aaff;font-size:11px;display:none;text-align:center;letter-spacing:1px
 }
-#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,.35)}
+
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,.3)}
 #crosshair::before{width:1px;height:100%;left:50%;transform:translateX(-50%)}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
 
-#save-indicator{
-  position:absolute;bottom:20px;left:20px;
-  color:#00ff77;font-size:11px;opacity:0;transition:opacity .5s
-}
-
-#controls-hint{
-  position:absolute;bottom:20px;right:20px;
-  color:#333;font-size:11px;line-height:1.7;text-align:right
-}
+#save-indicator{position:absolute;bottom:20px;left:20px;color:#00ff77;font-size:11px;opacity:0;transition:opacity .5s}
+#controls-hint{position:absolute;bottom:20px;right:20px;color:#2a3040;font-size:11px;line-height:1.7;text-align:right}
 
 /* ── NOTIFICATIONS ── */
 #notification{
   position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  background:rgba(0,5,20,.92);border:1px solid #00aaff;
+  background:rgba(0,5,20,.92);border:1px solid #00aaff44;
   color:white;padding:22px 44px;font-size:1.1em;
   z-index:150;display:none;text-align:center;
-  pointer-events:none;letter-spacing:1px;line-height:1.7
+  pointer-events:none;letter-spacing:1px;line-height:1.7;
+  box-shadow:0 0 40px #00aaff22
 }
 
 /* ── GAME OVER ── */
 #gameOverScreen{
   position:fixed;top:0;left:0;width:100%;height:100%;
   background:rgba(0,0,0,.92);
-  display:none;flex-direction:column;align-items:center;justify-content:center;
-  z-index:200;color:white
+  display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;color:white
 }
 #gameOverScreen h1{font-size:4em;color:#cc0000;text-shadow:0 0 30px #cc0000;margin-bottom:20px}
 #gameOverScreen p{color:#888;margin-bottom:30px;font-size:1.1em}
 
-/* ── PLANET ARRIVAL ── */
+/* ── PLANET PANEL ── */
 #planetPanel{
   position:fixed;top:0;left:0;width:100%;height:100%;
   background:rgba(0,0,0,.88);
@@ -125,11 +131,14 @@ canvas{display:block;position:fixed;top:0;left:0}
   z-index:180;color:white;text-align:center
 }
 #planetPanel h2{font-size:2.5em;color:#00c8ff;text-shadow:0 0 20px #00c8ff;margin-bottom:15px}
-#planetPanel p{color:#aaa;max-width:500px;line-height:1.9;margin-bottom:25px;font-size:.95em}
+#planetPanel p{color:#aaa;max-width:520px;line-height:1.9;margin-bottom:25px;font-size:.95em}
 #planetPanel .food-reward{color:#ffaa00;font-size:1.3em;margin-bottom:25px}
 </style>
 </head>
 <body>
+
+<!-- VIGNETTE OVERLAY -->
+<div id="vignette"></div>
 
 <!-- MAIN MENU -->
 <div id="mainMenu">
@@ -141,15 +150,15 @@ canvas{display:block;position:fixed;top:0;left:0}
   <div id="menu-save-info" style="color:#334;font-size:.8em;margin-top:30px"></div>
 </div>
 
-<!-- STORY PANEL -->
+<!-- STORY -->
 <div id="storyPanel" style="display:none;flex-direction:column;align-items:center;justify-content:center">
   <div class="story-box">
     <h2>// MISSION BRIEFING</h2>
-    <p><span class="red">EARTH YEAR 2087.</span> Without warning, an alien armada emerged from deep space. Their weapon — a gravity implosion device — compressed Earth's core until the planet detonated. The explosion was visible from Mars.</p>
-    <p>You are <strong style="color:#fff">Commander Alex Chen</strong>, one of 47 survivors who made it aboard the <strong style="color:#00c8ff">SpaceX Ark I</strong> — a deep-space exploration vessel retrofitted for survival. Your oxygen tanks hold 250% of normal capacity. Your hull can absorb 1000 units of damage.</p>
-    <p>The route is treacherous: asteroid fields trail the debris of the inner solar system. <span class="red">Asteroids strike your rear exhaust at 80 hull damage.</span> Worse, alien-launched <span class="red">comets now pierce the void ahead at 120 hull damage.</span></p>
-    <p>Collect food from alien worlds. Keep your crew alive. Find a new home.</p>
-    <p style="color:#00c8ff;letter-spacing:2px">DESTINATION: MARS — 225 MILLION KM</p>
+    <p><span class="red">EARTH YEAR 2087.</span> Without warning, an alien armada emerged from deep space. Their gravity implosion device compressed Earth's core until the planet detonated. The explosion was visible from Mars.</p>
+    <p>You are <strong style="color:#fff">Commander Alex Chen</strong>, one of 47 survivors aboard the <strong style="color:#00c8ff">SpaceX Ark I</strong>. Your suit holds 250% oxygen capacity. The hull absorbs 1000 damage before failure.</p>
+    <p><span class="red">Asteroids rise from the debris belt behind you — 80 hull damage each. Alien-launched comets pierce the void ahead — 120 damage.</span> Use food to repair the hull: 5 food = +500 HP.</p>
+    <p>Land on planets, walk the surface, collect supplies. Find humanity a new home.</p>
+    <p style="color:#00c8ff;letter-spacing:2px">FIRST DESTINATION: MARS</p>
     <button class="mbtn" style="margin-top:20px;width:100%" onclick="beginPlay()">LAUNCH ▶</button>
   </div>
 </div>
@@ -157,7 +166,7 @@ canvas{display:block;position:fixed;top:0;left:0}
 <!-- HUD -->
 <div id="hud">
   <div class="stat-block" id="sb-player">
-    <div class="stat-label">CREW HP</div>
+    <div class="stat-label">COMMANDER HP</div>
     <div class="bar-wrap"><div class="bar" id="bar-player" style="width:100%"></div></div>
     <div class="stat-val" id="val-player">100 / 100</div>
   </div>
@@ -174,39 +183,40 @@ canvas{display:block;position:fixed;top:0;left:0}
 
   <div id="hud-center">
     <div id="dest-label">DESTINATION: MARS</div>
-    <div id="dist-label">DISTANCE: 0 km</div>
+    <div id="dist-label">DISTANCE: —</div>
     <div id="food-label">FOOD: 0 UNITS</div>
     <div id="chapter-label">CHAPTER 1 — ESCAPE FROM EARTH</div>
   </div>
 
   <div id="hud-tr">
-    <div id="eva-indicator">⚠ EVA MODE ACTIVE</div>
+    <div id="eva-indicator">⚠ EVA MODE</div>
+    <div id="surface-indicator">▲ ON SURFACE — E to board</div>
     <div id="breath-warn">⚠ SUFFOCATING</div>
-    <div style="color:#334;font-size:11px;margin-top:8px">SPEED: <span id="speed-label">50</span> u/s</div>
-    <div style="color:#334;font-size:11px;margin-top:3px">HAZARDS: <span id="hazard-label">0</span></div>
-    <div style="margin-top:10px">
+    <div style="color:#2a3040;font-size:11px;margin-top:8px">HAZARDS: <span id="hazard-label">0</span></div>
+    <div style="margin-top:10px;pointer-events:all">
       <button id="mute-btn" onclick="toggleMute()"
-        style="background:none;border:1px solid #334;color:#556;font-size:14px;cursor:pointer;padding:3px 8px;font-family:'Courier New',monospace">
+        style="background:none;border:1px solid #1a2030;color:#334;font-size:13px;cursor:pointer;padding:3px 8px;font-family:'Courier New',monospace">
         🔊 AUDIO
       </button>
     </div>
   </div>
 
+  <div id="repair-hint">[ R ] REPAIR HULL — 5 FOOD = +500 HP</div>
   <div id="crosshair"></div>
-  <div id="save-indicator">✓ GAME SAVED</div>
-
+  <div id="save-indicator">✓ SAVED</div>
   <div id="controls-hint">
-    ARROW KEYS — Move Rocket<br>
-    WASD — Look Around<br>
-    E — Exit / Enter Rocket<br>
-    ESC — Menu
+    ARROWS — Dodge / Move<br>
+    WASD — Look around<br>
+    E — Exit / Enter rocket<br>
+    R — Repair hull (5 food)<br>
+    ESC — Pause
   </div>
 </div>
 
 <!-- NOTIFICATION -->
 <div id="notification"></div>
 
-<!-- PLANET ARRIVAL PANEL -->
+<!-- PLANET ARRIVAL -->
 <div id="planetPanel">
   <h2 id="planet-name">MARS</h2>
   <p id="planet-story"></p>
@@ -223,1383 +233,1258 @@ canvas{display:block;position:fixed;top:0;left:0}
 </div>
 
 <canvas id="gameCanvas"></canvas>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  CONSTANTS
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 const PLAYER_MAX_HP    = 100;
 const PLAYER_MAX_BREATH= 250;
 const ROCKET_MAX_HP    = 1000;
 const ASTEROID_DMG     = 80;
 const COMET_DMG        = 120;
-const BREATH_DRAIN_MS  = 3000;   // 1% every 3 sec outside rocket
+const BREATH_DRAIN_MS  = 3000;
 const SUFF_DMG         = 5;
 const SUFF_INTERVAL_MS = 500;
-const BREATH_REFILL_MS = 120000; // 2 minutes
+const BREATH_REFILL_MS = 120000;
 const SAVE_INTERVAL_MS = 10000;
-const ROCKET_SPEED     = 60;     // forward units/sec (auto travel)
-const MOVE_SPEED       = 40;     // lateral dodge speed
-const EVA_MOVE_SPEED   = 15;
-const SAVE_KEY         = 'SpaceXJourney_v1';
+const ROCKET_SPEED     = 55;
+const MOVE_ACCEL       = 180;
+const MOVE_DRAG        = 6;
+const EVA_SPEED        = 12;
+const SURFACE_GRAVITY  = 18;
+const ROCKET_RADIUS    = 14;
+const PLAYER_RADIUS    = 2;
+const SAVE_KEY         = 'SpaceXJourney_v2';
 
-// ─────────────────────────────────────────────
-//  AUDIO SYSTEM  (Web Audio API — no files needed)
-// ─────────────────────────────────────────────
-let audioCtx        = null;
-let masterGain      = null;
-let musicGain       = null;
-let sfxGain         = null;
-let engineOsc       = null;
-let engineGainNode  = null;
-let engineLFO       = null;
-const musicNodes    = [];
-let audioMuted      = false;
+// ═══════════════════════════════════════════════
+//  AUDIO (Web Audio API — no files)
+// ═══════════════════════════════════════════════
+let audioCtx=null,masterGain=null,musicGain=null,sfxGain=null;
+let engineOsc=null,engineGainNode=null,engineLFO=null;
+const musicNodes=[];
+let audioMuted=false;
 
-function initAudio() {
-  if (audioCtx) { audioCtx.resume(); return; }
-  audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
-  masterGain = audioCtx.createGain(); masterGain.gain.value = 0.7;
-  musicGain  = audioCtx.createGain(); musicGain.gain.value  = 0.32;
-  sfxGain    = audioCtx.createGain(); sfxGain.gain.value    = 0.85;
+function initAudio(){
+  if(audioCtx){audioCtx.resume();return;}
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();masterGain.gain.value=0.7;
+  musicGain=audioCtx.createGain();musicGain.gain.value=0.32;
+  sfxGain=audioCtx.createGain();sfxGain.gain.value=0.85;
   masterGain.connect(audioCtx.destination);
-  musicGain.connect(masterGain);
-  sfxGain.connect(masterGain);
+  musicGain.connect(masterGain);sfxGain.connect(masterGain);
 }
-
-function toggleMute() {
-  audioMuted = !audioMuted;
-  if (masterGain) masterGain.gain.value = audioMuted ? 0 : 0.7;
-  document.getElementById('mute-btn').textContent = audioMuted ? '🔇 MUTED' : '🔊 AUDIO';
+function toggleMute(){
+  audioMuted=!audioMuted;
+  if(masterGain)masterGain.gain.value=audioMuted?0:0.7;
+  document.getElementById('mute-btn').textContent=audioMuted?'🔇 MUTED':'🔊 AUDIO';
 }
-
-// ── helpers ──────────────────────────────────
-function _noiseBuffer(dur) {
-  const sr  = audioCtx.sampleRate;
-  const buf = audioCtx.createBuffer(1, sr * dur, sr);
-  const d   = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  return buf;
+function _nb(d){
+  const sr=audioCtx.sampleRate,b=audioCtx.createBuffer(1,sr*d,sr),dd=b.getChannelData(0);
+  for(let i=0;i<dd.length;i++)dd[i]=Math.random()*2-1;return b;
 }
-
-function _tone(freq, dur, type='sine', vol=0.3, delay=0, target=null) {
-  if (!audioCtx) return;
-  const t   = audioCtx.currentTime + delay;
-  const osc = audioCtx.createOscillator();
-  const g   = audioCtx.createGain();
-  osc.type = type; osc.frequency.value = freq;
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.connect(g); g.connect(target || sfxGain);
-  osc.start(t); osc.stop(t + dur + 0.02);
+function _tone(f,d,t='sine',v=0.3,dl=0,out=null){
+  if(!audioCtx)return;
+  const ts=audioCtx.currentTime+dl,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,ts);g.gain.exponentialRampToValueAtTime(0.0001,ts+d);
+  o.connect(g);g.connect(out||sfxGain);o.start(ts);o.stop(ts+d+0.02);
 }
-
-function _noise(dur, vol=0.3, fLo=100, fHi=1000, delay=0) {
-  if (!audioCtx) return;
-  const t   = audioCtx.currentTime + delay;
-  const src = audioCtx.createBufferSource();
-  src.buffer = _noiseBuffer(dur + 0.05);
-  const flt = audioCtx.createBiquadFilter();
-  flt.type = 'bandpass'; flt.frequency.value = (fLo+fHi)/2; flt.Q.value = 0.7;
-  const g   = audioCtx.createGain();
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  src.connect(flt); flt.connect(g); g.connect(sfxGain);
-  src.start(t); src.stop(t + dur + 0.05);
+function _noise(d,v=0.3,lo=100,hi=1000,dl=0){
+  if(!audioCtx)return;
+  const ts=audioCtx.currentTime+dl,s=audioCtx.createBufferSource();
+  s.buffer=_nb(d+0.05);
+  const f=audioCtx.createBiquadFilter();f.type='bandpass';f.frequency.value=(lo+hi)/2;f.Q.value=0.7;
+  const g=audioCtx.createGain();g.gain.setValueAtTime(v,ts);g.gain.exponentialRampToValueAtTime(0.0001,ts+d);
+  s.connect(f);f.connect(g);g.connect(sfxGain);s.start(ts);s.stop(ts+d+0.05);
 }
+function sfxAsteroidHit(){if(!audioCtx)return;_noise(.55,.6,40,400);_tone(55,.5,'sine',.4);_tone(40,.7,'sine',.2,.06);_noise(.2,.25,400,2000,.05);}
+function sfxCometHit(){if(!audioCtx)return;_noise(.35,.7,1000,6000);_noise(.4,.4,60,500,.1);_tone(200,.3,'sawtooth',.25);_tone(140,.5,'sine',.2,.12);}
+function sfxFoodCollect(){if(!audioCtx)return;[523,659,784,1047].forEach((f,i)=>_tone(f,.18,'sine',.18,i*.075));}
+function sfxPlanetArrive(){if(!audioCtx)return;[261,329,392,523,659,784].forEach((f,i)=>{_tone(f,1.8,'sine',.12,i*.06);_tone(f*2,.9,'sine',.05,i*.06+.25);_tone(f*.5,2,'triangle',.07,i*.06);});}
+function sfxOxygenBeep(){if(!audioCtx)return;_tone(880,.08,'square',.14);_tone(880,.08,'square',.14,.18);}
+function sfxEVAStart(){if(!audioCtx)return;_noise(.9,.45,150,2500);_tone(330,.3,'sine',.08,.1);}
+function sfxEVAEnd(){if(!audioCtx)return;_noise(.6,.3,80,700);_tone(220,.4,'sine',.12);_tone(330,.3,'sine',.08,.22);}
+function sfxGameOver(){if(!audioCtx)return;[440,415,392,370,349,330,311,294,277].forEach((f,i)=>_tone(f,.7,'sawtooth',.18,i*.16));}
+function sfxClick(){if(!audioCtx)return;_tone(1100,.06,'sine',.12);_tone(880,.06,'sine',.08,.04);}
+function sfxRepair(){if(!audioCtx)return;[440,550,660,880].forEach((f,i)=>_tone(f,.2,'sine',.2,i*.05));_noise(.3,.2,200,2000,.1);}
+function sfxLand(){if(!audioCtx)return;_noise(.8,.5,40,300);_tone(80,.6,'sine',.3);_tone(60,.8,'sine',.2,.1);}
 
-// ── SFX ──────────────────────────────────────
-
-function sfxAsteroidHit() {
-  if (!audioCtx) return;
-  _noise(0.55, 0.6, 40,  400);        // low rumble
-  _tone(55,  0.5, 'sine',     0.4);
-  _tone(40,  0.7, 'sine',     0.2, 0.06);
-  _noise(0.2, 0.25, 400, 2000, 0.05); // crack
+function startEngineHum(){
+  if(!audioCtx||engineOsc)return;
+  engineOsc=audioCtx.createOscillator();engineGainNode=audioCtx.createGain();
+  engineLFO=audioCtx.createOscillator();
+  const lg=audioCtx.createGain(),fl=audioCtx.createBiquadFilter();
+  engineLFO.frequency.value=9;lg.gain.value=8;
+  engineLFO.connect(lg);lg.connect(engineOsc.frequency);engineLFO.start();
+  fl.type='lowpass';fl.frequency.value=220;
+  engineOsc.type='sawtooth';engineOsc.frequency.value=62;
+  engineGainNode.gain.setValueAtTime(0,audioCtx.currentTime);
+  engineGainNode.gain.linearRampToValueAtTime(0.09,audioCtx.currentTime+1.5);
+  engineOsc.connect(fl);fl.connect(engineGainNode);engineGainNode.connect(masterGain);engineOsc.start();
 }
-
-function sfxCometHit() {
-  if (!audioCtx) return;
-  _noise(0.35, 0.7, 1000, 6000);      // high whoosh
-  _noise(0.4,  0.4, 60,   500, 0.1);  // boom underneath
-  _tone(200, 0.3, 'sawtooth', 0.25);
-  _tone(140, 0.5, 'sine',     0.2, 0.12);
+function stopEngineHum(){
+  if(!engineOsc)return;
+  engineGainNode.gain.linearRampToValueAtTime(0.0001,audioCtx.currentTime+.8);
+  setTimeout(()=>{try{engineOsc.stop();engineLFO.stop();}catch(e){}engineOsc=null;engineLFO=null;},900);
 }
-
-function sfxFoodCollect() {
-  if (!audioCtx) return;
-  [523, 659, 784, 1047].forEach((f, i) => _tone(f, 0.18, 'sine', 0.18, i * 0.075));
-}
-
-function sfxPlanetArrive() {
-  if (!audioCtx) return;
-  // Triumphant rising chord
-  [261, 329, 392, 523, 659, 784].forEach((f, i) => {
-    _tone(f,      1.8, 'sine',     0.12, i * 0.06);
-    _tone(f * 2,  0.9, 'sine',     0.05, i * 0.06 + 0.25);
-    _tone(f * 0.5,2.0, 'triangle', 0.07, i * 0.06);
+function startSpaceMusic(){
+  if(!audioCtx)return;stopSpaceMusic();
+  [{f:55,t:'sine',v:.10},{f:55.4,t:'sine',v:.08},{f:82.4,t:'sine',v:.06},
+   {f:110,t:'sine',v:.04},{f:27.5,t:'triangle',v:.07},{f:164.8,t:'sine',v:.03}]
+  .forEach(dd=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain(),l=audioCtx.createOscillator(),lg=audioCtx.createGain();
+    l.frequency.value=.04+Math.random()*.12;lg.gain.value=dd.f*.008;l.connect(lg);lg.connect(o.frequency);l.start();
+    o.type=dd.t;o.frequency.value=dd.f;
+    g.gain.setValueAtTime(0,audioCtx.currentTime);g.gain.linearRampToValueAtTime(dd.v,audioCtx.currentTime+4);
+    o.connect(g);g.connect(musicGain);o.start();musicNodes.push(o,g,l,lg);
   });
-}
-
-function sfxOxygenBeep() {
-  if (!audioCtx) return;
-  _tone(880, 0.08, 'square', 0.14);
-  _tone(880, 0.08, 'square', 0.14, 0.18);
-}
-
-function sfxEVAStart() {
-  if (!audioCtx) return;
-  _noise(0.9, 0.45, 150, 2500);       // pressure release
-  _tone(330, 0.3, 'sine', 0.08, 0.1);
-}
-
-function sfxEVAEnd() {
-  if (!audioCtx) return;
-  _noise(0.6, 0.3, 80, 700);          // airlock seal
-  _tone(220, 0.4, 'sine',  0.12);
-  _tone(330, 0.3, 'sine',  0.08, 0.22);
-}
-
-function sfxGameOver() {
-  if (!audioCtx) return;
-  [440,415,392,370,349,330,311,294,277].forEach((f,i) =>
-    _tone(f, 0.7, 'sawtooth', 0.18, i * 0.16)
-  );
-}
-
-function sfxClick() {
-  if (!audioCtx) return;
-  _tone(1100, 0.06, 'sine', 0.12);
-  _tone(880,  0.06, 'sine', 0.08, 0.04);
-}
-
-// ── ENGINE HUM ────────────────────────────────
-function startEngineHum() {
-  if (!audioCtx || engineOsc) return;
-  engineOsc      = audioCtx.createOscillator();
-  engineGainNode = audioCtx.createGain();
-  engineLFO      = audioCtx.createOscillator();
-  const lfoGain  = audioCtx.createGain();
-  const filter   = audioCtx.createBiquadFilter();
-
-  engineLFO.frequency.value = 9;
-  lfoGain.gain.value        = 8;
-  engineLFO.connect(lfoGain);
-  lfoGain.connect(engineOsc.frequency);
-  engineLFO.start();
-
-  filter.type = 'lowpass'; filter.frequency.value = 220;
-
-  engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 62;
-  engineGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-  engineGainNode.gain.linearRampToValueAtTime(0.09, audioCtx.currentTime + 1.5);
-
-  engineOsc.connect(filter); filter.connect(engineGainNode);
-  engineGainNode.connect(masterGain);
-  engineOsc.start();
-}
-
-function stopEngineHum() {
-  if (!engineOsc) return;
-  engineGainNode.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
-  setTimeout(() => {
-    try { engineOsc.stop(); engineLFO.stop(); } catch(e){}
-    engineOsc = null; engineLFO = null;
-  }, 900);
-}
-
-// ── AMBIENT SPACE MUSIC ───────────────────────
-function startSpaceMusic() {
-  if (!audioCtx) return;
-  stopSpaceMusic();
-
-  // Deep layered drone
-  const droneDefs = [
-    { f:55.0,  t:'sine',     v:0.10 },
-    { f:55.4,  t:'sine',     v:0.08 },
-    { f:82.4,  t:'sine',     v:0.06 },
-    { f:110.0, t:'sine',     v:0.04 },
-    { f:27.5,  t:'triangle', v:0.07 },
-    { f:164.8, t:'sine',     v:0.03 },
-  ];
-  droneDefs.forEach(dd => {
-    const osc = audioCtx.createOscillator();
-    const g   = audioCtx.createGain();
-    const lfo = audioCtx.createOscillator();
-    const lg  = audioCtx.createGain();
-
-    lfo.frequency.value = 0.04 + Math.random() * 0.12;
-    lg.gain.value = dd.f * 0.008;
-    lfo.connect(lg); lg.connect(osc.frequency); lfo.start();
-
-    osc.type = dd.t; osc.frequency.value = dd.f;
-    g.gain.setValueAtTime(0, audioCtx.currentTime);
-    g.gain.linearRampToValueAtTime(dd.v, audioCtx.currentTime + 4);
-
-    osc.connect(g); g.connect(musicGain); osc.start();
-    musicNodes.push(osc, g, lfo, lg);
-  });
-
-  // Slow evolving melody pad
-  const scale = [110, 123.5, 138.6, 164.8, 185, 220, 246.9, 277.2, 329.6, 370];
-  let padActive = true;
-  function padNote() {
-    if (!audioCtx || !padActive || musicNodes.length === 0) return;
-    const freq = scale[Math.floor(Math.random() * scale.length)];
-    const osc  = audioCtx.createOscillator();
-    const g    = audioCtx.createGain();
-    osc.type = 'sine'; osc.frequency.value = freq;
-    const now = audioCtx.currentTime;
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.038, now + 1.0);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 5.5);
-    osc.connect(g); g.connect(musicGain);
-    osc.start(now); osc.stop(now + 6);
-    musicNodes.push(osc, g);
-    setTimeout(padNote, 2500 + Math.random() * 4000);
+  const sc=[110,123.5,138.6,164.8,185,220,246.9,277.2,329.6,370];
+  function pad(){
+    if(!audioCtx||musicNodes.length===0)return;
+    const f=sc[Math.floor(Math.random()*sc.length)],o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;const n=audioCtx.currentTime;
+    g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.038,n+1);g.gain.exponentialRampToValueAtTime(.0001,n+5.5);
+    o.connect(g);g.connect(musicGain);o.start(n);o.stop(n+6);musicNodes.push(o,g);
+    setTimeout(pad,2500+Math.random()*4000);
   }
-  padNote();
-  // Store flag so stopSpaceMusic can halt pads
-  musicNodes._padActive = true;
+  pad();
+}
+function stopSpaceMusic(){
+  if(!audioCtx)return;const t=audioCtx.currentTime;
+  musicNodes.forEach(n=>{try{if(n.gain){n.gain.setValueAtTime(n.gain.value||.01,t);n.gain.linearRampToValueAtTime(.0001,t+1.2);}if(n.stop)n.stop(t+1.5);}catch(e){}});
+  musicNodes.length=0;
 }
 
-function stopSpaceMusic() {
-  if (!audioCtx) return;
-  const t = audioCtx.currentTime;
-  musicNodes.forEach(n => {
-    try {
-      if (n.gain) { n.gain.setValueAtTime(n.gain.value||0.01, t); n.gain.linearRampToValueAtTime(0.0001, t+1.2); }
-      if (n.stop)   n.stop(t + 1.5);
-    } catch(e) {}
-  });
-  musicNodes.length = 0;
-}
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  PLANET DATA
-// ─────────────────────────────────────────────
-const PLANETS = [
-  {
-    name:'Mars', color:0xcc4400, emissive:0x220800, radius:60, distance:8000,
-    story:'The red planet stands desolate — the alien armada passed through here hours ago. Martian Colony Alpha is rubble. But in the greenhouse domes, hydroponic crops still grow, untouched. You dock and harvest what you can.',
-    food:25, chapter:'Chapter 2 — The Red Wasteland'
-  },
-  {
-    name:'Jupiter\'s Moons', color:0xcc9955, emissive:0x221100, radius:200, distance:22000,
-    story:'Europa\'s ocean-vents harbor alien kelp forests beneath kilometers of ice. Your EVA team melts an entry shaft. The bioluminescent harvest is enough to feed the crew for weeks.',
-    food:40, chapter:'Chapter 3 — Ocean Beneath the Ice'
-  },
-  {
-    name:'Saturn', color:0xddcc88, emissive:0x111100, radius:160, distance:40000,
-    story:'Titan\'s methane lakes are lifeless, but orbiting the rings you intercept an alien cargo pod — packed with protein synthesizers from a civilisation that predates humanity. A lucky find.',
-    food:35, chapter:'Chapter 4 — Rings of Saturn'
-  },
-  {
-    name:'Uranus', color:0x44aacc, emissive:0x001122, radius:120, distance:60000,
-    story:'A derelict alien harvester drifts in Uranus\'s upper atmosphere, trailing frozen organic matter. You grapple it and extract a cache of nutrient packs — alien, but chemically compatible with human biology.',
-    food:50, chapter:'Chapter 5 — Blue Silence'
-  },
-  {
-    name:'Neptune', color:0x2244ff, emissive:0x000033, radius:110, distance:80000,
-    story:'The storm-wracked upper atmosphere of Neptune conceals vast floating ecosystems — gas-bag creatures the size of cities. You harvest their shed membranes, rich in complex proteins. Humanity\'s new food source.',
-    food:60, chapter:'Chapter 6 — The Dark Giant'
-  },
-  {
-    name:'Proxima b', color:0xff8844, emissive:0x220800, radius:80, distance:150000,
-    story:'After years in the void, you reach Proxima Centauri b — a rocky world bathed in a dim red sun. Breathable atmosphere. Running water. Alien flora everywhere. Humanity has found its new home. The mission is complete.',
-    food:100, chapter:'Chapter 7 — A New Home'
-  }
+// ═══════════════════════════════════════════════
+const PLANETS=[
+  {name:'Mars',color:0xbb3300,emissive:0x1a0400,radius:380,distance:8000,
+   story:'The red planet stands desolate — the alien armada passed through hours ago. Martian Colony Alpha is rubble. But in the greenhouse domes, hydroponic crops still grow, untouched. You land and harvest what you can.',
+   food:25,chapter:'Chapter 2 — The Red Wasteland',surfaceColor:0xaa3300,skyColor:0x331100},
+  {name:"Jupiter's Moons",color:0xcc9944,emissive:0x221100,radius:900,distance:22000,
+   story:"Europa's ocean-vents harbor alien kelp forests beneath kilometers of ice. Your EVA team melts an entry shaft. The bioluminescent harvest feeds the crew for weeks.",
+   food:40,chapter:'Chapter 3 — Ocean Beneath the Ice',surfaceColor:0xaaddff,skyColor:0x002244},
+  {name:'Saturn',color:0xddcc88,emissive:0x111100,radius:750,distance:40000,
+   story:"Titan's methane lakes are lifeless, but orbiting the rings you intercept an alien cargo pod packed with protein synthesizers. A lucky find.",
+   food:35,chapter:'Chapter 4 — Rings of Saturn',surfaceColor:0xccaa66,skyColor:0x221100},
+  {name:'Uranus',color:0x44aacc,emissive:0x001122,radius:600,distance:60000,
+   story:'A derelict alien harvester drifts in the upper atmosphere, trailing frozen organic matter. You grapple it and extract a cache of nutrient packs.',
+   food:50,chapter:'Chapter 5 — Blue Silence',surfaceColor:0x336688,skyColor:0x001122},
+  {name:'Neptune',color:0x2244ff,emissive:0x000033,radius:550,distance:80000,
+   story:'The storm-wracked atmosphere conceals vast floating ecosystems — gas-bag creatures the size of cities. Their shed membranes are rich in proteins.',
+   food:60,chapter:'Chapter 6 — The Dark Giant',surfaceColor:0x112266,skyColor:0x000033},
+  {name:'Proxima b',color:0xff8844,emissive:0x220800,radius:420,distance:150000,
+   story:'After years in the void, you reach Proxima Centauri b — a rocky world with breathable atmosphere, running water, alien flora everywhere. Humanity has found its new home.',
+   food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x885522,skyColor:0x220800}
 ];
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  GAME STATE
-// ─────────────────────────────────────────────
-const gs = {
+// ═══════════════════════════════════════════════
+const gs={
   screen:'menu',
-  playerHP: PLAYER_MAX_HP,
-  playerBreath: PLAYER_MAX_BREATH,
-  rocketHP: ROCKET_MAX_HP,
-  inRocket: true,
-  food: 0,
-  score: 0,
-  travelDist: 0,
-  planetIdx: 0,
-  chapter: 'Chapter 1 — Escape from Earth',
-  paused: false,
-  breathRefilling: false,
-  breathRefillStart: 0
+  playerHP:PLAYER_MAX_HP,playerBreath:PLAYER_MAX_BREATH,rocketHP:ROCKET_MAX_HP,
+  inRocket:true,onSurface:false,
+  food:0,score:0,travelDist:0,
+  planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
+  paused:false,breathRefilling:false,breathRefillStart:0
 };
 
-// ─────────────────────────────────────────────
-//  THREE.JS SETUP
-// ─────────────────────────────────────────────
-const canvas = document.getElementById('gameCanvas');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ReinhardToneMapping;
-renderer.toneMappingExposure = 1.2;
+// ═══════════════════════════════════════════════
+//  THREE.JS RENDERER
+// ═══════════════════════════════════════════════
+const canvas=document.getElementById('gameCanvas');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.physicallyCorrectLights=true;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+renderer.outputEncoding=THREE.sRGBEncoding;
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000008, 0.000008);
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000008,.000006);
+const camera=new THREE.PerspectiveCamera(68,window.innerWidth/window.innerHeight,.3,300000);
 
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.5, 300000);
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  INPUT
-// ─────────────────────────────────────────────
-const keys = {};
-window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
-window.addEventListener('keyup',   e => { keys[e.code] = false; });
+// ═══════════════════════════════════════════════
+const keys={};
+window.addEventListener('keydown',e=>{keys[e.code]=true;e.preventDefault();});
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
 
-// ─────────────────────────────────────────────
-//  CAMERA ORBIT STATE
-// ─────────────────────────────────────────────
-let camYaw   = 0;
-let camPitch = 0.25;
-const CAM_DIST  = 45;
-const CAM_H     = 12;
-const CAM_SPEED = 1.5; // deg/sec in radians
+// ═══════════════════════════════════════════════
+//  CAMERA / SCREEN SHAKE
+// ═══════════════════════════════════════════════
+let camYaw=0,camPitch=.22;
+const CAM_DIST=50,CAM_H=14,CAM_SPEED=1.6;
+let shakeAmt=0;
 
-// ─────────────────────────────────────────────
+function addShake(s){shakeAmt=Math.max(shakeAmt,s);}
+
+// ═══════════════════════════════════════════════
+//  PHYSICS STATE
+// ═══════════════════════════════════════════════
+const rocketVel=new THREE.Vector3(0,0,-ROCKET_SPEED);
+const playerVel=new THREE.Vector3();
+
+// ═══════════════════════════════════════════════
 //  SCENE OBJECTS
-// ─────────────────────────────────────────────
-let rocket, playerMesh;
-let engineLight, engineGlow;
-const asteroids = [];
-const comets    = [];
-const foodItems = [];
-const planetMeshes = [];
-let earthDebrisGroup;
-let starPoints;
-let nebula1, nebula2;
-let sunMesh, sunLight;
+// ═══════════════════════════════════════════════
+let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles;
+const asteroids=[],comets=[],foodItems=[],particleSystems=[];
+const planetMeshes=[];
+let surfaceMesh=null,surfaceGroup=null;
+let currentSurfacePlanetIdx=-1;
+let lastBreathDrain=0,lastSuffDmg=0,lastAsteroidSpawn=0,lastCometSpawn=0;
+let lastSave=0,lastOxyBeep=0,prevTime=0,notifTimeout=null,flashTimeout=null;
 
-// ─────────────────────────────────────────────
-//  TIMERS
-// ─────────────────────────────────────────────
-let lastBreathDrain   = 0;
-let lastSuffDmg       = 0;
-let lastAsteroidSpawn = 0;
-let lastCometSpawn    = 0;
-let lastSave          = 0;
-let lastOxyBeep       = 0;
-let prevTime          = 0;
-let notifTimeout      = null;
-
-// ─────────────────────────────────────────────
-//  LIGHTING
-// ─────────────────────────────────────────────
-function buildLighting() {
-  const ambient = new THREE.AmbientLight(0x0a0a1a, 1.0);
-  scene.add(ambient);
-
-  sunLight = new THREE.DirectionalLight(0xfff5cc, 2.0);
-  sunLight.position.set(-10000, 3000, 10000);
-  sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width  = 2048;
-  sunLight.shadow.mapSize.height = 2048;
-  scene.add(sunLight);
-
-  // Fill light
-  const fill = new THREE.DirectionalLight(0x112244, 0.3);
-  fill.position.set(0, 0, 1);
-  scene.add(fill);
-}
-
-// ─────────────────────────────────────────────
-//  STARFIELD
-// ─────────────────────────────────────────────
-function buildStarfield() {
-  const count = 20000;
-  const geo = new THREE.BufferGeometry();
-  const pos = new Float32Array(count * 3);
-  const col = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    const r = 50000 + Math.random() * 150000;
-    const theta = Math.random() * Math.PI * 2;
-    const phi   = Math.acos(2 * Math.random() - 1);
-    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-    pos[i*3+2] = r * Math.cos(phi);
-    const brightness = 0.4 + Math.random() * 0.6;
-    const hue = Math.random();
-    // Mostly white/blue, some orange
-    if (hue < 0.7) { col[i*3]=brightness; col[i*3+1]=brightness; col[i*3+2]=brightness; }
-    else if (hue < 0.85) { col[i*3]=brightness; col[i*3+1]=brightness*0.85; col[i*3+2]=brightness*0.6; }
-    else { col[i*3]=brightness*0.7; col[i*3+1]=brightness*0.8; col[i*3+2]=brightness; }
+// ═══════════════════════════════════════════════
+//  PROCEDURAL PLANET TEXTURE
+// ═══════════════════════════════════════════════
+function makePlanetTexture(baseColor,size=256){
+  const c=document.createElement('canvas');c.width=c.height=size;
+  const ctx=c.getContext('2d');
+  const r=(baseColor>>16)&255,g=(baseColor>>8)&255,b=baseColor&255;
+  ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(0,0,size,size);
+  for(let i=0;i<2000;i++){
+    const x=Math.random()*size,y=Math.random()*size,rad=1+Math.random()*8;
+    const bright=Math.random()>.5?1.3:.7;
+    ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${Math.min(255,r*bright)|0},${Math.min(255,g*bright)|0},${Math.min(255,b*bright)|0},.4)`;
+    ctx.fill();
   }
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
-  const mat = new THREE.PointsMaterial({size:2.5, vertexColors:true, sizeAttenuation:false});
-  starPoints = new THREE.Points(geo, mat);
-  scene.add(starPoints);
+  // Bands
+  for(let i=0;i<6;i++){
+    const y=Math.random()*size,h=4+Math.random()*20;
+    ctx.fillStyle=`rgba(${(r*.7)|0},${(g*.7)|0},${(b*.7)|0},.25)`;
+    ctx.fillRect(0,y,size,h);
+  }
+  return new THREE.CanvasTexture(c);
 }
 
-// ─────────────────────────────────────────────
-//  SUN
-// ─────────────────────────────────────────────
-function buildSun() {
-  const geo = new THREE.SphereGeometry(1200, 32, 32);
-  const mat = new THREE.MeshBasicMaterial({color:0xffee88});
-  sunMesh = new THREE.Mesh(geo, mat);
-  sunMesh.position.set(-80000, 5000, 80000);
-  scene.add(sunMesh);
+// ═══════════════════════════════════════════════
+//  LIGHTING
+// ═══════════════════════════════════════════════
+function buildLighting(){
+  // Hemisphere — space sky (dark blue) / planet reflections
+  const hemi=new THREE.HemisphereLight(0x080820,0x020208,0.8);
+  scene.add(hemi);
+  // Main sun light
+  const sun=new THREE.DirectionalLight(0xfff2cc,4.5);
+  sun.position.set(-12000,4000,12000);
+  sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.near=100;sun.shadow.camera.far=50000;
+  sun.shadow.camera.left=-5000;sun.shadow.camera.right=5000;
+  sun.shadow.camera.top=5000;sun.shadow.camera.bottom=-5000;
+  scene.add(sun);
+  // Faint fill from behind
+  const fill=new THREE.DirectionalLight(0x112244,.4);
+  fill.position.set(0,0,1);scene.add(fill);
+}
 
-  // Glow sprite
-  const glowGeo = new THREE.SphereGeometry(2400, 16, 16);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color:0xff9900, transparent:true, opacity:0.12, side:THREE.BackSide
+// ═══════════════════════════════════════════════
+//  STARFIELD
+// ═══════════════════════════════════════════════
+function buildStarfield(){
+  const count=25000,geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3),col=new Float32Array(count*3),sizes=new Float32Array(count);
+  for(let i=0;i<count;i++){
+    const r=60000+Math.random()*160000,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=r*Math.cos(ph);
+    const bri=.3+Math.random()*.7,hue=Math.random();
+    if(hue<.7){col[i*3]=bri;col[i*3+1]=bri;col[i*3+2]=bri;}
+    else if(hue<.85){col[i*3]=bri;col[i*3+1]=bri*.85;col[i*3+2]=bri*.6;}
+    else{col[i*3]=bri*.7;col[i*3+1]=bri*.8;col[i*3+2]=bri;}
+    sizes[i]=Math.random()<.02?4:Math.random()<.1?2.5:1.5;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const mat=new THREE.PointsMaterial({size:1.8,vertexColors:true,sizeAttenuation:false});
+  scene.add(new THREE.Points(geo,mat));
+}
+
+// ═══════════════════════════════════════════════
+//  SUN SPHERE
+// ═══════════════════════════════════════════════
+function buildSun(){
+  const geo=new THREE.SphereGeometry(2000,32,32);
+  const mat=new THREE.MeshBasicMaterial({color:0xffee88});
+  const s=new THREE.Mesh(geo,mat);s.position.set(-80000,5000,80000);scene.add(s);
+  const corona=new THREE.Mesh(new THREE.SphereGeometry(3800,16,16),
+    new THREE.MeshBasicMaterial({color:0xff8800,transparent:true,opacity:.08,side:THREE.BackSide}));
+  s.add(corona);
+  s.add(new THREE.PointLight(0xfff5cc,2,250000));
+}
+
+// ═══════════════════════════════════════════════
+//  NEBULA
+// ═══════════════════════════════════════════════
+function buildNebula(){
+  [[0x002244,30000,5000,-40000,25000],[0x220033,-20000,-3000,-70000,30000],
+   [0x001133,10000,-8000,-120000,40000]].forEach(([c,x,y,z,r])=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r,8,8),
+      new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.05,side:THREE.BackSide}));
+    m.position.set(x,y,z);scene.add(m);
   });
-  const glowMesh = new THREE.Mesh(glowGeo, glowMat);
-  sunMesh.add(glowMesh);
-
-  const sunPtLight = new THREE.PointLight(0xfff5cc, 1.5, 200000);
-  sunMesh.add(sunPtLight);
 }
 
-// ─────────────────────────────────────────────
-//  EARTH DEBRIS (behind starting position)
-// ─────────────────────────────────────────────
-function buildEarthDebris() {
-  earthDebrisGroup = new THREE.Group();
-  const mat = new THREE.MeshPhongMaterial({color:0x1144aa, emissive:0x001122});
-  for (let i = 0; i < 30; i++) {
-    const size = 30 + Math.random() * 200;
-    const geo  = new THREE.IcosahedronGeometry(size, 1);
-    // Displace verts
-    const pos = geo.attributes.position;
-    for (let v = 0; v < pos.count; v++) {
-      pos.setXYZ(v,
-        pos.getX(v) + (Math.random()-.5)*size*.4,
-        pos.getY(v) + (Math.random()-.5)*size*.4,
-        pos.getZ(v) + (Math.random()-.5)*size*.4
-      );
+// ═══════════════════════════════════════════════
+//  EARTH DEBRIS
+// ═══════════════════════════════════════════════
+function buildEarthDebris(){
+  const g=new THREE.Group();
+  const oceanMat=new THREE.MeshStandardMaterial({color:0x1144aa,roughness:.9,metalness:.1,emissive:0x001122,emissiveIntensity:.3});
+  const rockMat =new THREE.MeshStandardMaterial({color:0x443322,roughness:.95,metalness:0});
+  for(let i=0;i<35;i++){
+    const sz=40+Math.random()*250,geo=new THREE.IcosahedronGeometry(sz,2);
+    const pos=geo.attributes.position;
+    for(let v=0;v<pos.count;v++){
+      pos.setXYZ(v,pos.getX(v)*(1+(Math.random()-.5)*.35),
+        pos.getY(v)*(1+(Math.random()-.5)*.35),pos.getZ(v)*(1+(Math.random()-.5)*.35));
     }
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(
-      (Math.random()-.5)*4000,
-      (Math.random()-.5)*4000,
-      2000 + Math.random()*8000
-    );
-    mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, 0);
-    mesh.userData.rotSpd = new THREE.Vector3(
-      (Math.random()-.5)*.003, (Math.random()-.5)*.003, 0
-    );
-    earthDebrisGroup.add(mesh);
+    const m=new THREE.Mesh(geo,Math.random()>.4?oceanMat:rockMat);
+    m.position.set((Math.random()-.5)*5000,(Math.random()-.5)*5000,2000+Math.random()*10000);
+    m.rotation.set(Math.random()*Math.PI*2,Math.random()*Math.PI*2,0);
+    m.userData.rot=new THREE.Vector3((Math.random()-.5)*.004,(Math.random()-.5)*.004,0);
+    m.castShadow=true;g.add(m);
   }
-  scene.add(earthDebrisGroup);
+  scene.add(g);
+  return g;
 }
 
-// ─────────────────────────────────────────────
-//  NEBULA
-// ─────────────────────────────────────────────
-function buildNebula() {
-  const makeNebula = (color, x, y, z, size) => {
-    const geo = new THREE.SphereGeometry(size, 8, 8);
-    const mat = new THREE.MeshBasicMaterial({
-      color, transparent:true, opacity:0.04, side:THREE.BackSide
-    });
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x,y,z);
-    scene.add(m);
-  };
-  makeNebula(0x002244, 30000, 5000, -40000, 25000);
-  makeNebula(0x220033, -20000, -3000, -70000, 30000);
-  makeNebula(0x001133, 10000, -8000, -120000, 40000);
-}
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  PLANETS
-// ─────────────────────────────────────────────
-function buildPlanets() {
-  PLANETS.forEach((pd, i) => {
-    const geo = new THREE.SphereGeometry(pd.radius, 32, 32);
-    const mat = new THREE.MeshPhongMaterial({
-      color:pd.color, emissive:pd.emissive, shininess:40
+// ═══════════════════════════════════════════════
+function buildPlanets(){
+  PLANETS.forEach((pd,i)=>{
+    const tex=makePlanetTexture(pd.color);
+    const geo=new THREE.SphereGeometry(pd.radius,48,48);
+    const mat=new THREE.MeshStandardMaterial({
+      map:tex,roughness:.85,metalness:.05,emissive:new THREE.Color(pd.emissive),emissiveIntensity:.6
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    // Place planets along -Z axis at their travel distances
-    // Offset slightly for visual interest
-    mesh.position.set(
-      (i % 2 === 0 ? 200 : -200),
-      (i % 3 - 1) * 150,
-      -pd.distance
-    );
-    mesh.userData.planetIdx = i;
-    mesh.userData.reached   = false;
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.set(i%2===0?500:-500,(i%3-1)*400,-pd.distance);
+    mesh.castShadow=true;mesh.receiveShadow=true;
 
-    // Ring for Saturn-like planets
-    if (pd.name === 'Saturn') {
-      const ringGeo = new THREE.TorusGeometry(pd.radius * 2.2, pd.radius * 0.35, 2, 64);
-      const ringMat = new THREE.MeshBasicMaterial({color:0xccaa77, side:THREE.DoubleSide, transparent:true, opacity:0.6});
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2.5;
-      mesh.add(ring);
+    if(pd.name==='Saturn'){
+      const ring=new THREE.Mesh(
+        new THREE.TorusGeometry(pd.radius*2.4,pd.radius*.38,3,80),
+        new THREE.MeshStandardMaterial({color:0xddbb88,roughness:1,metalness:0,transparent:true,opacity:.55,side:THREE.DoubleSide})
+      );ring.rotation.x=Math.PI/2.3;mesh.add(ring);
     }
-
     // Atmosphere glow
-    const atmGeo = new THREE.SphereGeometry(pd.radius * 1.15, 16, 16);
-    const atmMat = new THREE.MeshBasicMaterial({
-      color:pd.color, transparent:true, opacity:0.07, side:THREE.BackSide
-    });
-    mesh.add(new THREE.Mesh(atmGeo, atmMat));
-
-    // Point light to illuminate surroundings
-    const pl = new THREE.PointLight(pd.color, 0.8, pd.radius * 20);
-    mesh.add(pl);
-
-    scene.add(mesh);
-    planetMeshes.push(mesh);
+    mesh.add(new THREE.Mesh(
+      new THREE.SphereGeometry(pd.radius*1.12,16,16),
+      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.06,side:THREE.BackSide})
+    ));
+    mesh.add(new THREE.PointLight(pd.color,.9,pd.radius*25));
+    scene.add(mesh);planetMeshes.push(mesh);
   });
 }
 
-// ─────────────────────────────────────────────
-//  ROCKET MODEL
-// ─────────────────────────────────────────────
-function buildRocket() {
-  rocket = new THREE.Group();
+// ═══════════════════════════════════════════════
+//  ROCKET MODEL (improved PBR)
+// ═══════════════════════════════════════════════
+function buildRocket(){
+  rocket=new THREE.Group();
+  const metal =new THREE.MeshStandardMaterial({color:0xdde0e8,roughness:.25,metalness:.85,envMapIntensity:1});
+  const dark  =new THREE.MeshStandardMaterial({color:0x1a1c22,roughness:.5,metalness:.7});
+  const glass =new THREE.MeshStandardMaterial({color:0x88ccff,roughness:.05,metalness:.1,transparent:true,opacity:.75,emissive:0x224466,emissiveIntensity:.5});
+  const nozzle=new THREE.MeshStandardMaterial({color:0x444455,roughness:.4,metalness:.9});
+  const tile  =new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.9,metalness:.05});
+  const stripe=new THREE.MeshBasicMaterial({color:0x0044cc});
 
-  const metalMat  = new THREE.MeshPhongMaterial({color:0xe0e0e0, shininess:120, specular:0x555555});
-  const darkMat   = new THREE.MeshPhongMaterial({color:0x555555, shininess:80});
-  const glassMat  = new THREE.MeshPhongMaterial({color:0x88ccff, emissive:0x224466, shininess:200, transparent:true, opacity:0.85});
-  const nozzleMat = new THREE.MeshPhongMaterial({color:0x333333, shininess:150});
-  const finMat    = new THREE.MeshPhongMaterial({color:0xbbbbbb, shininess:80});
-
-  // Body
-  const bodyGeo = new THREE.CylinderGeometry(1.0, 1.4, 10, 20);
-  const body    = new THREE.Mesh(bodyGeo, metalMat);
-  body.castShadow = true;
+  // Main body sections (3 cylinders to mimic Starship paneling)
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,7,24),metal);
   rocket.add(body);
+  const mid=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,3.5,24),tile);
+  mid.position.y=5.2;rocket.add(mid);
+  // Nose fairing
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(1.3,5,24),metal);
+  nose.position.y=9.75;rocket.add(nose);
+  const tip=new THREE.Mesh(new THREE.SphereGeometry(.18,12,12),dark);
+  tip.position.y=12.2;rocket.add(tip);
 
-  // Nose cone
-  const noseGeo = new THREE.ConeGeometry(1.0, 4, 20);
-  const nose    = new THREE.Mesh(noseGeo, metalMat);
-  nose.position.y = 7;
-  nose.castShadow = true;
-  rocket.add(nose);
-
-  // Nose tip
-  const tipGeo = new THREE.SphereGeometry(0.15, 8, 8);
-  const tip    = new THREE.Mesh(tipGeo, darkMat);
-  tip.position.y = 9;
-  rocket.add(tip);
-
-  // Windows (3)
-  for (let i = 0; i < 3; i++) {
-    const wGeo = new THREE.CircleGeometry(0.28, 16);
-    const w    = new THREE.Mesh(wGeo, glassMat);
-    w.position.set(1.05, 1.5 - i * 2.2, 0);
-    w.rotation.y = Math.PI / 2;
-    rocket.add(w);
-    // Window rim
-    const rimGeo = new THREE.TorusGeometry(0.28, 0.05, 8, 16);
-    const rim    = new THREE.Mesh(rimGeo, darkMat);
-    rim.position.copy(w.position);
-    rim.rotation.copy(w.rotation);
-    rocket.add(rim);
+  // Windows (3 — porthole style)
+  for(let i=0;i<3;i++){
+    const win=new THREE.Mesh(new THREE.CircleGeometry(.32,20),glass);
+    win.position.set(1.32,3.5-i*2.2,0);win.rotation.y=Math.PI/2;rocket.add(win);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(.32,.06,8,20),dark);
+    rim.position.copy(win.position);rim.rotation.copy(win.rotation);rocket.add(rim);
+    // Interior glow
+    const glow=new THREE.PointLight(0x88ccff,.8,6);glow.position.copy(win.position);rocket.add(glow);
   }
 
-  // Fins (4 fins evenly spaced)
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2;
-    const finGeo = new THREE.BoxGeometry(0.15, 3.5, 2.2);
-    const fin    = new THREE.Mesh(finGeo, finMat);
-    fin.position.set(Math.cos(angle) * 1.4, -5.8, Math.sin(angle) * 1.4);
-    fin.rotation.y = angle;
-    fin.castShadow = true;
-    rocket.add(fin);
+  // SpaceX stripe band
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(1.32,1.32,.6,24,1,true),stripe);
+  band.position.y=6.5;rocket.add(band);
+
+  // Fins (4 grid fins at top + 4 landing legs at bottom)
+  for(let i=0;i<4;i++){
+    const angle=i*Math.PI/2+Math.PI/4;
+    // Grid fin (top)
+    const gf=new THREE.Mesh(new THREE.BoxGeometry(.12,2.2,1.6),metal);
+    gf.position.set(Math.cos(angle)*1.4,8,Math.sin(angle)*1.4);
+    gf.rotation.y=angle;rocket.add(gf);
+    // Landing leg (bottom)
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(.1,4,.8),dark);
+    leg.position.set(Math.cos(angle)*1.8,-5,Math.sin(angle)*1.8);
+    leg.rotation.y=angle;leg.rotation.z=Math.cos(angle)*.35;rocket.add(leg);
+    // Leg foot
+    const foot=new THREE.Mesh(new THREE.BoxGeometry(.6,.15,1.2),dark);
+    foot.position.set(Math.cos(angle)*3.2,-7,Math.sin(angle)*3.2);rocket.add(foot);
   }
 
-  // Engine nozzle cluster (9 Raptor-style nozzles like Starship)
-  const nozzleOffsets = [
-    [0,0],[1.1,0],[-1.1,0],[0,1.1],[0,-1.1],
-    [0.78,0.78],[-0.78,0.78],[0.78,-0.78],[-0.78,-0.78]
-  ];
-  nozzleOffsets.forEach(([nx,nz]) => {
-    const nGeo = new THREE.CylinderGeometry(0.38, 0.22, 1.0, 12);
-    const n    = new THREE.Mesh(nGeo, nozzleMat);
-    n.position.set(nx, -6.0, nz);
-    rocket.add(n);
+  // Raptor engine cluster (9 nozzles)
+  const noffsets=[[0,0],[1.1,0],[-1.1,0],[0,1.1],[0,-1.1],[.78,.78],[-.78,.78],[.78,-.78],[-.78,-.78]];
+  noffsets.forEach(([nx,nz])=>{
+    const n=new THREE.Mesh(new THREE.CylinderGeometry(.3,.18,1.2,12),nozzle);
+    n.position.set(nx,-6.6,nz);rocket.add(n);
   });
+  // Nozzle heat shield ring
+  const shield=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.4,.4,24,1,true),dark);
+  shield.position.y=-5.9;rocket.add(shield);
 
-  // Engine glow light
-  engineLight = new THREE.PointLight(0xff6600, 4, 50);
-  engineLight.position.set(0, -8, 0);
-  rocket.add(engineLight);
+  // Engine light
+  engineLight=new THREE.PointLight(0xff6600,5,80);engineLight.position.y=-9;rocket.add(engineLight);
 
-  // Engine exhaust plume (cone)
-  const plumeGeo = new THREE.ConeGeometry(2.5, 14, 12, 1, true);
-  const plumeMat = new THREE.MeshBasicMaterial({
-    color:0xff4400, transparent:true, opacity:0.25, side:THREE.BackSide
-  });
-  engineGlow = new THREE.Mesh(plumeGeo, plumeMat);
-  engineGlow.position.y = -14;
-  rocket.add(engineGlow);
+  // Exhaust plume (cone)
+  const plumeGeo=new THREE.ConeGeometry(3,18,16,1,true);
+  const plumeMat=new THREE.MeshBasicMaterial({color:0xff5500,transparent:true,opacity:.22,side:THREE.BackSide,depthWrite:false});
+  engineGlow=new THREE.Mesh(plumeGeo,plumeMat);engineGlow.position.y=-17;rocket.add(engineGlow);
 
-  // "SpaceX" stripe (decal band)
-  const stripeGeo = new THREE.CylinderGeometry(1.02, 1.02, 0.5, 20, 1, true);
-  const stripeMat = new THREE.MeshBasicMaterial({color:0x0055ff, side:THREE.DoubleSide});
-  const stripe    = new THREE.Mesh(stripeGeo, stripeMat);
-  stripe.position.y = 3.5;
-  rocket.add(stripe);
+  // Inner bright core
+  const core=new THREE.Mesh(new THREE.ConeGeometry(1,8,12,1,true),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.15,side:THREE.BackSide,depthWrite:false}));
+  core.position.y=-11;rocket.add(core);
 
-  // Rotate so nose points in -Z (forward direction)
-  rocket.rotation.x = -Math.PI / 2;
-  rocket.position.set(0, 0, 0);
+  rocket.rotation.x=-Math.PI/2;
+  rocket.castShadow=true;rocket.receiveShadow=true;
   scene.add(rocket);
 }
 
-// ─────────────────────────────────────────────
-//  PLAYER (EVA) MESH
-// ─────────────────────────────────────────────
-function buildPlayerMesh() {
-  playerMesh = new THREE.Group();
+// ═══════════════════════════════════════════════
+//  PLAYER (astronaut)
+// ═══════════════════════════════════════════════
+function buildPlayerMesh(){
+  playerMesh=new THREE.Group();
+  const suit  =new THREE.MeshStandardMaterial({color:0xeeeeff,roughness:.8,metalness:.1});
+  const helmet=new THREE.MeshStandardMaterial({color:0x88ccff,roughness:.05,metalness:.05,transparent:true,opacity:.65,emissive:0x224466,emissiveIntensity:.4});
+  const dark  =new THREE.MeshStandardMaterial({color:0x2a2a3a,roughness:.7,metalness:.2});
+  const orange=new THREE.MeshStandardMaterial({color:0xff6600,roughness:.8,metalness:.05});
 
-  const suitMat = new THREE.MeshPhongMaterial({color:0xffffff, shininess:60});
-  const helmetMat = new THREE.MeshPhongMaterial({color:0x88ccff, shininess:200, transparent:true, opacity:0.7});
-
-  // Body
-  const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.0, 12);
-  playerMesh.add(new THREE.Mesh(bodyGeo, suitMat));
-
-  // Head / helmet
-  const helmGeo = new THREE.SphereGeometry(0.4, 16, 16);
-  const helm    = new THREE.Mesh(helmGeo, helmetMat);
-  helm.position.y = 0.9;
-  playerMesh.add(helm);
-
-  // Backpack (oxygen tank)
-  const packGeo = new THREE.BoxGeometry(0.35, 0.6, 0.2);
-  const pack    = new THREE.Mesh(packGeo, new THREE.MeshPhongMaterial({color:0xdddddd}));
-  pack.position.set(0, 0.1, -0.35);
-  playerMesh.add(pack);
-
-  // Legs
-  [-0.2, 0.2].forEach(x => {
-    const legGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.7, 8);
-    const leg    = new THREE.Mesh(legGeo, suitMat);
-    leg.position.set(x, -0.85, 0);
-    playerMesh.add(leg);
+  // Torso
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,1.1,12),suit);
+  playerMesh.add(torso);
+  // Helmet sphere
+  const helm=new THREE.Mesh(new THREE.SphereGeometry(.42,20,20),helmet);
+  helm.position.y=1.0;playerMesh.add(helm);
+  // Helmet glow interior
+  const helmGlow=new THREE.PointLight(0x88ccff,.8,5);helmGlow.position.y=1.0;playerMesh.add(helmGlow);
+  // Neck ring
+  playerMesh.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(.36,.06,8,16),dark),{position:{y:.56}}));
+  // Backpack (life support)
+  const pack=new THREE.Mesh(new THREE.BoxGeometry(.4,.7,.25),dark);
+  pack.position.set(0,.1,-.42);playerMesh.add(pack);
+  // Arms
+  [-1,1].forEach(s=>{
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.9,8),suit);
+    arm.position.set(s*.55,.15,0);arm.rotation.z=s*.3;playerMesh.add(arm);
+    // Orange stripe on arm
+    const stripe=new THREE.Mesh(new THREE.CylinderGeometry(.135,.135,.15,8,1,true),orange);
+    stripe.position.set(s*.55,.4,0);stripe.rotation.z=s*.3;playerMesh.add(stripe);
   });
+  // Legs
+  [-1,1].forEach(s=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.8,8),suit);
+    leg.position.set(s*.22,-.95,0);playerMesh.add(leg);
+    // Boot
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.28,.2,.38),dark);
+    boot.position.set(s*.22,-1.4,.05);playerMesh.add(boot);
+  });
+  // USA flag patch (decorative box)
+  const flag=new THREE.Mesh(new THREE.BoxGeometry(.01,.18,.25),
+    new THREE.MeshStandardMaterial({color:0x3344ff,roughness:.9,metalness:0}));
+  flag.position.set(.4,.35,0);flag.rotation.z=.3;playerMesh.add(flag);
 
-  playerMesh.visible = false;
+  playerMesh.visible=false;
   scene.add(playerMesh);
 }
 
-// ─────────────────────────────────────────────
-//  ASTEROID SPAWNING
-// ─────────────────────────────────────────────
-function spawnAsteroid() {
-  const size = 5 + Math.random() * 20;
-  const geo  = new THREE.IcosahedronGeometry(size, 1);
-  const pos  = geo.attributes.position;
+// ═══════════════════════════════════════════════
+//  ASTEROID SPAWN
+// ═══════════════════════════════════════════════
+const rockColors=[0x8b7355,0x6b5a4a,0x9c8b72,0x5c4a38,0x7a6b55];
 
-  // Displace verts for rocky look
-  for (let v = 0; v < pos.count; v++) {
-    const factor = 0.25 + Math.random() * 0.35;
-    pos.setXYZ(v, pos.getX(v) * (1 + (Math.random()-.5)*factor),
-                   pos.getY(v) * (1 + (Math.random()-.5)*factor),
-                   pos.getZ(v) * (1 + (Math.random()-.5)*factor));
+function spawnAsteroid(){
+  const sz=8+Math.random()*22;
+  const detail=sz>15?2:1;
+  const geo=new THREE.IcosahedronGeometry(sz,detail);
+  const pos=geo.attributes.position;
+  for(let v=0;v<pos.count;v++){
+    const f=.25+Math.random()*.4;
+    pos.setXYZ(v,pos.getX(v)*(1+(Math.random()-.5)*f),
+      pos.getY(v)*(1+(Math.random()-.5)*f),pos.getZ(v)*(1+(Math.random()-.5)*f));
   }
   geo.computeVertexNormals();
+  const col=rockColors[Math.floor(Math.random()*rockColors.length)];
+  const mat=new THREE.MeshStandardMaterial({color:col,roughness:.95,metalness:.02});
+  const mesh=new THREE.Mesh(geo,mat);
 
-  const brownish = new THREE.Color().setHSL(0.06 + Math.random()*0.08, 0.3+Math.random()*0.2, 0.2+Math.random()*0.25);
-  const mat = new THREE.MeshPhongMaterial({color:brownish, shininess:15});
-  const mesh = new THREE.Mesh(geo, mat);
+  // Spawn BEHIND rocket (+Z side)
+  const spread=200+Math.random()*200;
+  mesh.position.set(
+    rocket.position.x+(Math.random()-.5)*spread,
+    rocket.position.y+(Math.random()-.5)*spread,
+    rocket.position.z+500+Math.random()*400
+  );
+  mesh.rotation.set(Math.random()*Math.PI*2,Math.random()*Math.PI*2,0);
+  mesh.castShadow=true;
 
-  // Spawn behind the rocket (+Z offset from rocket, random spread)
-  const rx = rocket.position.x + (Math.random()-.5) * 300;
-  const ry = rocket.position.y + (Math.random()-.5) * 300;
-  const rz = rocket.position.z + 600 + Math.random() * 400;
+  const spd=70+Math.random()*90;
+  // Aim at rocket position with slight spread
+  const aim=rocket.position.clone().add(new THREE.Vector3((Math.random()-.5)*30,(Math.random()-.5)*30,0));
+  const vel=aim.clone().sub(mesh.position).normalize().multiplyScalar(spd);
 
-  mesh.position.set(rx, ry, rz);
-  mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, 0);
-
-  const speed  = 80 + Math.random() * 100;
-  const target = rocket.position.clone();
-  const dir    = target.clone().sub(mesh.position).normalize();
-
-  mesh.userData = {
-    vel: dir.multiplyScalar(speed),
-    rotSpd: new THREE.Vector3((Math.random()-.5)*.02,(Math.random()-.5)*.02,0),
-    type:'asteroid',
-    alive:true
-  };
-
-  mesh.castShadow = true;
-  scene.add(mesh);
-  asteroids.push(mesh);
+  mesh.userData={vel,rot:new THREE.Vector3((Math.random()-.5)*.025,(Math.random()-.5)*.025,0),
+    type:'asteroid',alive:true,radius:sz,justHit:false};
+  scene.add(mesh);asteroids.push(mesh);
 }
 
-// ─────────────────────────────────────────────
-//  COMET SPAWNING
-// ─────────────────────────────────────────────
-function spawnComet() {
-  // Elongated comet body
-  const cometGroup = new THREE.Group();
+// ═══════════════════════════════════════════════
+//  COMET SPAWN
+// ═══════════════════════════════════════════════
+function spawnComet(){
+  const g=new THREE.Group();
+  // Nucleus
+  const nuc=new THREE.Mesh(new THREE.IcosahedronGeometry(10,1),
+    new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.4,metalness:.2,emissive:0x224466,emissiveIntensity:.8}));
+  g.add(nuc);
+  // Coma (outer glow)
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(18,12,12),
+    new THREE.MeshBasicMaterial({color:0x66aaff,transparent:true,opacity:.08,side:THREE.BackSide,depthWrite:false})));
+  // Ion tail (elongated cone)
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(9,100,12,1,true),
+    new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false}));
+  tail.rotation.z=Math.PI;tail.position.y=55;g.add(tail);
+  // Dust tail (wider, shorter)
+  const dtail=new THREE.Mesh(new THREE.ConeGeometry(14,60,12,1,true),
+    new THREE.MeshBasicMaterial({color:0xddddaa,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false}));
+  dtail.rotation.z=Math.PI;dtail.position.y=35;g.add(dtail);
+  g.add(new THREE.PointLight(0x4488ff,3,350));
 
-  const bodyGeo = new THREE.SphereGeometry(8, 16, 12);
-  const bodyMat = new THREE.MeshPhongMaterial({color:0xaaddff, emissive:0x224466, shininess:80});
-  cometGroup.add(new THREE.Mesh(bodyGeo, bodyMat));
+  // Spawn in FRONT (-Z)
+  const spread=180+Math.random()*180;
+  g.position.set(
+    rocket.position.x+(Math.random()-.5)*spread,
+    rocket.position.y+(Math.random()-.5)*spread,
+    rocket.position.z-700-Math.random()*400
+  );
 
-  // Tail (elongated cone behind comet)
-  const tailGeo = new THREE.ConeGeometry(7, 80, 12, 1, true);
-  const tailMat = new THREE.MeshBasicMaterial({color:0x88ccff, transparent:true, opacity:0.2, side:THREE.DoubleSide});
-  const tail = new THREE.Mesh(tailGeo, tailMat);
-  tail.rotation.z = Math.PI; // point tail backward
-  tail.position.y = 45;
-  cometGroup.add(tail);
-
-  // Inner glow
-  const glowGeo = new THREE.SphereGeometry(14, 8, 8);
-  const glowMat = new THREE.MeshBasicMaterial({color:0x4488ff, transparent:true, opacity:0.12, side:THREE.BackSide});
-  cometGroup.add(new THREE.Mesh(glowGeo, glowMat));
-
-  // Point light on comet
-  cometGroup.add(new THREE.PointLight(0x4488ff, 2.5, 300));
-
-  // Spawn in front of rocket (-Z offset)
-  const rx = rocket.position.x + (Math.random()-.5)*200;
-  const ry = rocket.position.y + (Math.random()-.5)*200;
-  const rz = rocket.position.z - 800 - Math.random()*400;
-
-  cometGroup.position.set(rx, ry, rz);
-
-  const speed  = 120 + Math.random() * 80;
-  const target = rocket.position.clone();
-  const dir    = target.clone().sub(cometGroup.position).normalize();
-
-  // Orient comet along velocity
-  const up = new THREE.Vector3(0,1,0);
-  cometGroup.quaternion.setFromUnitVectors(up, dir.clone().negate());
-
-  cometGroup.userData = {
-    vel: dir.multiplyScalar(speed),
-    type:'comet',
-    alive:true
-  };
-
-  scene.add(cometGroup);
-  comets.push(cometGroup);
+  const spd=110+Math.random()*90;
+  const aim=rocket.position.clone().add(new THREE.Vector3((Math.random()-.5)*20,(Math.random()-.5)*20,0));
+  const dir=aim.clone().sub(g.position).normalize();
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().negate());
+  g.userData={vel:dir.multiplyScalar(spd),type:'comet',alive:true,radius:12,justHit:false};
+  scene.add(g);comets.push(g);
 }
 
-// ─────────────────────────────────────────────
-//  FOOD ITEM SPAWNING (near planets)
-// ─────────────────────────────────────────────
-function spawnFoodItem(planetPos) {
-  const geo = new THREE.OctahedronGeometry(8, 0);
-  const mat = new THREE.MeshPhongMaterial({
-    color:0x00ff88, emissive:0x003311, shininess:100
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.copy(planetPos).add(new THREE.Vector3(
-    (Math.random()-.5)*600, (Math.random()-.5)*600, (Math.random()-.5)*200
-  ));
-  mesh.userData = {type:'food', alive:true, rotY:0};
-  const pl = new THREE.PointLight(0x00ff88, 1, 80);
-  mesh.add(pl);
-  scene.add(mesh);
-  foodItems.push(mesh);
+// ═══════════════════════════════════════════════
+//  FOOD ITEM
+// ═══════════════════════════════════════════════
+function spawnFoodItem(basePos){
+  const geo=new THREE.OctahedronGeometry(8,1);
+  const mat=new THREE.MeshStandardMaterial({color:0x00ff88,roughness:.3,metalness:.5,emissive:0x004422,emissiveIntensity:.6});
+  const m=new THREE.Mesh(geo,mat);
+  m.position.copy(basePos).add(new THREE.Vector3((Math.random()-.5)*500,(Math.random()-.5)*300,(Math.random()-.5)*200));
+  m.userData={type:'food',alive:true};
+  m.add(new THREE.PointLight(0x00ff88,1.2,90));
+  scene.add(m);foodItems.push(m);
 }
 
-// ─────────────────────────────────────────────
-//  COLLISION — sphere vs sphere (simple)
-// ─────────────────────────────────────────────
-function dist3(a, b) {
-  return a.position.distanceTo(b.position);
+// ═══════════════════════════════════════════════
+//  PHYSICS — elastic sphere collision
+// ═══════════════════════════════════════════════
+const RESTITUTION=0.4;
+function resolveCollision(posA,rA,velA,massA,posB,rB,velB,massB){
+  const d=posA.clone().sub(posB);
+  const dist=d.length();
+  const minD=rA+rB;
+  if(dist>=minD||dist<.001)return false;
+  const n=d.divideScalar(dist);
+  const overlap=minD-dist;
+  const tm=massA+massB;
+  posA.addScaledVector(n,overlap*massB/tm);
+  posB.addScaledVector(n,-overlap*massA/tm);
+  if(velA&&velB){
+    const rv=velA.clone().sub(velB);
+    const vaN=rv.dot(n);
+    if(vaN>0)return true;
+    const j=-(1+RESTITUTION)*vaN/(1/massA+1/massB);
+    velA.addScaledVector(n,j/massA);
+    velB.addScaledVector(n,-j/massB);
+  }
+  return true;
 }
 
-// ─────────────────────────────────────────────
-//  DAMAGE FLASH
-// ─────────────────────────────────────────────
-let flashTimeout = null;
-function flashDamage(color='#ff000044') {
-  const el = document.getElementById('notification');
-  el.style.background = color;
-  el.style.display = 'block';
-  if (flashTimeout) clearTimeout(flashTimeout);
-  flashTimeout = setTimeout(() => { el.style.display='none'; el.style.background='rgba(0,5,20,.92)'; }, 150);
+// ═══════════════════════════════════════════════
+//  SCREEN EFFECTS
+// ═══════════════════════════════════════════════
+const vig=document.getElementById('vignette');
+function flashVignette(cls=''){
+  vig.className=cls;vig.style.opacity='.85';
+  if(flashTimeout)clearTimeout(flashTimeout);
+  flashTimeout=setTimeout(()=>vig.style.opacity='0',200);
 }
 
-// ─────────────────────────────────────────────
-//  SHOW NOTIFICATION
-// ─────────────────────────────────────────────
-function showNotif(msg, duration=3000) {
-  const el = document.getElementById('notification');
-  el.innerHTML = msg;
-  el.style.display = 'block';
-  if (notifTimeout) clearTimeout(notifTimeout);
-  notifTimeout = setTimeout(() => el.style.display='none', duration);
+function spawnDmgNumber(amount,worldPos,color='#ff3333'){
+  const v=worldPos.clone().project(camera);
+  const x=(v.x*.5+.5)*window.innerWidth;
+  const y=(-v.y*.5+.5)*window.innerHeight;
+  if(x<0||x>window.innerWidth||y<0||y>window.innerHeight)return;
+  const d=document.createElement('div');
+  d.className='dmg-num';d.textContent=`-${amount}`;
+  d.style.cssText=`position:fixed;left:${x}px;top:${y}px;color:${color};
+    font-size:26px;font-weight:bold;font-family:'Courier New',monospace;
+    text-shadow:0 2px 10px #000,0 0 20px ${color};
+    pointer-events:none;z-index:300;transform:translate(-50%,-50%);
+    transition:transform 1.1s ease-out,opacity 1.1s ease-out;`;
+  document.body.appendChild(d);
+  requestAnimationFrame(()=>{d.style.transform='translate(-50%,-130px)';d.style.opacity='0';});
+  setTimeout(()=>d.remove(),1200);
 }
 
-// ─────────────────────────────────────────────
+function showNotif(msg,dur=3000){
+  const el=document.getElementById('notification');
+  el.innerHTML=msg;el.style.display='block';
+  if(notifTimeout)clearTimeout(notifTimeout);
+  notifTimeout=setTimeout(()=>el.style.display='none',dur);
+}
+
+// ═══════════════════════════════════════════════
+//  LANDING PARTICLE BURST
+// ═══════════════════════════════════════════════
+function spawnLandingParticles(pos,color=0xcc5533){
+  const count=300;
+  const geo=new THREE.BufferGeometry();
+  const positions=new Float32Array(count*3);
+  const velocities=[];
+  for(let i=0;i<count;i++){
+    positions[i*3]=pos.x;positions[i*3+1]=pos.y;positions[i*3+2]=pos.z;
+    const theta=Math.random()*Math.PI*2,phi=Math.random()*Math.PI*.5;
+    const spd=15+Math.random()*55;
+    velocities.push(new THREE.Vector3(
+      Math.sin(phi)*Math.cos(theta)*spd,
+      Math.cos(phi)*spd*.8,
+      Math.sin(phi)*Math.sin(theta)*spd
+    ));
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  const mat=new THREE.PointsMaterial({color,size:4,transparent:true,opacity:.9,sizeAttenuation:true,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);
+  scene.add(pts);
+  const ps={pts,velocities,geo,life:0,maxLife:3.5};
+  particleSystems.push(ps);
+  sfxLand();
+}
+
+// ═══════════════════════════════════════════════
+//  MARS SURFACE MODE
+// ═══════════════════════════════════════════════
+function buildPlanetSurface(planetIdx){
+  if(surfaceGroup)removePlanetSurface();
+  currentSurfacePlanetIdx=planetIdx;
+  const pd=PLANETS[planetIdx];
+  surfaceGroup=new THREE.Group();
+
+  // Flat terrain (with vertex displacement)
+  const terrGeo=new THREE.PlaneGeometry(3000,3000,60,60);
+  const tpos=terrGeo.attributes.position;
+  for(let v=0;v<tpos.count;v++){
+    tpos.setZ(v,tpos.getZ(v)+(Math.random()-.5)*8+(Math.sin(tpos.getX(v)*.02)*Math.cos(tpos.getY(v)*.02))*15);
+  }
+  terrGeo.computeVertexNormals();
+  const tex=makePlanetTexture(pd.surfaceColor,512);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(8,8);
+  const terrMat=new THREE.MeshStandardMaterial({map:tex,roughness:.95,metalness:0});
+  surfaceMesh=new THREE.Mesh(terrGeo,terrMat);
+  surfaceMesh.rotation.x=-Math.PI/2;surfaceMesh.receiveShadow=true;
+  surfaceGroup.add(surfaceMesh);
+
+  // Scatter rocks
+  const rockMat=new THREE.MeshStandardMaterial({color:pd.surfaceColor,roughness:.98,metalness:0});
+  for(let i=0;i<60;i++){
+    const sz=2+Math.random()*20;
+    const geo=new THREE.IcosahedronGeometry(sz,1);
+    const pos2=geo.attributes.position;
+    for(let v=0;v<pos2.count;v++){
+      pos2.setXYZ(v,pos2.getX(v)*(1+(Math.random()-.5)*.4),
+        pos2.getY(v)*(1+(Math.random()-.5)*.4),pos2.getZ(v)*(1+(Math.random()-.5)*.4));
+    }
+    geo.computeVertexNormals();
+    const r=new THREE.Mesh(geo,rockMat);
+    r.position.set((Math.random()-.5)*2000,sz*.5,(Math.random()-.5)*2000);
+    r.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,0);
+    r.castShadow=true;r.receiveShadow=true;surfaceGroup.add(r);
+  }
+
+  // Ambient surface light (fake sky)
+  const skyLight=new THREE.HemisphereLight(new THREE.Color(pd.skyColor),new THREE.Color(pd.surfaceColor),2);
+  surfaceGroup.add(skyLight);
+
+  // Place surface group near rocket landing position
+  surfaceGroup.position.copy(rocket.position).add(new THREE.Vector3(0,-25,0));
+  scene.add(surfaceGroup);
+
+  // Spawn food items on surface
+  for(let i=0;i<6;i++){
+    const fp=surfaceGroup.position.clone().add(
+      new THREE.Vector3((Math.random()-.5)*600,5,(Math.random()-.5)*400)
+    );
+    spawnFoodItem(fp);
+  }
+
+  // Land particles
+  spawnLandingParticles(rocket.position.clone(),pd.surfaceColor);
+}
+
+function removePlanetSurface(){
+  if(!surfaceGroup)return;
+  scene.remove(surfaceGroup);surfaceGroup=null;surfaceMesh=null;
+  currentSurfacePlanetIdx=-1;
+}
+
+function getSurfaceY(){
+  if(!surfaceMesh)return null;
+  // Surface Y in world coords
+  return surfaceGroup.position.y+2;
+}
+
+// ═══════════════════════════════════════════════
 //  HUD UPDATE
-// ─────────────────────────────────────────────
-function updateHUD() {
-  const pPct = (gs.playerHP / PLAYER_MAX_HP * 100).toFixed(0);
-  const rPct = (gs.rocketHP / ROCKET_MAX_HP * 100).toFixed(0);
-  const bPct = (gs.playerBreath / PLAYER_MAX_BREATH * 100).toFixed(0);
+// ═══════════════════════════════════════════════
+function updateHUD(){
+  const pp=(gs.playerHP/PLAYER_MAX_HP*100).toFixed(0);
+  const rp=(gs.rocketHP/ROCKET_MAX_HP*100).toFixed(0);
+  const bp=(gs.playerBreath/PLAYER_MAX_BREATH*100).toFixed(0);
 
-  document.getElementById('bar-player').style.width = pPct + '%';
-  document.getElementById('bar-rocket').style.width = rPct + '%';
-  document.getElementById('bar-breath').style.width = bPct + '%';
+  document.getElementById('bar-player').style.width=pp+'%';
+  document.getElementById('bar-rocket').style.width=rp+'%';
+  document.getElementById('bar-breath').style.width=bp+'%';
+  document.getElementById('val-player').textContent=`${Math.max(0,Math.round(gs.playerHP))} / ${PLAYER_MAX_HP}`;
+  document.getElementById('val-rocket').textContent=`${Math.max(0,Math.round(gs.rocketHP))} / ${ROCKET_MAX_HP}`;
+  document.getElementById('val-breath').textContent=`${Math.max(0,gs.playerBreath.toFixed(1))}% / ${PLAYER_MAX_BREATH}%`;
 
-  document.getElementById('val-player').textContent = `${Math.max(0,Math.round(gs.playerHP))} / ${PLAYER_MAX_HP}`;
-  document.getElementById('val-rocket').textContent = `${Math.max(0,Math.round(gs.rocketHP))} / ${ROCKET_MAX_HP}`;
-  document.getElementById('val-breath').textContent = `${Math.max(0,gs.playerBreath.toFixed(1))}% / ${PLAYER_MAX_BREATH}%`;
+  document.getElementById('bar-player').style.background=
+    gs.playerHP<30?'linear-gradient(90deg,#550000,#ff0000)':'linear-gradient(90deg,#880000,#ff3333)';
+  document.getElementById('bar-rocket').style.background=
+    gs.rocketHP<200?'linear-gradient(90deg,#882200,#ff4400)':'linear-gradient(90deg,#003388,#0088ff)';
+  document.getElementById('bar-breath').style.background=
+    gs.playerBreath<30?'linear-gradient(90deg,#884400,#ff8800)':'linear-gradient(90deg,#006622,#00ff66)';
 
-  // Color bars based on values
-  document.getElementById('bar-player').style.background =
-    gs.playerHP < 30 ? 'linear-gradient(90deg,#660000,#ff0000)' : 'linear-gradient(90deg,#880000,#ff2222)';
-  document.getElementById('bar-rocket').style.background =
-    gs.rocketHP < 200 ? 'linear-gradient(90deg,#882200,#ff4400)' : 'linear-gradient(90deg,#003388,#0077ff)';
-  document.getElementById('bar-breath').style.background =
-    gs.playerBreath < 30 ? 'linear-gradient(90deg,#884400,#ff8800)' : 'linear-gradient(90deg,#006622,#00ee55)';
-
-  const destPlanet = PLANETS[gs.planetIdx] || PLANETS[PLANETS.length-1];
-  const distLeft = Math.max(0, destPlanet.distance - gs.travelDist);
-  document.getElementById('dest-label').textContent = `DESTINATION: ${destPlanet.name.toUpperCase()}`;
-  document.getElementById('dist-label').textContent  = `DISTANCE: ${Math.round(distLeft * 150).toLocaleString()} km`;
-  document.getElementById('food-label').textContent  = `FOOD: ${gs.food} UNITS`;
-  document.getElementById('chapter-label').textContent = gs.chapter.toUpperCase();
-  document.getElementById('speed-label').textContent = ROCKET_SPEED;
-  document.getElementById('hazard-label').textContent = asteroids.length + comets.length;
-
-  document.getElementById('eva-indicator').style.display = gs.inRocket ? 'none' : 'block';
-  document.getElementById('breath-warn').style.display   = gs.playerBreath <= 0 ? 'block' : 'none';
+  const dp=PLANETS[gs.planetIdx]||PLANETS[PLANETS.length-1];
+  const distLeft=Math.max(0,dp.distance-gs.travelDist);
+  document.getElementById('dest-label').textContent=`DESTINATION: ${dp.name.toUpperCase()}`;
+  document.getElementById('dist-label').textContent=`DISTANCE: ${Math.round(distLeft*150).toLocaleString()} km`;
+  document.getElementById('food-label').textContent=`FOOD: ${gs.food} UNITS`;
+  document.getElementById('chapter-label').textContent=gs.chapter.toUpperCase();
+  document.getElementById('hazard-label').textContent=asteroids.length+comets.length;
+  document.getElementById('eva-indicator').style.display=(!gs.inRocket&&!gs.onSurface)?'block':'none';
+  document.getElementById('surface-indicator').style.display=gs.onSurface?'block':'none';
+  document.getElementById('breath-warn').style.display=gs.playerBreath<=0?'block':'none';
+  // Show repair hint when in rocket and hull is damaged
+  document.getElementById('repair-hint').style.display=(gs.inRocket&&gs.rocketHP<ROCKET_MAX_HP&&gs.food>=5)?'block':'none';
 }
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  SAVE / LOAD
-// ─────────────────────────────────────────────
-function saveGame() {
-  const data = {
-    playerHP: gs.playerHP,
-    playerBreath: gs.playerBreath,
-    rocketHP: gs.rocketHP,
-    food: gs.food,
-    score: gs.score,
-    travelDist: gs.travelDist,
-    planetIdx: gs.planetIdx,
-    chapter: gs.chapter,
-    inRocket: gs.inRocket,
-    rocketPos: { x: rocket.position.x, y: rocket.position.y, z: rocket.position.z },
-    ts: Date.now()
-  };
-  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-
-  // Flash save indicator
-  const si = document.getElementById('save-indicator');
-  si.style.opacity = '1';
-  setTimeout(() => si.style.opacity = '0', 2000);
+// ═══════════════════════════════════════════════
+function saveGame(){
+  const d={playerHP:gs.playerHP,playerBreath:gs.playerBreath,rocketHP:gs.rocketHP,
+    food:gs.food,score:gs.score,travelDist:gs.travelDist,planetIdx:gs.planetIdx,
+    chapter:gs.chapter,inRocket:gs.inRocket,
+    rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},ts:Date.now()};
+  localStorage.setItem(SAVE_KEY,JSON.stringify(d));
+  const si=document.getElementById('save-indicator');
+  si.style.opacity='1';setTimeout(()=>si.style.opacity='0',2000);
+}
+function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+function applySave(data){
+  gs.playerHP=data.playerHP;gs.playerBreath=data.playerBreath;gs.rocketHP=data.rocketHP;
+  gs.food=data.food;gs.score=data.score;gs.travelDist=data.travelDist;
+  gs.planetIdx=data.planetIdx;gs.chapter=data.chapter;gs.inRocket=data.inRocket!==false;
+  if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
 }
 
-function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch(e) { return null; }
+// ═══════════════════════════════════════════════
+//  CLEAR HAZARDS
+// ═══════════════════════════════════════════════
+function clearHazards(){
+  [...asteroids,...comets,...foodItems].forEach(m=>scene.remove(m));
+  asteroids.length=0;comets.length=0;foodItems.length=0;
+  particleSystems.forEach(ps=>scene.remove(ps.pts));particleSystems.length=0;
 }
 
-function applySave(data) {
-  gs.playerHP    = data.playerHP;
-  gs.playerBreath= data.playerBreath;
-  gs.rocketHP    = data.rocketHP;
-  gs.food        = data.food;
-  gs.score       = data.score;
-  gs.travelDist  = data.travelDist;
-  gs.planetIdx   = data.planetIdx;
-  gs.chapter     = data.chapter;
-  gs.inRocket    = data.inRocket !== false;
-  if (data.rocketPos) {
-    rocket.position.set(data.rocketPos.x, data.rocketPos.y, data.rocketPos.z);
-  }
+// ═══════════════════════════════════════════════
+//  DEATH / GAME OVER
+// ═══════════════════════════════════════════════
+function gameOver(reason){
+  gs.screen='gameover';sfxGameOver();stopEngineHum();stopSpaceMusic();
+  document.getElementById('gameOverReason').textContent=reason;
+  document.getElementById('gameOverScreen').style.display='flex';
+  document.getElementById('hud').style.display='none';
 }
-
-// ─────────────────────────────────────────────
-//  DEATH CHECK
-// ─────────────────────────────────────────────
-function checkDeath() {
-  if (gs.playerHP <= 0) {
-    gameOver('Commander Chen perished in the void. The last hope of humanity faded with them.');
-    return true;
-  }
-  if (gs.rocketHP <= 0) {
-    gameOver('The Ark I was torn apart by the barrage. Her crew never reached Mars.');
-    return true;
-  }
+function checkDeath(){
+  if(gs.playerHP<=0){gameOver('Commander Chen perished in the void. The last hope of humanity faded with them.');return true;}
+  if(gs.rocketHP<=0){gameOver('The Ark I hull collapsed. Her crew never reached Mars.');return true;}
   return false;
 }
 
-function gameOver(reason) {
-  gs.screen = 'gameover';
-  sfxGameOver();
-  stopEngineHum();
-  stopSpaceMusic();
-  document.getElementById('gameOverReason').textContent = reason;
-  document.getElementById('gameOverScreen').style.display = 'flex';
-  document.getElementById('hud').style.display = 'none';
-}
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  PLANET ARRIVAL
-// ─────────────────────────────────────────────
-function arriveAtPlanet(idx) {
-  const pd = PLANETS[idx];
-  gs.food += pd.food;
-  gs.score += pd.food * 10;
-  gs.planetIdx = idx + 1;
-  gs.chapter   = pd.chapter;
-  gs.screen    = 'planet';
-  gs.paused    = true;
+// ═══════════════════════════════════════════════
+function arriveAtPlanet(idx){
+  gs.food+=PLANETS[idx].food;gs.score+=PLANETS[idx].food*10;
+  gs.chapter=PLANETS[idx].chapter;gs.screen='planet';gs.paused=true;
   sfxPlanetArrive();
-
-  if (idx === PLANETS.length - 1) {
-    // WIN!
-    document.getElementById('planet-name').textContent = 'MISSION COMPLETE';
-    document.getElementById('planet-story').textContent = pd.story;
-    document.getElementById('planet-food').textContent = `+${pd.food} FOOD — HUMANITY IS SAVED`;
-  } else {
-    document.getElementById('planet-name').textContent = pd.name.toUpperCase();
-    document.getElementById('planet-story').textContent = pd.story;
-    document.getElementById('planet-food').textContent = `+${pd.food} FOOD UNITS COLLECTED`;
+  if(idx===0){
+    // Mars — actually land on surface after panel dismiss
+    gs.onSurface=true;
   }
-
-  document.getElementById('planetPanel').style.display = 'flex';
+  document.getElementById('planet-name').textContent=
+    idx===PLANETS.length-1?'MISSION COMPLETE':PLANETS[idx].name.toUpperCase();
+  document.getElementById('planet-story').textContent=PLANETS[idx].story;
+  document.getElementById('planet-food').textContent=`+${PLANETS[idx].food} FOOD UNITS COLLECTED`;
+  document.getElementById('planetPanel').style.display='flex';
   saveGame();
 }
 
-function leavePlanet() {
-  document.getElementById('planetPanel').style.display = 'none';
-  gs.screen = 'playing';
-  gs.paused = false;
+function leavePlanet(){
+  document.getElementById('planetPanel').style.display='none';
+  gs.screen='playing';gs.paused=false;
+  const idx=gs.planetIdx;
+  gs.planetIdx=Math.min(gs.planetIdx+1,PLANETS.length-1);
+
+  if(gs.onSurface){
+    // Build surface to walk on
+    buildPlanetSurface(idx);
+    gs.inRocket=false;
+    playerMesh.visible=true;
+    playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+    playerVel.set(0,0,0);
+    showNotif('You are on the surface. Collect supplies. Press E to re-board.', 5000);
+  }
 }
 
-// ─────────────────────────────────────────────
-//  CLEAR HAZARDS
-// ─────────────────────────────────────────────
-function clearHazards() {
-  [...asteroids, ...comets, ...foodItems].forEach(m => scene.remove(m));
-  asteroids.length = 0;
-  comets.length    = 0;
-  foodItems.length = 0;
-}
+// ═══════════════════════════════════════════════
+//  MAIN UPDATE LOOP
+// ═══════════════════════════════════════════════
+let earthDebrisRef=null;
 
-// ─────────────────────────────────────────────
-//  MAIN UPDATE
-// ─────────────────────────────────────────────
-function update(time) {
-  if (gs.screen !== 'playing' || gs.paused) return;
+function update(time){
+  if(gs.screen!=='playing'||gs.paused)return;
+  const dt=Math.min((time-prevTime)/1000,.1);prevTime=time;const now=time;
 
-  const dt = Math.min((time - prevTime) / 1000, 0.1);
-  prevTime = time;
-  const now = time;
+  // ── SCREEN SHAKE DECAY
+  shakeAmt=Math.max(0,shakeAmt-8*dt);
 
-  // ── ROCKET LATERAL MOVEMENT (arrow keys) ──
-  if (gs.inRocket) {
-    const lookDir = new THREE.Vector3();
-    camera.getWorldDirection(lookDir);
-    lookDir.y = 0;
-    lookDir.normalize();
-    const right = new THREE.Vector3().crossVectors(lookDir, new THREE.Vector3(0,1,0)).normalize();
+  // ── CAMERA (WASD look)
+  if(keys['KeyA'])camYaw+=CAM_SPEED*dt;
+  if(keys['KeyD'])camYaw-=CAM_SPEED*dt;
+  if(keys['KeyW'])camPitch-=CAM_SPEED*dt;
+  if(keys['KeyS'])camPitch+=CAM_SPEED*dt;
+  camPitch=Math.max(-.9,Math.min(1.0,camPitch));
 
-    if (keys['ArrowUp'])    rocket.position.y += MOVE_SPEED * dt;
-    if (keys['ArrowDown'])  rocket.position.y -= MOVE_SPEED * dt;
-    if (keys['ArrowLeft'])  rocket.position.addScaledVector(right, -MOVE_SPEED * dt);
-    if (keys['ArrowRight']) rocket.position.addScaledVector(right,  MOVE_SPEED * dt);
+  const lookTarget=gs.inRocket?rocket.position:playerMesh.position;
+  const sinY=Math.sin(camYaw),cosY=Math.cos(camYaw),cosP=Math.cos(camPitch),sinP=Math.sin(camPitch);
+  camera.position.set(
+    lookTarget.x+CAM_DIST*sinY*cosP,
+    lookTarget.y+CAM_DIST*sinP+CAM_H,
+    lookTarget.z+CAM_DIST*cosY*cosP
+  );
+  // Apply shake after positioning
+  if(shakeAmt>.01){
+    camera.position.x+=(Math.random()-.5)*shakeAmt;
+    camera.position.y+=(Math.random()-.5)*shakeAmt*0.6;
+  }
+  camera.lookAt(lookTarget);
 
-    // Auto-travel forward (-Z)
-    rocket.position.z -= ROCKET_SPEED * dt;
-    gs.travelDist += ROCKET_SPEED * dt;
+  // ── REPAIR (R key)
+  if(keys['KeyR']&&gs.inRocket&&gs.food>=5&&gs.rocketHP<ROCKET_MAX_HP){
+    keys['KeyR']=false;
+    gs.food-=5;gs.rocketHP=Math.min(ROCKET_MAX_HP,gs.rocketHP+500);
+    sfxRepair();addShake(1.5);
+    showNotif('HULL REPAIRED  +500 HP',2000);
+  }
 
-    // Rocket roll / tilt based on lateral input (visual only)
-    const targetRollZ = (keys['ArrowLeft'] ? 0.18 : keys['ArrowRight'] ? -0.18 : 0);
-    const targetRollX = -Math.PI / 2 + (keys['ArrowUp'] ? -0.12 : keys['ArrowDown'] ? 0.12 : 0);
-    rocket.rotation.z += (targetRollZ - rocket.rotation.z) * 3 * dt;
-    rocket.rotation.x += (targetRollX - rocket.rotation.x) * 3 * dt;
+  // ── EVA TOGGLE (E key)
+  if(keys['KeyE']){
+    keys['KeyE']=false;
+    if(gs.inRocket&&!gs.onSurface){
+      gs.inRocket=false;
+      playerMesh.position.copy(rocket.position).add(new THREE.Vector3(6,0,0));
+      playerMesh.visible=true;gs.breathRefilling=false;playerVel.set(0,0,0);
+      sfxEVAStart();showNotif('EVA MODE — Oxygen depleting 1%/3 sec.',4000);
+    } else if(!gs.inRocket){
+      const target=gs.onSurface?rocket.position:rocket.position;
+      if(playerMesh.position.distanceTo(target)<40){
+        gs.inRocket=true;playerMesh.visible=false;
+        gs.breathRefilling=true;gs.breathRefillStart=now;
+        sfxEVAEnd();
+        if(gs.onSurface){gs.onSurface=false;removePlanetSurface();}
+        showNotif('Back in the rocket. Oxygen refilling — 2 min.',4000);
+      } else {
+        showNotif('Too far from rocket! Get closer.',2000);
+      }
+    }
+  }
+
+  // ── ROCKET MOVEMENT (arrow keys + physics)
+  if(gs.inRocket){
+    // Build look-right vector from camera yaw
+    const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
+    const up=new THREE.Vector3(0,1,0);
+    if(keys['ArrowLeft']) rocketVel.addScaledVector(right,-MOVE_ACCEL*dt);
+    if(keys['ArrowRight'])rocketVel.addScaledVector(right, MOVE_ACCEL*dt);
+    if(keys['ArrowUp'])   rocketVel.addScaledVector(up,    MOVE_ACCEL*dt);
+    if(keys['ArrowDown']) rocketVel.addScaledVector(up,   -MOVE_ACCEL*dt);
+    // Lateral drag (not forward)
+    rocketVel.x*=1-MOVE_DRAG*dt;
+    rocketVel.y*=1-MOVE_DRAG*dt;
+    rocketVel.z=-ROCKET_SPEED; // constant forward travel
+    rocket.position.addScaledVector(rocketVel,dt);
+    gs.travelDist+=ROCKET_SPEED*dt;
+
+    // Rocket visual roll
+    const targetRoll=keys['ArrowLeft']?.2:keys['ArrowRight']?-.2:0;
+    const targetPitch=-Math.PI/2+(keys['ArrowUp']?-.12:keys['ArrowDown']?.12:0);
+    rocket.rotation.z+=(targetRoll-rocket.rotation.z)*3*dt;
+    rocket.rotation.x+=(targetPitch-rocket.rotation.x)*3*dt;
+
+  } else if(gs.onSurface&&surfaceMesh){
+    // ── HUMAN MOVEMENT ON SURFACE
+    const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
+    const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
+    const inp=new THREE.Vector3();
+    if(keys['ArrowUp'])   inp.addScaledVector(fwd, EVA_SPEED);
+    if(keys['ArrowDown']) inp.addScaledVector(fwd,-EVA_SPEED);
+    if(keys['ArrowLeft']) inp.addScaledVector(right,-EVA_SPEED);
+    if(keys['ArrowRight'])inp.addScaledVector(right, EVA_SPEED);
+    playerMesh.position.addScaledVector(inp,dt);
+
+    // Gravity toward surface
+    const surfY=getSurfaceY();
+    if(surfY!==null){
+      playerVel.y-=SURFACE_GRAVITY*dt;
+      playerMesh.position.y+=playerVel.y*dt;
+      if(playerMesh.position.y<surfY+2){
+        playerMesh.position.y=surfY+2;playerVel.y=0;
+      }
+    }
+    // Orient player upright
+    playerMesh.rotation.y=Math.PI+camYaw;
+
+    // Footstep dust when moving
+    if((inp.length()>.1)&&(now%500<20)){
+      const dp={x:playerMesh.position.x,y:playerMesh.position.y-1,z:playerMesh.position.z};
+      const dg=new THREE.Group();const cnt=8;
+      const dGeo=new THREE.BufferGeometry();const dpos=new Float32Array(cnt*3);
+      const pd=PLANETS[currentSurfacePlanetIdx]||PLANETS[0];
+      for(let i=0;i<cnt;i++){dpos[i*3]=dp.x+(Math.random()-.5)*3;dpos[i*3+1]=dp.y;dpos[i*3+2]=dp.z+(Math.random()-.5)*3;}
+      dGeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
+      const dpts=new THREE.Points(dGeo,new THREE.PointsMaterial({color:pd.surfaceColor,size:2.5,transparent:true,opacity:.5,depthWrite:false}));
+      scene.add(dpts);setTimeout(()=>scene.remove(dpts),400);
+    }
+
+    // Rocket auto-travels; keep rocket near player so they can re-board
+    rocket.position.x+=(playerMesh.position.x-rocket.position.x)*.005;
 
   } else {
-    // ── EVA MOVEMENT (outside rocket) ──
-    const lookDir = new THREE.Vector3();
-    camera.getWorldDirection(lookDir);
-    const right = new THREE.Vector3().crossVectors(lookDir, new THREE.Vector3(0,1,0)).normalize();
-
-    if (keys['ArrowUp'])    playerMesh.position.addScaledVector(lookDir, EVA_MOVE_SPEED * dt);
-    if (keys['ArrowDown'])  playerMesh.position.addScaledVector(lookDir, -EVA_MOVE_SPEED * dt);
-    if (keys['ArrowLeft'])  playerMesh.position.addScaledVector(right,   -EVA_MOVE_SPEED * dt);
-    if (keys['ArrowRight']) playerMesh.position.addScaledVector(right,    EVA_MOVE_SPEED * dt);
-
-    // Rocket still auto-travels so player must chase it
-    rocket.position.z -= ROCKET_SPEED * dt;
-    gs.travelDist += ROCKET_SPEED * dt;
+    // ── EVA (zero-G space walk)
+    const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
+    const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
+    if(keys['ArrowUp'])   playerVel.addScaledVector(fwd,  EVA_SPEED*3*dt);
+    if(keys['ArrowDown']) playerVel.addScaledVector(fwd, -EVA_SPEED*3*dt);
+    if(keys['ArrowLeft']) playerVel.addScaledVector(right,-EVA_SPEED*3*dt);
+    if(keys['ArrowRight'])playerVel.addScaledVector(right, EVA_SPEED*3*dt);
+    playerVel.multiplyScalar(1-2*dt); // drag
+    playerMesh.position.addScaledVector(playerVel,dt);
+    rocket.position.z-=ROCKET_SPEED*dt;gs.travelDist+=ROCKET_SPEED*dt;
   }
 
-  // ── CAMERA ORBIT (WASD) ──
-  if (keys['KeyA']) camYaw   += CAM_SPEED * dt;
-  if (keys['KeyD']) camYaw   -= CAM_SPEED * dt;
-  if (keys['KeyW']) camPitch -= CAM_SPEED * dt;
-  if (keys['KeyS']) camPitch += CAM_SPEED * dt;
-  camPitch = Math.max(-1.2, Math.min(1.2, camPitch));
+  // ── BREATH SYSTEM
+  if(!gs.inRocket){
+    if(now-lastBreathDrain>BREATH_DRAIN_MS){gs.playerBreath=Math.max(0,gs.playerBreath-1);lastBreathDrain=now;}
+    if(gs.playerBreath<50&&now-lastOxyBeep>3000){sfxOxygenBeep();lastOxyBeep=now;}
+    if(gs.playerBreath<=0&&now-lastSuffDmg>SUFF_INTERVAL_MS){
+      gs.playerHP-=SUFF_DMG;lastSuffDmg=now;flashVignette('breathe');
+    }
+  } else if(gs.breathRefilling){
+    gs.playerBreath=Math.min(PLAYER_MAX_BREATH,
+      (now-gs.breathRefillStart)/BREATH_REFILL_MS*PLAYER_MAX_BREATH);
+    if(gs.playerBreath>=PLAYER_MAX_BREATH)gs.breathRefilling=false;
+  }
 
-  const target = gs.inRocket ? rocket.position : playerMesh.position;
-  const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
-  const cosP = Math.cos(camPitch), sinP = Math.sin(camPitch);
-  camera.position.set(
-    target.x + CAM_DIST * sinY * cosP,
-    target.y + CAM_DIST * sinP + CAM_H,
-    target.z + CAM_DIST * cosY * cosP
-  );
-  camera.lookAt(target);
+  // ── ASTEROID SPAWNING (not on surface)
+  if(!gs.onSurface){
+    const ai=Math.max(600,2200-gs.travelDist*.04);
+    if(now-lastAsteroidSpawn>ai){spawnAsteroid();lastAsteroidSpawn=now;}
+    const ci=Math.max(1200,5500-gs.travelDist*.04);
+    if(now-lastCometSpawn>ci){spawnComet();lastCometSpawn=now;}
+  }
 
-  // ── E KEY — EXIT / ENTER ROCKET ──
-  if (keys['KeyE']) {
-    keys['KeyE'] = false; // consume
-    if (gs.inRocket) {
-      // Exit
-      gs.inRocket = false;
-      playerMesh.position.copy(rocket.position).add(new THREE.Vector3(5, 0, 0));
-      playerMesh.visible = true;
-      gs.breathRefilling = false;
-      sfxEVAStart();
-      showNotif('EVA MODE — Oxygen depleting. 1% per 3 seconds.', 4000);
-    } else {
-      // Check if close enough to rocket
-      if (playerMesh.position.distanceTo(rocket.position) < 20) {
-        gs.inRocket = true;
-        playerMesh.visible = false;
-        gs.breathRefilling = true;
-        gs.breathRefillStart = now;
-        sfxEVAEnd();
-        showNotif('Back in the rocket. Oxygen refilling — 2 minutes.', 4000);
-      } else {
-        showNotif('Too far from rocket! Get closer.', 2000);
+  // ── MOVE & COLLIDE ASTEROIDS
+  for(let i=asteroids.length-1;i>=0;i--){
+    const a=asteroids[i];
+    if(!a.userData.alive){scene.remove(a);asteroids.splice(i,1);continue;}
+    a.position.addScaledVector(a.userData.vel,dt);
+    a.rotation.x+=a.userData.rot.x;a.rotation.y+=a.userData.rot.y;
+
+    // Asteroid vs Rocket collision (solid)
+    const hitR=resolveCollision(a.position,a.userData.radius,a.userData.vel,15,
+                                rocket.position,ROCKET_RADIUS,rocketVel,80);
+    if(hitR&&!a.userData.justHit&&gs.inRocket){
+      gs.rocketHP-=ASTEROID_DMG;a.userData.justHit=true;
+      sfxAsteroidHit();addShake(7);flashVignette('');
+      spawnDmgNumber(ASTEROID_DMG,a.position.clone(),'#ff6600');
+      showNotif(`⚠ ASTEROID IMPACT — HULL: ${Math.max(0,Math.round(gs.rocketHP))}`,1500);
+      spawnImpactSparks(a.position.clone(),0xff4400);
+      setTimeout(()=>a.userData.justHit=false,600);
+    }
+
+    // Asteroid vs Player (EVA / surface)
+    if(!gs.inRocket){
+      const hitP=resolveCollision(a.position,a.userData.radius,a.userData.vel,15,
+                                  playerMesh.position,PLAYER_RADIUS,playerVel,5);
+      if(hitP&&!a.userData.justHit){
+        gs.playerHP-=ASTEROID_DMG;a.userData.justHit=true;
+        sfxAsteroidHit();addShake(9);flashVignette('');
+        spawnDmgNumber(ASTEROID_DMG,playerMesh.position.clone(),'#ff2200');
+        setTimeout(()=>a.userData.justHit=false,600);
       }
     }
+    if(a.position.distanceTo(rocket.position)>2500)a.userData.alive=false;
   }
 
-  // ── BREATH SYSTEM ──
-  if (!gs.inRocket) {
-    if (now - lastBreathDrain > BREATH_DRAIN_MS) {
-      gs.playerBreath = Math.max(0, gs.playerBreath - 1);
-      lastBreathDrain = now;
+  // ── MOVE & COLLIDE COMETS
+  for(let i=comets.length-1;i>=0;i--){
+    const c=comets[i];
+    if(!c.userData.alive){scene.remove(c);comets.splice(i,1);continue;}
+    c.position.addScaledVector(c.userData.vel,dt);
+
+    const hitR=resolveCollision(c.position,c.userData.radius,c.userData.vel,8,
+                                rocket.position,ROCKET_RADIUS,rocketVel,80);
+    if(hitR&&!c.userData.justHit&&gs.inRocket){
+      gs.rocketHP-=COMET_DMG;c.userData.justHit=true;
+      sfxCometHit();addShake(10);flashVignette('blue');
+      spawnDmgNumber(COMET_DMG,c.position.clone(),'#4488ff');
+      showNotif(`⚠ COMET IMPACT — HULL: ${Math.max(0,Math.round(gs.rocketHP))}`,2000);
+      spawnImpactSparks(c.position.clone(),0x4488ff);
+      setTimeout(()=>c.userData.justHit=false,800);
     }
-    // Beep when oxygen is critically low
-    if (gs.playerBreath < 50 && now - lastOxyBeep > 3000) {
-      sfxOxygenBeep();
-      lastOxyBeep = now;
-    }
-    if (gs.playerBreath <= 0 && now - lastSuffDmg > SUFF_INTERVAL_MS) {
-      gs.playerHP -= SUFF_DMG;
-      lastSuffDmg  = now;
-      flashDamage('rgba(0,0,200,0.15)');
-    }
-  } else if (gs.breathRefilling) {
-    const elapsed = now - gs.breathRefillStart;
-    const fraction = Math.min(1, elapsed / BREATH_REFILL_MS);
-    gs.playerBreath = Math.min(PLAYER_MAX_BREATH, fraction * PLAYER_MAX_BREATH);
-    if (fraction >= 1) gs.breathRefilling = false;
-  }
-
-  // ── ASTEROID SPAWNING ──
-  const asteroidInterval = Math.max(800, 2500 - gs.travelDist * 0.05);
-  if (now - lastAsteroidSpawn > asteroidInterval) {
-    spawnAsteroid();
-    lastAsteroidSpawn = now;
-  }
-
-  // ── COMET SPAWNING ──
-  const cometInterval = Math.max(1500, 6000 - gs.travelDist * 0.05);
-  if (now - lastCometSpawn > cometInterval) {
-    spawnComet();
-    lastCometSpawn = now;
-  }
-
-  // ── MOVE & COLLIDE ASTEROIDS ──
-  for (let i = asteroids.length - 1; i >= 0; i--) {
-    const a = asteroids[i];
-    if (!a.userData.alive) { scene.remove(a); asteroids.splice(i,1); continue; }
-
-    a.position.addScaledVector(a.userData.vel, dt);
-    a.rotation.x += a.userData.rotSpd.x;
-    a.rotation.y += a.userData.rotSpd.y;
-
-    // Hit the BACK of rocket (asteroid is behind rocket, z > rocket.z)
-    if (gs.inRocket && dist3(a, rocket) < 14) {
-      gs.rocketHP -= ASTEROID_DMG;
-      sfxAsteroidHit();
-      flashDamage('rgba(200,80,0,0.3)');
-      showNotif(`⚠ ASTEROID IMPACT — HULL: ${Math.max(0,Math.round(gs.rocketHP))}`, 1500);
-      a.userData.alive = false;
-      // Debris effect (spawn small pieces)
-      for (let d = 0; d < 5; d++) {
-        const dg = new THREE.IcosahedronGeometry(1 + Math.random()*3, 0);
-        const dm = new THREE.Mesh(dg, new THREE.MeshPhongMaterial({color:0x665544}));
-        dm.position.copy(a.position);
-        dm.userData = {vel: new THREE.Vector3((Math.random()-.5)*60,(Math.random()-.5)*60,(Math.random()-.5)*60), type:'debris', alive:true, life:2};
-        scene.add(dm);
-        setTimeout(() => scene.remove(dm), 2000);
+    if(!gs.inRocket){
+      const hitP=resolveCollision(c.position,c.userData.radius,c.userData.vel,8,
+                                  playerMesh.position,PLAYER_RADIUS,playerVel,5);
+      if(hitP&&!c.userData.justHit){
+        gs.playerHP-=COMET_DMG;c.userData.justHit=true;
+        sfxCometHit();addShake(12);flashVignette('blue');
+        spawnDmgNumber(COMET_DMG,playerMesh.position.clone(),'#0066ff');
+        setTimeout(()=>c.userData.justHit=false,800);
       }
     }
+    if(c.position.distanceTo(rocket.position)>2800)c.userData.alive=false;
+  }
 
-    // Hit EVA player
-    if (!gs.inRocket && dist3(a, playerMesh) < 10) {
-      gs.playerHP -= ASTEROID_DMG;
-      sfxAsteroidHit();
-      flashDamage('rgba(200,0,0,0.4)');
-      showNotif(`⚠ DIRECT HIT — HP: ${Math.max(0,Math.round(gs.playerHP))}`, 2000);
-      a.userData.alive = false;
-    }
-
-    // Despawn if too far
-    if (a.position.distanceTo(rocket.position) > 2000) {
-      a.userData.alive = false;
+  // ── FOOD ITEMS
+  for(let i=foodItems.length-1;i>=0;i--){
+    const f=foodItems[i];
+    if(!f.userData.alive){scene.remove(f);foodItems.splice(i,1);continue;}
+    f.rotation.y+=.025;f.rotation.x+=.01;
+    const ct=gs.inRocket?rocket.position:playerMesh.position;
+    if(f.position.distanceTo(ct)<22){
+      gs.food+=5;gs.score+=50;f.userData.alive=false;
+      sfxFoodCollect();showNotif('+ 5 FOOD UNITS COLLECTED',1500);
     }
   }
 
-  // ── MOVE & COLLIDE COMETS ──
-  for (let i = comets.length - 1; i >= 0; i--) {
-    const c = comets[i];
-    if (!c.userData.alive) { scene.remove(c); comets.splice(i,1); continue; }
-
-    c.position.addScaledVector(c.userData.vel, dt);
-
-    // Comets hit the FRONT of rocket
-    if (gs.inRocket && dist3(c, rocket) < 16) {
-      gs.rocketHP -= COMET_DMG;
-      sfxCometHit();
-      flashDamage('rgba(0,100,255,0.3)');
-      showNotif(`⚠ COMET IMPACT — HULL: ${Math.max(0,Math.round(gs.rocketHP))}`, 2000);
-      c.userData.alive = false;
-    }
-
-    if (!gs.inRocket && dist3(c, playerMesh) < 12) {
-      gs.playerHP -= COMET_DMG;
-      sfxCometHit();
-      flashDamage('rgba(0,0,255,0.4)');
-      showNotif(`⚠ COMET STRIKE — HP: ${Math.max(0,Math.round(gs.playerHP))}`, 2000);
-      c.userData.alive = false;
-    }
-
-    if (c.position.distanceTo(rocket.position) > 2500) c.userData.alive = false;
-  }
-
-  // ── FOOD ITEMS ──
-  for (let i = foodItems.length - 1; i >= 0; i--) {
-    const f = foodItems[i];
-    if (!f.userData.alive) { scene.remove(f); foodItems.splice(i,1); continue; }
-    f.rotation.y += 0.02;
-    const collectTarget = gs.inRocket ? rocket.position : playerMesh.position;
-    if (f.position.distanceTo(collectTarget) < 20) {
-      gs.food  += 5;
-      gs.score += 50;
-      f.userData.alive = false;
-      sfxFoodCollect();
-      showNotif('+ 5 FOOD UNITS COLLECTED', 1500);
-    }
-  }
-
-  // ── PLANET PROXIMITY CHECK ──
-  planetMeshes.forEach((pm, i) => {
-    if (i < gs.planetIdx) return; // already visited
-    if (i > gs.planetIdx) return; // not the current dest
-    pm.rotation.y += 0.001; // slow rotation
-    if (rocket.position.distanceTo(pm.position) < PLANETS[i].radius * 2.5) {
+  // ── PLANET PROXIMITY
+  planetMeshes.forEach((pm,i)=>{
+    pm.rotation.y+=.0006;
+    if(i!==gs.planetIdx)return;
+    if(rocket.position.distanceTo(pm.position)<PLANETS[i].radius*2.2&&!gs.paused){
       arriveAtPlanet(i);
     }
   });
 
-  // ── ENGINE GLOW PULSE ──
-  const pulse = 0.25 + Math.sin(time * 0.008) * 0.1;
-  if (engineGlow) {
-    engineGlow.material.opacity = pulse;
-    engineGlow.scale.y = 1 + Math.sin(time * 0.012) * 0.15;
-  }
-  if (engineLight) engineLight.intensity = 3 + Math.sin(time * 0.01) * 1.5;
-
-  // ── EARTH DEBRIS ROTATION ──
-  if (earthDebrisGroup) {
-    earthDebrisGroup.children.forEach(ch => {
-      ch.rotation.x += ch.userData.rotSpd.x;
-      ch.rotation.y += ch.userData.rotSpd.y;
-    });
-  }
-
-  // ── AUTO-SAVE ──
-  if (now - lastSave > SAVE_INTERVAL_MS) {
-    saveGame();
-    lastSave = now;
+  // ── PARTICLE SYSTEMS
+  for(let i=particleSystems.length-1;i>=0;i--){
+    const ps=particleSystems[i];
+    ps.life+=dt;
+    if(ps.life>ps.maxLife){scene.remove(ps.pts);particleSystems.splice(i,1);continue;}
+    const ppos=ps.geo.attributes.position;const t=ps.life;
+    for(let j=0;j<ps.velocities.length;j++){
+      const v=ps.velocities[j];
+      ppos.setXYZ(j,ppos.getX(j)+v.x*dt,ppos.getY(j)+v.y*dt-.5*SURFACE_GRAVITY*.1*t,ppos.getZ(j)+v.z*dt);
+      v.y-=8*dt; // gravity
+    }
+    ppos.needsUpdate=true;
+    ps.pts.material.opacity=Math.max(0,1-ps.life/ps.maxLife)*0.9;
   }
 
-  // ── DEATH CHECK ──
-  checkDeath();
+  // ── ENGINE PULSE
+  const pulse=.22+Math.sin(time*.01)*.1;
+  if(engineGlow){engineGlow.material.opacity=pulse;engineGlow.scale.y=1+Math.sin(time*.014)*.18;}
+  if(engineLight)engineLight.intensity=4+Math.sin(time*.009)*2;
 
-  // ── HUD ──
-  updateHUD();
+  // ── EARTH DEBRIS
+  if(earthDebrisRef){earthDebrisRef.children.forEach(c=>{c.rotation.x+=c.userData.rot.x;c.rotation.y+=c.userData.rot.y;});}
+
+  // ── AUTO-SAVE
+  if(now-lastSave>SAVE_INTERVAL_MS){saveGame();lastSave=now;}
+
+  checkDeath();updateHUD();
 }
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
+//  IMPACT SPARKS (mini particles)
+// ═══════════════════════════════════════════════
+function spawnImpactSparks(pos,color){
+  const count=30,geo=new THREE.BufferGeometry(),ppos=new Float32Array(count*3),vels=[];
+  for(let i=0;i<count;i++){
+    ppos[i*3]=pos.x;ppos[i*3+1]=pos.y;ppos[i*3+2]=pos.z;
+    vels.push(new THREE.Vector3((Math.random()-.5)*80,(Math.random()-.5)*80,(Math.random()-.5)*80));
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(ppos,3));
+  const mat=new THREE.PointsMaterial({color,size:5,transparent:true,opacity:.9,sizeAttenuation:true,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);scene.add(pts);
+  particleSystems.push({pts,velocities:vels,geo,life:0,maxLife:.8});
+}
+
+// ═══════════════════════════════════════════════
 //  RENDER LOOP
-// ─────────────────────────────────────────────
-function renderLoop(time) {
+// ═══════════════════════════════════════════════
+function renderLoop(time){
   requestAnimationFrame(renderLoop);
-  if (gs.screen === 'playing') update(time);
-  renderer.render(scene, camera);
+  if(gs.screen==='playing')update(time);
+  renderer.render(scene,camera);
 }
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  INIT SCENE
-// ─────────────────────────────────────────────
-function initScene() {
-  buildLighting();
-  buildStarfield();
-  buildSun();
-  buildNebula();
-  buildEarthDebris();
-  buildPlanets();
-  buildRocket();
-  buildPlayerMesh();
+// ═══════════════════════════════════════════════
+function initScene(){
+  buildLighting();buildStarfield();buildSun();buildNebula();
+  earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
 }
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  MENU FUNCTIONS
-// ─────────────────────────────────────────────
-function startNewGame() {
+// ═══════════════════════════════════════════════
+function startNewGame(){
   localStorage.removeItem(SAVE_KEY);
-  document.getElementById('mainMenu').style.display = 'none';
-  document.getElementById('storyPanel').style.display = 'flex';
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('storyPanel').style.display='flex';
 }
 
-function beginPlay() {
-  document.getElementById('storyPanel').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  gs.screen = 'playing';
-  prevTime = performance.now();
-  lastSave = prevTime;
-  initAudio();
-  startSpaceMusic();
-  startEngineHum();
-  showNotif('Mission started. Reach Mars. Survive.', 4000);
+function beginPlay(){
+  document.getElementById('storyPanel').style.display='none';
+  document.getElementById('hud').style.display='block';
+  gs.screen='playing';prevTime=performance.now();lastSave=prevTime;
+  initAudio();startSpaceMusic();startEngineHum();
+  showNotif('Mission started. Reach Mars. Survive.',4000);
 }
 
-function continueGame() {
-  const save = loadSave();
-  if (!save) return;
-  document.getElementById('mainMenu').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  applySave(save);
-  gs.screen = 'playing';
-  gs.breathRefilling = gs.inRocket;
-  if (gs.breathRefilling) gs.breathRefillStart = performance.now();
-  if (!gs.inRocket) playerMesh.visible = true;
-  prevTime = performance.now();
-  lastSave = prevTime;
-  initAudio();
-  startSpaceMusic();
-  startEngineHum();
-  showNotif('Mission resumed.', 2000);
+function continueGame(){
+  const save=loadSave();if(!save)return;
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('hud').style.display='block';
+  applySave(save);gs.screen='playing';
+  gs.breathRefilling=gs.inRocket;
+  if(gs.breathRefilling)gs.breathRefillStart=performance.now();
+  if(!gs.inRocket){playerMesh.visible=true;}
+  prevTime=performance.now();lastSave=prevTime;
+  initAudio();startSpaceMusic();startEngineHum();
+  showNotif('Mission resumed.',2000);
 }
 
-function showControls() {
+function showControls(){
   showNotif(
-    '<strong style="color:#00c8ff">CONTROLS</strong><br><br>' +
-    'ARROW KEYS — Dodge (up/down/left/right)<br>' +
-    'W / S — Look up / down<br>' +
-    'A / D — Look left / right<br>' +
-    'E — Exit / enter rocket<br>' +
-    'ESC — Pause / menu<br><br>' +
-    '<span style="color:#ff6600">Outside rocket: oxygen drains 1%/3 sec.<br>' +
-    'At 0%: 5 HP damage per 0.5 sec.<br>' +
-    'Back inside: 2 min to refill.</span>',
-    8000
-  );
+    '<strong style="color:#00c8ff">CONTROLS</strong><br><br>'+
+    'ARROW KEYS — Move / dodge rocket (also walk on surface)<br>'+
+    'W/S/A/D — Rotate camera<br>'+
+    'E — Exit / enter rocket<br>'+
+    'R — Repair hull (5 food = +500 HP)<br>'+
+    'ESC — Pause<br><br>'+
+    '<span style="color:#ff6600">Outside: O₂ drains 1%/3 sec → 5 HP damage/0.5 sec at zero</span>',8000);
 }
 
-function showMain() {
-  gs.screen = 'menu';
-  document.getElementById('gameOverScreen').style.display = 'none';
-  document.getElementById('hud').style.display = 'none';
-  document.getElementById('mainMenu').style.display = 'flex';
+function leavePlanet(){
+  document.getElementById('planetPanel').style.display='none';
+  gs.screen='playing';gs.paused=false;
+  const idx=gs.planetIdx;
+  gs.planetIdx=Math.min(gs.planetIdx+1,PLANETS.length-1);
+  if(gs.onSurface){
+    buildPlanetSurface(idx);
+    gs.inRocket=false;playerMesh.visible=true;
+    playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+    playerVel.set(0,0,0);
+    showNotif('You are on the surface. Collect supplies. Press E to re-board.',5500);
+  }
 }
 
-function restartGame() {
-  // Reset state
-  gs.playerHP     = PLAYER_MAX_HP;
-  gs.playerBreath = PLAYER_MAX_BREATH;
-  gs.rocketHP     = ROCKET_MAX_HP;
-  gs.inRocket     = true;
-  gs.food         = 0;
-  gs.score        = 0;
-  gs.travelDist   = 0;
-  gs.planetIdx    = 0;
-  gs.chapter      = 'Chapter 1 — Escape from Earth';
-  gs.paused       = false;
-  gs.breathRefilling = false;
-
-  rocket.position.set(0,0,0);
-  rocket.rotation.set(-Math.PI/2, 0, 0);
-  playerMesh.visible = false;
-  clearHazards();
-  planetMeshes.forEach((pm, i) => { pm.userData.reached = false; });
-  lastAsteroidSpawn = 0; lastCometSpawn = 0;
-  camYaw = 0; camPitch = 0.25;
-
-  document.getElementById('gameOverScreen').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  gs.screen = 'playing';
-  prevTime  = performance.now();
-  lastSave  = prevTime;
-  initAudio();
-  startSpaceMusic();
-  startEngineHum();
+function showMain(){
+  gs.screen='menu';
+  document.getElementById('gameOverScreen').style.display='none';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('mainMenu').style.display='flex';
 }
 
-// ─────────────────────────────────────────────
-//  KEYBOARD SHORTCUTS IN GAME
-// ─────────────────────────────────────────────
-window.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && gs.screen === 'playing') {
-    gs.paused = !gs.paused;
-    showNotif(gs.paused ? 'PAUSED — Press ESC to resume' : 'RESUMED', 2000);
+function restartGame(){
+  gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
+  gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;
+  rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
+  rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
+  playerMesh.visible=false;clearHazards();removePlanetSurface();
+  camYaw=0;camPitch=.22;shakeAmt=0;lastAsteroidSpawn=0;lastCometSpawn=0;
+  document.getElementById('gameOverScreen').style.display='none';
+  document.getElementById('hud').style.display='block';
+  gs.screen='playing';prevTime=performance.now();lastSave=prevTime;
+  initAudio();startSpaceMusic();startEngineHum();
+}
+
+// ═══════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════
+window.addEventListener('keydown',e=>{
+  if(e.code==='Escape'&&gs.screen==='playing'){
+    gs.paused=!gs.paused;
+    showNotif(gs.paused?'PAUSED — ESC to resume':'RESUMED',1500);
   }
 });
-
-// ─────────────────────────────────────────────
-//  SAVE ON EXIT
-// ─────────────────────────────────────────────
-window.addEventListener('beforeunload', () => {
-  if (gs.screen === 'playing') saveGame();
+window.addEventListener('beforeunload',()=>{if(gs.screen==='playing')saveGame();});
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
 });
 
-// ─────────────────────────────────────────────
-//  RESIZE
-// ─────────────────────────────────────────────
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════
 //  BOOT
-// ─────────────────────────────────────────────
-(function boot() {
+// ═══════════════════════════════════════════════
+(function boot(){
   initScene();
-
-  // Check for existing save
-  const save = loadSave();
-  if (save) {
-    const btn = document.getElementById('continueBtn');
-    btn.disabled = false;
-    const d = new Date(save.ts);
-    document.getElementById('menu-save-info').textContent =
-      `Save found: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} — ${save.chapter}`;
+  const save=loadSave();
+  if(save){
+    document.getElementById('continueBtn').disabled=false;
+    const d=new Date(save.ts);
+    document.getElementById('menu-save-info').textContent=
+      `Save: ${d.toLocaleDateString()} ${d.toLocaleTimeString()} — ${save.chapter}`;
   }
-
   renderLoop(0);
 })();
 </script>
