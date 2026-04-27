@@ -108,6 +108,33 @@ canvas{display:block;position:fixed;top:0;left:0}
 
 #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none}
 #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,.3)}
+
+/* ── COCKPIT OVERLAY ── */
+#cockpit-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:5;display:none;
+  /* Thick dark frame — the cockpit walls */
+  box-shadow:
+    inset 0 0 0 55px #04070b,
+    inset 0 0 280px 100px rgba(0,4,10,.65);
+}
+/* Vertical centre post (window divider) */
+#cockpit-overlay::before{
+  content:'';position:absolute;top:0;bottom:0;left:50%;width:7px;
+  transform:translateX(-50%);
+  background:linear-gradient(to bottom,#070b10,#111c28 20%,#111c28 80%,#070b10);
+  box-shadow:0 0 12px rgba(0,120,255,.15);
+}
+/* Horizontal sill — top of instrument panel area */
+#cockpit-overlay::after{
+  content:'';position:absolute;left:5%;right:5%;bottom:18%;height:6px;
+  background:linear-gradient(to right,transparent,#0d1520 12%,#0d1520 88%,transparent);
+  box-shadow:0 -2px 20px rgba(0,80,160,.2);
+}
+#cockpit-instruments{
+  position:fixed;bottom:0;left:0;right:0;height:18%;
+  background:linear-gradient(to top,#04070b 65%,rgba(4,7,11,.7) 90%,transparent);
+  pointer-events:none;z-index:5;display:none;
+}
 #crosshair::before{width:1px;height:100%;left:50%;transform:translateX(-50%)}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
 
@@ -225,7 +252,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   <div id="save-indicator">✓ SAVED</div>
   <div id="controls-hint">
     ARROWS — Dodge / Move<br>
-    WASD — Look around<br>
+    WASD — Look around cockpit (springs back)<br>
     C (hold) — Look backwards<br>
     J — Jump (on surface)<br>
     E — Exit rocket (planet only) / board<br>
@@ -235,6 +262,10 @@ canvas{display:block;position:fixed;top:0;left:0}
     ESC — Pause
   </div>
 </div>
+
+<!-- COCKPIT -->
+<div id="cockpit-overlay"></div>
+<div id="cockpit-instruments"></div>
 
 <!-- NOTIFICATION -->
 <div id="notification"></div>
@@ -456,6 +487,7 @@ window.addEventListener('keyup',e=>{keys[e.code]=false;});
 // ═══════════════════════════════════════════════
 let camYaw=0,camPitch=.22;
 let rocketYaw=0,rocketPitch=0;
+let lookYawOff=0,lookPitchOff=0;
 const CAM_DIST=50,CAM_H=14,CAM_SPEED=4.5;
 let shakeAmt=0;
 
@@ -1234,27 +1266,48 @@ function update(time){
   // ── SCREEN SHAKE DECAY
   shakeAmt=Math.max(0,shakeAmt-8*dt);
 
-  // ── CAMERA (WASD look)
-  if(keys['KeyA'])camYaw+=CAM_SPEED*dt;
-  if(keys['KeyD'])camYaw-=CAM_SPEED*dt;
-  if(keys['KeyW'])camPitch-=CAM_SPEED*dt;
-  if(keys['KeyS'])camPitch+=CAM_SPEED*dt;
-  camPitch=Math.max(-.9,Math.min(1.0,camPitch));
+  // ── CAMERA
+  if(gs.inRocket){
+    // ── FIRST-PERSON COCKPIT — WASD = head look, springs back to centre
+    if(keys['KeyA'])lookYawOff=Math.min(.7,lookYawOff+CAM_SPEED*dt*.55);
+    if(keys['KeyD'])lookYawOff=Math.max(-.7,lookYawOff-CAM_SPEED*dt*.55);
+    if(keys['KeyW'])lookPitchOff=Math.max(-.45,lookPitchOff-CAM_SPEED*dt*.4);
+    if(keys['KeyS'])lookPitchOff=Math.min(.45,lookPitchOff+CAM_SPEED*dt*.4);
+    if(!keys['KeyA']&&!keys['KeyD'])lookYawOff*=Math.pow(.015,dt);
+    if(!keys['KeyW']&&!keys['KeyS'])lookPitchOff*=Math.pow(.015,dt);
 
-  const lookTarget=gs.inRocket?rocket.position:playerMesh.position;
-  const viewYaw=keys['KeyC']?camYaw+Math.PI:camYaw; // C = look back
-  const sinY=Math.sin(viewYaw),cosY=Math.cos(viewYaw),cosP=Math.cos(camPitch),sinP=Math.sin(camPitch);
-  camera.position.set(
-    lookTarget.x+CAM_DIST*sinY*cosP,
-    lookTarget.y+CAM_DIST*sinP+CAM_H,
-    lookTarget.z+CAM_DIST*cosY*cosP
-  );
-  // Apply shake after positioning
-  if(shakeAmt>.01){
-    camera.position.x+=(Math.random()-.5)*shakeAmt;
-    camera.position.y+=(Math.random()-.5)*shakeAmt*0.6;
+    // Cockpit seat position: inside rocket at window height
+    const cPos=new THREE.Vector3(0,3.5,0.5);
+    rocket.localToWorld(cPos);
+    if(shakeAmt>.01){cPos.x+=(Math.random()-.5)*shakeAmt*.25;cPos.y+=(Math.random()-.5)*shakeAmt*.18;}
+    camera.position.copy(cPos);
+
+    // Look direction: rocket heading + head offset; C = look behind
+    const vy=rocketYaw+lookYawOff+(keys['KeyC']?Math.PI:0);
+    const vp=rocketPitch+lookPitchOff*(keys['KeyC']?-1:1);
+    camera.lookAt(cPos.x-Math.sin(vy)*Math.cos(vp)*2000,cPos.y+Math.sin(vp)*2000,cPos.z-Math.cos(vy)*Math.cos(vp)*2000);
+
+    rocket.visible=false;
+    document.getElementById('cockpit-overlay').style.display='block';
+    document.getElementById('cockpit-instruments').style.display='block';
+  } else {
+    // ── THIRD-PERSON — surface / EVA
+    if(keys['KeyA'])camYaw+=CAM_SPEED*dt;
+    if(keys['KeyD'])camYaw-=CAM_SPEED*dt;
+    if(keys['KeyW'])camPitch-=CAM_SPEED*dt;
+    if(keys['KeyS'])camPitch+=CAM_SPEED*dt;
+    camPitch=Math.max(-.9,Math.min(1.0,camPitch));
+    const lookTarget=playerMesh.position;
+    const viewYaw=keys['KeyC']?camYaw+Math.PI:camYaw;
+    const sinY=Math.sin(viewYaw),cosY=Math.cos(viewYaw),cosP=Math.cos(camPitch),sinP=Math.sin(camPitch);
+    camera.position.set(lookTarget.x+CAM_DIST*sinY*cosP,lookTarget.y+CAM_DIST*sinP+CAM_H,lookTarget.z+CAM_DIST*cosY*cosP);
+    if(shakeAmt>.01){camera.position.x+=(Math.random()-.5)*shakeAmt;camera.position.y+=(Math.random()-.5)*shakeAmt*.6;}
+    camera.lookAt(lookTarget);
+
+    rocket.visible=true;
+    document.getElementById('cockpit-overlay').style.display='none';
+    document.getElementById('cockpit-instruments').style.display='none';
   }
-  camera.lookAt(lookTarget);
 
   // ── EAT (G key) — 1 food unit restores hunger + heals HP
   if(keys['KeyG']&&gs.food>=1){
@@ -1675,6 +1728,9 @@ function showMain(){
   document.getElementById('gameOverScreen').style.display='none';
   document.getElementById('hud').style.display='none';
   document.getElementById('mainMenu').style.display='flex';
+  document.getElementById('cockpit-overlay').style.display='none';
+  document.getElementById('cockpit-instruments').style.display='none';
+  if(rocket)rocket.visible=true;
 }
 
 function restartGame(){
@@ -1685,7 +1741,7 @@ function restartGame(){
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
   playerMesh.visible=false;clearHazards();removePlanetSurface();
-  camYaw=0;camPitch=.22;rocketYaw=0;rocketPitch=0;shakeAmt=0;lastAsteroidSpawn=0;lastCometSpawn=0;
+  camYaw=0;camPitch=.22;rocketYaw=0;rocketPitch=0;lookYawOff=0;lookPitchOff=0;shakeAmt=0;lastAsteroidSpawn=0;lastCometSpawn=0;
   document.getElementById('gameOverScreen').style.display='none';
   document.getElementById('hud').style.display='block';
   gs.screen='playing';prevTime=performance.now();lastSave=prevTime;
