@@ -168,7 +168,7 @@ canvas{display:block;position:fixed;top:0;left:0}
     <p><span class="red">EARTH YEAR 2087.</span> Without warning, an alien armada emerged from deep space. Their gravity implosion device compressed Earth's core until the planet detonated. The explosion was visible from Mars.</p>
     <p>You are <strong style="color:#fff">Commander Alex Chen</strong>, one of 47 survivors aboard the <strong style="color:#00c8ff">SpaceX Ark I</strong>. Your suit holds 250% oxygen capacity. The hull absorbs 1000 damage before failure.</p>
     <p><span class="red">Asteroids rise from the debris belt behind you — 80 hull damage each. Alien-launched comets pierce the void ahead — 120 damage.</span> Use food to repair the hull: 5 food = +500 HP.</p>
-    <p>You begin with <strong style="color:#00c8ff">250% oxygen</strong>. Collect food to heal yourself and restore hunger. Press <strong style="color:#ffcc00">F</strong> to eat (1 food = +15 HP +30% hunger). At zero hunger you starve. Land on planets to find supplies.</p>
+    <p>You begin with <strong style="color:#00c8ff">250% oxygen</strong>. Collect food to heal yourself and restore hunger. Press <strong style="color:#ffcc00">G</strong> to eat (1 food = +15 HP +30% hunger). At zero hunger you starve. Hold <strong style="color:#ff6600">F</strong> for afterburner (5× speed, drains hull). Land on planets to find supplies.</p>
     <p style="color:#00c8ff;letter-spacing:2px">FIRST DESTINATION: MARS</p>
     <button class="mbtn" style="margin-top:20px;width:100%" onclick="beginPlay()">LAUNCH ▶</button>
   </div>
@@ -209,6 +209,7 @@ canvas{display:block;position:fixed;top:0;left:0}
     <div id="surface-indicator">▲ ON SURFACE — E to board</div>
     <div id="breath-warn">⚠ SUFFOCATING</div>
     <div id="hunger-warn" style="color:#ffaa00;font-size:.85em;display:none;animation:blink .8s infinite">⚠ STARVING</div>
+    <div id="boost-indicator" style="color:#ff6600;font-size:.9em;display:none;animation:blink .4s infinite">🔥 AFTERBURNER — HULL DRAINING</div>
     <div style="color:#2a3040;font-size:11px;margin-top:8px">HAZARDS: <span id="hazard-label">0</span></div>
     <div style="margin-top:10px;pointer-events:all">
       <button id="mute-btn" onclick="toggleMute()"
@@ -226,7 +227,8 @@ canvas{display:block;position:fixed;top:0;left:0}
     ARROWS — Dodge / Move<br>
     WASD — Look around<br>
     E — Exit / Enter rocket<br>
-    F — Eat food (1 unit = +15 HP)<br>
+    F (hold) — Afterburner 5× speed<br>
+    G — Eat food (+15 HP)<br>
     R — Repair hull (5 food)<br>
     ESC — Pause
   </div>
@@ -418,7 +420,7 @@ const gs={
   inRocket:true,onSurface:false,
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
-  paused:false,breathRefilling:false,breathRefillStart:0
+  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false
 };
 
 // ═══════════════════════════════════════════════
@@ -467,7 +469,7 @@ const planetMeshes=[];
 let surfaceMesh=null,surfaceGroup=null;
 let currentSurfacePlanetIdx=-1;
 let lastBreathDrain=0,lastSuffDmg=0,lastAsteroidSpawn=0,lastCometSpawn=0;
-let lastSave=0,lastOxyBeep=0,lastHungerDrain=0,lastStarveDmg=0;
+let lastSave=0,lastOxyBeep=0,lastHungerDrain=0,lastStarveDmg=0,lastBoostDmg=0;
 let prevTime=0,notifTimeout=null,flashTimeout=null;
 
 // ═══════════════════════════════════════════════
@@ -1076,9 +1078,10 @@ function updateHUD(){
   const distLeft=Math.max(0,dp.distance-gs.travelDist);
   document.getElementById('dest-label').textContent=`DESTINATION: ${dp.name.toUpperCase()}`;
   document.getElementById('dist-label').textContent=`DISTANCE: ${Math.round(distLeft*150).toLocaleString()} km`;
-  document.getElementById('food-label').textContent=`FOOD: ${gs.food} UNITS  [ F=EAT ]`;
+  document.getElementById('food-label').textContent=`FOOD: ${gs.food} UNITS  [ G=EAT ]`;
   document.getElementById('chapter-label').textContent=gs.chapter.toUpperCase();
   document.getElementById('hazard-label').textContent=asteroids.length+comets.length;
+  document.getElementById('boost-indicator').style.display=gs.boosting?'block':'none';
   document.getElementById('eva-indicator').style.display=(!gs.inRocket&&!gs.onSurface)?'block':'none';
   document.getElementById('surface-indicator').style.display=gs.onSurface?'block':'none';
   document.getElementById('breath-warn').style.display=gs.playerBreath<=0?'block':'none';
@@ -1131,7 +1134,9 @@ function saveGame(){
   const d={playerHP:gs.playerHP,playerBreath:gs.playerBreath,rocketHP:gs.rocketHP,
     hunger:gs.hunger,food:gs.food,score:gs.score,travelDist:gs.travelDist,planetIdx:gs.planetIdx,
     chapter:gs.chapter,inRocket:gs.inRocket,
-    rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},ts:Date.now()};
+    rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},
+    playerPos:{x:playerMesh.position.x,y:playerMesh.position.y,z:playerMesh.position.z},
+    ts:Date.now()};
   localStorage.setItem(SAVE_KEY,JSON.stringify(d));
   const si=document.getElementById('save-indicator');
   si.style.opacity='1';setTimeout(()=>si.style.opacity='0',2000);
@@ -1143,6 +1148,7 @@ function applySave(data){
   gs.food=data.food;gs.score=data.score;gs.travelDist=data.travelDist;
   gs.planetIdx=data.planetIdx;gs.chapter=data.chapter;gs.inRocket=data.inRocket!==false;
   if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
+  if(data.playerPos)playerMesh.position.set(data.playerPos.x,data.playerPos.y,data.playerPos.z);
 }
 
 // ═══════════════════════════════════════════════
@@ -1238,14 +1244,21 @@ function update(time){
   }
   camera.lookAt(lookTarget);
 
-  // ── EAT (F key) — 1 food unit restores hunger + heals HP
-  if(keys['KeyF']&&gs.food>=1){
-    keys['KeyF']=false;
+  // ── EAT (G key) — 1 food unit restores hunger + heals HP
+  if(keys['KeyG']&&gs.food>=1){
+    keys['KeyG']=false;
     gs.food-=1;
     gs.playerHP=Math.min(PLAYER_MAX_HP,gs.playerHP+EAT_HP);
     gs.hunger=Math.min(PLAYER_MAX_HUNGER,gs.hunger+EAT_HUNGER);
     sfxEat();
     showNotif(`FOOD EATEN  +${EAT_HP} HP  +${EAT_HUNGER}% HUNGER`,1500);
+  }
+
+  // ── AFTERBURNER (F hold) — 5× speed, -1 hull HP/sec
+  gs.boosting=!!(keys['KeyF']&&gs.inRocket);
+  if(gs.boosting&&now-lastBoostDmg>=1000){
+    gs.rocketHP=Math.max(0,gs.rocketHP-1);lastBoostDmg=now;
+    if(gs.rocketHP<=0){checkDeath();return;}
   }
 
   // ── REPAIR (R key)
@@ -1290,9 +1303,17 @@ function update(time){
     // Lateral drag (not forward)
     rocketVel.x*=1-MOVE_DRAG*dt;
     rocketVel.y*=1-MOVE_DRAG*dt;
-    rocketVel.z=-ROCKET_SPEED; // constant forward travel
+    const spd=gs.boosting?ROCKET_SPEED*5:ROCKET_SPEED;
+    rocketVel.z=-spd;
     rocket.position.addScaledVector(rocketVel,dt);
-    gs.travelDist+=ROCKET_SPEED*dt;
+    gs.travelDist+=spd*dt;
+    // Boost visuals: scale engine glow + warp line opacity
+    if(engineGlow){
+      const s=gs.boosting?2.8:1;
+      engineGlow.scale.set(s,s,s);
+      engineGlow.material.opacity=gs.boosting?.55:.22;
+    }
+    if(engineLight)engineLight.intensity=gs.boosting?18:5;
 
     // 3D nav arrow — floats ahead, points at destination
     if(navArrow3D&&planetMeshes[gs.planetIdx]){
@@ -1607,6 +1628,8 @@ function showControls(){
     'ARROW KEYS — Move / dodge rocket (also walk on surface)<br>'+
     'W/S/A/D — Rotate camera<br>'+
     'E — Exit / enter rocket<br>'+
+    '<span style="color:#ff6600">F (hold) — Afterburner 5× speed (drains 1 hull HP/sec)</span><br>'+
+    'G — Eat food (+15 HP)<br>'+
     'R — Repair hull (5 food = +500 HP)<br>'+
     'ESC — Pause<br><br>'+
     '<span style="color:#ff6600">Outside: O₂ drains 1%/3 sec → 5 HP damage/0.5 sec at zero</span>',8000);
@@ -1637,7 +1660,7 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
   playerMesh.visible=false;clearHazards();removePlanetSurface();
