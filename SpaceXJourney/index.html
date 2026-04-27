@@ -227,6 +227,7 @@ canvas{display:block;position:fixed;top:0;left:0}
     ARROWS — Dodge / Move<br>
     WASD — Look around<br>
     C (hold) — Look backwards<br>
+    J — Jump (on surface)<br>
     E — Exit rocket (planet only) / board<br>
     F (hold) — Afterburner 5× speed<br>
     G — Eat food (+15 HP)<br>
@@ -243,7 +244,10 @@ canvas{display:block;position:fixed;top:0;left:0}
   <h2 id="planet-name">MARS</h2>
   <p id="planet-story"></p>
   <div class="food-reward" id="planet-food"></div>
-  <button class="mbtn" onclick="leavePlanet()">CONTINUE JOURNEY ▶</button>
+  <div style="display:flex;gap:20px;justify-content:center;margin-top:10px">
+    <button class="mbtn" onclick="explorePlanet()">🪐 EXPLORE PLANET</button>
+    <button class="mbtn" onclick="continuePlanet()">CONTINUE JOURNEY ▶</button>
+  </div>
 </div>
 
 <!-- GAME OVER -->
@@ -273,7 +277,8 @@ const SAVE_INTERVAL_MS = 10000;
 const ROCKET_SPEED     = 200;
 const MOVE_ACCEL       = 600;
 const MOVE_DRAG        = 6;
-const EVA_SPEED        = 12;
+const EVA_SPEED        = 80;
+const JUMP_SPEED       = 28;
 const SURFACE_GRAVITY  = 18;
 const ROCKET_RADIUS    = 14;
 const PLAYER_RADIUS    = 2;
@@ -472,6 +477,7 @@ let surfaceMesh=null,surfaceGroup=null;
 let currentSurfacePlanetIdx=-1;
 let lastBreathDrain=0,lastSuffDmg=0,lastAsteroidSpawn=0,lastCometSpawn=0;
 let lastSave=0,lastOxyBeep=0,lastHungerDrain=0,lastStarveDmg=0,lastBoostDmg=0;
+let playerGrounded=false;
 let prevTime=0,notifTimeout=null,flashTimeout=null;
 
 // ═══════════════════════════════════════════════
@@ -1187,10 +1193,6 @@ function arriveAtPlanet(idx){
   gs.food+=PLANETS[idx].food;gs.score+=PLANETS[idx].food*10;
   gs.chapter=PLANETS[idx].chapter;gs.screen='planet';gs.paused=true;
   sfxPlanetArrive();
-  if(idx===0){
-    // Mars — actually land on surface after panel dismiss
-    gs.onSurface=true;
-  }
   document.getElementById('planet-name').textContent=
     idx===PLANETS.length-1?'MISSION COMPLETE':PLANETS[idx].name.toUpperCase();
   document.getElementById('planet-story').textContent=PLANETS[idx].story;
@@ -1199,21 +1201,25 @@ function arriveAtPlanet(idx){
   saveGame();
 }
 
-function leavePlanet(){
+function explorePlanet(){
   document.getElementById('planetPanel').style.display='none';
   gs.screen='playing';gs.paused=false;
   const idx=gs.planetIdx;
   gs.planetIdx=Math.min(gs.planetIdx+1,PLANETS.length-1);
+  gs.onSurface=true;
+  buildPlanetSurface(idx);
+  gs.inRocket=false;playerMesh.visible=true;playerGrounded=false;
+  playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+  playerVel.set(0,0,0);
+  showNotif('On the surface — ARROWS=walk  J=jump  E=board rocket',5000);
+}
 
-  if(gs.onSurface){
-    // Build surface to walk on
-    buildPlanetSurface(idx);
-    gs.inRocket=false;
-    playerMesh.visible=true;
-    playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
-    playerVel.set(0,0,0);
-    showNotif('You are on the surface. Collect supplies. Press E to re-board.', 5000);
-  }
+function continuePlanet(){
+  document.getElementById('planetPanel').style.display='none';
+  gs.screen='playing';gs.paused=false;
+  gs.onSurface=false;
+  gs.planetIdx=Math.min(gs.planetIdx+1,PLANETS.length-1);
+  showNotif('Continuing journey...',2000);
 }
 
 // ═══════════════════════════════════════════════
@@ -1373,8 +1379,14 @@ function update(time){
       playerVel.y-=SURFACE_GRAVITY*dt;
       playerMesh.position.y+=playerVel.y*dt;
       if(playerMesh.position.y<surfY+2){
-        playerMesh.position.y=surfY+2;playerVel.y=0;
+        playerMesh.position.y=surfY+2;playerVel.y=0;playerGrounded=true;
+      } else {
+        playerGrounded=false;
       }
+    }
+    // Jump (J key)
+    if(keys['KeyJ']&&playerGrounded){
+      keys['KeyJ']=false;playerVel.y=JUMP_SPEED;playerGrounded=false;
     }
     // Orient player upright
     playerMesh.rotation.y=Math.PI+camYaw;
