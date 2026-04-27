@@ -449,7 +449,7 @@ window.addEventListener('keyup',e=>{keys[e.code]=false;});
 //  CAMERA / SCREEN SHAKE
 // ═══════════════════════════════════════════════
 let camYaw=0,camPitch=.22;
-const CAM_DIST=50,CAM_H=14,CAM_SPEED=1.6;
+const CAM_DIST=50,CAM_H=14,CAM_SPEED=4.5;
 let shakeAmt=0;
 
 function addShake(s){shakeAmt=Math.max(shakeAmt,s);}
@@ -1346,10 +1346,10 @@ function update(time){
     }
 
     // Rocket visual roll
-    const targetRoll=keys['ArrowLeft']?.2:keys['ArrowRight']?-.2:0;
-    const targetPitch=-Math.PI/2+(keys['ArrowUp']?-.12:keys['ArrowDown']?.12:0);
-    rocket.rotation.z+=(targetRoll-rocket.rotation.z)*3*dt;
-    rocket.rotation.x+=(targetPitch-rocket.rotation.x)*3*dt;
+    const targetRoll=keys['ArrowLeft']?.45:keys['ArrowRight']?-.45:0;
+    const targetPitch=-Math.PI/2+(keys['ArrowUp']?-.2:keys['ArrowDown']?.2:0);
+    rocket.rotation.z+=(targetRoll-rocket.rotation.z)*10*dt;
+    rocket.rotation.x+=(targetPitch-rocket.rotation.x)*10*dt;
 
   } else if(gs.onSurface&&surfaceMesh){
     if(warpLines)warpLines.visible=false;
