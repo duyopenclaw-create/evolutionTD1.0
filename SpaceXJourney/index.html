@@ -257,8 +257,8 @@ const SUFF_DMG         = 5;
 const SUFF_INTERVAL_MS = 500;
 const BREATH_REFILL_MS = 120000;
 const SAVE_INTERVAL_MS = 10000;
-const ROCKET_SPEED     = 55;
-const MOVE_ACCEL       = 180;
+const ROCKET_SPEED     = 200;
+const MOVE_ACCEL       = 600;
 const MOVE_DRAG        = 6;
 const EVA_SPEED        = 12;
 const SURFACE_GRAVITY  = 18;
@@ -378,22 +378,22 @@ function stopSpaceMusic(){
 //  PLANET DATA
 // ═══════════════════════════════════════════════
 const PLANETS=[
-  {name:'Mars',color:0xbb3300,emissive:0x1a0400,radius:380,distance:8000,
+  {name:'Mars',color:0xbb3300,emissive:0x1a0400,radius:380,distance:29000,
    story:'The red planet stands desolate — the alien armada passed through hours ago. Martian Colony Alpha is rubble. But in the greenhouse domes, hydroponic crops still grow, untouched. You land and harvest what you can.',
    food:25,chapter:'Chapter 2 — The Red Wasteland',surfaceColor:0xaa3300,skyColor:0x331100},
-  {name:"Jupiter's Moons",color:0xcc9944,emissive:0x221100,radius:900,distance:22000,
+  {name:"Jupiter's Moons",color:0xcc9944,emissive:0x221100,radius:900,distance:80000,
    story:"Europa's ocean-vents harbor alien kelp forests beneath kilometers of ice. Your EVA team melts an entry shaft. The bioluminescent harvest feeds the crew for weeks.",
    food:40,chapter:'Chapter 3 — Ocean Beneath the Ice',surfaceColor:0xaaddff,skyColor:0x002244},
-  {name:'Saturn',color:0xddcc88,emissive:0x111100,radius:750,distance:40000,
+  {name:'Saturn',color:0xddcc88,emissive:0x111100,radius:750,distance:145000,
    story:"Titan's methane lakes are lifeless, but orbiting the rings you intercept an alien cargo pod packed with protein synthesizers. A lucky find.",
    food:35,chapter:'Chapter 4 — Rings of Saturn',surfaceColor:0xccaa66,skyColor:0x221100},
-  {name:'Uranus',color:0x44aacc,emissive:0x001122,radius:600,distance:60000,
+  {name:'Uranus',color:0x44aacc,emissive:0x001122,radius:600,distance:218000,
    story:'A derelict alien harvester drifts in the upper atmosphere, trailing frozen organic matter. You grapple it and extract a cache of nutrient packs.',
    food:50,chapter:'Chapter 5 — Blue Silence',surfaceColor:0x336688,skyColor:0x001122},
-  {name:'Neptune',color:0x2244ff,emissive:0x000033,radius:550,distance:80000,
+  {name:'Neptune',color:0x2244ff,emissive:0x000033,radius:550,distance:290000,
    story:'The storm-wracked atmosphere conceals vast floating ecosystems — gas-bag creatures the size of cities. Their shed membranes are rich in proteins.',
    food:60,chapter:'Chapter 6 — The Dark Giant',surfaceColor:0x112266,skyColor:0x000033},
-  {name:'Proxima b',color:0xff8844,emissive:0x220800,radius:420,distance:150000,
+  {name:'Proxima b',color:0xff8844,emissive:0x220800,radius:420,distance:545000,
    story:'After years in the void, you reach Proxima Centauri b — a rocky world with breathable atmosphere, running water, alien flora everywhere. Humanity has found its new home.',
    food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x885522,skyColor:0x220800}
 ];
@@ -423,8 +423,8 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.setClearColor(0x000015);
 
 const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x000008,.000006);
-const camera=new THREE.PerspectiveCamera(68,window.innerWidth/window.innerHeight,.3,300000);
+scene.fog=new THREE.FogExp2(0x000008,.000018);
+const camera=new THREE.PerspectiveCamera(85,window.innerWidth/window.innerHeight,.3,300000);
 
 // ═══════════════════════════════════════════════
 //  INPUT
@@ -451,7 +451,7 @@ const playerVel=new THREE.Vector3();
 // ═══════════════════════════════════════════════
 //  SCENE OBJECTS
 // ═══════════════════════════════════════════════
-let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles;
+let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles,warpLines;
 const asteroids=[],comets=[],foodItems=[],particleSystems=[];
 const planetMeshes=[];
 let surfaceMesh=null,surfaceGroup=null;
@@ -498,6 +498,28 @@ function buildLighting(){
   scene.add(sun);
   const fill=new THREE.DirectionalLight(0x8899cc,0.5);
   fill.position.set(0,0,1);scene.add(fill);
+}
+
+// ═══════════════════════════════════════════════
+//  WARP SPEED STREAKS
+// ═══════════════════════════════════════════════
+function buildWarpLines(){
+  const COUNT=600;
+  const pos=new Float32Array(COUNT*6);
+  for(let i=0;i<COUNT;i++){
+    const a=Math.random()*Math.PI*2;
+    const r=40+Math.random()*700;
+    const z=-(Math.random()*3000);
+    const len=40+Math.random()*160;
+    pos[i*6  ]=Math.cos(a)*r; pos[i*6+1]=Math.sin(a)*r; pos[i*6+2]=z;
+    pos[i*6+3]=Math.cos(a)*r; pos[i*6+4]=Math.sin(a)*r; pos[i*6+5]=z-len;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  warpLines=new THREE.LineSegments(geo,
+    new THREE.LineBasicMaterial({color:0x99bbff,transparent:true,opacity:.22}));
+  warpLines.visible=false;
+  scene.add(warpLines);
 }
 
 // ═══════════════════════════════════════════════
@@ -1193,6 +1215,22 @@ function update(time){
     rocket.position.addScaledVector(rocketVel,dt);
     gs.travelDist+=ROCKET_SPEED*dt;
 
+    // Warp streaks — recycle lines that have passed behind the rocket
+    if(warpLines){
+      warpLines.visible=true;
+      const pa=warpLines.geometry.attributes.position;
+      const rz=rocket.position.z;
+      for(let i=0;i<600;i++){
+        if(pa.getZ(i*2)>rz+80){
+          const a=Math.random()*Math.PI*2,r=40+Math.random()*700;
+          const nz=rz-(200+Math.random()*2800),len=40+Math.random()*160;
+          pa.setXYZ(i*2,  Math.cos(a)*r,Math.sin(a)*r+rocket.position.y,nz);
+          pa.setXYZ(i*2+1,Math.cos(a)*r,Math.sin(a)*r+rocket.position.y,nz-len);
+        }
+      }
+      pa.needsUpdate=true;
+    }
+
     // Rocket visual roll
     const targetRoll=keys['ArrowLeft']?.2:keys['ArrowRight']?-.2:0;
     const targetPitch=-Math.PI/2+(keys['ArrowUp']?-.12:keys['ArrowDown']?.12:0);
@@ -1200,6 +1238,7 @@ function update(time){
     rocket.rotation.x+=(targetPitch-rocket.rotation.x)*3*dt;
 
   } else if(gs.onSurface&&surfaceMesh){
+    if(warpLines)warpLines.visible=false;
     // ── HUMAN MOVEMENT ON SURFACE
     const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
     const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
@@ -1238,6 +1277,7 @@ function update(time){
     rocket.position.x+=(playerMesh.position.x-rocket.position.x)*.005;
 
   } else {
+    if(warpLines)warpLines.visible=false;
     // ── EVA (zero-G space walk)
     const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
     const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
@@ -1431,7 +1471,7 @@ function renderLoop(time){
 //  INIT SCENE
 // ═══════════════════════════════════════════════
 function initScene(){
-  buildLighting();buildStarfield();buildSun();buildNebula();
+  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();
   earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
 }
 
