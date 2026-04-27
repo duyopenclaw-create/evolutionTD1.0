@@ -226,6 +226,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   <div id="controls-hint">
     ARROWS — Dodge / Move<br>
     WASD — Look around<br>
+    C (hold) — Look backwards<br>
     E — Exit rocket (planet only) / board<br>
     F (hold) — Afterburner 5× speed<br>
     G — Eat food (+15 HP)<br>
@@ -1234,7 +1235,8 @@ function update(time){
   camPitch=Math.max(-.9,Math.min(1.0,camPitch));
 
   const lookTarget=gs.inRocket?rocket.position:playerMesh.position;
-  const sinY=Math.sin(camYaw),cosY=Math.cos(camYaw),cosP=Math.cos(camPitch),sinP=Math.sin(camPitch);
+  const viewYaw=keys['KeyC']?camYaw+Math.PI:camYaw; // C = look back
+  const sinY=Math.sin(viewYaw),cosY=Math.cos(viewYaw),cosP=Math.cos(camPitch),sinP=Math.sin(camPitch);
   camera.position.set(
     lookTarget.x+CAM_DIST*sinY*cosP,
     lookTarget.y+CAM_DIST*sinP+CAM_H,
@@ -1632,6 +1634,7 @@ function showControls(){
     '<strong style="color:#00c8ff">CONTROLS</strong><br><br>'+
     'ARROW KEYS — Move / dodge rocket (also walk on surface)<br>'+
     'W/S/A/D — Rotate camera<br>'+
+    'C (hold) — Look backwards<br>'+
     'E — Exit rocket (planet surface only) / re-board<br>'+
     '<span style="color:#ff6600">F (hold) — Afterburner 5× speed (drains 1 hull HP/sec)</span><br>'+
     'G — Eat food (+15 HP)<br>'+
