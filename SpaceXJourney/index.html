@@ -420,8 +420,7 @@ renderer.setSize(window.innerWidth,window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.toneMapping=THREE.ReinhardToneMapping;
-renderer.toneMappingExposure=1.4;
+renderer.setClearColor(0x000015);
 
 const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(0x000008,.000006);
@@ -489,21 +488,15 @@ function makePlanetTexture(baseColor,size=256){
 //  LIGHTING
 // ═══════════════════════════════════════════════
 function buildLighting(){
-  // Ambient base — ensures nothing is pure black
-  scene.add(new THREE.AmbientLight(0x222233,1.0));
-  // Hemisphere — deep-space blue sky / dark ground
-  const hemi=new THREE.HemisphereLight(0x334466,0x111122,1.2);
-  scene.add(hemi);
-  // Main sun directional
-  const sun=new THREE.DirectionalLight(0xfff5cc,3.0);
-  sun.position.set(-12000,4000,12000);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const sun=new THREE.DirectionalLight(0xfff5cc,1.5);
+  sun.position.set(0,100,200);
   sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
-  sun.shadow.camera.near=100;sun.shadow.camera.far=50000;
+  sun.shadow.camera.near=1;sun.shadow.camera.far=50000;
   sun.shadow.camera.left=-5000;sun.shadow.camera.right=5000;
   sun.shadow.camera.top=5000;sun.shadow.camera.bottom=-5000;
   scene.add(sun);
-  // Fill from front so the rocket is always readable
-  const fill=new THREE.DirectionalLight(0x334466,0.8);
+  const fill=new THREE.DirectionalLight(0x8899cc,0.5);
   fill.position.set(0,0,1);scene.add(fill);
 }
 
@@ -558,8 +551,8 @@ function buildNebula(){
 // ═══════════════════════════════════════════════
 function buildEarthDebris(){
   const g=new THREE.Group();
-  const oceanMat=new THREE.MeshStandardMaterial({color:0x1144aa,roughness:.9,metalness:.1,emissive:0x001122,emissiveIntensity:.3});
-  const rockMat =new THREE.MeshStandardMaterial({color:0x443322,roughness:.95,metalness:0});
+  const oceanMat=new THREE.MeshPhongMaterial({color:0x1144aa,emissive:0x001122,shininess:10});
+  const rockMat =new THREE.MeshPhongMaterial({color:0x443322,shininess:5});
   for(let i=0;i<35;i++){
     const sz=40+Math.random()*250,geo=new THREE.IcosahedronGeometry(sz,2);
     const pos=geo.attributes.position;
@@ -585,8 +578,8 @@ function buildPlanets(){
   PLANETS.forEach((pd,i)=>{
     const tex=makePlanetTexture(pd.color);
     const geo=new THREE.SphereGeometry(pd.radius,48,48);
-    const mat=new THREE.MeshStandardMaterial({
-      map:tex,roughness:.85,metalness:.0,emissive:new THREE.Color(pd.emissive),emissiveIntensity:1.5
+    const mat=new THREE.MeshPhongMaterial({
+      map:tex,emissive:new THREE.Color(pd.emissive),emissiveIntensity:1.5,shininess:20
     });
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.set(i%2===0?500:-500,(i%3-1)*400,-pd.distance);
@@ -595,7 +588,7 @@ function buildPlanets(){
     if(pd.name==='Saturn'){
       const ring=new THREE.Mesh(
         new THREE.TorusGeometry(pd.radius*2.4,pd.radius*.38,3,80),
-        new THREE.MeshStandardMaterial({color:0xddbb88,roughness:1,metalness:0,transparent:true,opacity:.55,side:THREE.DoubleSide})
+        new THREE.MeshPhongMaterial({color:0xddbb88,shininess:5,transparent:true,opacity:.55,side:THREE.DoubleSide})
       );ring.rotation.x=Math.PI/2.3;mesh.add(ring);
     }
     // Atmosphere glow
@@ -613,11 +606,11 @@ function buildPlanets(){
 // ═══════════════════════════════════════════════
 function buildRocket(){
   rocket=new THREE.Group();
-  const metal =new THREE.MeshStandardMaterial({color:0xe0e4ee,roughness:.3,metalness:.7});
-  const dark  =new THREE.MeshStandardMaterial({color:0x2a2c34,roughness:.6,metalness:.5});
-  const glass =new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.05,metalness:.0,transparent:true,opacity:.8,emissive:0x336688,emissiveIntensity:1.0});
-  const nozzle=new THREE.MeshStandardMaterial({color:0x555566,roughness:.5,metalness:.8});
-  const tile  =new THREE.MeshStandardMaterial({color:0xdddddd,roughness:.85,metalness:.0});
+  const metal =new THREE.MeshPhongMaterial({color:0xe0e4ee,shininess:80,specular:0x888899});
+  const dark  =new THREE.MeshPhongMaterial({color:0x2a2c34,shininess:40,specular:0x333344});
+  const glass =new THREE.MeshPhongMaterial({color:0xaaddff,shininess:200,specular:0xffffff,transparent:true,opacity:.8,emissive:0x336688,emissiveIntensity:1.0});
+  const nozzle=new THREE.MeshPhongMaterial({color:0x555566,shininess:60,specular:0x555566});
+  const tile  =new THREE.MeshPhongMaterial({color:0xdddddd,shininess:20,specular:0x444444});
   const stripe=new THREE.MeshBasicMaterial({color:0x1155ff});
 
   // Main body sections (3 cylinders to mimic Starship paneling)
@@ -694,10 +687,10 @@ function buildRocket(){
 // ═══════════════════════════════════════════════
 function buildPlayerMesh(){
   playerMesh=new THREE.Group();
-  const suit  =new THREE.MeshStandardMaterial({color:0xffffff,roughness:.75,metalness:.0});
-  const helmet=new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.05,metalness:.0,transparent:true,opacity:.7,emissive:0x335577,emissiveIntensity:1.5});
-  const dark  =new THREE.MeshStandardMaterial({color:0x333344,roughness:.7,metalness:.3});
-  const orange=new THREE.MeshStandardMaterial({color:0xff6600,roughness:.7,metalness:.0,emissive:0x441100,emissiveIntensity:.4});
+  const suit  =new THREE.MeshPhongMaterial({color:0xffffff,shininess:30,specular:0x333333});
+  const helmet=new THREE.MeshPhongMaterial({color:0xaaddff,shininess:200,specular:0xffffff,transparent:true,opacity:.7,emissive:0x335577,emissiveIntensity:1.5});
+  const dark  =new THREE.MeshPhongMaterial({color:0x333344,shininess:40,specular:0x333344});
+  const orange=new THREE.MeshPhongMaterial({color:0xff6600,shininess:30,specular:0x331100,emissive:0x441100,emissiveIntensity:.4});
 
   // Torso
   const torso=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,1.1,12),suit);
@@ -708,7 +701,7 @@ function buildPlayerMesh(){
   // Helmet glow interior
   const helmGlow=new THREE.PointLight(0x88ccff,.8,5);helmGlow.position.y=1.0;playerMesh.add(helmGlow);
   // Neck ring
-  playerMesh.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(.36,.06,8,16),dark),{position:{y:.56}}));
+  const neck=new THREE.Mesh(new THREE.TorusGeometry(.36,.06,8,16),dark);neck.position.y=.56;playerMesh.add(neck);
   // Backpack (life support)
   const pack=new THREE.Mesh(new THREE.BoxGeometry(.4,.7,.25),dark);
   pack.position.set(0,.1,-.42);playerMesh.add(pack);
@@ -730,7 +723,7 @@ function buildPlayerMesh(){
   });
   // USA flag patch (decorative box)
   const flag=new THREE.Mesh(new THREE.BoxGeometry(.01,.18,.25),
-    new THREE.MeshStandardMaterial({color:0x3344ff,roughness:.9,metalness:0}));
+    new THREE.MeshPhongMaterial({color:0x3344ff,shininess:10}));
   flag.position.set(.4,.35,0);flag.rotation.z=.3;playerMesh.add(flag);
 
   playerMesh.visible=false;
@@ -754,7 +747,7 @@ function spawnAsteroid(){
   }
   geo.computeVertexNormals();
   const col=rockColors[Math.floor(Math.random()*rockColors.length)];
-  const mat=new THREE.MeshStandardMaterial({color:col,roughness:.95,metalness:.02});
+  const mat=new THREE.MeshPhongMaterial({color:col,shininess:5});
   const mesh=new THREE.Mesh(geo,mat);
 
   // Spawn BEHIND rocket (+Z side)
@@ -784,7 +777,7 @@ function spawnComet(){
   const g=new THREE.Group();
   // Nucleus
   const nuc=new THREE.Mesh(new THREE.IcosahedronGeometry(10,1),
-    new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.4,metalness:.2,emissive:0x224466,emissiveIntensity:.8}));
+    new THREE.MeshPhongMaterial({color:0xaaddff,shininess:80,emissive:0x224466,emissiveIntensity:.8}));
   g.add(nuc);
   // Coma (outer glow)
   g.add(new THREE.Mesh(new THREE.SphereGeometry(18,12,12),
@@ -820,7 +813,7 @@ function spawnComet(){
 // ═══════════════════════════════════════════════
 function spawnFoodItem(basePos){
   const geo=new THREE.OctahedronGeometry(8,1);
-  const mat=new THREE.MeshStandardMaterial({color:0x00ff88,roughness:.3,metalness:.5,emissive:0x004422,emissiveIntensity:.6});
+  const mat=new THREE.MeshPhongMaterial({color:0x00ff88,shininess:60,emissive:0x004422,emissiveIntensity:.6});
   const m=new THREE.Mesh(geo,mat);
   m.position.copy(basePos).add(new THREE.Vector3((Math.random()-.5)*500,(Math.random()-.5)*300,(Math.random()-.5)*200));
   m.userData={type:'food',alive:true};
@@ -932,13 +925,13 @@ function buildPlanetSurface(planetIdx){
   terrGeo.computeVertexNormals();
   const tex=makePlanetTexture(pd.surfaceColor,512);
   tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(8,8);
-  const terrMat=new THREE.MeshStandardMaterial({map:tex,roughness:.95,metalness:0});
+  const terrMat=new THREE.MeshPhongMaterial({map:tex,shininess:5});
   surfaceMesh=new THREE.Mesh(terrGeo,terrMat);
   surfaceMesh.rotation.x=-Math.PI/2;surfaceMesh.receiveShadow=true;
   surfaceGroup.add(surfaceMesh);
 
   // Scatter rocks
-  const rockMat=new THREE.MeshStandardMaterial({color:pd.surfaceColor,roughness:.98,metalness:0});
+  const rockMat=new THREE.MeshPhongMaterial({color:pd.surfaceColor,shininess:3});
   for(let i=0;i<60;i++){
     const sz=2+Math.random()*20;
     const geo=new THREE.IcosahedronGeometry(sz,1);
@@ -1539,6 +1532,7 @@ window.addEventListener('resize',()=>{
 // ═══════════════════════════════════════════════
 (function boot(){
   initScene();
+  camera.position.set(0,25,50);camera.lookAt(0,0,0);
   const save=loadSave();
   if(save){
     document.getElementById('continueBtn').disabled=false;
