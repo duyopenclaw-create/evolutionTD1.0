@@ -420,10 +420,8 @@ renderer.setSize(window.innerWidth,window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.physicallyCorrectLights=true;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.1;
-renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ReinhardToneMapping;
+renderer.toneMappingExposure=1.4;
 
 const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(0x000008,.000006);
@@ -491,19 +489,21 @@ function makePlanetTexture(baseColor,size=256){
 //  LIGHTING
 // ═══════════════════════════════════════════════
 function buildLighting(){
-  // Hemisphere — space sky (dark blue) / planet reflections
-  const hemi=new THREE.HemisphereLight(0x080820,0x020208,0.8);
+  // Ambient base — ensures nothing is pure black
+  scene.add(new THREE.AmbientLight(0x222233,1.0));
+  // Hemisphere — deep-space blue sky / dark ground
+  const hemi=new THREE.HemisphereLight(0x334466,0x111122,1.2);
   scene.add(hemi);
-  // Main sun light
-  const sun=new THREE.DirectionalLight(0xfff2cc,4.5);
+  // Main sun directional
+  const sun=new THREE.DirectionalLight(0xfff5cc,3.0);
   sun.position.set(-12000,4000,12000);
   sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   sun.shadow.camera.near=100;sun.shadow.camera.far=50000;
   sun.shadow.camera.left=-5000;sun.shadow.camera.right=5000;
   sun.shadow.camera.top=5000;sun.shadow.camera.bottom=-5000;
   scene.add(sun);
-  // Faint fill from behind
-  const fill=new THREE.DirectionalLight(0x112244,.4);
+  // Fill from front so the rocket is always readable
+  const fill=new THREE.DirectionalLight(0x334466,0.8);
   fill.position.set(0,0,1);scene.add(fill);
 }
 
@@ -586,7 +586,7 @@ function buildPlanets(){
     const tex=makePlanetTexture(pd.color);
     const geo=new THREE.SphereGeometry(pd.radius,48,48);
     const mat=new THREE.MeshStandardMaterial({
-      map:tex,roughness:.85,metalness:.05,emissive:new THREE.Color(pd.emissive),emissiveIntensity:.6
+      map:tex,roughness:.85,metalness:.0,emissive:new THREE.Color(pd.emissive),emissiveIntensity:1.5
     });
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.set(i%2===0?500:-500,(i%3-1)*400,-pd.distance);
@@ -613,12 +613,12 @@ function buildPlanets(){
 // ═══════════════════════════════════════════════
 function buildRocket(){
   rocket=new THREE.Group();
-  const metal =new THREE.MeshStandardMaterial({color:0xdde0e8,roughness:.25,metalness:.85,envMapIntensity:1});
-  const dark  =new THREE.MeshStandardMaterial({color:0x1a1c22,roughness:.5,metalness:.7});
-  const glass =new THREE.MeshStandardMaterial({color:0x88ccff,roughness:.05,metalness:.1,transparent:true,opacity:.75,emissive:0x224466,emissiveIntensity:.5});
-  const nozzle=new THREE.MeshStandardMaterial({color:0x444455,roughness:.4,metalness:.9});
-  const tile  =new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.9,metalness:.05});
-  const stripe=new THREE.MeshBasicMaterial({color:0x0044cc});
+  const metal =new THREE.MeshStandardMaterial({color:0xe0e4ee,roughness:.3,metalness:.7});
+  const dark  =new THREE.MeshStandardMaterial({color:0x2a2c34,roughness:.6,metalness:.5});
+  const glass =new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.05,metalness:.0,transparent:true,opacity:.8,emissive:0x336688,emissiveIntensity:1.0});
+  const nozzle=new THREE.MeshStandardMaterial({color:0x555566,roughness:.5,metalness:.8});
+  const tile  =new THREE.MeshStandardMaterial({color:0xdddddd,roughness:.85,metalness:.0});
+  const stripe=new THREE.MeshBasicMaterial({color:0x1155ff});
 
   // Main body sections (3 cylinders to mimic Starship paneling)
   const body=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.5,7,24),metal);
@@ -694,10 +694,10 @@ function buildRocket(){
 // ═══════════════════════════════════════════════
 function buildPlayerMesh(){
   playerMesh=new THREE.Group();
-  const suit  =new THREE.MeshStandardMaterial({color:0xeeeeff,roughness:.8,metalness:.1});
-  const helmet=new THREE.MeshStandardMaterial({color:0x88ccff,roughness:.05,metalness:.05,transparent:true,opacity:.65,emissive:0x224466,emissiveIntensity:.4});
-  const dark  =new THREE.MeshStandardMaterial({color:0x2a2a3a,roughness:.7,metalness:.2});
-  const orange=new THREE.MeshStandardMaterial({color:0xff6600,roughness:.8,metalness:.05});
+  const suit  =new THREE.MeshStandardMaterial({color:0xffffff,roughness:.75,metalness:.0});
+  const helmet=new THREE.MeshStandardMaterial({color:0xaaddff,roughness:.05,metalness:.0,transparent:true,opacity:.7,emissive:0x335577,emissiveIntensity:1.5});
+  const dark  =new THREE.MeshStandardMaterial({color:0x333344,roughness:.7,metalness:.3});
+  const orange=new THREE.MeshStandardMaterial({color:0xff6600,roughness:.7,metalness:.0,emissive:0x441100,emissiveIntensity:.4});
 
   // Torso
   const torso=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,1.1,12),suit);
