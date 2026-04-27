@@ -94,8 +94,17 @@ canvas{display:block;position:fixed;top:0;left:0}
 
 #repair-hint{
   position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
-  color:#66aaff;font-size:11px;display:none;text-align:center;letter-spacing:1px
+  color:#ffcc44;font-size:13px;display:none;text-align:center;letter-spacing:1px;
+  background:rgba(0,0,0,.75);padding:8px 22px;border:1px solid #ff880055;border-radius:4px;
+  text-shadow:0 0 12px #ff8800;animation:blink 1.4s infinite
 }
+#nav-marker{
+  position:fixed;display:none;flex-direction:column;align-items:center;
+  pointer-events:none;z-index:50;transform:translate(-50%,-50%);
+}
+#nav-marker-arrow{color:#00eeff;font-size:26px;text-shadow:0 0 14px #00aaff;line-height:1}
+#nav-marker-text{color:#00ccee;font-size:11px;font-family:'Courier New',monospace;
+  letter-spacing:1px;text-shadow:0 0 8px #00aaff;margin-top:2px;text-align:center}
 
 #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none}
 #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,.3)}
@@ -210,6 +219,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   </div>
 
   <div id="repair-hint">[ R ] REPAIR HULL — 5 FOOD = +500 HP</div>
+  <div id="nav-marker"><div id="nav-marker-arrow">▶</div><div id="nav-marker-text">MARS</div></div>
   <div id="crosshair"></div>
   <div id="save-indicator">✓ SAVED</div>
   <div id="controls-hint">
@@ -451,7 +461,7 @@ const playerVel=new THREE.Vector3();
 // ═══════════════════════════════════════════════
 //  SCENE OBJECTS
 // ═══════════════════════════════════════════════
-let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles,warpLines;
+let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles,warpLines,navArrow3D;
 const asteroids=[],comets=[],foodItems=[],particleSystems=[];
 const planetMeshes=[];
 let surfaceMesh=null,surfaceGroup=null;
@@ -498,6 +508,19 @@ function buildLighting(){
   scene.add(sun);
   const fill=new THREE.DirectionalLight(0x8899cc,0.5);
   fill.position.set(0,0,1);scene.add(fill);
+}
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION ARROW (3D world marker)
+// ═══════════════════════════════════════════════
+function buildNavArrow(){
+  navArrow3D=new THREE.Group();
+  const mat=new THREE.MeshPhongMaterial({color:0x00eeff,emissive:0x00aacc,emissiveIntensity:.9,transparent:true,opacity:.75});
+  const head=new THREE.Mesh(new THREE.ConeGeometry(9,22,8),mat);head.position.y=20;navArrow3D.add(head);
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,28,8),mat);navArrow3D.add(shaft);
+  navArrow3D.add(new THREE.PointLight(0x00eeff,2,80));
+  navArrow3D.visible=false;
+  scene.add(navArrow3D);
 }
 
 // ═══════════════════════════════════════════════
@@ -834,13 +857,31 @@ function spawnComet(){
 //  FOOD ITEM
 // ═══════════════════════════════════════════════
 function spawnFoodItem(basePos){
-  const geo=new THREE.OctahedronGeometry(8,1);
-  const mat=new THREE.MeshPhongMaterial({color:0x00ff88,shininess:60,emissive:0x004422,emissiveIntensity:.6});
-  const m=new THREE.Mesh(geo,mat);
-  m.position.copy(basePos).add(new THREE.Vector3((Math.random()-.5)*500,(Math.random()-.5)*300,(Math.random()-.5)*200));
-  m.userData={type:'food',alive:true};
-  m.add(new THREE.PointLight(0x00ff88,1.2,90));
-  scene.add(m);foodItems.push(m);
+  const g=new THREE.Group();
+  const metalMat=new THREE.MeshPhongMaterial({color:0xcc8800,shininess:80,specular:0xaa6600});
+  const labelMat=new THREE.MeshPhongMaterial({color:0xdd2200,shininess:40});
+  const capMat  =new THREE.MeshPhongMaterial({color:0x996600,shininess:100,specular:0xcc9900});
+  const crossMat=new THREE.MeshPhongMaterial({color:0xffffff,shininess:20});
+  // Can body
+  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(5,5,14,16),metalMat)));
+  // Red label band
+  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(5.1,5.1,6,16,1,true),labelMat)));
+  // Top / bottom caps
+  [-7.4,7.4].forEach(y=>{
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(4.8,4.8,1,16),capMat);
+    cap.position.y=y;g.add(cap);
+  });
+  // White cross (+) on label — vertical bar
+  const cv=new THREE.Mesh(new THREE.BoxGeometry(.6,3.5,.2),crossMat);
+  cv.position.set(0,0,5.2);g.add(cv);
+  // White cross (+) — horizontal bar
+  const ch=new THREE.Mesh(new THREE.BoxGeometry(3.5,.6,.2),crossMat);
+  ch.position.set(0,0,5.2);g.add(ch);
+
+  g.position.copy(basePos).add(new THREE.Vector3((Math.random()-.5)*500,(Math.random()-.5)*300,(Math.random()-.5)*200));
+  g.userData={type:'food',alive:true,radius:8};
+  g.add(new THREE.PointLight(0xffaa00,1.8,100));
+  scene.add(g);foodItems.push(g);
 }
 
 // ═══════════════════════════════════════════════
@@ -1042,7 +1083,45 @@ function updateHUD(){
   document.getElementById('surface-indicator').style.display=gs.onSurface?'block':'none';
   document.getElementById('breath-warn').style.display=gs.playerBreath<=0?'block':'none';
   document.getElementById('hunger-warn').style.display=gs.hunger<=20?'block':'none';
-  document.getElementById('repair-hint').style.display=(gs.inRocket&&gs.rocketHP<ROCKET_MAX_HP&&gs.food>=5)?'block':'none';
+  if(gs.inRocket&&gs.rocketHP<ROCKET_MAX_HP){
+    const rh=document.getElementById('repair-hint');
+    rh.style.display='block';
+    rh.textContent=gs.food>=5
+      ?'[ R ] REPAIR HULL  —  5 FOOD = +500 HP'
+      :'⚠ HULL DAMAGED — Need 5 food to repair [ R ]';
+    rh.style.color=gs.food>=5?'#ffcc44':'#ff6644';
+  } else {
+    document.getElementById('repair-hint').style.display='none';
+  }
+
+  // ── NAVIGATION MARKER (screen-space)
+  const pm=planetMeshes[gs.planetIdx];
+  const navEl=document.getElementById('nav-marker');
+  if(pm&&gs.screen==='playing'){
+    const proj=pm.position.clone().project(camera);
+    const sx=(proj.x*.5+.5)*window.innerWidth;
+    const sy=(-proj.y*.5+.5)*window.innerHeight;
+    const pad=55,cx=window.innerWidth/2,cy=window.innerHeight/2;
+    const onScreen=proj.z<1&&sx>pad&&sx<window.innerWidth-pad&&sy>pad&&sy<window.innerHeight-pad;
+    const arrowEl=document.getElementById('nav-marker-arrow');
+    const textEl=document.getElementById('nav-marker-text');
+    const pd=PLANETS[gs.planetIdx]||PLANETS[PLANETS.length-1];
+    textEl.textContent=pd.name.toUpperCase();
+    if(onScreen){
+      navEl.style.left=sx+'px';navEl.style.top=sy+'px';
+      arrowEl.textContent='⊕';arrowEl.style.transform='';
+    } else {
+      let dx=sx-cx,dy=sy-cy;
+      if(proj.z>=1){dx=-dx;dy=-dy;}
+      const angle=Math.atan2(dy,dx);
+      const sc=Math.min(Math.abs((cx-pad)/Math.cos(angle))||1e9,Math.abs((cy-pad)/Math.sin(angle))||1e9);
+      navEl.style.left=(cx+Math.cos(angle)*sc)+'px';navEl.style.top=(cy+Math.sin(angle)*sc)+'px';
+      arrowEl.textContent='▶';arrowEl.style.transform=`rotate(${angle}rad)`;
+    }
+    navEl.style.display='flex';
+  } else {
+    navEl.style.display='none';
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -1215,6 +1294,15 @@ function update(time){
     rocket.position.addScaledVector(rocketVel,dt);
     gs.travelDist+=ROCKET_SPEED*dt;
 
+    // 3D nav arrow — floats ahead, points at destination
+    if(navArrow3D&&planetMeshes[gs.planetIdx]){
+      const ahead=new THREE.Vector3(rocket.position.x,rocket.position.y,rocket.position.z-120);
+      navArrow3D.position.copy(ahead);
+      const dir=planetMeshes[gs.planetIdx].position.clone().sub(ahead).normalize();
+      navArrow3D.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+      navArrow3D.visible=true;
+    }
+
     // Warp streaks — recycle lines that have passed behind the rocket
     if(warpLines){
       warpLines.visible=true;
@@ -1239,6 +1327,7 @@ function update(time){
 
   } else if(gs.onSurface&&surfaceMesh){
     if(warpLines)warpLines.visible=false;
+    if(navArrow3D)navArrow3D.visible=false;
     // ── HUMAN MOVEMENT ON SURFACE
     const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
     const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
@@ -1278,6 +1367,7 @@ function update(time){
 
   } else {
     if(warpLines)warpLines.visible=false;
+    if(navArrow3D)navArrow3D.visible=false;
     // ── EVA (zero-G space walk)
     const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
     const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
@@ -1394,9 +1484,15 @@ function update(time){
   for(let i=foodItems.length-1;i>=0;i--){
     const f=foodItems[i];
     if(!f.userData.alive){scene.remove(f);foodItems.splice(i,1);continue;}
-    f.rotation.y+=.025;f.rotation.x+=.01;
+    f.rotation.y+=.025;
     const ct=gs.inRocket?rocket.position:playerMesh.position;
-    if(f.position.distanceTo(ct)<22){
+    const vel=gs.inRocket?rocketVel:playerVel;
+    const cm=gs.inRocket?80:5;
+    const cr=gs.inRocket?ROCKET_RADIUS:PLAYER_RADIUS;
+    const fr=f.userData.radius||8;
+    // Solid collision — go on top, don't pass through
+    const hit=resolveCollision(ct,cr,vel,cm,f.position,fr,null,99999);
+    if(hit){
       gs.food+=5;gs.score+=50;f.userData.alive=false;
       gs.playerHP=Math.min(PLAYER_MAX_HP,gs.playerHP+FOOD_HEAL_HP);
       gs.hunger=Math.min(PLAYER_MAX_HUNGER,gs.hunger+FOOD_HUNGER_RESTORE);
@@ -1471,7 +1567,7 @@ function renderLoop(time){
 //  INIT SCENE
 // ═══════════════════════════════════════════════
 function initScene(){
-  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();
+  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();
   earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
 }
 
