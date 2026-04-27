@@ -226,7 +226,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   <div id="controls-hint">
     ARROWS — Dodge / Move<br>
     WASD — Look around<br>
-    E — Exit / Enter rocket<br>
+    E — Exit rocket (planet only) / board<br>
     F (hold) — Afterburner 5× speed<br>
     G — Eat food (+15 HP)<br>
     R — Repair hull (5 food)<br>
@@ -1146,7 +1146,10 @@ function applySave(data){
   gs.playerHP=data.playerHP;gs.playerBreath=data.playerBreath;gs.rocketHP=data.rocketHP;
   gs.hunger=data.hunger??PLAYER_MAX_HUNGER;
   gs.food=data.food;gs.score=data.score;gs.travelDist=data.travelDist;
-  gs.planetIdx=data.planetIdx;gs.chapter=data.chapter;gs.inRocket=data.inRocket!==false;
+  gs.planetIdx=data.planetIdx;gs.chapter=data.chapter;
+  // Only allow being outside the rocket if on a planet surface
+  gs.inRocket=(data.inRocket!==false)||!data.onSurface;
+  gs.onSurface=data.onSurface&&!gs.inRocket;
   if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
   if(data.playerPos)playerMesh.position.set(data.playerPos.x,data.playerPos.y,data.playerPos.z);
 }
@@ -1269,14 +1272,16 @@ function update(time){
     showNotif('HULL REPAIRED  +500 HP',2000);
   }
 
-  // ── EVA TOGGLE (E key)
+  // ── EVA TOGGLE (E key) — only exit rocket on a planet surface
   if(keys['KeyE']){
     keys['KeyE']=false;
     if(gs.inRocket&&!gs.onSurface){
+      showNotif('⚠ Cannot exit in open space — land on a planet first.',3000);
+    } else if(gs.inRocket&&gs.onSurface){
       gs.inRocket=false;
       playerMesh.position.copy(rocket.position).add(new THREE.Vector3(6,0,0));
       playerMesh.visible=true;gs.breathRefilling=false;playerVel.set(0,0,0);
-      sfxEVAStart();showNotif('EVA MODE — Oxygen depleting 1%/3 sec.',4000);
+      sfxEVAStart();showNotif('Exited rocket. Explore the surface.',3000);
     } else if(!gs.inRocket){
       const target=gs.onSurface?rocket.position:rocket.position;
       if(playerMesh.position.distanceTo(target)<40){
@@ -1627,7 +1632,7 @@ function showControls(){
     '<strong style="color:#00c8ff">CONTROLS</strong><br><br>'+
     'ARROW KEYS — Move / dodge rocket (also walk on surface)<br>'+
     'W/S/A/D — Rotate camera<br>'+
-    'E — Exit / enter rocket<br>'+
+    'E — Exit rocket (planet surface only) / re-board<br>'+
     '<span style="color:#ff6600">F (hold) — Afterburner 5× speed (drains 1 hull HP/sec)</span><br>'+
     'G — Eat food (+15 HP)<br>'+
     'R — Repair hull (5 food = +500 HP)<br>'+
