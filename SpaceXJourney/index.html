@@ -1146,7 +1146,7 @@ function buildProximaSurface(){
     tpos.setZ(v,(Math.random()-.5)*4+(Math.sin(tpos.getX(v)*.025)*Math.cos(tpos.getY(v)*.025))*6);
   }
   terrGeo.computeVertexNormals();
-  const terrMat=new THREE.MeshPhongMaterial({color:0x55cc55,emissive:0x113311,emissiveIntensity:.4,shininess:6});
+  const terrMat=new THREE.MeshPhongMaterial({color:0x55cc55,emissive:0x113311,emissiveIntensity:.1,shininess:6});
   surfaceMesh=new THREE.Mesh(terrGeo,terrMat);
   surfaceMesh.rotation.x=-Math.PI/2;surfaceMesh.receiveShadow=true;
   surfaceGroup.add(surfaceMesh);
@@ -1157,9 +1157,9 @@ function buildProximaSurface(){
   river.rotation.x=-Math.PI/2;river.position.set(50,0.5,0);surfaceGroup.add(river);
 
   // Trees — spread 80–500 units, bigger, brighter
-  const trunkMat=new THREE.MeshPhongMaterial({color:0x7a4420,emissive:0x1a0800,emissiveIntensity:.3,shininess:6});
-  const leafMat =new THREE.MeshPhongMaterial({color:0x44dd55,emissive:0x115511,emissiveIntensity:.5,shininess:10});
-  const leafMat2=new THREE.MeshPhongMaterial({color:0x88ee44,emissive:0x224400,emissiveIntensity:.4,shininess:10});
+  const trunkMat=new THREE.MeshPhongMaterial({color:0x7a4420,emissive:0x1a0800,emissiveIntensity:.05,shininess:6});
+  const leafMat =new THREE.MeshPhongMaterial({color:0x44dd55,emissive:0x115511,emissiveIntensity:.1,shininess:10});
+  const leafMat2=new THREE.MeshPhongMaterial({color:0x88ee44,emissive:0x224400,emissiveIntensity:.08,shininess:10});
   for(let i=0;i<28;i++){
     const tree=new THREE.Group();
     const h=12+Math.random()*14;
@@ -1196,9 +1196,9 @@ function buildProximaSurface(){
   }
 
   // Lighting — natural sky hemisphere + sun pointing straight DOWN at surface
-  const skyLight=new THREE.HemisphereLight(0x88ccff,0x336633,2.5);
+  const skyLight=new THREE.HemisphereLight(0x88ccff,0x336633,1.0);
   surfaceGroup.add(skyLight);
-  const sunLight=new THREE.DirectionalLight(0xfff8cc,1.4);
+  const sunLight=new THREE.DirectionalLight(0xfff8cc,0.8);
   sunLight.position.set(0,600,0); // straight above
   const sunTarget=new THREE.Object3D();sunTarget.position.set(0,0,0);
   surfaceGroup.add(sunTarget);sunLight.target=sunTarget;
