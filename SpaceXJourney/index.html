@@ -254,8 +254,9 @@ canvas{display:block;position:fixed;top:0;left:0}
     ARROWS — Dodge / Move<br>
     WASD — Look around cockpit (springs back)<br>
     C (hold) — Look backwards<br>
-    J — Jump (on surface)<br>
-    E — Exit rocket (planet only) / board<br>
+    J — Jump  (double-tap = super jump)<br>
+    E — Exit cockpit / Enter rocket / Launch<br>
+    Q — Exit rocket interior back outside<br>
     F (hold) — Afterburner 5× speed<br>
     G — Eat food (+15 HP)<br>
     R — Repair hull (5 food)<br>
@@ -457,7 +458,7 @@ const gs={
   inRocket:true,onSurface:false,
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
-  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false
+  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,rocketInterior:false
 };
 
 // ═══════════════════════════════════════════════
@@ -509,7 +510,8 @@ let surfaceMesh=null,surfaceGroup=null;
 let currentSurfacePlanetIdx=-1;
 let lastBreathDrain=0,lastSuffDmg=0,lastAsteroidSpawn=0,lastCometSpawn=0;
 let lastSave=0,lastOxyBeep=0,lastHungerDrain=0,lastStarveDmg=0,lastBoostDmg=0;
-let playerGrounded=false;
+let playerGrounded=false,lastJPress=0;
+let rocketInteriorGroup=null;
 let prevTime=0,notifTimeout=null,flashTimeout=null;
 
 // ═══════════════════════════════════════════════
@@ -550,6 +552,106 @@ function buildLighting(){
   scene.add(sun);
   const fill=new THREE.DirectionalLight(0x8899cc,0.5);
   fill.position.set(0,0,1);scene.add(fill);
+}
+
+// ═══════════════════════════════════════════════
+//  ROCKET INTERIOR
+// ═══════════════════════════════════════════════
+function buildRocketInterior(){
+  const g=new THREE.Group();
+  const wallM =new THREE.MeshPhongMaterial({color:0x0d1117,shininess:15});
+  const floorM=new THREE.MeshPhongMaterial({color:0x1a1a2e,shininess:40});
+  const metalM=new THREE.MeshPhongMaterial({color:0x223344,shininess:80,specular:0x335566});
+  const panelM=new THREE.MeshPhongMaterial({color:0x001133,shininess:60});
+  const screenM=new THREE.MeshPhongMaterial({color:0x0055ff,emissive:0x002288,emissiveIntensity:1,shininess:100});
+  const seatM =new THREE.MeshPhongMaterial({color:0x181828,shininess:30});
+  const crateM=new THREE.MeshPhongMaterial({color:0x443322,shininess:10});
+  const repairM=new THREE.MeshPhongMaterial({color:0x224400,emissive:0x112200,shininess:40});
+  const warnM =new THREE.MeshPhongMaterial({color:0xff6600,emissive:0x441100,shininess:30});
+
+  function msh(geo,mat,x,y,z){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;}
+  // Floor / ceiling / walls
+  msh(new THREE.BoxGeometry(18,0.5,22),floorM,0,-.25,0);
+  msh(new THREE.BoxGeometry(18,0.4,22),wallM,0,8.2,0);
+  msh(new THREE.BoxGeometry(.4,8.5,22),wallM,-9,4,0);
+  msh(new THREE.BoxGeometry(.4,8.5,22),wallM,9,4,0);
+  msh(new THREE.BoxGeometry(18,8.5,.4),wallM,0,4,-11);
+  // Door arch (front open — represented by two narrow pillars)
+  [-7.5,7.5].forEach(x=>{
+    const p=new THREE.Mesh(new THREE.BoxGeometry(3,.4,22),wallM);p.position.set(x,8,0);g.add(p);
+    const pp=new THREE.Mesh(new THREE.BoxGeometry(3,8.5,.4),wallM);pp.position.set(x,4,11);g.add(pp);
+  });
+
+  // Cockpit instrument panel
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(14,4,.35),panelM);
+  panel.position.set(0,3,-10.8);g.add(panel);
+  // Main screen
+  const scr=new THREE.Mesh(new THREE.BoxGeometry(9,2.6,.1),screenM);
+  scr.position.set(0,3.3,-10.6);g.add(scr);
+  scr.add(new THREE.PointLight(0x0055ff,2,20));
+  // Side screens
+  [-4,4].forEach(x=>{
+    const ss=new THREE.Mesh(new THREE.BoxGeometry(3,1.6,.1),
+      new THREE.MeshPhongMaterial({color:0x00ff88,emissive:0x004422,emissiveIntensity:1}));
+    ss.position.set(x,2,-10.6);g.add(ss);
+    ss.add(new THREE.PointLight(0x00ff44,.8,12));
+  });
+  // Button row
+  for(let i=0;i<8;i++){
+    const col=new THREE.MeshPhongMaterial({color:[0xff2200,0x00ff44,0xffcc00,0x0088ff][i%4],emissive:[0x440000,0x004400,0x443300,0x002244][i%4],emissiveIntensity:.8,shininess:80});
+    const btn=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.18,12),col);
+    btn.position.set(-4.9+i*1.4,1.2,-10.65);btn.rotation.x=Math.PI/2;g.add(btn);
+  }
+
+  // Pilot seat
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(3,.55,3),seatM);seat.position.set(0,1.1,-8);g.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(3,3,.45),seatM);back.position.set(0,2.9,-9.2);g.add(back);
+  const hr=new THREE.Mesh(new THREE.BoxGeometry(3.2,.45,.45),metalM);hr.position.set(0,4.5,-9.2);g.add(hr);
+  // Armrests
+  [-1.6,1.6].forEach(x=>{const ar=new THREE.Mesh(new THREE.BoxGeometry(.4,.25,2.2),metalM);ar.position.set(x,1.55,-8);g.add(ar);});
+
+  // Storage crates on both sides
+  [-6.5,6.5].forEach(x=>{
+    for(let zi=0;zi<3;zi++){
+      const cr=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.2,2.8),crateM);
+      cr.position.set(x,1.1,4-zi*3.8);g.add(cr);
+      // Yellow hazard stripe
+      const str=new THREE.Mesh(new THREE.BoxGeometry(2.85,.3,.1),warnM);
+      str.position.set(0,.8,1.4);cr.add(str);
+    }
+  });
+
+  // Repair console (left back)
+  const rc=new THREE.Mesh(new THREE.BoxGeometry(3.5,3,1.8),repairM);rc.position.set(-6,1.5,-7);g.add(rc);
+  rc.add(new THREE.PointLight(0x44ff00,1.2,12));
+  const rcScr=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.6,.1),
+    new THREE.MeshPhongMaterial({color:0x44ff00,emissive:0x22aa00,emissiveIntensity:1}));
+  rcScr.position.set(0,.9,.95);rc.add(rcScr);
+  // Repair console label
+  rc.userData={type:'repair'};
+
+  // Food locker (right back)
+  const fl=new THREE.Mesh(new THREE.BoxGeometry(3.5,5,1.8),metalM);fl.position.set(6,2.5,-7);g.add(fl);
+  fl.add(new THREE.PointLight(0xffaa00,.8,10));
+  const flScr=new THREE.Mesh(new THREE.BoxGeometry(2,.8,.1),
+    new THREE.MeshPhongMaterial({color:0xffaa00,emissive:0x884400,emissiveIntensity:1}));
+  flScr.position.set(0,1.2,.95);fl.add(flScr);
+  fl.userData={type:'foodlocker'};
+
+  // Ceiling lights
+  [-4,0,4].forEach(x=>{
+    const lf=new THREE.Mesh(new THREE.BoxGeometry(3,.15,1.2),
+      new THREE.MeshPhongMaterial({color:0xaabbff,emissive:0x4455aa,emissiveIntensity:.6}));
+    lf.position.set(x,8,-1);g.add(lf);
+    lf.add(new THREE.PointLight(0x8899cc,.8,18));
+  });
+
+  // Ambient fill
+  g.add(new THREE.AmbientLight(0x223355,1.2));
+
+  g.visible=false;
+  scene.add(g);
+  rocketInteriorGroup=g;
 }
 
 // ═══════════════════════════════════════════════
@@ -1334,28 +1436,43 @@ function update(time){
     showNotif('HULL REPAIRED  +500 HP',2000);
   }
 
-  // ── EVA TOGGLE (E key) — only exit rocket on a planet surface
+  // ── E KEY
   if(keys['KeyE']){
     keys['KeyE']=false;
     if(gs.inRocket&&!gs.onSurface){
+      // Flying in space — can't exit
       showNotif('⚠ Cannot exit in open space — land on a planet first.',3000);
     } else if(gs.inRocket&&gs.onSurface){
+      // Step out of cockpit onto surface
       gs.inRocket=false;
-      playerMesh.position.copy(rocket.position).add(new THREE.Vector3(6,0,0));
+      playerMesh.position.copy(rocket.position).add(new THREE.Vector3(8,0,0));
       playerMesh.visible=true;gs.breathRefilling=false;playerVel.set(0,0,0);
-      sfxEVAStart();showNotif('Exited rocket. Explore the surface.',3000);
-    } else if(!gs.inRocket){
-      const target=gs.onSurface?rocket.position:rocket.position;
-      if(playerMesh.position.distanceTo(target)<40){
-        gs.inRocket=true;playerMesh.visible=false;
-        gs.breathRefilling=true;gs.breathRefillStart=now;
-        sfxEVAEnd();
-        if(gs.onSurface){gs.onSurface=false;removePlanetSurface();}
-        showNotif('Back in the rocket. Oxygen refilling — 2 min.',4000);
-      } else {
-        showNotif('Too far from rocket! Get closer.',2000);
-      }
+      sfxEVAStart();showNotif('Stepped out. E near rocket=enter interior, use Q to launch.',4000);
+    } else if(gs.rocketInterior){
+      // Inside interior — sit in pilot seat = launch
+      gs.rocketInterior=false;rocketInteriorGroup.visible=false;
+      gs.inRocket=true;gs.onSurface=false;playerMesh.visible=false;
+      removePlanetSurface();sfxEVAEnd();
+      showNotif('Launching from surface!',2000);
+    } else if(gs.onSurface&&!gs.inRocket&&playerMesh.position.distanceTo(rocket.position)<35){
+      // Walk into rocket interior
+      gs.rocketInterior=true;
+      rocketInteriorGroup.position.set(rocket.position.x,rocket.position.y-2,rocket.position.z);
+      rocketInteriorGroup.visible=true;
+      playerMesh.position.set(rocket.position.x,rocket.position.y+1.5,rocket.position.z+8);
+      playerVel.set(0,0,0);playerGrounded=true;
+      showNotif('Inside the rocket — explore. E=launch  Q=exit outside',4000);
+    } else if(gs.onSurface&&!gs.inRocket){
+      showNotif('Get closer to the rocket to enter.',2000);
     }
+  }
+  // ── Q KEY — exit interior back to surface
+  if(keys['KeyQ']&&gs.rocketInterior){
+    keys['KeyQ']=false;
+    gs.rocketInterior=false;rocketInteriorGroup.visible=false;
+    playerMesh.position.copy(rocket.position).add(new THREE.Vector3(8,0,0));
+    playerVel.set(0,0,0);
+    showNotif('Stepped outside.',2000);
   }
 
   // ── ROCKET MOVEMENT — free steering
@@ -1413,6 +1530,46 @@ function update(time){
       pa.needsUpdate=true;
     }
 
+  } else if(gs.rocketInterior&&rocketInteriorGroup){
+    if(warpLines)warpLines.visible=false;
+    if(navArrow3D)navArrow3D.visible=false;
+    // ── WALK INSIDE ROCKET INTERIOR
+    const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
+    const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
+    const inp=new THREE.Vector3();
+    if(keys['ArrowUp'])   inp.addScaledVector(fwd, EVA_SPEED);
+    if(keys['ArrowDown']) inp.addScaledVector(fwd,-EVA_SPEED);
+    if(keys['ArrowLeft']) inp.addScaledVector(right,-EVA_SPEED);
+    if(keys['ArrowRight'])inp.addScaledVector(right, EVA_SPEED);
+    playerMesh.position.addScaledVector(inp,dt);
+    // Clamp inside room bounds
+    const base=rocketInteriorGroup.position;
+    playerMesh.position.x=Math.max(base.x-8,Math.min(base.x+8,playerMesh.position.x));
+    playerMesh.position.z=Math.max(base.z-10,Math.min(base.z+10,playerMesh.position.z));
+    // Floor gravity
+    const floorY=base.y+2;
+    playerVel.y-=SURFACE_GRAVITY*dt;
+    playerMesh.position.y+=playerVel.y*dt;
+    if(playerMesh.position.y<floorY){playerMesh.position.y=floorY;playerVel.y=0;playerGrounded=true;}
+    else playerGrounded=false;
+    // Jump inside
+    if(keys['KeyJ']&&playerGrounded){
+      keys['KeyJ']=false;
+      const superJump=now-lastJPress<350;
+      playerVel.y=superJump?JUMP_SPEED*1.8:JUMP_SPEED;
+      lastJPress=now;playerGrounded=false;
+    }
+    playerMesh.rotation.y=Math.PI+camYaw;
+    // Repair console proximity hint
+    const repairPos=new THREE.Vector3(base.x-6,base.y+1.5,base.z-7);
+    if(playerMesh.position.distanceTo(repairPos)<6&&gs.rocketHP<ROCKET_MAX_HP&&gs.food>=5){
+      showNotif('[ R ] Repair hull at console  (5 food = +500 HP)',1500);
+    }
+    const foodPos=new THREE.Vector3(base.x+6,base.y+2.5,base.z-7);
+    if(playerMesh.position.distanceTo(foodPos)<6){
+      showNotif('[ G ] Eat from food locker',1500);
+    }
+
   } else if(gs.onSurface&&surfaceMesh){
     if(warpLines)warpLines.visible=false;
     if(navArrow3D)navArrow3D.visible=false;
@@ -1437,9 +1594,13 @@ function update(time){
         playerGrounded=false;
       }
     }
-    // Jump (J key)
+    // Jump (J key) — double-tap within 350ms = 2.5× super-jump
     if(keys['KeyJ']&&playerGrounded){
-      keys['KeyJ']=false;playerVel.y=JUMP_SPEED;playerGrounded=false;
+      keys['KeyJ']=false;
+      const superJump=now-lastJPress<350;
+      playerVel.y=superJump?JUMP_SPEED*2.5:JUMP_SPEED;
+      lastJPress=now;playerGrounded=false;
+      if(superJump)showNotif('SUPER JUMP!',800);
     }
     // Orient player upright
     playerMesh.rotation.y=Math.PI+camYaw;
@@ -1661,7 +1822,7 @@ function renderLoop(time){
 //  INIT SCENE
 // ═══════════════════════════════════════════════
 function initScene(){
-  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();
+  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();buildRocketInterior();
   earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
 }
 
@@ -1737,7 +1898,8 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.rocketInterior=false;
+  if(rocketInteriorGroup)rocketInteriorGroup.visible=false;
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
   playerMesh.visible=false;clearHazards();removePlanetSurface();
