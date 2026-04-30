@@ -470,9 +470,9 @@ const PLANETS=[
   {name:'Neptune',color:0x2244ff,emissive:0x000033,radius:550,distance:290000,
    story:'The storm-wracked atmosphere conceals vast floating ecosystems — gas-bag creatures the size of cities. Their shed membranes are rich in proteins.',
    food:60,chapter:'Chapter 6 — The Dark Giant',surfaceColor:0x112266,skyColor:0x000033},
-  {name:'Proxima b',color:0x44cc66,emissive:0x0a2208,radius:420,distance:545000,
-   story:'After years in the void, you reach Proxima Centauri b — a lush world with breathable atmosphere, vast forests, and running rivers. Humanity has found its new home. You will build a life here.',
-   food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x226633,skyColor:0x4499cc}
+  {name:'Proxima b',color:0x2266dd,emissive:0x081833,radius:420,distance:545000,
+   story:'After years in the void, you reach Proxima Centauri b — an alien ocean world glowing blue beneath twin moons. Strange silver-barked trees and luminous flowers cover the highlands. Humanity has found its new home.',
+   food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x1a5588,skyColor:0x2266dd}
 ];
 
 // ═══════════════════════════════════════════════
@@ -1139,27 +1139,28 @@ function buildProximaSurface(){
   proximaTrees.length=0;
   proximaFarmPlots.length=0;
 
-  // Bright green terrain
+  // Blue alien terrain
   const terrGeo=new THREE.PlaneGeometry(3000,3000,60,60);
   const tpos=terrGeo.attributes.position;
   for(let v=0;v<tpos.count;v++){
     tpos.setZ(v,(Math.random()-.5)*4+(Math.sin(tpos.getX(v)*.025)*Math.cos(tpos.getY(v)*.025))*6);
   }
   terrGeo.computeVertexNormals();
-  const terrMat=new THREE.MeshPhongMaterial({color:0x55cc55,emissive:0x113311,emissiveIntensity:.1,shininess:6});
+  const terrMat=new THREE.MeshPhongMaterial({color:0x1a5588,emissive:0x0a1a33,emissiveIntensity:.15,shininess:12});
   surfaceMesh=new THREE.Mesh(terrGeo,terrMat);
   surfaceMesh.rotation.x=-Math.PI/2;surfaceMesh.receiveShadow=true;
   surfaceGroup.add(surfaceMesh);
 
-  // River (flat blue strip)
-  const river=new THREE.Mesh(new THREE.PlaneGeometry(18,500),
-    new THREE.MeshPhongMaterial({color:0x2288ee,emissive:0x001133,emissiveIntensity:.5,shininess:160,specular:0xaaccff,transparent:true,opacity:.8}));
+  // Glowing cyan river
+  const river=new THREE.Mesh(new THREE.PlaneGeometry(22,600),
+    new THREE.MeshPhongMaterial({color:0x00ccff,emissive:0x0066aa,emissiveIntensity:.6,shininess:200,specular:0xaaeeff,transparent:true,opacity:.9}));
   river.rotation.x=-Math.PI/2;river.position.set(50,0.5,0);surfaceGroup.add(river);
+  river.add(new THREE.PointLight(0x00ccff,1.5,80));
 
-  // Trees — spread 80–500 units, bigger, brighter
-  const trunkMat=new THREE.MeshPhongMaterial({color:0x7a4420,emissive:0x1a0800,emissiveIntensity:.05,shininess:6});
-  const leafMat =new THREE.MeshPhongMaterial({color:0x44dd55,emissive:0x115511,emissiveIntensity:.1,shininess:10});
-  const leafMat2=new THREE.MeshPhongMaterial({color:0x88ee44,emissive:0x224400,emissiveIntensity:.08,shininess:10});
+  // Blue alien trees — silver trunks, blue-purple canopy
+  const trunkMat=new THREE.MeshPhongMaterial({color:0x556677,emissive:0x112233,emissiveIntensity:.1,shininess:20});
+  const leafMat =new THREE.MeshPhongMaterial({color:0x2266cc,emissive:0x112255,emissiveIntensity:.2,shininess:15});
+  const leafMat2=new THREE.MeshPhongMaterial({color:0x7744cc,emissive:0x221144,emissiveIntensity:.2,shininess:15});
   for(let i=0;i<28;i++){
     const tree=new THREE.Group();
     const h=12+Math.random()*14;
@@ -1170,7 +1171,6 @@ function buildProximaSurface(){
     canopy.position.y=h+5;tree.add(canopy);
     const canopy2=new THREE.Mesh(new THREE.ConeGeometry(3+Math.random()*2,6,8),lm);
     canopy2.position.y=h+12;tree.add(canopy2);
-    // Spread: inner ring 80-180, outer ring 200-500
     const angle=Math.random()*Math.PI*2;
     const dist=i<14?80+Math.random()*100:200+Math.random()*300;
     tree.position.set(Math.cos(angle)*dist,0,Math.sin(angle)*dist);
@@ -1179,26 +1179,26 @@ function buildProximaSurface(){
     proximaTrees.push(tree);
   }
 
-  // Alien flowers
-  const flowerCols=[0xff55cc,0xff9933,0xffee22,0x99ff44,0x44ffee,0xee44ff];
-  for(let i=0;i<50;i++){
+  // Glowing alien flowers — bright so they pop against blue ground
+  const flowerCols=[0xff55ff,0xff3366,0xffee00,0x00ffee,0xff6600,0xaaffcc,0xff99ff];
+  for(let i=0;i<60;i++){
     const col=flowerCols[Math.floor(Math.random()*flowerCols.length)];
     const stem=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,2.2,6),
-      new THREE.MeshPhongMaterial({color:0x338844,emissive:0x112211,emissiveIntensity:.4}));
+      new THREE.MeshPhongMaterial({color:0x224466,emissive:0x112233,emissiveIntensity:.2}));
     stem.position.y=1.1;
-    const bloom=new THREE.Mesh(new THREE.SphereGeometry(.5+Math.random()*.3,8,8),
-      new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:.7,shininess:40}));
+    const bloom=new THREE.Mesh(new THREE.SphereGeometry(.6+Math.random()*.4,8,8),
+      new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:.9,shininess:60}));
     bloom.position.y=2.5;
     const f=new THREE.Group();f.add(stem);f.add(bloom);
-    const a=Math.random()*Math.PI*2,d=15+Math.random()*250;
+    const a=Math.random()*Math.PI*2,d=10+Math.random()*250;
     f.position.set(Math.cos(a)*d,0,Math.sin(a)*d);
     surfaceGroup.add(f);
   }
 
-  // Lighting — natural sky hemisphere + sun pointing straight DOWN at surface
-  const skyLight=new THREE.HemisphereLight(0x88ccff,0x336633,1.0);
+  // Blue atmosphere lighting — hemisphere top blue, ground dark navy
+  const skyLight=new THREE.HemisphereLight(0x66aaff,0x112244,1.8);
   surfaceGroup.add(skyLight);
-  const sunLight=new THREE.DirectionalLight(0xfff8cc,0.8);
+  const sunLight=new THREE.DirectionalLight(0xaaccff,1.2);
   sunLight.position.set(0,600,0); // straight above
   const sunTarget=new THREE.Object3D();sunTarget.position.set(0,0,0);
   surfaceGroup.add(sunTarget);sunLight.target=sunTarget;
