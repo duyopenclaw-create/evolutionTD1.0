@@ -1126,8 +1126,6 @@ function beginColony(){
   }
   document.getElementById('hud').style.display='block';
   document.getElementById('hud-center').style.display='none';
-  document.getElementById('sb-rocket').style.display='none';
-  document.getElementById('sb-breath').style.display='none';
   document.getElementById('colony-hud').style.display='block';
   saveGame();
   showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
@@ -1197,10 +1195,10 @@ function buildProximaSurface(){
     surfaceGroup.add(f);
   }
 
-  // Lighting — bright sky hemisphere + sun pointing straight DOWN at surface
-  const skyLight=new THREE.HemisphereLight(0x88ccff,0x336633,6);
+  // Lighting — natural sky hemisphere + sun pointing straight DOWN at surface
+  const skyLight=new THREE.HemisphereLight(0x88ccff,0x336633,2.5);
   surfaceGroup.add(skyLight);
-  const sunLight=new THREE.DirectionalLight(0xfff8cc,3.0);
+  const sunLight=new THREE.DirectionalLight(0xfff8cc,1.4);
   sunLight.position.set(0,600,0); // straight above
   const sunTarget=new THREE.Object3D();sunTarget.position.set(0,0,0);
   surfaceGroup.add(sunTarget);sunLight.target=sunTarget;
@@ -2411,8 +2409,6 @@ function continueGame(){
     if(companionMesh){companionMesh.visible=true;companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));}
     gs.lastBabyTime=performance.now();
     document.getElementById('hud-center').style.display='none';
-    document.getElementById('sb-rocket').style.display='none';
-    document.getElementById('sb-breath').style.display='none';
     document.getElementById('colony-hud').style.display='block';
     document.getElementById('col-pop').textContent=gs.population;
     document.getElementById('col-wood').textContent=gs.wood;
