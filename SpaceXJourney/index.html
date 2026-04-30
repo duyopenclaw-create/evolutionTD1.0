@@ -2101,14 +2101,19 @@ function update(time){
         keys['KeyB']=false;
         if(gs.wood>=5){
           gs.wood-=5;gs.shelters++;
-          const shelterMat=new THREE.MeshPhongMaterial({color:0x8b5e3c,shininess:10});
+          const shelterMat=new THREE.MeshPhongMaterial({color:0xaa7744,emissive:0x331100,emissiveIntensity:.2,shininess:12});
+          const roofMat=new THREE.MeshPhongMaterial({color:0x884422,emissive:0x221100,emissiveIntensity:.2,shininess:8});
           const shelter=new THREE.Group();
-          const walls=new THREE.Mesh(new THREE.BoxGeometry(12,7,10),shelterMat);
-          walls.position.y=3.5;shelter.add(walls);
-          const roofMat=new THREE.MeshPhongMaterial({color:0x5a3a22,shininess:5});
-          const roof=new THREE.Mesh(new THREE.ConeGeometry(9,4,4),roofMat);
-          roof.position.y=9;roof.rotation.y=Math.PI/4;shelter.add(roof);
-          shelter.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(16,0,0));
+          const walls=new THREE.Mesh(new THREE.BoxGeometry(14,8,12),shelterMat);
+          walls.position.y=4;shelter.add(walls);
+          const roof=new THREE.Mesh(new THREE.ConeGeometry(10,5,4),roofMat);
+          roof.position.y=10.5;roof.rotation.y=Math.PI/4;shelter.add(roof);
+          // Window glow so it's visible at night
+          const winMat=new THREE.MeshPhongMaterial({color:0xffdd88,emissive:0xffaa00,emissiveIntensity:1.5});
+          const win=new THREE.Mesh(new THREE.BoxGeometry(2.5,2,.1),winMat);
+          win.position.set(0,4.5,6.1);shelter.add(win);
+          shelter.add(new THREE.PointLight(0xffcc66,2.5,30));
+          shelter.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(18,0,0));
           surfaceGroup.add(shelter);
           showNotif(`🏠 Shelter built!  Shelters: ${gs.shelters}  Wood left: ${gs.wood}`,3000);
         } else {
@@ -2121,20 +2126,27 @@ function update(time){
         keys['KeyP']=false;
         if(gs.wood>=2){
           gs.wood-=2;
-          const farmMat=new THREE.MeshPhongMaterial({color:0x664400,shininess:2});
-          const cropMat=new THREE.MeshPhongMaterial({color:0x88cc22,emissive:0x224400,emissiveIntensity:.5});
+          const farmMat=new THREE.MeshPhongMaterial({color:0xaa6622,emissive:0x331100,emissiveIntensity:.25,shininess:4});
+          const cropMat=new THREE.MeshPhongMaterial({color:0x44ee22,emissive:0x226611,emissiveIntensity:.5,shininess:10});
           const farm=new THREE.Group();
-          farm.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(10,8),farmMat),
-            {rotation:new THREE.Euler(-Math.PI/2,0,0)}));
-          for(let ci=0;ci<6;ci++){
-            const crop=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,1.5,5),cropMat);
-            crop.position.set(-3.5+ci*1.4,.75,0);farm.add(crop);
+          // Fix: set rotation via .rotation.x — NOT Object.assign (which breaks quaternion sync)
+          const farmFloor=new THREE.Mesh(new THREE.PlaneGeometry(14,10),farmMat);
+          farmFloor.rotation.x=-Math.PI/2;
+          farm.add(farmFloor);
+          for(let ci=0;ci<8;ci++){
+            const crop=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,2.5,6),cropMat);
+            crop.position.set(-4.9+ci*1.4,1.25,0);farm.add(crop);
           }
-          farm.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(0,.5,10));
+          // Glowing marker post so the farm is easy to find
+          const postMat=new THREE.MeshPhongMaterial({color:0xffdd00,emissive:0xffaa00,emissiveIntensity:1.2});
+          const post=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,5,6),postMat);
+          post.position.set(0,2.5,0);farm.add(post);
+          farm.add(new THREE.PointLight(0xffcc00,2,20));
+          farm.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(0,.1,12));
           farm.userData.plantedAt=now;
           surfaceGroup.add(farm);
           proximaFarmPlots.push(farm);
-          showNotif(`🌾 Farm planted!  Press H near it in 30s to harvest (+5 food)`,3000);
+          showNotif(`🌾 Farm planted!  Walk to the yellow post and press H in 30s to harvest`,3500);
         } else {
           showNotif(`Need 2 wood to plant a farm.  You have: ${gs.wood}`,2000);
         }
