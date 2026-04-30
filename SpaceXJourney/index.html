@@ -474,7 +474,15 @@ renderer.setClearColor(0x000015);
 
 const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(0x000008,.000018);
-const camera=new THREE.PerspectiveCamera(85,window.innerWidth/window.innerHeight,.3,300000);
+const camera=new THREE.PerspectiveCamera(85,window.innerWidth/window.innerHeight,.12,300000);
+scene.add(camera);
+
+const _navCanvas=document.createElement('canvas');_navCanvas.width=256;_navCanvas.height=128;
+const _navCtx=_navCanvas.getContext('2d');
+const _navTex=new THREE.CanvasTexture(_navCanvas);
+const _statCanvas=document.createElement('canvas');_statCanvas.width=256;_statCanvas.height=128;
+const _statCtx=_statCanvas.getContext('2d');
+const _statTex=new THREE.CanvasTexture(_statCanvas);
 
 // ═══════════════════════════════════════════════
 //  INPUT
@@ -504,6 +512,7 @@ const playerVel=new THREE.Vector3();
 //  SCENE OBJECTS
 // ═══════════════════════════════════════════════
 let rocket,playerMesh,engineLight,engineGlow,enginePlumeParticles,warpLines,navArrow3D;
+let cockpitShell=null;
 const asteroids=[],comets=[],foodItems=[],particleSystems=[];
 const planetMeshes=[];
 let surfaceMesh=null,surfaceGroup=null;
@@ -542,8 +551,8 @@ function makePlanetTexture(baseColor,size=256){
 //  LIGHTING
 // ═══════════════════════════════════════════════
 function buildLighting(){
-  scene.add(new THREE.AmbientLight(0xffffff,0.7));
-  const sun=new THREE.DirectionalLight(0xfff5cc,1.5);
+  scene.add(new THREE.AmbientLight(0xffffff,1.0));
+  const sun=new THREE.DirectionalLight(0xfff5cc,2.0);
   sun.position.set(0,100,200);
   sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
   sun.shadow.camera.near=1;sun.shadow.camera.far=50000;
@@ -652,6 +661,122 @@ function buildRocketInterior(){
   g.visible=false;
   scene.add(g);
   rocketInteriorGroup=g;
+}
+
+// ═══════════════════════════════════════════════
+//  COCKPIT SHELL (camera child — always in front)
+// ═══════════════════════════════════════════════
+function buildCockpitShell(){
+  cockpitShell=new THREE.Group();
+
+  const frameMat=new THREE.MeshPhongMaterial({color:0x141e28,shininess:90,specular:0x2a3d52});
+  const darkMat =new THREE.MeshPhongMaterial({color:0x07090c,shininess:8});
+  const metalMat=new THREE.MeshPhongMaterial({color:0x1c2a38,shininess:60,specular:0x334455});
+
+  function add(geo,mat,x,y,z,rx,ry,rz){
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(x,y,z);
+    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+    cockpitShell.add(m);return m;
+  }
+
+  // ── WINDOW FRAME ──
+  add(new THREE.BoxGeometry(2.2,0.09,0.06),frameMat,  0, 0.46,-0.52);   // top bar
+  add(new THREE.BoxGeometry(2.2,0.07,0.06),frameMat,  0,-0.46,-0.52);   // bottom sill
+  add(new THREE.BoxGeometry(0.08,1.0, 0.06),frameMat,-1.1, 0, -0.52);   // left pillar
+  add(new THREE.BoxGeometry(0.08,1.0, 0.06),frameMat, 1.1, 0, -0.52);   // right pillar
+  add(new THREE.BoxGeometry(0.06,0.94,0.06),frameMat,  0,  0.02,-0.52); // centre post
+  // Corner gussets
+  [[-1.06,0.42],[ 1.06,0.42],[- 1.06,-0.42],[1.06,-0.42]].forEach(([cx2,cy2])=>{
+    const g=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.14,0.06),frameMat);
+    g.position.set(cx2,cy2,-0.52);cockpitShell.add(g);
+  });
+
+  // ── SIDE WALLS (visible periphery) ──
+  add(new THREE.BoxGeometry(0.045,1.05,1.1),darkMat,-1.22,0,-0.85);
+  add(new THREE.BoxGeometry(0.045,1.05,1.1),darkMat, 1.22,0,-0.85);
+  // Side panel ribs
+  [-0.6,-0.9,-1.15].forEach(pz=>{
+    add(new THREE.BoxGeometry(0.06,0.9,0.04),metalMat,-1.22,0,pz);
+    add(new THREE.BoxGeometry(0.06,0.9,0.04),metalMat, 1.22,0,pz);
+  });
+  // Ceiling
+  add(new THREE.BoxGeometry(2.45,0.045,1.1),darkMat,0,0.53,-0.85);
+  // Ceiling ribs
+  [-0.55,-0.85,-1.1].forEach(pz=>{
+    add(new THREE.BoxGeometry(2.3,0.05,0.04),metalMat,0,0.51,pz);
+  });
+
+  // ── DASHBOARD ──
+  // Main console body
+  const dash=add(new THREE.BoxGeometry(2.2,0.52,0.5),new THREE.MeshPhongMaterial({color:0x0d1520,shininess:35}),0,-0.64,-0.85,-0.28);
+  // Screen bezel indents
+  [-0.62,0,0.62].forEach(sx2=>{
+    add(new THREE.BoxGeometry(0.48,0.3,0.03),new THREE.MeshPhongMaterial({color:0x050a0e,shininess:5}),sx2,-0.49,-0.74,-0.28);
+  });
+
+  // ── LIVE SCREENS (canvas texture) ──
+  // Nav screen (centre)
+  const navScr=add(new THREE.PlaneGeometry(0.44,0.28),new THREE.MeshPhongMaterial({map:_navTex,emissive:0x001133,emissiveIntensity:0.3}),0,-0.485,-0.735,-0.28);
+  {const l=new THREE.PointLight(0x0055ff,0.55,0.9);l.position.set(0,0,0.05);navScr.add(l);}
+
+  // Stat screen (left)
+  const statScr=add(new THREE.PlaneGeometry(0.44,0.28),new THREE.MeshPhongMaterial({map:_statTex,emissive:0x001100,emissiveIntensity:0.3}),-0.62,-0.485,-0.735,-0.28);
+  {const l=new THREE.PointLight(0x00aa44,0.45,0.8);l.position.set(0,0,0.05);statScr.add(l);}
+
+  // Warning screen (right) — red
+  const warnScr=add(new THREE.PlaneGeometry(0.44,0.28),new THREE.MeshPhongMaterial({color:0x220000,emissive:0x440000,emissiveIntensity:0.8}),0.62,-0.485,-0.735,-0.28);
+  warnScr.name='warnScr';
+  {const l=new THREE.PointLight(0xff2200,0.35,0.7);l.position.set(0,0,0.05);warnScr.add(l);}
+
+  // ── BUTTONS row ──
+  const btnCols=[0xff2200,0x00ff44,0xffcc00,0x0088ff,0xff6600,0x00ccff];
+  for(let i=0;i<6;i++){
+    const bm=new THREE.MeshPhongMaterial({color:btnCols[i],emissive:btnCols[i],emissiveIntensity:0.6,shininess:120});
+    const btn=new THREE.Mesh(new THREE.CylinderGeometry(0.019,0.019,0.01,10),bm);
+    btn.position.set(-0.55+i*0.22,-0.56,-0.725);btn.rotation.x=-0.28;cockpitShell.add(btn);
+  }
+  // Toggle switches
+  for(let i=0;i<4;i++){
+    const sm=new THREE.MeshPhongMaterial({color:0xaabbcc,shininess:100,specular:0xffffff});
+    const sw=new THREE.Mesh(new THREE.BoxGeometry(0.012,0.04,0.012),sm);
+    sw.position.set(-0.88+i*0.18,-0.545,-0.725);sw.rotation.x=-0.28+(Math.random()>.5?.12:0);cockpitShell.add(sw);
+  }
+
+  // ── CONTROL STICK ──
+  const stickMat=new THREE.MeshPhongMaterial({color:0x111111,shininess:150,specular:0x444444});
+  // Base
+  const sb=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.04,0.06,12),stickMat);
+  sb.position.set(0.26,-0.675,-0.84);cockpitShell.add(sb);
+  // Shaft
+  const ss=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.022,0.19,12),stickMat);
+  ss.position.set(0.26,-0.545,-0.84);ss.rotation.z=-0.12;cockpitShell.add(ss);
+  // Grip ball
+  const sg=new THREE.Mesh(new THREE.SphereGeometry(0.032,14,14),
+    new THREE.MeshPhongMaterial({color:0xcc0000,shininess:130,specular:0xff6666}));
+  sg.position.set(0.27,-0.44,-0.84);cockpitShell.add(sg);
+  // Grip trigger bump
+  const st=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.022,0.018),stickMat);
+  st.position.set(0.27,-0.44,-0.825);cockpitShell.add(st);
+
+  // ── THROTTLE ──
+  const thrMat=new THREE.MeshPhongMaterial({color:0x222222,shininess:60,specular:0x333333});
+  const tShaft=new THREE.Mesh(new THREE.BoxGeometry(0.028,0.2,0.028),thrMat);
+  tShaft.position.set(-0.28,-0.59,-0.84);tShaft.rotation.z=0.18;cockpitShell.add(tShaft);
+  const tGrip=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.04,0.055),thrMat);
+  tGrip.position.set(-0.305,-0.48,-0.84);cockpitShell.add(tGrip);
+  // Throttle indicator stripe (orange = power level)
+  const thrInd=new THREE.Mesh(new THREE.BoxGeometry(0.01,0.12,0.01),
+    new THREE.MeshPhongMaterial({color:0xff6600,emissive:0xff3300,emissiveIntensity:0.8}));
+  thrInd.position.set(-0.265,-0.555,-0.835);thrInd.rotation.z=0.18;thrInd.name='thrInd';cockpitShell.add(thrInd);
+
+  // ── INTERIOR AMBIENT ──
+  const amb=new THREE.PointLight(0x2a3d52,0.45,1.6);amb.position.set(0,0.3,-0.8);cockpitShell.add(amb);
+  // Dash glow wash
+  const dashGlow=new THREE.PointLight(0x002255,0.3,1.0);dashGlow.position.set(0,-0.3,-0.75);cockpitShell.add(dashGlow);
+
+  cockpitShell.visible=false;
+  camera.add(cockpitShell); // moves with camera automatically
 }
 
 // ═══════════════════════════════════════════════
@@ -1193,7 +1318,45 @@ function getSurfaceY(){
 // ═══════════════════════════════════════════════
 //  HUD UPDATE
 // ═══════════════════════════════════════════════
+function updateCockpitScreens(){
+  if(!gs.inRocket)return;
+  // NAV SCREEN
+  _navCtx.fillStyle='#000d1a';_navCtx.fillRect(0,0,256,128);
+  _navCtx.strokeStyle='#0044aa';_navCtx.lineWidth=1;_navCtx.strokeRect(2,2,252,124);
+  _navCtx.fillStyle='#0066ff';_navCtx.font='bold 11px monospace';_navCtx.fillText('NAVIGATION',8,16);
+  const dp=PLANETS[gs.planetIdx]||PLANETS[PLANETS.length-1];
+  const distLeft=Math.max(0,dp.distance-gs.travelDist);
+  _navCtx.fillStyle='#00aaff';_navCtx.font='10px monospace';
+  _navCtx.fillText('DEST: '+dp.name.toUpperCase(),8,34);
+  _navCtx.fillText('DIST: '+(Math.round(distLeft*150/1000))+'k km',8,50);
+  _navCtx.fillText('HDG:  '+Math.round(((rocketYaw%(Math.PI*2))+Math.PI*2)%(Math.PI*2)*180/Math.PI)+'°',8,66);
+  _navCtx.fillText('PITCH:'+Math.round(rocketPitch*180/Math.PI)+'°',8,82);
+  // Mini compass
+  _navCtx.beginPath();_navCtx.arc(210,70,28,0,Math.PI*2);_navCtx.strokeStyle='#003366';_navCtx.stroke();
+  _navCtx.beginPath();_navCtx.moveTo(210,70);
+  const ha=(rocketYaw%(Math.PI*2));
+  _navCtx.lineTo(210+Math.sin(ha)*22,70-Math.cos(ha)*22);
+  _navCtx.strokeStyle='#00aaff';_navCtx.lineWidth=2;_navCtx.stroke();
+  _navCtx.fillStyle='#00aaff';_navCtx.font='9px monospace';_navCtx.fillText('N',207,48);
+  _navTex.needsUpdate=true;
+
+  // STAT SCREEN
+  _statCtx.fillStyle='#000d08';_statCtx.fillRect(0,0,256,128);
+  _statCtx.strokeStyle='#004422';_statCtx.lineWidth=1;_statCtx.strokeRect(2,2,252,124);
+  _statCtx.fillStyle='#00cc44';_statCtx.font='bold 11px monospace';_statCtx.fillText('SYSTEMS',8,16);
+  const bars=[['HULL',gs.rocketHP/ROCKET_MAX_HP,'#0088ff'],['O2  ',gs.playerBreath/PLAYER_MAX_BREATH,'#00ff88'],['HP  ',gs.playerHP/PLAYER_MAX_HP,'#ff4444'],['FOOD',Math.min(1,gs.food/20),'#ffaa00']];
+  bars.forEach(([lbl,pct,col],i)=>{
+    const y=32+i*22;
+    _statCtx.fillStyle='#334433';_statCtx.fillRect(8,y,160,13);
+    _statCtx.fillStyle=col;_statCtx.fillRect(8,y,Math.round(160*pct),13);
+    _statCtx.fillStyle='#ffffff';_statCtx.font='9px monospace';
+    _statCtx.fillText(lbl+' '+Math.round(pct*100)+'%',172,y+10);
+  });
+  _statTex.needsUpdate=true;
+}
+
 function updateHUD(){
+  updateCockpitScreens();
   const pp=(gs.playerHP/PLAYER_MAX_HP*100).toFixed(0);
   const rp=(gs.rocketHP/ROCKET_MAX_HP*100).toFixed(0);
   const bp=(gs.playerBreath/PLAYER_MAX_BREATH*100).toFixed(0);
@@ -1394,8 +1557,9 @@ function update(time){
     camera.lookAt(cPos.x-Math.sin(vy)*Math.cos(vp)*2000,cPos.y+Math.sin(vp)*2000,cPos.z-Math.cos(vy)*Math.cos(vp)*2000);
 
     rocket.visible=false;
-    document.getElementById('cockpit-overlay').style.display='block';
-    document.getElementById('cockpit-instruments').style.display='block';
+    if(cockpitShell)cockpitShell.visible=true;
+    document.getElementById('cockpit-overlay').style.display='none';
+    document.getElementById('cockpit-instruments').style.display='none';
   } else {
     // ── THIRD-PERSON — surface / EVA
     if(keys['KeyA'])camYaw+=CAM_SPEED*dt;
@@ -1411,6 +1575,7 @@ function update(time){
     camera.lookAt(lookTarget);
 
     rocket.visible=true;
+    if(cockpitShell)cockpitShell.visible=false;
     document.getElementById('cockpit-overlay').style.display='none';
     document.getElementById('cockpit-instruments').style.display='none';
   }
@@ -1830,7 +1995,7 @@ function renderLoop(time){
 //  INIT SCENE
 // ═══════════════════════════════════════════════
 function initScene(){
-  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();buildRocketInterior();
+  buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();buildRocketInterior();buildCockpitShell();
   earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
 }
 
@@ -1900,6 +2065,7 @@ function showMain(){
   document.getElementById('cockpit-overlay').style.display='none';
   document.getElementById('cockpit-instruments').style.display='none';
   if(rocket)rocket.visible=true;
+  if(cockpitShell)cockpitShell.visible=false;
 }
 
 function restartGame(){
