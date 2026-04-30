@@ -1097,20 +1097,27 @@ function buildCompanion(){
 }
 
 function beginColony(){
-  document.getElementById('planetPanel').style.display='none';
+  // Hide every overlay that could be showing
+  ['planetPanel','mainMenu','cockpit-overlay','cockpit-instruments','gameOverScreen'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  if(cockpitShell)cockpitShell.visible=false;
+  rocket.visible=true;
+
   gs.screen='playing';gs.paused=false;gs.colony=true;
   gs.population=2;gs.wood=0;gs.shelters=0;gs.lastBabyTime=performance.now();
-  const idx=PLANETS.length-1;
   gs.onSurface=true;gs.inRocket=false;
+
   buildProximaSurface();
   playerMesh.visible=true;playerGrounded=false;
   playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
   playerVel.set(0,0,0);
-  // Place Elena beside the player
+
   if(companionMesh){
     companionMesh.visible=true;
     companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));
   }
+  document.getElementById('hud').style.display='block';
   document.getElementById('colony-hud').style.display='block';
   showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
 }
