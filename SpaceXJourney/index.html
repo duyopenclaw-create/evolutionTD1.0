@@ -473,7 +473,7 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.setClearColor(0x000015);
 
 const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x000008,.000018);
+scene.fog=new THREE.FogExp2(0x000008,.000003);
 const camera=new THREE.PerspectiveCamera(85,window.innerWidth/window.innerHeight,.12,300000);
 scene.add(camera);
 
@@ -893,7 +893,7 @@ function buildPlanets(){
     const tex=makePlanetTexture(pd.color);
     const geo=new THREE.SphereGeometry(pd.radius,48,48);
     const mat=new THREE.MeshPhongMaterial({
-      map:tex,emissive:new THREE.Color(pd.emissive),emissiveIntensity:1.5,shininess:20
+      map:tex,emissive:new THREE.Color(pd.color),emissiveIntensity:3.0,shininess:20
     });
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.set(i%2===0?500:-500,(i%3-1)*400,-pd.distance);
@@ -905,12 +905,17 @@ function buildPlanets(){
         new THREE.MeshPhongMaterial({color:0xddbb88,shininess:5,transparent:true,opacity:.55,side:THREE.DoubleSide})
       );ring.rotation.x=Math.PI/2.3;mesh.add(ring);
     }
-    // Atmosphere glow
+    // Atmosphere glow — inner halo
     mesh.add(new THREE.Mesh(
-      new THREE.SphereGeometry(pd.radius*1.12,16,16),
-      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.06,side:THREE.BackSide})
+      new THREE.SphereGeometry(pd.radius*1.15,16,16),
+      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.30,side:THREE.BackSide})
     ));
-    mesh.add(new THREE.PointLight(pd.color,.9,pd.radius*25));
+    // Far glow sphere
+    mesh.add(new THREE.Mesh(
+      new THREE.SphereGeometry(pd.radius*4,16,16),
+      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.10,side:THREE.BackSide})
+    ));
+    mesh.add(new THREE.PointLight(pd.color,4,pd.radius*80));
     scene.add(mesh);planetMeshes.push(mesh);
   });
 }
