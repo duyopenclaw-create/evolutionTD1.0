@@ -112,28 +112,34 @@ canvas{display:block;position:fixed;top:0;left:0}
 /* ── COCKPIT OVERLAY ── */
 #cockpit-overlay{
   position:fixed;inset:0;pointer-events:none;z-index:5;display:none;
-  /* Thick dark frame — the cockpit walls */
+  /* Thick cockpit window frame */
   box-shadow:
-    inset 0 0 0 55px #04070b,
-    inset 0 0 280px 100px rgba(0,4,10,.65);
+    inset 80px 0 60px -40px #030508,
+    inset -80px 0 60px -40px #030508,
+    inset 0 60px 50px -30px #030508,
+    inset 0 0 180px 60px rgba(0,3,8,.55);
+  border:8px solid #060c14;
+  border-radius:4px;
 }
-/* Vertical centre post (window divider) */
+/* Vertical centre post */
 #cockpit-overlay::before{
-  content:'';position:absolute;top:0;bottom:0;left:50%;width:7px;
+  content:'';position:absolute;top:0;bottom:18%;left:50%;width:8px;
   transform:translateX(-50%);
-  background:linear-gradient(to bottom,#070b10,#111c28 20%,#111c28 80%,#070b10);
-  box-shadow:0 0 12px rgba(0,120,255,.15);
+  background:linear-gradient(to bottom,#050a12,#0d1a28 15%,#0d1a28 85%,#050a12);
+  box-shadow:0 0 10px rgba(0,100,200,.18);
 }
-/* Horizontal sill — top of instrument panel area */
+/* Window sill bar — sits above instrument panel */
 #cockpit-overlay::after{
-  content:'';position:absolute;left:5%;right:5%;bottom:18%;height:6px;
-  background:linear-gradient(to right,transparent,#0d1520 12%,#0d1520 88%,transparent);
-  box-shadow:0 -2px 20px rgba(0,80,160,.2);
+  content:'';position:absolute;left:3%;right:3%;bottom:18%;height:8px;
+  background:#070e1a;
+  border-top:2px solid #1a2e48;
+  box-shadow:0 -4px 24px rgba(0,80,160,.25);
 }
 #cockpit-instruments{
   position:fixed;bottom:0;left:0;right:0;height:18%;
-  background:linear-gradient(to top,#04070b 65%,rgba(4,7,11,.7) 90%,transparent);
+  background:linear-gradient(to top,#030508 60%,rgba(3,5,8,.85) 88%,transparent);
   pointer-events:none;z-index:5;display:none;
+  border-top:1px solid #0d1a28;
 }
 #crosshair::before{width:1px;height:100%;left:50%;transform:translateX(-50%)}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
@@ -1558,9 +1564,10 @@ function update(time){
     camera.lookAt(cPos.x-Math.sin(vy)*Math.cos(vp)*2000,cPos.y+Math.sin(vp)*2000,cPos.z-Math.cos(vy)*Math.cos(vp)*2000);
 
     rocket.visible=false;
+    if(playerMesh)playerMesh.visible=false;
     if(cockpitShell)cockpitShell.visible=true;
-    document.getElementById('cockpit-overlay').style.display='none';
-    document.getElementById('cockpit-instruments').style.display='none';
+    document.getElementById('cockpit-overlay').style.display='block';
+    document.getElementById('cockpit-instruments').style.display='block';
   } else {
     // ── THIRD-PERSON — surface / EVA
     if(keys['KeyA'])camYaw+=CAM_SPEED*dt;
