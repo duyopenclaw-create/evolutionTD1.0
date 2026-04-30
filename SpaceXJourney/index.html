@@ -896,7 +896,7 @@ function buildPlanets(){
       map:tex,emissive:new THREE.Color(pd.color),emissiveIntensity:3.0,shininess:20
     });
     const mesh=new THREE.Mesh(geo,mat);
-    mesh.position.set(i%2===0?500:-500,(i%3-1)*400,-pd.distance);
+    mesh.position.set(0,0,-pd.distance);
     mesh.castShadow=true;mesh.receiveShadow=true;
 
     if(pd.name==='Saturn'){
@@ -912,8 +912,8 @@ function buildPlanets(){
     ));
     // Far glow sphere
     mesh.add(new THREE.Mesh(
-      new THREE.SphereGeometry(pd.radius*4,16,16),
-      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.10,side:THREE.BackSide})
+      new THREE.SphereGeometry(pd.radius*7,16,16),
+      new THREE.MeshBasicMaterial({color:pd.color,transparent:true,opacity:.15,side:THREE.BackSide})
     ));
     mesh.add(new THREE.PointLight(pd.color,4,pd.radius*80));
     scene.add(mesh);planetMeshes.push(mesh);
@@ -1338,6 +1338,16 @@ function updateCockpitScreens(){
   _navCtx.fillText('PITCH:'+Math.round(rocketPitch*180/Math.PI)+'°',8,82);
   // Mini compass
   _navCtx.beginPath();_navCtx.arc(210,70,28,0,Math.PI*2);_navCtx.strokeStyle='#003366';_navCtx.stroke();
+  // Planet target dot (orange) — shows bearing to planet relative to heading
+  if(planetMeshes[gs.planetIdx]){
+    const pm=planetMeshes[gs.planetIdx];
+    const dx=pm.position.x-rocket.position.x;const dz=pm.position.z-rocket.position.z;
+    const tYaw=Math.atan2(-dx,-dz);const rel=tYaw-rocketYaw;
+    const tx=210+Math.sin(rel)*22;const ty=70-Math.cos(rel)*22;
+    _navCtx.beginPath();_navCtx.arc(tx,ty,5,0,Math.PI*2);_navCtx.fillStyle='#ff8800';_navCtx.fill();
+    _navCtx.fillStyle='#ff6600';_navCtx.font='bold 9px monospace';_navCtx.fillText('TGT',196,122);
+  }
+  // Heading needle (blue)
   _navCtx.beginPath();_navCtx.moveTo(210,70);
   const ha=(rocketYaw%(Math.PI*2));
   _navCtx.lineTo(210+Math.sin(ha)*22,70-Math.cos(ha)*22);
