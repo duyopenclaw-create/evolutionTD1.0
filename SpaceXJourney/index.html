@@ -1126,6 +1126,7 @@ function beginColony(){
   document.getElementById('sb-rocket').style.display='none';
   document.getElementById('sb-breath').style.display='none';
   document.getElementById('colony-hud').style.display='block';
+  saveGame();
   showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
 }
 
@@ -1620,7 +1621,8 @@ function updateHUD(){
 function saveGame(){
   const d={playerHP:gs.playerHP,playerBreath:gs.playerBreath,rocketHP:gs.rocketHP,
     hunger:gs.hunger,food:gs.food,score:gs.score,travelDist:gs.travelDist,planetIdx:gs.planetIdx,
-    chapter:gs.chapter,inRocket:gs.inRocket,
+    chapter:gs.chapter,inRocket:gs.inRocket,onSurface:gs.onSurface,
+    colony:gs.colony,population:gs.population,wood:gs.wood,shelters:gs.shelters,
     rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},
     playerPos:{x:playerMesh.position.x,y:playerMesh.position.y,z:playerMesh.position.z},
     ts:Date.now()};
@@ -1634,9 +1636,12 @@ function applySave(data){
   gs.hunger=data.hunger??PLAYER_MAX_HUNGER;
   gs.food=data.food;gs.score=data.score;gs.travelDist=data.travelDist;
   gs.planetIdx=data.planetIdx;gs.chapter=data.chapter;
-  // Only allow being outside the rocket if on a planet surface
-  gs.inRocket=(data.inRocket!==false)||!data.onSurface;
-  gs.onSurface=data.onSurface&&!gs.inRocket;
+  gs.colony=!!data.colony;
+  gs.population=data.population||2;
+  gs.wood=data.wood||0;
+  gs.shelters=data.shelters||0;
+  gs.inRocket=gs.colony?false:(data.inRocket!==false)||!data.onSurface;
+  gs.onSurface=gs.colony?true:(data.onSurface&&!gs.inRocket);
   if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
   if(data.playerPos)playerMesh.position.set(data.playerPos.x,data.playerPos.y,data.playerPos.z);
 }
@@ -2323,12 +2328,32 @@ function continueGame(){
   document.getElementById('mainMenu').style.display='none';
   document.getElementById('hud').style.display='block';
   applySave(save);gs.screen='playing';
-  gs.breathRefilling=gs.inRocket;
-  if(gs.breathRefilling)gs.breathRefillStart=performance.now();
-  if(!gs.inRocket){playerMesh.visible=true;}
+
+  if(gs.colony){
+    // Restore Proxima B colony
+    buildProximaSurface();
+    playerMesh.visible=true;playerGrounded=false;
+    playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+    playerVel.set(0,0,0);
+    if(companionMesh){companionMesh.visible=true;companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));}
+    gs.lastBabyTime=performance.now();
+    document.getElementById('hud-center').style.display='none';
+    document.getElementById('sb-rocket').style.display='none';
+    document.getElementById('sb-breath').style.display='none';
+    document.getElementById('colony-hud').style.display='block';
+    document.getElementById('col-pop').textContent=gs.population;
+    document.getElementById('col-wood').textContent=gs.wood;
+    document.getElementById('col-shelters').textContent=gs.shelters;
+    showNotif('Welcome back to Proxima b.',3000);
+  } else {
+    gs.breathRefilling=gs.inRocket;
+    if(gs.breathRefilling)gs.breathRefillStart=performance.now();
+    if(!gs.inRocket){playerMesh.visible=true;}
+    showNotif('Mission resumed.',2000);
+  }
+
   prevTime=performance.now();lastSave=prevTime;
   initAudio();startSpaceMusic();startEngineHum();
-  showNotif('Mission resumed.',2000);
 }
 
 function showControls(){
