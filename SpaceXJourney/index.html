@@ -143,6 +143,13 @@ canvas{display:block;position:fixed;top:0;left:0}
 }
 #crosshair::before{width:1px;height:100%;left:50%;transform:translateX(-50%)}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
+#colony-hud{
+  position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,20,8,.82);border:1px solid #226633;border-radius:8px;
+  padding:8px 22px;color:#44ff88;font-family:monospace;font-size:13px;
+  pointer-events:none;z-index:8;display:none;text-align:center;letter-spacing:.04em;
+}
+#colony-hud span{margin:0 14px;}
 
 #save-indicator{position:absolute;bottom:20px;left:20px;color:#00ff77;font-size:11px;opacity:0;transition:opacity .5s}
 #controls-hint{position:absolute;bottom:20px;right:20px;color:#2a3040;font-size:11px;line-height:1.7;text-align:right}
@@ -282,10 +289,21 @@ canvas{display:block;position:fixed;top:0;left:0}
   <h2 id="planet-name">MARS</h2>
   <p id="planet-story"></p>
   <div class="food-reward" id="planet-food"></div>
-  <div style="display:flex;gap:20px;justify-content:center;margin-top:10px">
+  <div id="planet-btns" style="display:flex;gap:20px;justify-content:center;margin-top:10px">
     <button class="mbtn" onclick="explorePlanet()">🪐 EXPLORE PLANET</button>
     <button class="mbtn" onclick="continuePlanet()">CONTINUE JOURNEY ▶</button>
   </div>
+  <div id="colony-btns" style="display:none;gap:20px;justify-content:center;margin-top:10px">
+    <button class="mbtn" style="background:linear-gradient(135deg,#1a4d2a,#0d2e18);border-color:#44cc66;color:#88ffaa" onclick="beginColony()">🌿 BEGIN YOUR NEW LIFE</button>
+  </div>
+</div>
+
+<!-- COLONY HUD -->
+<div id="colony-hud">
+  <span>👥 POPULATION: <b id="col-pop">2</b></span>
+  <span>🪵 WOOD: <b id="col-wood">0</b></span>
+  <span>🏠 SHELTERS: <b id="col-shelters">0</b></span>
+  <span>🌾 FARMS: <b id="col-farms">0</b></span>
 </div>
 
 <!-- GAME OVER -->
@@ -449,9 +467,9 @@ const PLANETS=[
   {name:'Neptune',color:0x2244ff,emissive:0x000033,radius:550,distance:290000,
    story:'The storm-wracked atmosphere conceals vast floating ecosystems — gas-bag creatures the size of cities. Their shed membranes are rich in proteins.',
    food:60,chapter:'Chapter 6 — The Dark Giant',surfaceColor:0x112266,skyColor:0x000033},
-  {name:'Proxima b',color:0xff8844,emissive:0x220800,radius:420,distance:545000,
-   story:'After years in the void, you reach Proxima Centauri b — a rocky world with breathable atmosphere, running water, alien flora everywhere. Humanity has found its new home.',
-   food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x885522,skyColor:0x220800}
+  {name:'Proxima b',color:0x44cc66,emissive:0x0a2208,radius:420,distance:545000,
+   story:'After years in the void, you reach Proxima Centauri b — a lush world with breathable atmosphere, vast forests, and running rivers. Humanity has found its new home. You will build a life here.',
+   food:100,chapter:'Chapter 7 — A New Home',surfaceColor:0x226633,skyColor:0x4499cc}
 ];
 
 // ═══════════════════════════════════════════════
@@ -464,7 +482,8 @@ const gs={
   inRocket:true,onSurface:false,
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
-  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,hyperBoost:false,rocketInterior:false
+  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,hyperBoost:false,rocketInterior:false,
+  colony:false,wood:0,population:2,shelters:0,lastBabyTime:0
 };
 
 // ═══════════════════════════════════════════════
@@ -522,6 +541,9 @@ let cockpitShell=null;
 const asteroids=[],comets=[],foodItems=[],particleSystems=[];
 const planetMeshes=[];
 let surfaceMesh=null,surfaceGroup=null;
+let companionMesh=null;
+const proximaTrees=[];
+const proximaFarmPlots=[];
 let currentSurfacePlanetIdx=-1;
 let lastBreathDrain=0,lastSuffDmg=0,lastAsteroidSpawn=0,lastCometSpawn=0;
 let lastSave=0,lastOxyBeep=0,lastHungerDrain=0,lastStarveDmg=0,lastBoostDmg=0;
@@ -1043,6 +1065,136 @@ function buildPlayerMesh(){
 }
 
 // ═══════════════════════════════════════════════
+//  COMPANION (Elena) — Proxima B colony
+// ═══════════════════════════════════════════════
+function buildCompanion(){
+  if(companionMesh){scene.remove(companionMesh);companionMesh=null;}
+  companionMesh=new THREE.Group();
+  const suit  =new THREE.MeshPhongMaterial({color:0xff99cc,shininess:30,specular:0x442233});
+  const helmet=new THREE.MeshPhongMaterial({color:0xffeedd,shininess:200,specular:0xffffff,transparent:true,opacity:.75,emissive:0x553322,emissiveIntensity:1.2});
+  const dark  =new THREE.MeshPhongMaterial({color:0x2a1a22,shininess:40});
+  // Torso
+  companionMesh.add(new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,1.0,12),suit));
+  // Helmet
+  const helm=new THREE.Mesh(new THREE.SphereGeometry(.41,20,20),helmet);
+  helm.position.y=.95;companionMesh.add(helm);
+  const cneck=new THREE.Mesh(new THREE.TorusGeometry(.35,.055,8,16),dark);cneck.position.y=.52;companionMesh.add(cneck);
+  // Arms
+  [-1,1].forEach(s=>{
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.85,8),suit);
+    arm.position.set(s*.52,.12,0);arm.rotation.z=s*.28;companionMesh.add(arm);
+  });
+  // Legs
+  [-1,1].forEach(s=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.78,8),suit);
+    leg.position.set(s*.2,-.9,0);companionMesh.add(leg);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.26,.18,.36),dark);
+    boot.position.set(s*.2,-1.32,.04);companionMesh.add(boot);
+  });
+  const glow=new THREE.PointLight(0xffaacc,.6,5);glow.position.y=.95;companionMesh.add(glow);
+  companionMesh.visible=false;
+  scene.add(companionMesh);
+}
+
+function beginColony(){
+  document.getElementById('planetPanel').style.display='none';
+  gs.screen='playing';gs.paused=false;gs.colony=true;
+  gs.population=2;gs.wood=0;gs.shelters=0;gs.lastBabyTime=performance.now();
+  const idx=PLANETS.length-1;
+  gs.onSurface=true;gs.inRocket=false;
+  buildProximaSurface();
+  playerMesh.visible=true;playerGrounded=false;
+  playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+  playerVel.set(0,0,0);
+  // Place Elena beside the player
+  if(companionMesh){
+    companionMesh.visible=true;
+    companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));
+  }
+  document.getElementById('colony-hud').style.display='block';
+  showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
+}
+
+function buildProximaSurface(){
+  if(surfaceGroup)removePlanetSurface();
+  currentSurfacePlanetIdx=PLANETS.length-1;
+  const pd=PLANETS[currentSurfacePlanetIdx];
+  surfaceGroup=new THREE.Group();
+  proximaTrees.length=0;
+  proximaFarmPlots.length=0;
+
+  // Green terrain
+  const terrGeo=new THREE.PlaneGeometry(3000,3000,60,60);
+  const tpos=terrGeo.attributes.position;
+  for(let v=0;v<tpos.count;v++){
+    tpos.setZ(v,(Math.random()-.5)*6+(Math.sin(tpos.getX(v)*.025)*Math.cos(tpos.getY(v)*.025))*10);
+  }
+  terrGeo.computeVertexNormals();
+  const terrMat=new THREE.MeshPhongMaterial({color:0x226633,shininess:4});
+  surfaceMesh=new THREE.Mesh(terrGeo,terrMat);
+  surfaceMesh.rotation.x=-Math.PI/2;surfaceMesh.receiveShadow=true;
+  surfaceGroup.add(surfaceMesh);
+
+  // River (flat blue strip)
+  const river=new THREE.Mesh(new THREE.PlaneGeometry(18,500),
+    new THREE.MeshPhongMaterial({color:0x1166cc,shininess:120,specular:0x88aaff,transparent:true,opacity:.75}));
+  river.rotation.x=-Math.PI/2;river.position.set(40,0.2,0);surfaceGroup.add(river);
+
+  // Trees
+  const trunkMat=new THREE.MeshPhongMaterial({color:0x553311,shininess:5});
+  const leafMat =new THREE.MeshPhongMaterial({color:0x33aa44,shininess:8,emissive:0x0a2a0a,emissiveIntensity:.3});
+  for(let i=0;i<22;i++){
+    const tree=new THREE.Group();
+    const h=8+Math.random()*10;
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.2,h,8),trunkMat);
+    trunk.position.y=h/2;tree.add(trunk);
+    const canopy=new THREE.Mesh(new THREE.ConeGeometry(4+Math.random()*3,8+Math.random()*4,8),leafMat);
+    canopy.position.y=h+4;tree.add(canopy);
+    // Second canopy layer
+    const canopy2=new THREE.Mesh(new THREE.ConeGeometry(2.5+Math.random()*2,5,8),leafMat);
+    canopy2.position.y=h+8;tree.add(canopy2);
+    const angle=Math.random()*Math.PI*2;
+    const dist=25+Math.random()*180;
+    tree.position.set(Math.cos(angle)*dist,0,Math.sin(angle)*dist);
+    tree.userData.isTree=true;
+    surfaceGroup.add(tree);
+    proximaTrees.push(tree);
+  }
+
+  // Alien flowers (colorful)
+  const flowerCols=[0xff44aa,0xff8833,0xffee22,0x88ff44,0x44eeff];
+  for(let i=0;i<40;i++){
+    const col=flowerCols[Math.floor(Math.random()*flowerCols.length)];
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,1.8,6),
+      new THREE.MeshPhongMaterial({color:0x226633}));
+    stem.position.y=.9;
+    const bloom=new THREE.Mesh(new THREE.SphereGeometry(.4+Math.random()*.25,8,8),
+      new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:.4}));
+    bloom.position.y=2;
+    const f=new THREE.Group();f.add(stem);f.add(bloom);
+    const a=Math.random()*Math.PI*2,d=10+Math.random()*200;
+    f.position.set(Math.cos(a)*d,0,Math.sin(a)*d);
+    surfaceGroup.add(f);
+  }
+
+  // Sky hemisphere light
+  const skyLight=new THREE.HemisphereLight(0x4499cc,0x226633,4);
+  surfaceGroup.add(skyLight);
+  const sunLight=new THREE.DirectionalLight(0xfff0cc,1.8);
+  sunLight.position.set(200,400,100);surfaceGroup.add(sunLight);
+
+  surfaceGroup.position.copy(rocket.position).add(new THREE.Vector3(0,-25,0));
+  scene.add(surfaceGroup);
+
+  // Food scattered around
+  for(let i=0;i<6;i++){
+    const a=Math.random()*Math.PI*2,d=40+Math.random()*120;
+    spawnFoodItem(surfaceGroup.position.clone().add(new THREE.Vector3(Math.cos(a)*d,8,Math.sin(a)*d)));
+  }
+  spawnLandingParticles(rocket.position.clone(),0x226633);
+}
+
+// ═══════════════════════════════════════════════
 //  ASTEROID SPAWN
 // ═══════════════════════════════════════════════
 const rockColors=[0x8b7355,0x6b5a4a,0x9c8b72,0x5c4a38,0x7a6b55];
@@ -1501,10 +1653,12 @@ function arriveAtPlanet(idx){
   gs.food+=PLANETS[idx].food;gs.score+=PLANETS[idx].food*10;
   gs.chapter=PLANETS[idx].chapter;gs.screen='planet';gs.paused=true;
   sfxPlanetArrive();
-  document.getElementById('planet-name').textContent=
-    idx===PLANETS.length-1?'MISSION COMPLETE':PLANETS[idx].name.toUpperCase();
+  const isProxima=idx===PLANETS.length-1;
+  document.getElementById('planet-name').textContent=isProxima?'YOU HAVE ARRIVED — PROXIMA B':PLANETS[idx].name.toUpperCase();
   document.getElementById('planet-story').textContent=PLANETS[idx].story;
   document.getElementById('planet-food').textContent=`+${PLANETS[idx].food} FOOD UNITS COLLECTED`;
+  document.getElementById('planet-btns').style.display=isProxima?'none':'flex';
+  document.getElementById('colony-btns').style.display=isProxima?'flex':'none';
   document.getElementById('planetPanel').style.display='flex';
   saveGame();
 }
@@ -1802,6 +1956,111 @@ function update(time){
     // Rocket auto-travels; keep rocket near player so they can re-board
     rocket.position.x+=(playerMesh.position.x-rocket.position.x)*.005;
 
+    // ── COLONY LOOP (Proxima B) ──────────────────────────────────────
+    if(gs.colony){
+      // Elena follows player
+      if(companionMesh&&companionMesh.visible){
+        const target=playerMesh.position.clone().add(new THREE.Vector3(6,0,3));
+        companionMesh.position.lerp(target,.025);
+        companionMesh.position.y=getSurfaceY()+2||companionMesh.position.y;
+        companionMesh.rotation.y=playerMesh.rotation.y+0.3;
+      }
+      // Baby every 90 seconds
+      if(now-gs.lastBabyTime>90000){
+        gs.population++;gs.lastBabyTime=now;
+        showNotif(`👶 A new child is born!  Population: ${gs.population}`,4000);
+        document.getElementById('col-pop').textContent=gs.population;
+      }
+      // Update colony HUD
+      document.getElementById('col-wood').textContent=gs.wood;
+      document.getElementById('col-pop').textContent=gs.population;
+      document.getElementById('col-shelters').textContent=gs.shelters;
+      document.getElementById('col-farms').textContent=proximaFarmPlots.length;
+
+      // T — chop nearest tree
+      if(keys['KeyT']){
+        keys['KeyT']=false;
+        let nearest=null,nearDist=Infinity;
+        proximaTrees.forEach(tr=>{
+          if(!tr.visible)return;
+          const d=playerMesh.position.distanceTo(surfaceGroup.position.clone().add(tr.position));
+          if(d<nearDist){nearDist=d;nearest=tr;}
+        });
+        if(nearest&&nearDist<20){
+          nearest.visible=false;gs.wood++;
+          showNotif(`🪵 Tree chopped!  Wood: ${gs.wood}`,2000);
+        } else {
+          showNotif('Move closer to a tree to chop it.',1500);
+        }
+      }
+
+      // B — build shelter
+      if(keys['KeyB']){
+        keys['KeyB']=false;
+        if(gs.wood>=5){
+          gs.wood-=5;gs.shelters++;
+          const shelterMat=new THREE.MeshPhongMaterial({color:0x8b5e3c,shininess:10});
+          const shelter=new THREE.Group();
+          const walls=new THREE.Mesh(new THREE.BoxGeometry(12,7,10),shelterMat);
+          walls.position.y=3.5;shelter.add(walls);
+          const roofMat=new THREE.MeshPhongMaterial({color:0x5a3a22,shininess:5});
+          const roof=new THREE.Mesh(new THREE.ConeGeometry(9,4,4),roofMat);
+          roof.position.y=9;roof.rotation.y=Math.PI/4;shelter.add(roof);
+          shelter.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(16,0,0));
+          surfaceGroup.add(shelter);
+          showNotif(`🏠 Shelter built!  Shelters: ${gs.shelters}  Wood left: ${gs.wood}`,3000);
+        } else {
+          showNotif(`Need 5 wood to build a shelter.  You have: ${gs.wood}`,2000);
+        }
+      }
+
+      // P — plant farm
+      if(keys['KeyP']){
+        keys['KeyP']=false;
+        if(gs.wood>=2){
+          gs.wood-=2;
+          const farmMat=new THREE.MeshPhongMaterial({color:0x664400,shininess:2});
+          const cropMat=new THREE.MeshPhongMaterial({color:0x88cc22,emissive:0x224400,emissiveIntensity:.5});
+          const farm=new THREE.Group();
+          farm.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(10,8),farmMat),
+            {rotation:new THREE.Euler(-Math.PI/2,0,0)}));
+          for(let ci=0;ci<6;ci++){
+            const crop=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,1.5,5),cropMat);
+            crop.position.set(-3.5+ci*1.4,.75,0);farm.add(crop);
+          }
+          farm.position.copy(playerMesh.position).sub(surfaceGroup.position).add(new THREE.Vector3(0,.5,10));
+          farm.userData.plantedAt=now;
+          surfaceGroup.add(farm);
+          proximaFarmPlots.push(farm);
+          showNotif(`🌾 Farm planted!  Press H near it in 30s to harvest (+5 food)`,3000);
+        } else {
+          showNotif(`Need 2 wood to plant a farm.  You have: ${gs.wood}`,2000);
+        }
+      }
+
+      // H — harvest farm
+      if(keys['KeyH']){
+        keys['KeyH']=false;
+        let harvested=false;
+        for(let fi=proximaFarmPlots.length-1;fi>=0;fi--){
+          const farm=proximaFarmPlots[fi];
+          const wpos=surfaceGroup.position.clone().add(farm.position);
+          if(playerMesh.position.distanceTo(wpos)<14){
+            const age=now-farm.userData.plantedAt;
+            if(age>30000){
+              gs.food+=5;surfaceGroup.remove(farm);proximaFarmPlots.splice(fi,1);
+              showNotif(`🌾 Harvested! +5 food  (Food: ${gs.food})`,2500);harvested=true;
+            } else {
+              showNotif(`Crops still growing... ${Math.ceil((30000-age)/1000)}s left`,1500);harvested=true;
+            }
+            break;
+          }
+        }
+        if(!harvested)showNotif('No farm nearby to harvest.',1500);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────
+
   } else {
     if(warpLines)warpLines.visible=false;
     if(navArrow3D)navArrow3D.visible=false;
@@ -2005,7 +2264,7 @@ function renderLoop(time){
 // ═══════════════════════════════════════════════
 function initScene(){
   buildLighting();buildStarfield();buildSun();buildNebula();buildWarpLines();buildNavArrow();buildRocketInterior();buildCockpitShell();
-  earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();
+  earthDebrisRef=buildEarthDebris();buildPlanets();buildRocket();buildPlayerMesh();buildCompanion();
 }
 
 // ═══════════════════════════════════════════════
@@ -2081,7 +2340,10 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;
+  document.getElementById('colony-hud').style.display='none';
+  if(companionMesh)companionMesh.visible=false;
+  proximaTrees.length=0;proximaFarmPlots.length=0;
   if(rocketInteriorGroup)rocketInteriorGroup.visible=false;
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
