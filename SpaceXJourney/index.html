@@ -433,7 +433,7 @@ const PLANETS=[
    food:25,chapter:'Chapter 2 — The Red Wasteland',surfaceColor:0xaa3300,skyColor:0x331100},
   {name:"Jupiter's Moons",color:0xcc9944,emissive:0x221100,radius:900,distance:80000,
    story:"Europa's ocean-vents harbor alien kelp forests beneath kilometers of ice. Your EVA team melts an entry shaft. The bioluminescent harvest feeds the crew for weeks.",
-   food:40,chapter:'Chapter 3 — Ocean Beneath the Ice',surfaceColor:0xaaddff,skyColor:0x002244},
+   food:40,chapter:'Chapter 3 — Ocean Beneath the Ice',surfaceColor:0x88ccff,skyColor:0x66bbff},
   {name:'Saturn',color:0xddcc88,emissive:0x111100,radius:750,distance:145000,
    story:"Titan's methane lakes are lifeless, but orbiting the rings you intercept an alien cargo pod packed with protein synthesizers. A lucky find.",
    food:35,chapter:'Chapter 4 — Rings of Saturn',surfaceColor:0xccaa66,skyColor:0x221100},
@@ -889,6 +889,7 @@ function buildPlayerMesh(){
   helm.position.y=1.0;playerMesh.add(helm);
   // Helmet glow interior
   const helmGlow=new THREE.PointLight(0x88ccff,.8,5);helmGlow.position.y=1.0;playerMesh.add(helmGlow);
+  const suitLight=new THREE.PointLight(0xffffff,0,18);suitLight.name='suitLight';suitLight.position.y=0.5;playerMesh.add(suitLight);
   // Neck ring
   const neck=new THREE.Mesh(new THREE.TorusGeometry(.36,.06,8,16),dark);neck.position.y=.56;playerMesh.add(neck);
   // Backpack (life support)
@@ -1022,7 +1023,7 @@ function spawnFoodItem(basePos){
   const ch=new THREE.Mesh(new THREE.BoxGeometry(3.5,.6,.2),crossMat);
   ch.position.set(0,0,5.2);g.add(ch);
 
-  g.position.copy(basePos).add(new THREE.Vector3((Math.random()-.5)*500,(Math.random()-.5)*300,(Math.random()-.5)*200));
+  g.position.copy(basePos);
   g.userData={type:'food',alive:true,radius:8};
   g.add(new THREE.PointLight(0xffaa00,1.8,100));
   scene.add(g);foodItems.push(g);
@@ -1155,7 +1156,8 @@ function buildPlanetSurface(planetIdx){
   }
 
   // Ambient surface light (fake sky)
-  const skyLight=new THREE.HemisphereLight(new THREE.Color(pd.skyColor),new THREE.Color(pd.surfaceColor),2);
+  const skyLightIntensity=pd.skyColor===0x66bbff?5:2;
+  const skyLight=new THREE.HemisphereLight(new THREE.Color(pd.skyColor),new THREE.Color(pd.surfaceColor),skyLightIntensity);
   surfaceGroup.add(skyLight);
 
   // Place surface group near rocket landing position
@@ -1163,9 +1165,11 @@ function buildPlanetSurface(planetIdx){
   scene.add(surfaceGroup);
 
   // Spawn food items on surface
-  for(let i=0;i<6;i++){
+  for(let i=0;i<8;i++){
+    const angle=Math.random()*Math.PI*2;
+    const dist=60+Math.random()*180;
     const fp=surfaceGroup.position.clone().add(
-      new THREE.Vector3((Math.random()-.5)*600,5,(Math.random()-.5)*400)
+      new THREE.Vector3(Math.cos(angle)*dist,8,Math.sin(angle)*dist)
     );
     spawnFoodItem(fp);
   }
@@ -1604,6 +1608,10 @@ function update(time){
     }
     // Orient player upright
     playerMesh.rotation.y=Math.PI+camYaw;
+
+    // Suit light — brighter on dark/blue planets so player is visible
+    const sl=playerMesh.getObjectByName('suitLight');
+    if(sl){const pd=PLANETS[currentSurfacePlanetIdx];sl.intensity=pd&&pd.skyColor===0x66bbff?2.5:0;}
 
     // Footstep dust when moving
     if((inp.length()>.1)&&(now%500<20)){
