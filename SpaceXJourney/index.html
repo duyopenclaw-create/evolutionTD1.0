@@ -158,6 +158,12 @@ canvas{display:block;position:fixed;top:0;left:0}
   pointer-events:none;z-index:8;display:none;line-height:1.9;
 }
 
+#proximity-hint{
+  position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+  background:rgba(0,10,30,.85);border:1px solid #446688;border-radius:6px;
+  padding:5px 18px;color:#aaddff;font-family:monospace;font-size:12px;
+  pointer-events:none;z-index:9;display:none;white-space:nowrap;
+}
 #save-indicator{position:absolute;bottom:20px;left:20px;color:#00ff77;font-size:11px;opacity:0;transition:opacity .5s}
 #controls-hint{position:absolute;bottom:20px;right:20px;color:#2a3040;font-size:11px;line-height:1.7;text-align:right}
 
@@ -305,6 +311,9 @@ canvas{display:block;position:fixed;top:0;left:0}
     <button class="mbtn" style="background:linear-gradient(135deg,#1a4d2a,#0d2e18);border-color:#44cc66;color:#88ffaa" onclick="beginColony()">🌿 BEGIN YOUR NEW LIFE</button>
   </div>
 </div>
+
+<!-- PROXIMITY HINT (colony — separate from main notification) -->
+<div id="proximity-hint"></div>
 
 <!-- COLONY HUD -->
 <div id="colony-hud">
@@ -1124,7 +1133,9 @@ function buildCompanion(){
   const labelMat=new THREE.MeshPhongMaterial({color:0xffee44,emissive:0xffcc00,emissiveIntensity:1.5});
   const beacon=new THREE.Mesh(labelGeo,labelMat);beacon.position.y=2.0;companionMesh.add(beacon);
   // Strong glow so she's always visible
-  const glow=new THREE.PointLight(0xff88cc,3.0,18);glow.position.y=1.0;companionMesh.add(glow);
+  const glow=new THREE.PointLight(0xff88cc,4.0,30);glow.position.y=1.0;companionMesh.add(glow);
+  // Scale up so she's clearly visible in the world
+  companionMesh.scale.set(3,3,3);
   companionMesh.visible=false;
   scene.add(companionMesh);
 }
@@ -1151,7 +1162,7 @@ function beginColony(){
 
   if(companionMesh){
     companionMesh.visible=true;
-    companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));
+    companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(5,0,4));
   }
   document.getElementById('hud').style.display='block';
   document.getElementById('hud-center').style.display='none';
@@ -2030,9 +2041,9 @@ function update(time){
     if(gs.colony){
       // Elena follows player
       if(companionMesh&&companionMesh.visible){
-        const target=playerMesh.position.clone().add(new THREE.Vector3(6,0,3));
-        companionMesh.position.lerp(target,.025);
-        companionMesh.position.y=getSurfaceY()+2||companionMesh.position.y;
+        const target=playerMesh.position.clone().add(new THREE.Vector3(5,0,4));
+        companionMesh.position.lerp(target,.15);
+        companionMesh.position.y=getSurfaceY()+4;
         companionMesh.rotation.y=playerMesh.rotation.y+0.3;
       }
       // Baby every 90 seconds
@@ -2055,8 +2066,23 @@ function update(time){
         const d=playerMesh.position.distanceTo(surfaceGroup.position.clone().add(tr.position));
         if(d<nearestTreeDist){nearestTreeDist=d;nearestTree=tr;}
       });
-      if(nearestTree&&nearestTreeDist<25){
-        showNotif(`[ T ] Chop tree — Wood: ${gs.wood}`,500);
+      // Rocket proximity check (used below too)
+      const rktDist=playerMesh.position.distanceTo(rocket.position);
+      // Show one proximity hint at a time in dedicated element (doesn't block main notification)
+      {
+        const ph=document.getElementById('proximity-hint');
+        if(ph){
+          if(rktDist<40){
+            const upgTotal=gs.upgrades.engine+gs.upgrades.hull+gs.upgrades.hyper;
+            ph.textContent=`[ U ] Upgrade Rocket — ${upgTotal}/3 upgrades  (Wood: ${gs.wood})`;
+            ph.style.display='block';
+          } else if(nearestTree&&nearestTreeDist<25){
+            ph.textContent=`[ T ] Chop tree  (Wood: ${gs.wood})`;
+            ph.style.display='block';
+          } else {
+            ph.style.display='none';
+          }
+        }
       }
 
       // T — chop nearest tree
@@ -2135,12 +2161,7 @@ function update(time){
         if(!harvested)showNotif('No farm nearby to harvest.',1500);
       }
 
-      // Rocket proximity — upgrade hint + U key menu
-      const rktDist=playerMesh.position.distanceTo(rocket.position);
-      if(rktDist<40){
-        const upgTotal=gs.upgrades.engine+gs.upgrades.hull+gs.upgrades.hyper;
-        showNotif(`[ U ] Upgrade Rocket — ${upgTotal}/3 installed  (Wood: ${gs.wood})`,500);
-      }
+      // Rocket upgrade menu
       if(keys['KeyU']){
         keys['KeyU']=false;
         if(rktDist<40){
@@ -2506,6 +2527,7 @@ function restartGame(){
   gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;gs.upgrades={engine:0,hull:0,hyper:0};gs.upgradeMenuOpen=false;
   document.getElementById('colony-hud').style.display='none';
   document.getElementById('colony-controls').style.display='none';
+  document.getElementById('proximity-hint').style.display='none';
   if(companionMesh)companionMesh.visible=false;
   proximaTrees.length=0;proximaFarmPlots.length=0;
   if(rocketInteriorGroup)rocketInteriorGroup.visible=false;
