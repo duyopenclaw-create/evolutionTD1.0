@@ -144,10 +144,11 @@ canvas{display:block;position:fixed;top:0;left:0}
 #crosshair::before{width:1px;height:100%;left:50%;transform:translateX(-50%)}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
 #colony-hud{
-  position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
   background:rgba(0,20,8,.82);border:1px solid #226633;border-radius:8px;
   padding:8px 22px;color:#44ff88;font-family:monospace;font-size:13px;
   pointer-events:none;z-index:8;display:none;text-align:center;letter-spacing:.04em;
+  white-space:nowrap;
 }
 #colony-hud span{margin:0 14px;}
 
@@ -1121,6 +1122,9 @@ function beginColony(){
     companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));
   }
   document.getElementById('hud').style.display='block';
+  document.getElementById('hud-center').style.display='none';
+  document.getElementById('sb-rocket').style.display='none';
+  document.getElementById('sb-breath').style.display='none';
   document.getElementById('colony-hud').style.display='block';
   showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
 }
