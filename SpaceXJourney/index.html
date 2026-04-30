@@ -464,7 +464,7 @@ const gs={
   inRocket:true,onSurface:false,
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
-  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,rocketInterior:false
+  paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,hyperBoost:false,rocketInterior:false
 };
 
 // ═══════════════════════════════════════════════
@@ -1598,8 +1598,9 @@ function update(time){
     showNotif(`FOOD EATEN  +${EAT_HP} HP  +${EAT_HUNGER}% HUNGER`,1500);
   }
 
-  // ── AFTERBURNER (F hold) — 5× speed, -1 hull HP/sec
+  // ── AFTERBURNER — F=5× speed, F+Y=20× speed; both drain hull 1 HP/sec
   gs.boosting=!!(keys['KeyF']&&gs.inRocket);
+  gs.hyperBoost=!!(keys['KeyF']&&keys['KeyY']&&gs.inRocket);
   if(gs.boosting&&now-lastBoostDmg>=1000){
     gs.rocketHP=Math.max(0,gs.rocketHP-1);lastBoostDmg=now;
     if(gs.rocketHP<=0){checkDeath();return;}
@@ -1665,7 +1666,7 @@ function update(time){
     const fwdY= Math.sin(rocketPitch);
     const fwdZ=-Math.cos(rocketYaw)*Math.cos(rocketPitch);
 
-    const spd=gs.boosting?ROCKET_SPEED*5:ROCKET_SPEED;
+    const spd=gs.hyperBoost?ROCKET_SPEED*20:gs.boosting?ROCKET_SPEED*5:ROCKET_SPEED;
     rocketVel.set(fwdX*spd,fwdY*spd,fwdZ*spd);
     rocket.position.addScaledVector(rocketVel,dt);
     gs.travelDist+=spd*dt;
@@ -1678,8 +1679,8 @@ function update(time){
     rocket.rotation.z+=(bank-rocket.rotation.z)*10*dt;
 
     // Boost visuals
-    if(engineGlow){const s=gs.boosting?2.8:1;engineGlow.scale.set(s,s,s);engineGlow.material.opacity=gs.boosting?.55:.22;}
-    if(engineLight)engineLight.intensity=gs.boosting?18:5;
+    if(engineGlow){const s=gs.hyperBoost?5.5:gs.boosting?2.8:1;engineGlow.scale.set(s,s,s);engineGlow.material.opacity=gs.hyperBoost?.85:gs.boosting?.55:.22;}
+    if(engineLight)engineLight.intensity=gs.hyperBoost?45:gs.boosting?18:5;
 
     // 3D nav arrow — floats 120u ahead in heading direction
     if(navArrow3D&&planetMeshes[gs.planetIdx]){
@@ -2080,7 +2081,7 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.rocketInterior=false;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;
   if(rocketInteriorGroup)rocketInteriorGroup.visible=false;
   rocket.position.set(0,0,0);rocket.rotation.set(-Math.PI/2,0,0);
   rocketVel.set(0,0,-ROCKET_SPEED);playerVel.set(0,0,0);
