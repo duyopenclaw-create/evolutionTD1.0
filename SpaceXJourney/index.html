@@ -320,7 +320,8 @@ canvas{display:block;position:fixed;top:0;left:0}
   <span>👥 POP: <b id="col-pop">2</b></span>
   <span>🍎 FOOD: <b id="col-food">0</b></span>
   <span>🪵 WOOD: <b id="col-wood">0</b></span>
-  <span>🏠 SHELTERS: <b id="col-shelters">0</b></span>
+  <span>🏠 SHELTER: <b id="col-shelters">0</b> <span style="color:#88aaff">(cap <b id="col-cap">0</b>)</span></span>
+  <span>👶 KIDS: <b id="col-kids">0</b></span>
   <span>🌾 FARMS: <b id="col-farms">0</b></span>
   <span id="col-upgrades-hud" style="display:none">⚙ <b id="col-upgrades">0</b>/3 UPG</span>
 </div>
@@ -335,9 +336,11 @@ canvas{display:block;position:fixed;top:0;left:0}
   P — Plant farm (2 wood) 🌾<br>
   H — Harvest farm (+5 food)<br>
   G — Eat food (+15 HP)<br>
+  <span style="color:#ff88cc">K — Kiss Elena → have baby (10 wood)</span><br>
+  <span style="color:#ffdd88">F — Feed nearby child (1 food)</span><br>
   U — Upgrade rocket (near rocket)<br>
   E — Enter rocket<br>
-  <div style="color:#ffaa44;margin-top:4px">Elena follows you everywhere</div>
+  <div style="color:#ffaa44;margin-top:4px">👶 Babies need shelter in 3 min<br>Feed kids every 10 min or they die<br>1 shelter = 5 people</div>
 </div>
 
 <!-- GAME OVER -->
@@ -373,6 +376,8 @@ const SURFACE_GRAVITY  = 18;
 const ROCKET_RADIUS    = 14;
 const PLAYER_RADIUS    = 2;
 const SAVE_KEY         = 'SpaceXJourney_v2';
+const BABY_BOY_NAMES =['Kai','Leo','Zane','Ryu','Axel','Orion','Jax','Rex','Cian','Blaze','Nox','Dax'];
+const BABY_GIRL_NAMES=['Luna','Lyra','Aria','Zara','Vega','Elara','Sora','Mira','Cora','Iris','Nova','Faye'];
 const PLAYER_MAX_HUNGER  = 100;
 const HUNGER_DRAIN_MS    = 18000;  // 1% per 18 sec
 const STARVE_DMG         = 3;
@@ -517,8 +522,9 @@ const gs={
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
   paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,hyperBoost:false,rocketInterior:false,
-  colony:false,wood:0,population:2,shelters:0,lastBabyTime:0,
-  upgrades:{engine:0,hull:0,hyper:0},upgradeMenuOpen:false
+  colony:false,wood:0,population:2,shelters:0,
+  upgrades:{engine:0,hull:0,hyper:0},upgradeMenuOpen:false,
+  babies:[]
 };
 
 // ═══════════════════════════════════════════════
@@ -1140,6 +1146,79 @@ function buildCompanion(){
   scene.add(companionMesh);
 }
 
+// ═══════════════════════════════════════════════
+//  BABY SYSTEM
+// ═══════════════════════════════════════════════
+function buildBabyMesh(gender){
+  const g=new THREE.Group();
+  const col=gender==='boy'?0x55aaff:0xff66cc;
+  const mat=new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:.5,shininess:30});
+  const darkMat=new THREE.MeshPhongMaterial({color:0x222233,shininess:20});
+  // Head
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.55,10,10),mat);
+  head.position.y=.55;g.add(head);
+  // Body
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.65,8),mat);
+  body.position.y=-.18;g.add(body);
+  // Arms
+  [-1,1].forEach(s=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.45,6),mat);arm.position.set(s*.42,-.05,0);arm.rotation.z=s*.4;g.add(arm);});
+  // Legs
+  [-1,1].forEach(s=>{const leg=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.4,6),mat);leg.position.set(s*.16,-.7,0);g.add(leg);});
+  // Strong glow so baby is always visible
+  const glow=new THREE.PointLight(col,3.5,22);glow.position.y=.5;g.add(glow);
+  g.scale.set(2.2,2.2,2.2);
+  return g;
+}
+
+function worldToScreen(worldPos){
+  const v=worldPos.clone().project(camera);
+  const inFront=v.z<1;
+  return {
+    x:(v.x*.5+.5)*window.innerWidth,
+    y:((-v.y)*.5+.5)*window.innerHeight,
+    inFront
+  };
+}
+
+function spawnBaby(nameOverride,genderOverride,bornAtOverride,lastFedOverride){
+  const isBoy=genderOverride?genderOverride==='boy':Math.random()<.5;
+  const gender=isBoy?'boy':'girl';
+  const pool=isBoy?BABY_BOY_NAMES:BABY_GIRL_NAMES;
+  const name=nameOverride||pool[Math.floor(Math.random()*pool.length)];
+  const mesh=buildBabyMesh(gender);
+  // Position near player on the surface
+  const angle=Math.random()*Math.PI*2;
+  mesh.position.copy(playerMesh.position).add(new THREE.Vector3(Math.cos(angle)*7,0,Math.sin(angle)*7));
+  mesh.position.y=getSurfaceY()+3.3;
+  scene.add(mesh);
+  // DOM name label above head
+  const label=document.createElement('div');
+  label.style.cssText='position:fixed;color:#fff;font:bold 12px monospace;pointer-events:none;z-index:20;transform:translateX(-50%);background:rgba(0,0,20,.7);padding:2px 7px;border-radius:4px;border:1px solid rgba(255,255,255,.3);white-space:nowrap';
+  label.textContent=(gender==='boy'?'♂ ':'♀ ')+name;
+  document.body.appendChild(label);
+  const bornAt=bornAtOverride||performance.now();
+  const lastFed=lastFedOverride||performance.now();
+  const cap=gs.shelters*5;
+  const needsShelterBy=(gs.babies.length<cap)?null:bornAt+180000;
+  const baby={name,gender,bornAt,lastFed,needsShelterBy,mesh,labelEl:label};
+  gs.babies.push(baby);
+  gs.population=2+gs.babies.length;
+  return baby;
+}
+
+function removeBaby(idx){
+  const b=gs.babies[idx];
+  if(b.mesh)scene.remove(b.mesh);
+  if(b.labelEl&&b.labelEl.parentNode)b.labelEl.parentNode.removeChild(b.labelEl);
+  gs.babies.splice(idx,1);
+  gs.population=2+gs.babies.length;
+}
+
+function clearBabies(){
+  while(gs.babies.length)removeBaby(0);
+  gs.population=2;
+}
+
 function beginColony(){
   // Hide every overlay that could be showing
   ['planetPanel','mainMenu','cockpit-overlay','cockpit-instruments','gameOverScreen'].forEach(id=>{
@@ -1149,7 +1228,7 @@ function beginColony(){
   rocket.visible=true;
 
   gs.screen='playing';gs.paused=false;gs.colony=true;
-  gs.population=2;gs.wood=0;gs.shelters=0;gs.lastBabyTime=performance.now();
+  clearBabies();gs.wood=0;gs.shelters=0;
   gs.onSurface=true;gs.inRocket=false;
   gs.planetIdx=PLANETS.length; // past the end — stops arriveAtPlanet re-triggering
   // Proxima B is a fresh start — full health and breathable air
@@ -1667,6 +1746,7 @@ function saveGame(){
     chapter:gs.chapter,inRocket:gs.inRocket,onSurface:gs.onSurface,
     colony:gs.colony,population:gs.population,wood:gs.wood,shelters:gs.shelters,
     upgrades:gs.upgrades,
+    babySaveData:gs.babies.map(b=>({name:b.name,gender:b.gender,bornAt:b.bornAt,lastFed:b.lastFed,needsShelterBy:b.needsShelterBy})),
     rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},
     playerPos:{x:playerMesh.position.x,y:playerMesh.position.y,z:playerMesh.position.z},
     ts:Date.now()};
@@ -1685,6 +1765,7 @@ function applySave(data){
   gs.wood=data.wood||0;
   gs.shelters=data.shelters||0;
   gs.upgrades=data.upgrades||{engine:0,hull:0,hyper:0};
+  gs._babySaveData=data.babySaveData||[];
   gs.inRocket=gs.colony?false:(data.inRocket!==false)||!data.onSurface;
   gs.onSurface=gs.colony?true:(data.onSurface&&!gs.inRocket);
   if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
@@ -2046,17 +2127,70 @@ function update(time){
         companionMesh.position.y=getSurfaceY()+4;
         companionMesh.rotation.y=playerMesh.rotation.y+0.3;
       }
-      // Baby every 90 seconds
-      if(now-gs.lastBabyTime>90000){
-        gs.population++;gs.lastBabyTime=now;
-        showNotif(`👶 A new child is born!  Population: ${gs.population}`,4000);
-        document.getElementById('col-pop').textContent=gs.population;
+      // ── K — Kiss Elena → have baby (costs 10 wood)
+      if(keys['KeyK']){
+        keys['KeyK']=false;
+        const elenaDist=companionMesh&&companionMesh.visible?playerMesh.position.distanceTo(companionMesh.position):999;
+        if(elenaDist>20){showNotif('Walk up to Elena first to kiss her.',2000);}
+        else if(gs.wood<10){showNotif(`Need 10 wood for baby supplies.  Have: ${gs.wood}`,2000);}
+        else{
+          gs.wood-=10;
+          const baby=spawnBaby();
+          const cap=gs.shelters*5;
+          const shelterMsg=gs.babies.length>cap?`  ⚠ BUILD SHELTER IN 3 MIN OR ${baby.name.toUpperCase()} DIES!`:'';
+          showNotif(`👶 ${baby.gender==='boy'?'Boy':'Girl'} born!  Name: ${baby.name}${shelterMsg}`,6000);
+        }
+      }
+      // ── F — Feed nearest baby (1 food)
+      if(keys['KeyF']&&!gs.inRocket){
+        let nearest=null,nearDist=Infinity;
+        gs.babies.forEach(b=>{const d=playerMesh.position.distanceTo(b.mesh.position);if(d<nearDist){nearDist=d;nearest=b;}});
+        if(nearest&&nearDist<18){
+          keys['KeyF']=false;
+          if(gs.food>=1){gs.food--;nearest.lastFed=now;showNotif(`🍼 Fed ${nearest.name}!`,2000);}
+          else showNotif(`No food! Harvest farms to feed ${nearest.name}.`,2000);
+        }
+      }
+      // ── Baby update loop — labels, shelter timer, starvation
+      for(let bi=gs.babies.length-1;bi>=0;bi--){
+        const baby=gs.babies[bi];
+        // Auto-shelter if capacity opened up (new shelter built)
+        if(baby.needsShelterBy&&bi<gs.shelters*5)baby.needsShelterBy=null;
+        // Die: no shelter after 3 min
+        if(baby.needsShelterBy&&now>baby.needsShelterBy){
+          showNotif(`💔 ${baby.name} died from exposure — build shelters!`,5000);
+          removeBaby(bi);continue;
+        }
+        // Warn: 1 min left for shelter
+        if(baby.needsShelterBy&&baby.needsShelterBy-now<60000&&Math.floor(now/4000)%2===0){
+          showNotif(`⚠ 1 min to shelter ${baby.name}! Press B to build!`,1800);
+        }
+        // Die: starved (10 min without food)
+        if(now-baby.lastFed>600000){
+          showNotif(`💔 ${baby.name} starved — feed children with F key!`,5000);
+          removeBaby(bi);continue;
+        }
+        // Warn: hungry (9 min)
+        if(now-baby.lastFed>540000&&Math.floor(now/5000)%2===0){
+          showNotif(`⚠ ${baby.name} is hungry! Walk to them and press F!`,1800);
+        }
+        // DOM label — project to screen
+        const labelWorldPos=baby.mesh.position.clone();labelWorldPos.y+=6;
+        const sc=worldToScreen(labelWorldPos);
+        if(sc.inFront&&sc.x>0&&sc.x<window.innerWidth&&sc.y>0&&sc.y<window.innerHeight){
+          baby.labelEl.style.left=sc.x+'px';baby.labelEl.style.top=sc.y+'px';baby.labelEl.style.display='block';
+        } else {baby.labelEl.style.display='none';}
+        // Keep baby grounded
+        baby.mesh.position.y=getSurfaceY()+3.3;
       }
       // Update colony HUD
+      const shelterCap=gs.shelters*5;
       document.getElementById('col-food').textContent=gs.food;
       document.getElementById('col-wood').textContent=gs.wood;
       document.getElementById('col-pop').textContent=gs.population;
       document.getElementById('col-shelters').textContent=gs.shelters;
+      document.getElementById('col-cap').textContent=shelterCap;
+      document.getElementById('col-kids').textContent=gs.babies.length;
       document.getElementById('col-farms').textContent=proximaFarmPlots.length;
 
       // Proximity hint for nearest tree
@@ -2071,10 +2205,18 @@ function update(time){
       // Show one proximity hint at a time in dedicated element (doesn't block main notification)
       {
         const ph=document.getElementById('proximity-hint');
+        const elenaDist2=companionMesh&&companionMesh.visible?playerMesh.position.distanceTo(companionMesh.position):999;
+        const nearestHungryBaby=gs.babies.find(b=>playerMesh.position.distanceTo(b.mesh.position)<18&&now-b.lastFed>480000);
         if(ph){
           if(rktDist<40){
             const upgTotal=gs.upgrades.engine+gs.upgrades.hull+gs.upgrades.hyper;
-            ph.textContent=`[ U ] Upgrade Rocket — ${upgTotal}/3 upgrades  (Wood: ${gs.wood})`;
+            ph.textContent=`[ U ] Upgrade Rocket — ${upgTotal}/3  (Wood: ${gs.wood})`;
+            ph.style.display='block';
+          } else if(elenaDist2<20){
+            ph.textContent=`[ K ] Kiss Elena — have a baby  (costs 10 wood, have ${gs.wood})`;
+            ph.style.display='block';
+          } else if(nearestHungryBaby){
+            ph.textContent=`[ F ] Feed ${nearestHungryBaby.name} — hungry!  (1 food)`;
             ph.style.display='block';
           } else if(nearestTree&&nearestTreeDist<25){
             ph.textContent=`[ T ] Chop tree  (Wood: ${gs.wood})`;
@@ -2470,16 +2612,14 @@ function continueGame(){
     playerMesh.visible=true;playerGrounded=false;
     playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
     playerVel.set(0,0,0);
-    if(companionMesh){companionMesh.visible=true;companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(6,0,0));}
-    gs.lastBabyTime=performance.now();
+    if(companionMesh){companionMesh.visible=true;companionMesh.position.copy(playerMesh.position).add(new THREE.Vector3(5,0,4));}
+    // Restore babies from save
+    clearBabies();
+    (gs._babySaveData||[]).forEach(bd=>spawnBaby(bd.name,bd.gender,bd.bornAt,bd.lastFed));
     document.getElementById('hud-center').style.display='none';
     document.getElementById('colony-hud').style.display='block';
     document.getElementById('colony-controls').style.display='block';
-    document.getElementById('col-pop').textContent=gs.population;
-    document.getElementById('col-food').textContent=gs.food;
-    document.getElementById('col-wood').textContent=gs.wood;
-    document.getElementById('col-shelters').textContent=gs.shelters;
-    showNotif('Welcome back to Proxima b.',3000);
+    showNotif(`Welcome back to Proxima b.  ${gs.babies.length} children here.`,3000);
   } else {
     gs.breathRefilling=gs.inRocket;
     if(gs.breathRefilling)gs.breathRefillStart=performance.now();
@@ -2536,7 +2676,7 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;gs.upgrades={engine:0,hull:0,hyper:0};gs.upgradeMenuOpen=false;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.shelters=0;gs.upgrades={engine:0,hull:0,hyper:0};gs.upgradeMenuOpen=false;clearBabies();
   document.getElementById('colony-hud').style.display='none';
   document.getElementById('colony-controls').style.display='none';
   document.getElementById('proximity-hint').style.display='none';
