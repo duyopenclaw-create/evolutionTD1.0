@@ -1107,6 +1107,7 @@ function beginColony(){
   gs.screen='playing';gs.paused=false;gs.colony=true;
   gs.population=2;gs.wood=0;gs.shelters=0;gs.lastBabyTime=performance.now();
   gs.onSurface=true;gs.inRocket=false;
+  gs.planetIdx=PLANETS.length; // past the end — stops arriveAtPlanet re-triggering
 
   buildProximaSurface();
   playerMesh.visible=true;playerGrounded=false;
