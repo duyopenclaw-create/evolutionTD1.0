@@ -1108,6 +1108,8 @@ function beginColony(){
   gs.population=2;gs.wood=0;gs.shelters=0;gs.lastBabyTime=performance.now();
   gs.onSurface=true;gs.inRocket=false;
   gs.planetIdx=PLANETS.length; // past the end — stops arriveAtPlanet re-triggering
+  // Proxima B is a fresh start — full health and breathable air
+  gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.hunger=PLAYER_MAX_HUNGER;
 
   buildProximaSurface();
   playerMesh.visible=true;playerGrounded=false;
@@ -1649,8 +1651,18 @@ function gameOver(reason){
   document.getElementById('hud').style.display='none';
 }
 function checkDeath(){
-  if(gs.playerHP<=0){gameOver('Commander Chen perished in the void. The last hope of humanity faded with them.');return true;}
-  if(gs.rocketHP<=0){gameOver('The Ark I hull collapsed. Her crew never reached Mars.');return true;}
+  if(gs.playerHP<=0){
+    if(gs.colony){
+      // Respawn at colony — Elena revives you
+      gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;
+      playerMesh.position.copy(rocket.position).add(new THREE.Vector3(0,-20,10));
+      playerVel.set(0,0,0);
+      showNotif('Elena revived you.  Welcome back.', 4000);
+      return true;
+    }
+    gameOver('Commander Chen perished in the void. The last hope of humanity faded with them.');return true;
+  }
+  if(gs.rocketHP<=0&&!gs.colony){gameOver('The Ark I hull collapsed. Her crew never reached Mars.');return true;}
   return false;
 }
 
@@ -2084,8 +2096,8 @@ function update(time){
     rocket.position.z-=ROCKET_SPEED*dt;gs.travelDist+=ROCKET_SPEED*dt;
   }
 
-  // ── BREATH SYSTEM
-  if(!gs.inRocket){
+  // ── BREATH SYSTEM (Proxima B has breathable air — no drain or damage)
+  if(!gs.inRocket&&!gs.colony){
     if(now-lastBreathDrain>BREATH_DRAIN_MS){gs.playerBreath=Math.max(0,gs.playerBreath-1);lastBreathDrain=now;}
     if(gs.playerBreath<50&&now-lastOxyBeep>3000){sfxOxygenBeep();lastOxyBeep=now;}
     if(gs.playerBreath<=0&&now-lastSuffDmg>SUFF_INTERVAL_MS){
