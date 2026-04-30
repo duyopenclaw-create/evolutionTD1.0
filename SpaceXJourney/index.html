@@ -145,12 +145,18 @@ canvas{display:block;position:fixed;top:0;left:0}
 #crosshair::after{height:1px;width:100%;top:50%;transform:translateY(-50%)}
 #colony-hud{
   position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
-  background:rgba(0,20,8,.82);border:1px solid #226633;border-radius:8px;
-  padding:8px 22px;color:#44ff88;font-family:monospace;font-size:13px;
+  background:rgba(0,10,30,.88);border:1px solid #2266aa;border-radius:8px;
+  padding:8px 22px;color:#88ccff;font-family:monospace;font-size:13px;
   pointer-events:none;z-index:8;display:none;text-align:center;letter-spacing:.04em;
   white-space:nowrap;
 }
 #colony-hud span{margin:0 14px;}
+#colony-controls{
+  position:fixed;top:50%;right:18px;transform:translateY(-50%);
+  background:rgba(0,10,30,.80);border:1px solid #224466;border-radius:8px;
+  padding:10px 16px;color:#7ab8e8;font-family:monospace;font-size:11px;
+  pointer-events:none;z-index:8;display:none;line-height:1.9;
+}
 
 #save-indicator{position:absolute;bottom:20px;left:20px;color:#00ff77;font-size:11px;opacity:0;transition:opacity .5s}
 #controls-hint{position:absolute;bottom:20px;right:20px;color:#2a3040;font-size:11px;line-height:1.7;text-align:right}
@@ -302,11 +308,27 @@ canvas{display:block;position:fixed;top:0;left:0}
 
 <!-- COLONY HUD -->
 <div id="colony-hud">
-  <span>👥 POPULATION: <b id="col-pop">2</b></span>
+  <span>👥 POP: <b id="col-pop">2</b></span>
+  <span>🍎 FOOD: <b id="col-food">0</b></span>
   <span>🪵 WOOD: <b id="col-wood">0</b></span>
   <span>🏠 SHELTERS: <b id="col-shelters">0</b></span>
   <span>🌾 FARMS: <b id="col-farms">0</b></span>
-  <span id="col-upgrades-hud" style="display:none">⚙ UPGRADES: <b id="col-upgrades">0</b>/3</span>
+  <span id="col-upgrades-hud" style="display:none">⚙ <b id="col-upgrades">0</b>/3 UPG</span>
+</div>
+
+<!-- COLONY CONTROLS PANEL -->
+<div id="colony-controls">
+  <div style="color:#aaddff;font-weight:bold;margin-bottom:4px">COLONY CONTROLS</div>
+  ARROWS — Move<br>
+  J — Jump<br>
+  T — Chop tree 🪵<br>
+  B — Build shelter (5 wood) 🏠<br>
+  P — Plant farm (2 wood) 🌾<br>
+  H — Harvest farm (+5 food)<br>
+  G — Eat food (+15 HP)<br>
+  U — Upgrade rocket (near rocket)<br>
+  E — Enter rocket<br>
+  <div style="color:#ffaa44;margin-top:4px">Elena follows you everywhere</div>
 </div>
 
 <!-- GAME OVER -->
@@ -1074,28 +1096,35 @@ function buildPlayerMesh(){
 function buildCompanion(){
   if(companionMesh){scene.remove(companionMesh);companionMesh=null;}
   companionMesh=new THREE.Group();
-  const suit  =new THREE.MeshPhongMaterial({color:0xff99cc,shininess:30,specular:0x442233});
-  const helmet=new THREE.MeshPhongMaterial({color:0xffeedd,shininess:200,specular:0xffffff,transparent:true,opacity:.75,emissive:0x553322,emissiveIntensity:1.2});
-  const dark  =new THREE.MeshPhongMaterial({color:0x2a1a22,shininess:40});
+  // Bright pink suit so she stands out against blue terrain
+  const suit  =new THREE.MeshPhongMaterial({color:0xff44aa,emissive:0x661133,emissiveIntensity:.4,shininess:40});
+  // Yellow visor — easy to spot
+  const helmet=new THREE.MeshPhongMaterial({color:0xffee44,emissive:0xffbb00,emissiveIntensity:.8,shininess:200,specular:0xffffff,transparent:true,opacity:.85});
+  const dark  =new THREE.MeshPhongMaterial({color:0x221133,shininess:40});
   // Torso
   companionMesh.add(new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,1.0,12),suit));
   // Helmet
-  const helm=new THREE.Mesh(new THREE.SphereGeometry(.41,20,20),helmet);
-  helm.position.y=.95;companionMesh.add(helm);
-  const cneck=new THREE.Mesh(new THREE.TorusGeometry(.35,.055,8,16),dark);cneck.position.y=.52;companionMesh.add(cneck);
+  const helm=new THREE.Mesh(new THREE.SphereGeometry(.44,20,20),helmet);
+  helm.position.y=.98;companionMesh.add(helm);
+  const cneck=new THREE.Mesh(new THREE.TorusGeometry(.36,.06,8,16),dark);cneck.position.y=.54;companionMesh.add(cneck);
   // Arms
   [-1,1].forEach(s=>{
-    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.85,8),suit);
-    arm.position.set(s*.52,.12,0);arm.rotation.z=s*.28;companionMesh.add(arm);
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.85,8),suit);
+    arm.position.set(s*.54,.12,0);arm.rotation.z=s*.28;companionMesh.add(arm);
   });
   // Legs
   [-1,1].forEach(s=>{
-    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.78,8),suit);
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.8,8),suit);
     leg.position.set(s*.2,-.9,0);companionMesh.add(leg);
-    const boot=new THREE.Mesh(new THREE.BoxGeometry(.26,.18,.36),dark);
-    boot.position.set(s*.2,-1.32,.04);companionMesh.add(boot);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.27,.2,.38),dark);
+    boot.position.set(s*.2,-1.35,.04);companionMesh.add(boot);
   });
-  const glow=new THREE.PointLight(0xffaacc,.6,5);glow.position.y=.95;companionMesh.add(glow);
+  // ELENA label floating above head
+  const labelGeo=new THREE.SphereGeometry(.12,8,8);
+  const labelMat=new THREE.MeshPhongMaterial({color:0xffee44,emissive:0xffcc00,emissiveIntensity:1.5});
+  const beacon=new THREE.Mesh(labelGeo,labelMat);beacon.position.y=2.0;companionMesh.add(beacon);
+  // Strong glow so she's always visible
+  const glow=new THREE.PointLight(0xff88cc,3.0,18);glow.position.y=1.0;companionMesh.add(glow);
   companionMesh.visible=false;
   scene.add(companionMesh);
 }
@@ -1127,8 +1156,9 @@ function beginColony(){
   document.getElementById('hud').style.display='block';
   document.getElementById('hud-center').style.display='none';
   document.getElementById('colony-hud').style.display='block';
+  document.getElementById('colony-controls').style.display='block';
   saveGame();
-  showNotif('Welcome to Proxima b!  T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest',8000);
+  showNotif('Welcome to Proxima b! — Elena is right beside you',4000);
 }
 
 function buildProximaSurface(){
@@ -2012,6 +2042,7 @@ function update(time){
         document.getElementById('col-pop').textContent=gs.population;
       }
       // Update colony HUD
+      document.getElementById('col-food').textContent=gs.food;
       document.getElementById('col-wood').textContent=gs.wood;
       document.getElementById('col-pop').textContent=gs.population;
       document.getElementById('col-shelters').textContent=gs.shelters;
@@ -2410,7 +2441,9 @@ function continueGame(){
     gs.lastBabyTime=performance.now();
     document.getElementById('hud-center').style.display='none';
     document.getElementById('colony-hud').style.display='block';
+    document.getElementById('colony-controls').style.display='block';
     document.getElementById('col-pop').textContent=gs.population;
+    document.getElementById('col-food').textContent=gs.food;
     document.getElementById('col-wood').textContent=gs.wood;
     document.getElementById('col-shelters').textContent=gs.shelters;
     showNotif('Welcome back to Proxima b.',3000);
@@ -2472,6 +2505,7 @@ function restartGame(){
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
   gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;gs.upgrades={engine:0,hull:0,hyper:0};gs.upgradeMenuOpen=false;
   document.getElementById('colony-hud').style.display='none';
+  document.getElementById('colony-controls').style.display='none';
   if(companionMesh)companionMesh.visible=false;
   proximaTrees.length=0;proximaFarmPlots.length=0;
   if(rocketInteriorGroup)rocketInteriorGroup.visible=false;
