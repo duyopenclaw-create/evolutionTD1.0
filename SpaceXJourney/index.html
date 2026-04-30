@@ -1361,8 +1361,8 @@ function update(time){
   // ── ROCKET MOVEMENT — free steering
   if(gs.inRocket){
     const STEER=2.2;
-    if(keys['ArrowLeft']) { rocketYaw+=STEER*dt; camYaw+=STEER*dt; }
-    if(keys['ArrowRight']){ rocketYaw-=STEER*dt; camYaw-=STEER*dt; }
+    if(keys['ArrowLeft']) rocketYaw+=STEER*dt;
+    if(keys['ArrowRight'])rocketYaw-=STEER*dt;
     if(keys['ArrowUp'])   rocketPitch=Math.min( Math.PI/2.1,rocketPitch+STEER*dt);
     if(keys['ArrowDown']) rocketPitch=Math.max(-Math.PI/2.1,rocketPitch-STEER*dt);
 
