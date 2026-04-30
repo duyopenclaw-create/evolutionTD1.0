@@ -199,6 +199,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   <button class="mbtn" onclick="initAudio();sfxClick();startNewGame()">NEW MISSION</button>
   <button class="mbtn" id="continueBtn" onclick="initAudio();sfxClick();continueGame()" disabled>CONTINUE</button>
   <button class="mbtn" onclick="initAudio();sfxClick();showControls()">CONTROLS</button>
+  <button class="mbtn" style="border-color:#44cc66;color:#88ffaa;margin-top:8px" onclick="initAudio();sfxClick();startColonyDirect()">PROXIMA B COLONY</button>
   <div id="menu-save-info" style="color:#334;font-size:.8em;margin-top:30px"></div>
 </div>
 
@@ -305,6 +306,7 @@ canvas{display:block;position:fixed;top:0;left:0}
   <span>🪵 WOOD: <b id="col-wood">0</b></span>
   <span>🏠 SHELTERS: <b id="col-shelters">0</b></span>
   <span>🌾 FARMS: <b id="col-farms">0</b></span>
+  <span id="col-upgrades-hud" style="display:none">⚙ UPGRADES: <b id="col-upgrades">0</b>/3</span>
 </div>
 
 <!-- GAME OVER -->
@@ -484,7 +486,8 @@ const gs={
   food:0,score:0,travelDist:0,
   planetIdx:0,chapter:'Chapter 1 — Escape from Earth',
   paused:false,breathRefilling:false,breathRefillStart:0,boosting:false,hyperBoost:false,rocketInterior:false,
-  colony:false,wood:0,population:2,shelters:0,lastBabyTime:0
+  colony:false,wood:0,population:2,shelters:0,lastBabyTime:0,
+  upgrades:{engine:0,hull:0,hyper:0},upgradeMenuOpen:false
 };
 
 // ═══════════════════════════════════════════════
@@ -1536,8 +1539,9 @@ function updateCockpitScreens(){
 
 function updateHUD(){
   updateCockpitScreens();
+  const rktMaxHP=ROCKET_MAX_HP+(gs.upgrades.hull?500:0);
   const pp=(gs.playerHP/PLAYER_MAX_HP*100).toFixed(0);
-  const rp=(gs.rocketHP/ROCKET_MAX_HP*100).toFixed(0);
+  const rp=(gs.rocketHP/rktMaxHP*100).toFixed(0);
   const bp=(gs.playerBreath/PLAYER_MAX_BREATH*100).toFixed(0);
   const hp=(gs.hunger/PLAYER_MAX_HUNGER*100).toFixed(0);
 
@@ -1547,7 +1551,7 @@ function updateHUD(){
   document.getElementById('bar-hunger').style.width=hp+'%';
 
   document.getElementById('val-player').textContent=`${Math.max(0,Math.round(gs.playerHP))} / ${PLAYER_MAX_HP}`;
-  document.getElementById('val-rocket').textContent=`${Math.max(0,Math.round(gs.rocketHP))} / ${ROCKET_MAX_HP}`;
+  document.getElementById('val-rocket').textContent=`${Math.max(0,Math.round(gs.rocketHP))} / ${rktMaxHP}`;
   document.getElementById('val-breath').textContent=`${Math.max(0,gs.playerBreath.toFixed(1))}% / ${PLAYER_MAX_BREATH}%`;
   document.getElementById('val-hunger').textContent=`${Math.max(0,Math.round(gs.hunger))}% / ${PLAYER_MAX_HUNGER}%`;
 
@@ -1623,6 +1627,7 @@ function saveGame(){
     hunger:gs.hunger,food:gs.food,score:gs.score,travelDist:gs.travelDist,planetIdx:gs.planetIdx,
     chapter:gs.chapter,inRocket:gs.inRocket,onSurface:gs.onSurface,
     colony:gs.colony,population:gs.population,wood:gs.wood,shelters:gs.shelters,
+    upgrades:gs.upgrades,
     rocketPos:{x:rocket.position.x,y:rocket.position.y,z:rocket.position.z},
     playerPos:{x:playerMesh.position.x,y:playerMesh.position.y,z:playerMesh.position.z},
     ts:Date.now()};
@@ -1640,6 +1645,7 @@ function applySave(data){
   gs.population=data.population||2;
   gs.wood=data.wood||0;
   gs.shelters=data.shelters||0;
+  gs.upgrades=data.upgrades||{engine:0,hull:0,hyper:0};
   gs.inRocket=gs.colony?false:(data.inRocket!==false)||!data.onSurface;
   gs.onSurface=gs.colony?true:(data.onSurface&&!gs.inRocket);
   if(data.rocketPos)rocket.position.set(data.rocketPos.x,data.rocketPos.y,data.rocketPos.z);
@@ -1795,9 +1801,9 @@ function update(time){
   }
 
   // ── REPAIR (R key)
-  if(keys['KeyR']&&gs.inRocket&&gs.food>=5&&gs.rocketHP<ROCKET_MAX_HP){
+  if(keys['KeyR']&&gs.inRocket&&gs.food>=5&&gs.rocketHP<ROCKET_MAX_HP+(gs.upgrades.hull?500:0)){
     keys['KeyR']=false;
-    gs.food-=5;gs.rocketHP=Math.min(ROCKET_MAX_HP,gs.rocketHP+500);
+    gs.food-=5;gs.rocketHP=Math.min(ROCKET_MAX_HP+(gs.upgrades.hull?500:0),gs.rocketHP+500);
     sfxRepair();addShake(1.5);
     showNotif('HULL REPAIRED  +500 HP',2000);
   }
@@ -1854,7 +1860,9 @@ function update(time){
     const fwdY= Math.sin(rocketPitch);
     const fwdZ=-Math.cos(rocketYaw)*Math.cos(rocketPitch);
 
-    const spd=gs.hyperBoost?ROCKET_SPEED*20:gs.boosting?ROCKET_SPEED*5:ROCKET_SPEED;
+    const eMult=1+gs.upgrades.engine*.5;
+    const hMult=gs.upgrades.hyper?35:20;
+    const spd=gs.hyperBoost?ROCKET_SPEED*hMult*eMult:gs.boosting?ROCKET_SPEED*5*eMult:ROCKET_SPEED*eMult;
     rocketVel.set(fwdX*spd,fwdY*spd,fwdZ*spd);
     rocket.position.addScaledVector(rocketVel,dt);
     gs.travelDist+=spd*dt;
@@ -1928,7 +1936,7 @@ function update(time){
     playerMesh.rotation.y=Math.PI+camYaw;
     // Repair console proximity hint
     const repairPos=new THREE.Vector3(base.x-6,base.y+1.5,base.z-7);
-    if(playerMesh.position.distanceTo(repairPos)<6&&gs.rocketHP<ROCKET_MAX_HP&&gs.food>=5){
+    if(playerMesh.position.distanceTo(repairPos)<6&&gs.rocketHP<ROCKET_MAX_HP+(gs.upgrades.hull?500:0)&&gs.food>=5){
       showNotif('[ R ] Repair hull at console  (5 food = +500 HP)',1500);
     }
     const foodPos=new THREE.Vector3(base.x+6,base.y+2.5,base.z-7);
@@ -2097,6 +2105,57 @@ function update(time){
         }
         if(!harvested)showNotif('No farm nearby to harvest.',1500);
       }
+
+      // Rocket proximity — upgrade hint + U key menu
+      const rktDist=playerMesh.position.distanceTo(rocket.position);
+      if(rktDist<40){
+        const upgTotal=gs.upgrades.engine+gs.upgrades.hull+gs.upgrades.hyper;
+        showNotif(`[ U ] Upgrade Rocket — ${upgTotal}/3 installed  (Wood: ${gs.wood})`,500);
+      }
+      if(keys['KeyU']){
+        keys['KeyU']=false;
+        if(rktDist<40){
+          gs.upgradeMenuOpen=!gs.upgradeMenuOpen;
+          if(gs.upgradeMenuOpen){
+            const e=gs.upgrades.engine?'<span style="color:#44ff88">✓ OWNED</span>':'<span style="color:#ffcc44">10 wood</span>';
+            const h=gs.upgrades.hull?'<span style="color:#44ff88">✓ OWNED</span>':'<span style="color:#ffcc44">15 wood</span>';
+            const y=gs.upgrades.hyper?'<span style="color:#44ff88">✓ OWNED</span>':'<span style="color:#ffcc44">20 wood</span>';
+            showNotif(
+              `<strong style="color:#00c8ff">ROCKET UPGRADES</strong>  Wood: ${gs.wood}<br><br>`+
+              `[1] Engine Mk2 — +50% all speeds — ${e}<br>`+
+              `[2] Hull Plating — +500 max HP — ${h}<br>`+
+              `[3] HyperCore — F+Y = 35× — ${y}<br><br>`+
+              `<span style="color:#888">Press 1/2/3 to buy  •  U to close</span>`,
+              12000
+            );
+          }
+        } else {
+          showNotif('Get close to the rocket to upgrade it.',2000);
+        }
+      }
+      if(gs.upgradeMenuOpen){
+        if(keys['Digit1']){keys['Digit1']=false;
+          if(gs.upgrades.engine){showNotif('Engine Mk2 already installed.',2000);}
+          else if(gs.wood<10){showNotif(`Need 10 wood — have ${gs.wood}.`,2000);}
+          else{gs.wood-=10;gs.upgrades.engine=1;gs.upgradeMenuOpen=false;saveGame();showNotif('Engine Mk2 installed!  All speeds +50%',3000);}
+        }
+        if(keys['Digit2']){keys['Digit2']=false;
+          if(gs.upgrades.hull){showNotif('Hull Plating already installed.',2000);}
+          else if(gs.wood<15){showNotif(`Need 15 wood — have ${gs.wood}.`,2000);}
+          else{gs.wood-=15;gs.upgrades.hull=1;gs.rocketHP=Math.min(gs.rocketHP+500,ROCKET_MAX_HP+500);gs.upgradeMenuOpen=false;saveGame();showNotif('Hull Plating installed!  +500 max HP  Rocket repaired.',3000);}
+        }
+        if(keys['Digit3']){keys['Digit3']=false;
+          if(gs.upgrades.hyper){showNotif('HyperCore already installed.',2000);}
+          else if(gs.wood<20){showNotif(`Need 20 wood — have ${gs.wood}.`,2000);}
+          else{gs.wood-=20;gs.upgrades.hyper=1;gs.upgradeMenuOpen=false;saveGame();showNotif('HyperCore installed!  F+Y hyperdrive = 35×',3000);}
+        }
+      }
+      // Update upgrade HUD
+      const upgTotal=gs.upgrades.engine+gs.upgrades.hull+gs.upgrades.hyper;
+      const upgEl=document.getElementById('col-upgrades-hud');
+      const upgVal=document.getElementById('col-upgrades');
+      if(upgEl){upgEl.style.display=upgTotal>0?'inline':'none';}
+      if(upgVal)upgVal.textContent=upgTotal;
     }
     // ────────────────────────────────────────────────────────────────
 
@@ -2323,6 +2382,20 @@ function beginPlay(){
   showNotif('Mission started. Reach Mars. Survive.',4000);
 }
 
+function startColonyDirect(){
+  localStorage.removeItem(SAVE_KEY);
+  document.getElementById('mainMenu').style.display='none';
+  // Place rocket at Proxima B's coordinates so the surface builds there
+  rocket.position.set(0,25,-545000);
+  rocket.rotation.set(-Math.PI/2,0,0);
+  rocketYaw=0;rocketPitch=0;
+  clearHazards();removePlanetSurface();
+  playerMesh.visible=false;
+  prevTime=performance.now();lastSave=prevTime;
+  initAudio();startSpaceMusic();startEngineHum();
+  beginColony();
+}
+
 function continueGame(){
   const save=loadSave();if(!save)return;
   document.getElementById('mainMenu').style.display='none';
@@ -2367,7 +2440,9 @@ function showControls(){
     'G — Eat food (+15 HP)<br>'+
     'R — Repair hull (5 food = +500 HP)<br>'+
     'ESC — Pause<br><br>'+
-    '<span style="color:#ff6600">Outside: O₂ drains 1%/3 sec → 5 HP damage/0.5 sec at zero</span>',8000);
+    '<span style="color:#ff6600">Outside: O₂ drains 1%/3 sec → 5 HP damage/0.5 sec at zero</span><br><br>'+
+    '<span style="color:#44ff88">Colony: T=chop tree  B=build shelter (5 wood)  P=plant farm (2 wood)  H=harvest</span><br>'+
+    '<span style="color:#44ff88">Near rocket: U=upgrade menu  1/2/3=buy upgrades</span>',9000);
 }
 
 function leavePlanet(){
@@ -2399,7 +2474,7 @@ function restartGame(){
   gs.playerHP=PLAYER_MAX_HP;gs.playerBreath=PLAYER_MAX_BREATH;gs.rocketHP=ROCKET_MAX_HP;
   gs.hunger=PLAYER_MAX_HUNGER;
   gs.inRocket=true;gs.onSurface=false;gs.food=0;gs.score=0;gs.travelDist=0;
-  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;
+  gs.planetIdx=0;gs.chapter='Chapter 1 — Escape from Earth';gs.paused=false;gs.breathRefilling=false;gs.boosting=false;gs.hyperBoost=false;gs.rocketInterior=false;gs.colony=false;gs.wood=0;gs.population=2;gs.shelters=0;gs.lastBabyTime=0;gs.upgrades={engine:0,hull:0,hyper:0};gs.upgradeMenuOpen=false;
   document.getElementById('colony-hud').style.display='none';
   if(companionMesh)companionMesh.visible=false;
   proximaTrees.length=0;proximaFarmPlots.length=0;
