@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chess Clicker</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #12121f;
+  color: #e0d5c5;
+  font-family: Georgia, serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+header {
+  background: #0a0a15;
+  border-bottom: 2px solid #5a4030;
+  padding: 8px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+h1 {
+  font-size: 1.6em;
+  color: #f0c070;
+  text-shadow: 0 0 20px rgba(240,192,112,0.6);
+  letter-spacing: 2px;
+}
+
+.header-stats {
+  display: flex;
+  gap: 30px;
+}
+
+.stat-box { text-align: center; }
+.stat-val {
+  font-size: 1.3em;
+  color: #f0c070;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.stat-lbl { font-size: 0.7em; color: #80706a; text-transform: uppercase; letter-spacing: 1px; }
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ---- LEFT BOARD PANEL ---- */
+.board-panel {
+  width: 400px;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #0e0e1c;
+  border-right: 2px solid #5a4030;
+  padding: 16px;
+}
+
+.click-hint {
+  font-size: 0.85em;
+  color: #807060;
+  letter-spacing: 1px;
+}
+.click-hint span { color: #f0c070; font-weight: bold; }
+
+#board-wrap {
+  position: relative;
+  cursor: crosshair;
+}
+
+#board-wrap:active { transform: scale(0.985); }
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 44px);
+  grid-template-rows: repeat(8, 44px);
+  border: 3px solid #5a4030;
+  box-shadow: 0 0 40px rgba(90,64,48,0.9), 0 0 80px rgba(90,64,48,0.3);
+  transition: box-shadow 0.3s;
+}
+
+.chess-board.pulse {
+  box-shadow: 0 0 40px rgba(240,192,112,0.8), 0 0 80px rgba(240,192,112,0.4), 0 0 120px rgba(240,192,112,0.2);
+}
+
+.sq {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  position: relative;
+  transition: background 0.1s;
+}
+.sq.light { background: var(--sq-light, #f0d9b5); }
+.sq.dark  { background: var(--sq-dark, #b58863); }
+.sq.flash { background: #ffe080 !important; }
+.sq.light:hover { background: #f8e8c0; }
+.sq.dark:hover  { background: #c8986e; }
+
+.piece {
+  position: absolute;
+  line-height: 1;
+  transition: opacity 0.15s;
+  text-shadow: 0 0 4px rgba(255,255,255,0.9), 1px 2px 4px rgba(0,0,0,0.9);
+}
+.piece.moving {
+  animation: pieceJump 0.25s ease;
+}
+@keyframes pieceJump {
+  0%   { transform: scale(1.5); filter: brightness(2) drop-shadow(0 0 6px gold); }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1); filter: none; }
+}
+
+.rank-labels {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  left: -16px;
+  top: 0;
+  height: 352px;
+}
+.rank-labels span {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 0.65em;
+  color: #706050;
+}
+
+.file-labels {
+  display: flex;
+  width: 352px;
+  margin-top: 3px;
+}
+.file-labels span {
+  width: 44px;
+  text-align: center;
+  font-size: 0.65em;
+  color: #706050;
+}
+
+.mps-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: #0a0a15;
+  border: 1px solid #2a2030;
+  border-radius: 5px;
+  padding: 6px 16px;
+  width: 352px;
+}
+.mps-label {
+  font-size: 0.72em;
+  color: #605850;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex: 1;
+}
+.mps-val {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #80d080;
+  letter-spacing: 1px;
+  transition: color 0.4s;
+}
+.mps-val.zero { color: #404840; }
+
+.cps-row {
+  align-items: center;
+  gap: 6px;
+  background: #0a1520;
+  border: 1px solid #1a3040;
+  border-radius: 5px;
+  padding: 5px 14px;
+  width: 352px;
+  font-size: 0.82em;
+  color: #60b0e0;
+  animation: cpsPulse 2s ease-in-out infinite;
+}
+.cps-icon { font-size: 1em; }
+@keyframes cpsPulse {
+  0%, 100% { box-shadow: none; }
+  50%       { box-shadow: 0 0 10px rgba(80,160,220,0.4); }
+}
+
+.board-info {
+  font-size: 0.82em;
+  color: #706a58;
+  text-align: center;
+  height: 18px;
+}
+.board-info.good { color: #80c080; }
+
+/* floating click text */
+.floater {
+  position: fixed;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #f8e080;
+  text-shadow: 0 0 10px rgba(248,224,128,0.9);
+  pointer-events: none;
+  z-index: 999;
+  animation: floatUp 0.9s ease-out forwards;
+}
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.85); }
+}
+
+/* ---- RIGHT SHOP PANEL ---- */
+.shop-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #10101e;
+}
+
+.tabs {
+  display: flex;
+  background: #0a0a15;
+  border-bottom: 2px solid #3a2a20;
+  flex-shrink: 0;
+}
+.tab {
+  padding: 9px 18px;
+  background: none;
+  border: none;
+  color: #706050;
+  cursor: pointer;
+  font-size: 0.88em;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab.active { color: #f0c070; border-bottom-color: #f0c070; background: #10101e; }
+.tab:hover:not(.active) { color: #d0b080; }
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.tab-content::-webkit-scrollbar { width: 7px; }
+.tab-content::-webkit-scrollbar-track { background: #0a0a15; }
+.tab-content::-webkit-scrollbar-thumb { background: #4a3020; border-radius: 4px; }
+
+/* BUILDINGS */
+.building {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  background: #0d0d1e;
+  border: 1px solid #222238;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.building:hover:not(.locked) { background: #181828; border-color: #5a4030; }
+.building.affordable { border-color: #3a5a3a; box-shadow: 0 0 6px rgba(80,180,80,0.2); }
+.building.locked { opacity: 0.35; cursor: default; }
+
+.b-icon { font-size: 1.9em; width: 36px; text-align: center; flex-shrink: 0; }
+.b-info { flex: 1; min-width: 0; }
+.b-name { font-size: 0.9em; font-weight: bold; color: #e0d5c5; }
+.b-desc { font-size: 0.7em; color: #6a5a50; margin-top: 1px; }
+.b-prod { font-size: 0.7em; color: #70a070; margin-top: 1px; }
+.b-right { text-align: right; flex-shrink: 0; }
+.b-count { font-size: 1.5em; font-weight: bold; color: #f0c070; min-width: 36px; }
+.b-cost { font-size: 0.75em; color: #b09060; }
+.b-cost.red { color: #905050; }
+
+.b-auto {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.b-prog-track {
+  flex: 1;
+  height: 4px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.b-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2a7a2a, #60d060);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.b-prog-fill.full {
+  background: linear-gradient(90deg, #d0a020, #f0d060);
+}
+.b-auto-label {
+  font-size: 0.62em;
+  color: #507050;
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+/* MAGNUS CARD */
+.magnus-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-top: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1a1200, #120e00);
+  border: 2px solid #6a5010;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 16px rgba(180,140,20,0.2);
+}
+.magnus-card:hover:not(.hired) {
+  border-color: #c09030;
+  box-shadow: 0 0 24px rgba(180,140,20,0.5);
+}
+.magnus-card.affordable {
+  border-color: #c0a030;
+  box-shadow: 0 0 20px rgba(200,160,40,0.5);
+}
+.magnus-card.hired {
+  border-color: #d0a820;
+  cursor: default;
+  box-shadow: 0 0 30px rgba(200,160,30,0.4);
+  background: linear-gradient(135deg, #1e1600, #161000);
+}
+.magnus-avatar {
+  font-size: 2.8em;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(240,200,60,0.8));
+}
+.magnus-info { flex: 1; min-width: 0; }
+.magnus-name {
+  font-size: 1em;
+  font-weight: bold;
+  color: #f0c840;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.magnus-badge {
+  font-size: 0.6em;
+  background: #3a2800;
+  border: 1px solid #c09030;
+  color: #e0b040;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 1px;
+}
+.magnus-title { font-size: 0.75em; color: #907040; margin-top: 2px; }
+.magnus-desc  { font-size: 0.72em; color: #706040; margin-top: 4px; line-height: 1.4; }
+.magnus-buy { text-align: right; flex-shrink: 0; }
+.magnus-cost { font-size: 0.9em; font-weight: bold; color: #d0a030; }
+.magnus-cost.red { color: #905030; }
+.magnus-one-time { font-size: 0.62em; color: #604020; margin-top: 3px; }
+.magnus-passive-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.magnus-prog-track {
+  flex: 1;
+  height: 5px;
+  background: #1a1200;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #3a2800;
+}
+.magnus-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a07020, #f0d060);
+  border-radius: 3px;
+  transition: width 0.5s linear;
+}
+.magnus-next { font-size: 0.65em; color: #907040; white-space: nowrap; }
+
+/* PRESTIGE */
+.board-tier-name {
+  font-size: 0.72em;
+  color: #806050;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 2px;
+}
+
+.cp-val { color: #a080d0 !important; }
+.prestige-ready { color: #f0d060 !important; animation: cpPulse 1.5s ease-in-out infinite; }
+@keyframes cpPulse {
+  0%, 100% { text-shadow: none; }
+  50%       { text-shadow: 0 0 16px rgba(240,208,96,0.9); }
+}
+
+.prestige-block {
+  background: linear-gradient(135deg, #0e0a1a, #120e22);
+  border: 1px solid #3a2860;
+  border-radius: 7px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.prestige-block.ready {
+  border-color: #c0a030;
+  box-shadow: 0 0 20px rgba(180,150,30,0.4);
+  animation: prestigeGlow 2s ease-in-out infinite;
+}
+@keyframes prestigeGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(180,150,30,0.4); }
+  50%       { box-shadow: 0 0 35px rgba(220,180,40,0.7); }
+}
+.prestige-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.prestige-board-name { font-weight: bold; color: #c0a8e0; font-size: 0.95em; }
+.prestige-cp-badge {
+  background: #1a0a2a;
+  border: 1px solid #6040a0;
+  color: #a080d0;
+  font-size: 0.72em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+}
+.prestige-desc { font-size: 0.72em; color: #706080; margin-bottom: 8px; line-height: 1.5; }
+.prestige-desc strong { color: #c0a8e0; }
+.prestige-prog-track {
+  height: 6px;
+  background: #1a1428;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.prestige-prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6040a0, #c090f0);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.prestige-prog-label { font-size: 0.65em; color: #504060; margin-bottom: 10px; }
+.btn-prestige {
+  width: 100%;
+  padding: 9px;
+  border-radius: 5px;
+  border: 1px solid #3a2860;
+  background: #12082a;
+  color: #605080;
+  font-family: inherit;
+  font-size: 0.85em;
+  cursor: not-allowed;
+  transition: all 0.2s;
+}
+.btn-prestige.ready {
+  border-color: #c0a030;
+  background: linear-gradient(135deg, #1e1400, #2a1c00);
+  color: #f0d060;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 0 12px rgba(200,160,30,0.4);
+}
+.btn-prestige.ready:hover {
+  box-shadow: 0 0 20px rgba(220,180,40,0.7);
+  background: linear-gradient(135deg, #2a1c00, #381e00);
+}
+
+.prestige-upg-section {
+  background: linear-gradient(135deg, #1a1200, #120e00);
+  border: 1px solid #6a5010;
+  border-radius: 7px;
+  padding: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 0 12px rgba(160,120,20,0.2);
+}
+.prestige-upg-header {
+  font-size: 0.75em;
+  color: #c0a030;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.upgrade.prestige-upg {
+  background: #1a1400;
+  border-color: #4a3810;
+}
+.upgrade.prestige-upg.affordable {
+  border-color: #c09030;
+  box-shadow: 0 0 8px rgba(180,140,30,0.4);
+}
+.upgrade.prestige-upg:hover:not(.locked):not(.bought) {
+  background: #221a00;
+  border-color: #c09030;
+}
+.upgrade.prestige-upg .upg-cost { color: #c0a040; }
+
+.magnus-toast {
+  border-color: #f0c040 !important;
+  background: #1e1400 !important;
+  color: #f0d060 !important;
+  font-weight: bold;
+  box-shadow: 0 0 20px rgba(240,192,60,0.4);
+}
+
+.buy-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.buy-toggle span {
+  font-size: 0.75em;
+  color: #605040;
+  margin-right: 4px;
+}
+.buy-btn {
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid #3a2a20;
+  background: #0d0d1e;
+  color: #807060;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82em;
+  transition: all 0.15s;
+}
+.buy-btn:hover { border-color: #6a5030; color: #c0a060; }
+.buy-btn.active {
+  background: #1e1a08;
+  border-color: #c09040;
+  color: #f0c060;
+}
+.buy-btn .discount {
+  font-size: 0.8em;
+  color: #60a060;
+  margin-left: 3px;
+}
+.buy-btn.active .discount { color: #80d080; }
+
+.b-tier {
+  font-size: 0.62em;
+  color: #80c080;
+  background: #0e2a0e;
+  border: 1px solid #1a4a1a;
+  border-radius: 3px;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
+
+/* UPGRADES */
+.upgrades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 7px;
+}
+.upgrade {
+  padding: 10px 8px;
+  border-radius: 5px;
+  background: #0d0d1e;
+  border: 1px solid #222238;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.upgrade:hover:not(.locked):not(.bought) { background: #181828; border-color: #5a4030; }
+.upgrade.affordable { border-color: #6a6a20; box-shadow: 0 0 8px rgba(180,180,40,0.3); }
+.upgrade.bought { background: #0e1a0e; border-color: #1a381a; opacity: 0.6; cursor: default; }
+.upgrade.locked { opacity: 0.25; cursor: default; }
+.upg-icon { font-size: 1.7em; margin-bottom: 4px; }
+.upg-name { font-size: 0.75em; font-weight: bold; color: #e0d5c5; }
+.upg-desc { font-size: 0.65em; color: #6a5a50; margin-top: 3px; }
+.upg-cost { font-size: 0.68em; color: #b09060; margin-top: 3px; }
+
+.section-label {
+  font-size: 0.7em;
+  color: #504030;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 12px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #252525;
+}
+
+/* STATS */
+.stats-table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+.stats-table td { padding: 8px 6px; border-bottom: 1px solid #1e1e2e; }
+.stats-table td:first-child { color: #80706a; }
+.stats-table td:last-child { color: #e0d5c5; text-align: right; font-weight: bold; }
+
+.btn-reset {
+  background: #1e0e0e; border: 1px solid #6a2020; color: #c06060;
+  padding: 7px 14px; border-radius: 4px; cursor: pointer;
+  font-family: inherit; font-size: 0.85em; margin-top: 16px; margin-right: 8px;
+  transition: all 0.15s;
+}
+.btn-reset:hover { background: #2a1010; border-color: #a03030; }
+.btn-save {
+  background: #0e1e0e; border: 1px solid #206a20; color: #60c060;
+  padding: 7px 14px; border-radius: 4px; cursor: pointer;
+  font-family: inherit; font-size: 0.85em; margin-top: 16px;
+  transition: all 0.15s;
+}
+.btn-save:hover { background: #102010; border-color: #30a030; }
+
+/* TICKER */
+.ticker-bar {
+  background: #080812;
+  border-top: 1px solid #3a2a20;
+  padding: 5px 10px;
+  font-size: 0.75em;
+  color: #60504a;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ticker-inner {
+  display: inline-block;
+  animation: tickerScroll 30s linear infinite;
+}
+@keyframes tickerScroll {
+  from { transform: translateX(100vw); }
+  to   { transform: translateX(-100%); }
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1000;
+  border: 2px solid #f0c070;
+  padding: 9px 18px;
+  border-radius: 6px;
+  color: #f0c070;
+  font-size: 0.88em;
+  z-index: 800;
+  animation: toastAnim 3.2s ease forwards;
+  pointer-events: none;
+  text-align: center;
+  max-width: 360px;
+}
+@keyframes toastAnim {
+  0%   { opacity: 0; top: 45px; }
+  12%  { opacity: 1; top: 60px; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; top: 45px; }
+}
+
+.save-dot {
+  position: fixed;
+  bottom: 28px;
+  right: 10px;
+  font-size: 0.68em;
+  color: #404048;
+  z-index: 10;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>♔ CHESS CLICKER</h1>
+  <div class="header-stats">
+    <div class="stat-box">
+      <div class="stat-val" id="hdr-moves">0</div>
+      <div class="stat-lbl">Moves</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="hdr-mps">0/s</div>
+      <div class="stat-lbl">per second</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="hdr-total">0</div>
+      <div class="stat-lbl">All-time</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val cp-val" id="hdr-cp">0 CP</div>
+      <div class="stat-lbl" id="hdr-prestige-lbl">Prestige</div>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="board-panel">
+    <div class="board-tier-name" id="board-tier-name">Standard Board</div>
+    <div class="click-hint">Click power: <span id="click-power-display">1</span> ♟ per click</div>
+    <div id="board-wrap">
+      <div class="rank-labels" id="rank-labels"></div>
+      <div class="chess-board" id="chess-board"></div>
+      <div class="file-labels" id="file-labels"></div>
+    </div>
+    <div class="board-info" id="board-info">Click the board to make a move!</div>
+    <div class="mps-row">
+      <span class="mps-label">per second</span>
+      <span class="mps-val" id="board-mps">0</span>
+    </div>
+    <div class="cps-row" id="cps-row" style="display:none">
+      <span class="cps-icon">🖱</span>
+      <span id="cps-val">0</span> auto-clicks/sec
+    </div>
+  </div>
+
+  <div class="shop-panel">
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('upgrades')">Upgrades</button>
+      <button class="tab" onclick="setTab('buildings')">Pieces & Structures</button>
+      <button class="tab" onclick="setTab('stats')">Statistics</button>
+    </div>
+    <div class="tab-content" id="tab-content"></div>
+  </div>
+</div>
+
+<div class="ticker-bar">
+  <span class="ticker-inner" id="ticker-text">
+    ♟ Local pawn refuses en passant on moral grounds &nbsp;•&nbsp;
+    ♞ Knight fork discovered in wild — both rooks in shock &nbsp;•&nbsp;
+    ♝ Bishop pair proves unstoppable in open position &nbsp;•&nbsp;
+    ♜ Rook lifts to seventh rank; pawns declared doomed &nbsp;•&nbsp;
+    ♛ Queen sacrifice stuns audience; commentator speechless &nbsp;•&nbsp;
+    ♔ King walks to center in endgame — experts baffled &nbsp;•&nbsp;
+    💻 Chess engine evaluates position as +0.00; players disagree &nbsp;•&nbsp;
+    🎓 Grandmaster blunders mate in 1; blames time pressure &nbsp;•&nbsp;
+    📖 Sicilian Defense cited as reason for 47% of all draws &nbsp;•&nbsp;
+    ⏱ Chess clock blamed for loss; clock unavailable for comment
+  </span>
+</div>
+
+<div class="save-dot" id="save-dot">auto-saved</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  GAME DATA
+// ═══════════════════════════════════════════════════
+
+const BUILDINGS = [
+  { id:'pawn',       name:'Pawn',              icon:'♟', desc:'A humble foot soldier pushing forward',         baseCost:15,        baseMPS:0.1  },
+  { id:'knight',     name:'Knight',            icon:'♞', desc:'Leaps over obstacles in an L-shape',           baseCost:100,       baseMPS:0.5  },
+  { id:'bishop',     name:'Bishop',            icon:'♝', desc:'Glides along diagonals with deadly precision', baseCost:500,       baseMPS:2    },
+  { id:'rook',       name:'Rook',              icon:'♜', desc:'Commands open files and the seventh rank',     baseCost:2000,      baseMPS:8    },
+  { id:'queen',      name:'Queen',             icon:'♛', desc:'The most powerful piece on the board',         baseCost:12000,     baseMPS:47   },
+  { id:'king',       name:'Active King',       icon:'♚', desc:'The king becomes a dangerous fighting piece',  baseCost:65000,     baseMPS:260  },
+  { id:'clock',      name:'Chess Clock',       icon:'⏱', desc:'Time pressure auto-generates brilliant moves', baseCost:300000,    baseMPS:1400 },
+  { id:'gm',         name:'Grandmaster',       icon:'🎓', desc:'A 2800-rated mind producing endless theory',  baseCost:1600000,   baseMPS:7800 },
+  { id:'engine',     name:'Chess Engine',      icon:'💻', desc:'Stockfish calculates 30 million nodes/sec',   baseCost:10000000,  baseMPS:44000},
+  { id:'tournament', name:'World Championship',icon:'🏆', desc:'The pinnacle of chess — infinite brilliance',  baseCost:75000000,  baseMPS:260000},
+];
+
+const UPGRADES = [
+  // ── Click power ──────────────────────────────────
+  { id:'cu1', name:'Better Openings',    icon:'📖', desc:'×2 click',   cost:100,          type:'click', mult:2,   unlock:()=>true },
+  { id:'cu2', name:'En Passant',         icon:'⚡', desc:'×3 click',   cost:500,          type:'click', mult:3,   unlock:()=>G.totalMoves>=200 },
+  { id:'cu3', name:'The Immortal Game',  icon:'✨', desc:'×5 click',   cost:5000,         type:'click', mult:5,   unlock:()=>G.totalMoves>=2000 },
+  { id:'cu4', name:'Brilliant Move !!',  icon:'💡', desc:'×10 click',  cost:50000,        type:'click', mult:10,  unlock:()=>G.totalMoves>=20000 },
+  { id:'cu5', name:'Zugzwang Mastery',   icon:'🔀', desc:'×2 click',   cost:500000,       type:'click', mult:2,   unlock:()=>G.totalMoves>=200000 },
+  { id:'cu6', name:'Infinite Analysis',  icon:'♾', desc:'×5 click',   cost:5000000,      type:'click', mult:5,   unlock:()=>G.totalMoves>=2000000 },
+  { id:'cu7', name:'Tal Attack',         icon:'🔥', desc:'×10 click',  cost:50000000,     type:'click', mult:10,  unlock:()=>G.totalMoves>=20000000 },
+  { id:'cu8', name:'Kasparov Rage',      icon:'😤', desc:'×20 click',  cost:500000000,    type:'click', mult:20,  unlock:()=>G.totalMoves>=200000000 },
+  { id:'cu9', name:'Fischer Random',     icon:'🎲', desc:'×50 click',  cost:5000000000,   type:'click', mult:50,  unlock:()=>G.totalMoves>=2000000000 },
+  { id:'cu10',name:'God Move',           icon:'☄', desc:'×100 click', cost:50000000000,  type:'click', mult:100, unlock:()=>G.totalMoves>=20000000000 },
+
+  // ── Pawns ─────────────────────────────────────────
+  { id:'pu1', name:'Pawn Chain',         icon:'♟', desc:'Pawns ×2',   cost:100,      type:'bld', tgt:'pawn', mult:2,  unlock:()=>bld('pawn').count>=1   },
+  { id:'pu2', name:'Passed Pawn',        icon:'♟', desc:'Pawns ×4',   cost:500,      type:'bld', tgt:'pawn', mult:4,  unlock:()=>bld('pawn').count>=5   },
+  { id:'pu3', name:'Pawn Promotion',     icon:'♛', desc:'Pawns ×10',  cost:5000,     type:'bld', tgt:'pawn', mult:10, unlock:()=>bld('pawn').count>=25  },
+  { id:'pu4', name:'Pawn Storm',         icon:'♟', desc:'Pawns ×20',  cost:50000,    type:'bld', tgt:'pawn', mult:20, unlock:()=>bld('pawn').count>=50  },
+  { id:'pu5', name:'Pawn Avalanche',     icon:'🌊', desc:'Pawns ×40',  cost:500000,   type:'bld', tgt:'pawn', mult:40, unlock:()=>bld('pawn').count>=100 },
+  { id:'pu6', name:'Pawn Army',          icon:'⚔', desc:'Pawns ×80',  cost:5000000,  type:'bld', tgt:'pawn', mult:80, unlock:()=>bld('pawn').count>=200 },
+
+  // ── Knights ───────────────────────────────────────
+  { id:'kn1', name:'Outpost Knight',     icon:'♞', desc:'Knights ×2',  cost:1000,     type:'bld', tgt:'knight', mult:2,  unlock:()=>bld('knight').count>=1  },
+  { id:'kn2', name:'Knight Fork',        icon:'♞', desc:'Knights ×4',  cost:5000,     type:'bld', tgt:'knight', mult:4,  unlock:()=>bld('knight').count>=5  },
+  { id:'kn3', name:'Smothered Mate',     icon:'♞', desc:'Knights ×8',  cost:50000,    type:'bld', tgt:'knight', mult:8,  unlock:()=>bld('knight').count>=25 },
+  { id:'kn4', name:'Knight Domination',  icon:'♞', desc:'Knights ×15', cost:500000,   type:'bld', tgt:'knight', mult:15, unlock:()=>bld('knight').count>=50 },
+  { id:'kn5', name:'Cavalry Charge',     icon:'🐴', desc:'Knights ×30', cost:5000000,  type:'bld', tgt:'knight', mult:30, unlock:()=>bld('knight').count>=100},
+  { id:'kn6', name:'Horse Legion',       icon:'🏇', desc:'Knights ×60', cost:50000000, type:'bld', tgt:'knight', mult:60, unlock:()=>bld('knight').count>=200},
+
+  // ── Bishops ───────────────────────────────────────
+  { id:'bi1', name:'Fianchetto',         icon:'♝', desc:'Bishops ×2',  cost:5000,     type:'bld', tgt:'bishop', mult:2,  unlock:()=>bld('bishop').count>=1  },
+  { id:'bi2', name:'Bishop Pair',        icon:'♝', desc:'Bishops ×4',  cost:25000,    type:'bld', tgt:'bishop', mult:4,  unlock:()=>bld('bishop').count>=5  },
+  { id:'bi3', name:'Diagonal Control',   icon:'♝', desc:'Bishops ×8',  cost:250000,   type:'bld', tgt:'bishop', mult:8,  unlock:()=>bld('bishop').count>=25 },
+  { id:'bi4', name:'Color Complex',      icon:'🎨', desc:'Bishops ×15', cost:2500000,  type:'bld', tgt:'bishop', mult:15, unlock:()=>bld('bishop').count>=50 },
+  { id:'bi5', name:'Clerical Army',      icon:'⛪', desc:'Bishops ×30', cost:25000000, type:'bld', tgt:'bishop', mult:30, unlock:()=>bld('bishop').count>=100},
+
+  // ── Rooks ─────────────────────────────────────────
+  { id:'ro1', name:'Open File',          icon:'♜', desc:'Rooks ×2',   cost:20000,    type:'bld', tgt:'rook', mult:2,  unlock:()=>bld('rook').count>=1  },
+  { id:'ro2', name:'Rook Battery',       icon:'♜', desc:'Rooks ×4',   cost:100000,   type:'bld', tgt:'rook', mult:4,  unlock:()=>bld('rook').count>=5  },
+  { id:'ro3', name:'Seventh Rank',       icon:'♜', desc:'Rooks ×8',   cost:1000000,  type:'bld', tgt:'rook', mult:8,  unlock:()=>bld('rook').count>=25 },
+  { id:'ro4', name:'Iron Curtain',       icon:'🏰', desc:'Rooks ×15',  cost:10000000, type:'bld', tgt:'rook', mult:15, unlock:()=>bld('rook').count>=50 },
+  { id:'ro5', name:'Tower Fortress',     icon:'🗼', desc:'Rooks ×30',  cost:100000000,type:'bld', tgt:'rook', mult:30, unlock:()=>bld('rook').count>=100},
+
+  // ── Queens ────────────────────────────────────────
+  { id:'qu1', name:"Queen's Gambit",     icon:'♛', desc:'Queens ×2',  cost:120000,   type:'bld', tgt:'queen', mult:2,  unlock:()=>bld('queen').count>=1  },
+  { id:'qu2', name:'Queenside Attack',   icon:'♛', desc:'Queens ×4',  cost:600000,   type:'bld', tgt:'queen', mult:4,  unlock:()=>bld('queen').count>=5  },
+  { id:'qu3', name:'Royal Dominance',    icon:'♛', desc:'Queens ×8',  cost:6000000,  type:'bld', tgt:'queen', mult:8,  unlock:()=>bld('queen').count>=25 },
+  { id:'qu4', name:'Queen Network',      icon:'👑', desc:'Queens ×15', cost:60000000, type:'bld', tgt:'queen', mult:15, unlock:()=>bld('queen').count>=50 },
+  { id:'qu5', name:'Queen Legion',       icon:'♛', desc:'Queens ×30', cost:600000000,type:'bld', tgt:'queen', mult:30, unlock:()=>bld('queen').count>=100},
+
+  // ── Kings ─────────────────────────────────────────
+  { id:'kk1', name:'King March',         icon:'♚', desc:'Kings ×2',   cost:650000,   type:'bld', tgt:'king', mult:2,  unlock:()=>bld('king').count>=1  },
+  { id:'kk2', name:'King Centralization',icon:'♚', desc:'Kings ×4',   cost:3250000,  type:'bld', tgt:'king', mult:4,  unlock:()=>bld('king').count>=5  },
+  { id:'kk3', name:'King Attack',        icon:'♚', desc:'Kings ×10',  cost:32500000, type:'bld', tgt:'king', mult:10, unlock:()=>bld('king').count>=25 },
+  { id:'kk4', name:'King Army',          icon:'⚜', desc:'Kings ×20',  cost:325000000,type:'bld', tgt:'king', mult:20, unlock:()=>bld('king').count>=50 },
+
+  // ── Chess Clocks ──────────────────────────────────
+  { id:'cc1', name:'Bullet Chess',       icon:'⏱', desc:'Clocks ×2',  cost:3000000,  type:'bld', tgt:'clock', mult:2,  unlock:()=>bld('clock').count>=1  },
+  { id:'cc2', name:'Blitz Mode',         icon:'⚡', desc:'Clocks ×4',  cost:15000000, type:'bld', tgt:'clock', mult:4,  unlock:()=>bld('clock').count>=5  },
+  { id:'cc3', name:'Time Scramble',      icon:'🏃', desc:'Clocks ×8',  cost:150000000,type:'bld', tgt:'clock', mult:8,  unlock:()=>bld('clock').count>=25 },
+  { id:'cc4', name:'Flag Fall',          icon:'🚩', desc:'Clocks ×15', cost:1500000000,type:'bld',tgt:'clock', mult:15, unlock:()=>bld('clock').count>=50 },
+
+  // ── Grandmasters ──────────────────────────────────
+  { id:'gm1', name:'GM Title',           icon:'🎓', desc:'GMs ×2',    cost:16000000, type:'bld', tgt:'gm', mult:2,  unlock:()=>bld('gm').count>=1  },
+  { id:'gm2', name:'Super GM',           icon:'🥇', desc:'GMs ×4',    cost:80000000, type:'bld', tgt:'gm', mult:4,  unlock:()=>bld('gm').count>=5  },
+  { id:'gm3', name:'World Candidate',    icon:'🏅', desc:'GMs ×8',    cost:800000000,type:'bld', tgt:'gm', mult:8,  unlock:()=>bld('gm').count>=25 },
+  { id:'gm4', name:'GM Academy',         icon:'🏫', desc:'GMs ×15',   cost:8000000000,type:'bld',tgt:'gm', mult:15, unlock:()=>bld('gm').count>=50 },
+
+  // ── Chess Engines ─────────────────────────────────
+  { id:'en1', name:'Engine Depth 30',    icon:'💻', desc:'Engines ×2', cost:100000000,  type:'bld', tgt:'engine', mult:2,  unlock:()=>bld('engine').count>=1  },
+  { id:'en2', name:'Engine Depth 50',    icon:'🖥', desc:'Engines ×4', cost:500000000,  type:'bld', tgt:'engine', mult:4,  unlock:()=>bld('engine').count>=5  },
+  { id:'en3', name:'Perfect Play',       icon:'🤖', desc:'Engines ×10',cost:5000000000, type:'bld', tgt:'engine', mult:10, unlock:()=>bld('engine').count>=25 },
+  { id:'en4', name:'Quantum Engine',     icon:'⚛', desc:'Engines ×20',cost:50000000000,type:'bld', tgt:'engine', mult:20, unlock:()=>bld('engine').count>=50 },
+
+  // ── Tournaments ───────────────────────────────────
+  { id:'to1', name:'Grand Prix',         icon:'🏆', desc:'Tournaments ×2', cost:750000000,   type:'bld', tgt:'tournament', mult:2,  unlock:()=>bld('tournament').count>=1  },
+  { id:'to2', name:'Candidates Match',   icon:'🥈', desc:'Tournaments ×4', cost:3750000000,  type:'bld', tgt:'tournament', mult:4,  unlock:()=>bld('tournament').count>=5  },
+  { id:'to3', name:'World Title',        icon:'🌍', desc:'Tournaments ×10',cost:37500000000, type:'bld', tgt:'tournament', mult:10, unlock:()=>bld('tournament').count>=25 },
+  { id:'to4', name:'Dynasty',            icon:'👑', desc:'Tournaments ×20',cost:375000000000,type:'bld', tgt:'tournament', mult:20, unlock:()=>bld('tournament').count>=50 },
+
+  // ── Global ────────────────────────────────────────
+  { id:'gl1', name:'Endgame Theory',     icon:'📚', desc:'All ×2',   cost:100000,         type:'global', mult:2,   unlock:()=>G.totalMoves>=50000      },
+  { id:'gl2', name:'Deep Blue',          icon:'🤖', desc:'All ×2',   cost:5000000,        type:'global', mult:2,   unlock:()=>G.totalMoves>=2000000    },
+  { id:'gl3', name:'AlphaZero',          icon:'🧠', desc:'All ×5',   cost:50000000,       type:'global', mult:5,   unlock:()=>G.totalMoves>=20000000   },
+  { id:'gl4', name:'Stockfish 17',       icon:'💎', desc:'All ×10',  cost:500000000,      type:'global', mult:10,  unlock:()=>G.totalMoves>=200000000  },
+  { id:'gl5', name:'Neural Supremacy',   icon:'🌐', desc:'All ×15',  cost:5000000000,     type:'global', mult:15,  unlock:()=>G.totalMoves>=2000000000 },
+  { id:'gl6', name:'Omniscient Board',   icon:'🔮', desc:'All ×20',  cost:50000000000,    type:'global', mult:20,  unlock:()=>G.totalMoves>=20000000000},
+  { id:'gl7', name:'Chess Singularity',  icon:'🌀', desc:'All ×50',  cost:500000000000,   type:'global', mult:50,  unlock:()=>G.totalMoves>=200000000000},
+  { id:'gl8', name:'Infinite Board',     icon:'∞',  desc:'All ×100', cost:5000000000000,  type:'global', mult:100, unlock:()=>G.totalMoves>=2e12       },
+
+  // ── Maple Board (prestige 1) ──────────────────────
+  { id:'p1a', name:'Wood Grain Theory',  icon:'🪵', desc:'All pieces ×3',  cost:5000000,  type:'global', mult:3,  unlock:()=>G.prestigeCount>=1, prestige:1 },
+  { id:'p1b', name:'First Ascension',    icon:'⬆', desc:'×5 click power', cost:2000000,  type:'click',  mult:5,  unlock:()=>G.prestigeCount>=1, prestige:1 },
+  { id:'p1c', name:'Maple Pawns',        icon:'♟', desc:'Pawns ×8',       cost:1000000,  type:'bld', tgt:'pawn',   mult:8,  unlock:()=>G.prestigeCount>=1, prestige:1 },
+  { id:'p1d', name:'Veteran Knights',    icon:'♞', desc:'Knights ×8',     cost:3000000,  type:'bld', tgt:'knight', mult:8,  unlock:()=>G.prestigeCount>=1, prestige:1 },
+  { id:'p1e', name:'Seasoned Rooks',     icon:'♜', desc:'Rooks ×8',       cost:8000000,  type:'bld', tgt:'rook',   mult:8,  unlock:()=>G.prestigeCount>=1, prestige:1 },
+
+  // ── Rosewood Board (prestige 2) ───────────────────
+  { id:'p2a', name:'Blood Wood Ritual',  icon:'🌹', desc:'All pieces ×5',  cost:50000000, type:'global', mult:5,  unlock:()=>G.prestigeCount>=2, prestige:2 },
+  { id:'p2b', name:'Second Sight',       icon:'👁', desc:'×10 click power',cost:20000000, type:'click',  mult:10, unlock:()=>G.prestigeCount>=2, prestige:2 },
+  { id:'p2c', name:'Rose Bishops',       icon:'♝', desc:'Bishops ×10',    cost:30000000, type:'bld', tgt:'bishop', mult:10, unlock:()=>G.prestigeCount>=2, prestige:2 },
+  { id:'p2d', name:'Crimson Queens',     icon:'♛', desc:'Queens ×10',     cost:80000000, type:'bld', tgt:'queen',  mult:10, unlock:()=>G.prestigeCount>=2, prestige:2 },
+
+  // ── Marble Board (prestige 3) ─────────────────────
+  { id:'p3a', name:'Marble Perfection',  icon:'🏛', desc:'All pieces ×5',  cost:500000000,type:'global', mult:5,  unlock:()=>G.prestigeCount>=3, prestige:3 },
+  { id:'p3b', name:'Stone Cold Click',   icon:'🪨', desc:'×10 click power',cost:200000000,type:'click',  mult:10, unlock:()=>G.prestigeCount>=3, prestige:3 },
+  { id:'p3c', name:'Marble Grandmasters',icon:'🎓', desc:'GMs ×15',        cost:300000000,type:'bld', tgt:'gm',  mult:15, unlock:()=>G.prestigeCount>=3, prestige:3 },
+
+  // ── Crystal Board (prestige 4) ────────────────────
+  { id:'p4a', name:'Crystal Resonance',  icon:'💠', desc:'All pieces ×8',  cost:5000000000,  type:'global', mult:8,  unlock:()=>G.prestigeCount>=4, prestige:4 },
+  { id:'p4b', name:'Prismatic Click',    icon:'🌈', desc:'×20 click power',cost:2000000000,  type:'click',  mult:20, unlock:()=>G.prestigeCount>=4, prestige:4 },
+  { id:'p4c', name:'Crystal Engines',   icon:'💻', desc:'Engines ×20',    cost:3000000000,  type:'bld', tgt:'engine', mult:20, unlock:()=>G.prestigeCount>=4, prestige:4 },
+
+  // ── Golden Board (prestige 5) ─────────────────────
+  { id:'p5a', name:'Golden Age',         icon:'✨', desc:'All pieces ×10', cost:50000000000, type:'global', mult:10, unlock:()=>G.prestigeCount>=5, prestige:5 },
+  { id:'p5b', name:'Midas Click',        icon:'🤌', desc:'×50 click power',cost:20000000000, type:'click',  mult:50, unlock:()=>G.prestigeCount>=5, prestige:5 },
+
+  // ── Diamond Board (prestige 6) ────────────────────
+  { id:'p6a', name:'Diamond Clarity',    icon:'💎', desc:'All pieces ×20', cost:500000000000,type:'global', mult:20, unlock:()=>G.prestigeCount>=6, prestige:6 },
+  { id:'p6b', name:'Flawless Click',     icon:'💍', desc:'×100 click power',cost:200000000000,type:'click', mult:100,unlock:()=>G.prestigeCount>=6, prestige:6 },
+
+  // ── Cosmic Board (prestige 7) ─────────────────────
+  { id:'p7a', name:'Cosmic Singularity', icon:'🌌', desc:'All pieces ×50', cost:5000000000000,type:'global',mult:50, unlock:()=>G.prestigeCount>=7, prestige:7 },
+  { id:'p7b', name:'Universal Click',    icon:'🌠', desc:'×200 click power',cost:2000000000000,type:'click',mult:200,unlock:()=>G.prestigeCount>=7, prestige:7 },
+];
+
+const MILESTONES = [
+  [1,       '♟ Your first move! Every grandmaster starts here.'],
+  [100,     '♟ 100 moves! You\'re getting started.'],
+  [1000,    '♞ 1,000 moves! The knight is impressed.'],
+  [10000,   '♝ 10,000 moves! The bishops approve.'],
+  [100000,  '♜ 100,000 moves! The rooks salute you.'],
+  [1000000, '♛ 1 million moves! The queen is in awe.'],
+  [10000000,'♔ 10 million moves! You are a Grandmaster.'],
+  [1e8,     '🏆 100 million moves! World Champion!'],
+  [1e9,     '🤖 1 billion moves! Even engines bow down.'],
+  [1e12,    '🌌 1 trillion moves! You transcend chess itself.'],
+];
+
+// ═══════════════════════════════════════════════════
+//  BOARD TIERS (prestige)
+// ═══════════════════════════════════════════════════
+
+const BOARD_TIERS = [
+  { name:'Standard Board', light:'#f0d9b5', dark:'#b58863', border:'#5a4030', glow:'rgba(90,64,48,0.9)'   },
+  { name:'Walnut Board',   light:'#c8a870', dark:'#7a5228', border:'#6a4018', glow:'rgba(120,80,30,0.9)'  },
+  { name:'Slate Board',    light:'#909890', dark:'#505850', border:'#404840', glow:'rgba(70,80,70,0.9)'   },
+  { name:'Obsidian Board', light:'#686870', dark:'#383840', border:'#282830', glow:'rgba(50,50,70,0.9)'   },
+  { name:'Shadow Board',   light:'#484858', dark:'#282830', border:'#202028', glow:'rgba(40,40,80,0.9)'   },
+  { name:'Void Board',     light:'#303040', dark:'#181820', border:'#141420', glow:'rgba(30,30,80,0.9)'   },
+  { name:'Abyss Board',    light:'#1c1c28', dark:'#0c0c14', border:'#10101c', glow:'rgba(20,20,60,0.9)'   },
+  { name:'Cosmic Board',   light:'#0e0e18', dark:'#050508', border:'#0a0a12', glow:'rgba(60,10,120,0.9)'  },
+];
+
+const PRESTIGE_COST = 1_000_000_000_000_000;
+
+// Milestone ladder: 1 decillion, 1 undecillion, 1 duodecillion ...
+// Each hit gives +1x to your NEXT prestige multiplier (stacks, resets on prestige)
+const BONUS_MILESTONES = [
+  { val:1e33,  name:'decillion'          },
+  { val:1e36,  name:'undecillion'        },
+  { val:1e39,  name:'duodecillion'       },
+  { val:1e42,  name:'tredecillion'       },
+  { val:1e45,  name:'quattuordecillion'  },
+  { val:1e48,  name:'quindecillion'      },
+  { val:1e51,  name:'sexdecillion'       },
+  { val:1e54,  name:'septendecillion'    },
+  { val:1e57,  name:'octodecillion'      },
+  { val:1e60,  name:'novemdecillion'     },
+  { val:1e63,  name:'vigintillion'       },
+  { val:1e66,  name:'unvigintillion'     },
+  { val:1e69,  name:'duovigintillion'    },
+  { val:1e72,  name:'tresvigintillion'   },
+  { val:1e75,  name:'quattuorvigintillion'},
+  { val:1e78,  name:'quinvigintillion'   },
+  { val:1e81,  name:'sesvigintillion'    },
+  { val:1e84,  name:'septemvigintillion' },
+  { val:1e87,  name:'octovigintillion'   },
+  { val:1e90,  name:'novemvigintillion'  },
+  { val:1e93,  name:'trigintillion'      },
+];
+
+// ═══════════════════════════════════════════════════
+//  MAGNUS
+// ═══════════════════════════════════════════════════
+
+const MAGNUS = {
+  cost:    200000000,
+  mps:     1500000,
+  passive: 45,       // seconds between brilliant moves
+  bonus:   20,       // bonus = 20× current MPS lump sum
+  unlock:  () => (G.counts['gm'] || 0) >= 1,
+};
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+
+let G = {
+  moves: 0,
+  totalMoves: 0,
+  clickMult: 1,
+  globalMult: 1,
+  bldMults: {},
+  counts: {},
+  boughtUpgrades: {},
+  seenMilestones: {},
+  autoMilestones: {},
+  magnusHired: false,
+  magnusTimer: 0,
+  prestigeCount: 0,
+  cp: 0,
+  prestigeMult: 1,
+  bonusMilestoneIdx: 0,  // which BONUS_MILESTONES entry to check next
+  nextPrestigeBonus: 0,  // pending +Nx accumulated for next prestige
+};
+
+let currentTab = 'upgrades';
+let shopDirty = true;
+let lastMPS = 0;
+
+function bld(id) {
+  const b = BUILDINGS.find(x => x.id === id);
+  if (!b._bound) { b._bound = true; }
+  b.count = G.counts[id] || 0;
+  return b;
+}
+
+function bldCost(b) {
+  return Math.ceil(b.baseCost * Math.pow(1.15, G.counts[b.id] || 0));
+}
+
+function calcMPS() {
+  let t = 0;
+  for (const b of BUILDINGS) {
+    const cnt = G.counts[b.id] || 0;
+    const m = (G.bldMults[b.id] || 1) * G.globalMult * G.prestigeMult;
+    t += cnt * b.baseMPS * m;
+  }
+  if (G.magnusHired) t += MAGNUS.mps * G.prestigeMult;
+  return t;
+}
+
+function clickPower() {
+  return Math.max(1, Math.floor(G.clickMult * G.prestigeMult));
+}
+
+function boardTier() {
+  return Math.min(G.prestigeCount, BOARD_TIERS.length - 1);
+}
+
+// ═══════════════════════════════════════════════════
+//  CHESS BOARD
+// ═══════════════════════════════════════════════════
+
+let boardState = [];  // [8][8] = null | char
+
+function initBoardState() {
+  boardState = Array.from({length:8}, () => Array(8).fill(null));
+  const back = ['♜','♞','♝','♛','♚','♝','♞','♜'];
+  for (let c=0;c<8;c++) boardState[0][c] = back[c];
+  for (let c=0;c<8;c++) boardState[1][c] = '♟';
+  for (let c=0;c<8;c++) boardState[6][c] = '♙';
+  const wback = ['♖','♘','♗','♕','♔','♗','♘','♖'];
+  for (let c=0;c<8;c++) boardState[7][c] = wback[c];
+}
+
+function applyBoardTier() {
+  const tier = BOARD_TIERS[boardTier()];
+  const el = document.getElementById('chess-board');
+  el.style.setProperty('--sq-light', tier.light);
+  el.style.setProperty('--sq-dark',  tier.dark);
+  el.style.borderColor = tier.border;
+  el.style.boxShadow = `0 0 40px ${tier.glow}, 0 0 80px ${tier.glow.replace('0.9','0.3')}`;
+  const nameEl = document.getElementById('board-tier-name');
+  if (nameEl) nameEl.textContent = tier.name;
+}
+
+function renderBoard() {
+  const el = document.getElementById('chess-board');
+  el.innerHTML = '';
+  for (let r=0;r<8;r++) {
+    for (let c=0;c<8;c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r+c)%2===0 ? 'light' : 'dark');
+      sq.id = `sq-${r}-${c}`;
+      if (boardState[r][c]) {
+        const p = document.createElement('span');
+        p.className = 'piece';
+        p.id = `pc-${r}-${c}`;
+        p.textContent = boardState[r][c];
+        sq.appendChild(p);
+      }
+      el.appendChild(sq);
+    }
+  }
+  applyBoardTier();
+}
+
+function buildBoardLabels() {
+  const rankEl = document.getElementById('rank-labels');
+  const fileEl = document.getElementById('file-labels');
+  rankEl.innerHTML = '';
+  fileEl.innerHTML = '';
+  for (let r=1;r<=8;r++) {
+    const s = document.createElement('span');
+    s.textContent = 9-r;
+    rankEl.appendChild(s);
+  }
+  for (const f of 'abcdefgh') {
+    const s = document.createElement('span');
+    s.textContent = f;
+    fileEl.appendChild(s);
+  }
+}
+
+function animatePieceOnBoard(fr, fc, tr, tc) {
+  // Move in boardState
+  boardState[tr][tc] = boardState[fr][fc];
+  boardState[fr][fc] = null;
+
+  // Update DOM quickly
+  const fromSq = document.getElementById(`sq-${fr}-${fc}`);
+  const toSq   = document.getElementById(`sq-${tr}-${tc}`);
+  if (!fromSq || !toSq) { renderBoard(); return; }
+
+  // Remove piece from source
+  const oldPiece = fromSq.querySelector('.piece');
+  if (oldPiece) oldPiece.remove();
+
+  // Remove any piece on dest
+  const destOld = toSq.querySelector('.piece');
+  if (destOld) destOld.remove();
+
+  // Add piece to dest with animation
+  const p = document.createElement('span');
+  p.className = 'piece moving';
+  p.id = `pc-${tr}-${tc}`;
+  p.textContent = boardState[tr][tc];
+  toSq.appendChild(p);
+  setTimeout(() => p.classList.remove('moving'), 300);
+
+  // Flash destination
+  toSq.classList.add('flash');
+  setTimeout(() => toSq.classList.remove('flash'), 150);
+}
+
+function doRandomMove() {
+  const pieces = [];
+  const empties = [];
+  for (let r=0;r<8;r++) {
+    for (let c=0;c<8;c++) {
+      const p = boardState[r][c];
+      if (p && p !== '♔' && p !== '♚') pieces.push([r,c]);
+      else if (!p) empties.push([r,c]);
+    }
+  }
+  if (!pieces.length || !empties.length) return;
+  const [fr,fc] = pieces[Math.floor(Math.random()*pieces.length)];
+  const [tr,tc] = empties[Math.floor(Math.random()*empties.length)];
+  animatePieceOnBoard(fr, fc, tr, tc);
+}
+
+// ═══════════════════════════════════════════════════
+//  CLICK HANDLER
+// ═══════════════════════════════════════════════════
+
+document.getElementById('board-wrap').addEventListener('click', e => {
+  const earned = clickPower();
+  G.moves      += earned;
+  G.totalMoves += earned;
+
+  doRandomMove();
+  flashBoard();
+  spawnFloater(e.clientX, e.clientY, earned);
+  checkMilestones();
+  shopDirty = true;
+});
+
+function flashBoard() {
+  const el = document.getElementById('chess-board');
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 200);
+}
+
+function spawnFloater(x, y, n) {
+  const d = document.createElement('div');
+  d.className = 'floater';
+  d.textContent = '+' + fmtNum(n) + ' ♟';
+  d.style.left = (x - 30) + 'px';
+  d.style.top  = (y - 20) + 'px';
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 900);
+}
+
+// ═══════════════════════════════════════════════════
+//  AUTO-UPGRADES (every 10 of a piece)
+// ═══════════════════════════════════════════════════
+
+const AUTO_NAMES = {
+  pawn:       ['Pawn Chain','Passed Pawn','Pawn Storm','Promotion Wave','Pawn Roller','Queenside March','Pawn Majority','Pawn Avalanche','Unstoppable Pawn','Pawn Legion'],
+  knight:     ['Outpost Knight','Knight Fork','Smothered Mate','Cavalry Charge','Knight Invasion','Knight Web','Knight Domination','Horse Army','Knight Storm','Knight Legion'],
+  bishop:     ['Fianchetto','Bishop Pair','Diagonal Sweep','Color Complex','Long Diagonal','Bishop Storm','Clerical Wave','Bishop Web','Diagonal Army','Bishop Legion'],
+  rook:       ['Open File','Rook Lift','Seventh Rank','Rook Battery','Rook Invasion','Rook Column','Tower Defense','Iron Curtain','Rook Storm','Rook Legion'],
+  queen:      ["Queen's Gambit",'Queenside Attack','Central Queen','Queen Storm','Queen Domination','Queen Sacrifice','Royal Wave','Queen Network','Queen Web','Queen Legion'],
+  king:       ['King Walk','King March','King Centralization','King Attack','Endgame King','Marching Kings','Warrior King','King Storm','King Army','King Legion'],
+  clock:      ['Time Pressure','Flag Fall','Time Scramble','Time Trouble','Bullet Mode','Blitz Master','Speed Chess','Time Warp','Temporal Storm','Infinite Time'],
+  gm:         ['Master Class','Senior Master','International Master','Grandmaster','Super GM','World Class','Top 10','Top 3','World #2','World Champion'],
+  engine:     ['Depth 20','Depth 30','Depth 40','Depth 50','Depth 60','Infinite Depth','Perfect Play','God Mode','Omniscient','Omnipotent'],
+  tournament: ['Regional Cup','National Championship','Continental','Grand Prix','World Qualifier','Candidates','World Championship','Fischer Memorial','Kasparov Cup','Immortal Trophy'],
+};
+
+function checkAutoUpgrades(id, cnt, silent) {
+  if (cnt === 0 || cnt % 10 !== 0) return;
+  const key = `${id}_${cnt}`;
+  if (G.autoMilestones[key]) return;
+  G.autoMilestones[key] = true;
+
+  G.bldMults[id] = (G.bldMults[id] || 1) * 2;
+
+  if (!silent) {
+    const b = BUILDINGS.find(x => x.id === id);
+    const tier = cnt / 10;
+    const names = AUTO_NAMES[id] || [];
+    const upgName = names[tier - 1] || `Tier ${tier}`;
+    const totalMult = G.bldMults[id];
+    showToast(`${b.icon} ${upgName}! ${b.name}s are now ×${totalMult} stronger!`);
+    shopDirty = true;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  BUYING
+// ═══════════════════════════════════════════════════
+
+let buyMode = 1;
+
+function setBuyMode(n) {
+  buyMode = n;
+  renderTab();
+}
+
+function bldCostN(b, n) {
+  let total = 0;
+  const base = G.counts[b.id] || 0;
+  for (let i = 0; i < n; i++) {
+    total += Math.ceil(b.baseCost * Math.pow(1.15, base + i));
+  }
+  if (n === 10)  total = Math.floor(total * 0.98); // 2% bulk discount
+  if (n === 100) total = Math.floor(total * 0.96); // 4% bulk discount
+  return total;
+}
+
+function buyBuilding(id) {
+  const b = BUILDINGS.find(x => x.id === id);
+  const cost = bldCostN(b, buyMode);
+  if (G.moves < cost) return;
+  G.moves -= cost;
+  for (let i = 0; i < buyMode; i++) {
+    G.counts[id] = (G.counts[id] || 0) + 1;
+    checkAutoUpgrades(id, G.counts[id], false);
+  }
+  shopDirty = true;
+  checkMilestones();
+}
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find(x => x.id === id);
+  if (!u || G.boughtUpgrades[id] || G.moves < u.cost) return;
+  G.moves -= u.cost;
+  G.boughtUpgrades[id] = true;
+
+  if      (u.type === 'click')  G.clickMult  *= u.mult;
+  else if (u.type === 'bld')    G.bldMults[u.tgt] = (G.bldMults[u.tgt] || 1) * u.mult;
+  else if (u.type === 'global') G.globalMult *= u.mult;
+
+  shopDirty = true;
+}
+
+function buyMagnus() {
+  if (G.magnusHired || G.moves < MAGNUS.cost) return;
+  G.moves -= MAGNUS.cost;
+  G.magnusHired = true;
+  G.magnusTimer = 0;
+  showMagnusToast('👑 Magnus Carlsen has joined your team! The Norwegian genius generates moves at an unprecedented rate.');
+  shopDirty = true;
+}
+
+function showMagnusToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast magnus-toast';
+  t.innerHTML = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function triggerNorwegianGambit() {
+  const mps = calcMPS();
+  const bonus = Math.floor(mps * MAGNUS.bonus);
+  G.moves      += bonus;
+  G.totalMoves += bonus;
+
+  // Animate a king piece flying across the board
+  const kings = [];
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    if (boardState[r][c] === '♔' || boardState[r][c] === '♚') kings.push([r,c]);
+  }
+  if (kings.length) {
+    const [kr,kc] = kings[Math.floor(Math.random()*kings.length)];
+    const empties = [];
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++) if (!boardState[r][c]) empties.push([r,c]);
+    if (empties.length) {
+      const [tr,tc] = empties[Math.floor(Math.random()*empties.length)];
+      animatePieceOnBoard(kr, kc, tr, tc);
+    }
+  }
+
+  showMagnusToast(`👑 Norwegian Gambit! Magnus makes a brilliant move! +${fmtNum(bonus)} ♟`);
+  shopDirty = true;
+}
+
+// ═══════════════════════════════════════════════════
+//  PRESTIGE
+// ═══════════════════════════════════════════════════
+
+function canPrestige() {
+  return G.totalMoves >= PRESTIGE_COST;
+}
+
+function checkBonusMilestones() {
+  while (G.bonusMilestoneIdx < BONUS_MILESTONES.length &&
+         G.totalMoves >= BONUS_MILESTONES[G.bonusMilestoneIdx].val) {
+    const m = BONUS_MILESTONES[G.bonusMilestoneIdx];
+    G.bonusMilestoneIdx++;
+    G.nextPrestigeBonus++;
+    shopDirty = true;
+    showToast(`✨ ${m.name.charAt(0).toUpperCase()+m.name.slice(1)} reached! +1x bonus for your next prestige (total: +${G.nextPrestigeBonus}x)`);
+  }
+}
+
+function doPrestige() {
+  if (!canPrestige()) return;
+  const nextTierName = BOARD_TIERS[Math.min(G.prestigeCount + 1, BOARD_TIERS.length - 1)].name;
+  const thisMult = 2 + G.nextPrestigeBonus;
+  if (!confirm(
+    `Upgrade to ${nextTierName}?\n\n` +
+    `• Requires 1 quadrillion all-time moves (you have ${fmtNum(G.totalMoves)})\n` +
+    `• Resets all pieces, upgrades & Magnus\n` +
+    `• Grants +50 CP and ×${thisMult} permanent production boost${G.nextPrestigeBonus > 0 ? ` (+${G.nextPrestigeBonus} bonus!)` : ''}\n\n` +
+    `This cannot be undone!`
+  )) return;
+
+  G.prestigeCount++;
+  G.cp              += 50;
+  G.prestigeMult    *= thisMult;
+  G.nextPrestigeBonus = 0;
+
+  // Reset run state — totalMoves is all-time and must never reset
+  const keepTotal          = G.totalMoves;
+  const keepBonusIdx       = G.bonusMilestoneIdx;
+  G.moves          = 0;
+  G.clickMult      = 1;
+  G.globalMult     = 1;
+  G.bldMults       = {};
+  G.counts         = {};
+  G.boughtUpgrades = {};
+  G.autoMilestones = {};
+  G.magnusHired    = false;
+  G.magnusTimer    = 0;
+  G.totalMoves     = keepTotal;
+  G.bonusMilestoneIdx = keepBonusIdx;
+
+  initBoardState();
+  renderBoard();      // applies new tier colors
+
+  const tier = BOARD_TIERS[boardTier()];
+  showMagnusToast(`♟ Prestige! Welcome to the ${tier.name}! ×${thisMult} applied — total multiplier ×${G.prestigeMult}. (${G.cp} CP)`);
+  shopDirty = true;
+  saveGame();
+}
+
+// ═══════════════════════════════════════════════════
+//  DISPLAY
+// ═══════════════════════════════════════════════════
+
+const SUFFIXES = [
+  [1e303,'centillion'],
+  [1e93,'trigintillion'],[1e90,'novemvigintillion'],[1e87,'octovigintillion'],
+  [1e84,'septemvigintillion'],[1e81,'sesvigintillion'],[1e78,'quinvigintillion'],
+  [1e75,'quattuorvigintillion'],[1e72,'tresvigintillion'],[1e69,'duovigintillion'],
+  [1e66,'unvigintillion'],[1e63,'vigintillion'],
+  [1e60,'novemdecillion'],[1e57,'octodecillion'],[1e54,'septendecillion'],
+  [1e51,'sexdecillion'],[1e48,'quindecillion'],[1e45,'quattuordecillion'],
+  [1e42,'tredecillion'],[1e39,'duodecillion'],[1e36,'undecillion'],
+  [1e33,'decillion'],[1e30,'nonillion'],[1e27,'octillion'],
+  [1e24,'septillion'],[1e21,'sextillion'],[1e18,'quintillion'],
+  [1e15,'quadrillion'],[1e12,'trillion'],[1e9,'billion'],[1e6,'million'],
+];
+
+function fmtNum(n) {
+  n = Math.floor(n);
+  if (n >= 1e306) return n.toExponential(2); // beyond centillion, use sci notation
+  for (const [val, label] of SUFFIXES) {
+    if (n >= val) return (n/val).toFixed(2) + ' ' + label;
+  }
+  if (n >= 10000) return n.toLocaleString();
+  return n.toString();
+}
+
+function fmtMPS(n) {
+  if (n < 1) return n.toFixed(2);
+  return fmtNum(n);
+}
+
+function updateHUD() {
+  const mps = calcMPS();
+  lastMPS = mps;
+  document.getElementById('hdr-moves').textContent   = fmtNum(G.moves);
+  document.getElementById('hdr-mps').textContent     = fmtMPS(mps) + '/s';
+  const mpsEl = document.getElementById('board-mps');
+  mpsEl.textContent = fmtMPS(mps) + ' ♟/s';
+  mpsEl.className = 'mps-val' + (mps < 0.01 ? ' zero' : '');
+  document.getElementById('hdr-total').textContent   = fmtNum(G.totalMoves);
+  document.getElementById('click-power-display').textContent = fmtNum(clickPower());
+  const cpsRow = document.getElementById('cps-row');
+  if (G.prestigeCount > 0) {
+    cpsRow.style.display = 'flex';
+    document.getElementById('cps-val').textContent = G.prestigeCount;
+  } else {
+    cpsRow.style.display = 'none';
+  }
+
+  const cpEl = document.getElementById('hdr-cp');
+  cpEl.textContent = G.cp + ' CP';
+  const lbl = document.getElementById('hdr-prestige-lbl');
+  if (canPrestige()) {
+    cpEl.classList.add('prestige-ready');
+    lbl.textContent = '✦ PRESTIGE READY';
+  } else {
+    cpEl.classList.remove('prestige-ready');
+    lbl.textContent = 'Prestige';
+  }
+
+  const info = document.getElementById('board-info');
+  if (mps >= 1) {
+    info.className = 'board-info good';
+    info.textContent = fmtMPS(mps) + ' moves/sec flowing through the board';
+  } else {
+    info.className = 'board-info';
+    info.textContent = 'Click the board to make a move!';
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  TAB RENDERING
+// ═══════════════════════════════════════════════════
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['upgrades','buildings','stats'][i] === tab);
+  });
+  renderTab();
+}
+
+function renderTab() {
+  const el = document.getElementById('tab-content');
+  if (currentTab === 'upgrades') el.innerHTML = renderUpgrades();
+  else if (currentTab === 'buildings') el.innerHTML = renderBuildings();
+  else el.innerHTML = renderStats();
+  shopDirty = false;
+}
+
+function renderUpgrades() {
+  const available        = UPGRADES.filter(u => !G.boughtUpgrades[u.id] && u.unlock() && !u.prestige);
+  const availablePrestige= UPGRADES.filter(u => !G.boughtUpgrades[u.id] && u.unlock() &&  u.prestige);
+  const bought           = UPGRADES.filter(u =>  G.boughtUpgrades[u.id]);
+
+  let h = '';
+
+  // Prestige upgrades section (gold bordered)
+  if (availablePrestige.length > 0) {
+    const tier = BOARD_TIERS[boardTier()];
+    h += `<div class="prestige-upg-section">
+      <div class="prestige-upg-header">♟ ${tier.name} Upgrades</div>
+      <div class="upgrades-grid">`;
+    for (const u of availablePrestige) {
+      const can = G.moves >= u.cost;
+      h += `<div class="upgrade prestige-upg ${can?'affordable':''}" onclick="buyUpgrade('${u.id}')">
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-name">${u.name}</div>
+        <div class="upg-desc">${u.desc}</div>
+        <div class="upg-cost">${fmtNum(u.cost)} ♟</div>
+      </div>`;
+    }
+    h += '</div></div>';
+  }
+
+  // Regular upgrades
+  if (available.length === 0 && availablePrestige.length === 0) {
+    h += '<div style="color:#504030;padding:20px;text-align:center">No upgrades available yet.<br><br>Buy pieces and make more moves to unlock them.</div>';
+  } else if (available.length > 0) {
+    h += '<div class="upgrades-grid">';
+    for (const u of available) {
+      const can = G.moves >= u.cost;
+      h += `<div class="upgrade ${can?'affordable':''}" onclick="buyUpgrade('${u.id}')">
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-name">${u.name}</div>
+        <div class="upg-desc">${u.desc}</div>
+        <div class="upg-cost">${fmtNum(u.cost)} ♟</div>
+      </div>`;
+    }
+    h += '</div>';
+  }
+
+  if (bought.length > 0) {
+    h += '<div class="section-label">Purchased</div><div class="upgrades-grid">';
+    for (const u of bought) {
+      h += `<div class="upgrade bought">
+        <div class="upg-icon">${u.icon}</div>
+        <div class="upg-name">${u.name}</div>
+      </div>`;
+    }
+    h += '</div>';
+  }
+  return h;
+}
+
+function renderBuildings() {
+  let h = `<div class="buy-toggle">
+    <span>Buy</span>
+    <button class="buy-btn ${buyMode===1?'active':''}" onclick="setBuyMode(1)">×1</button>
+    <button class="buy-btn ${buyMode===10?'active':''}" onclick="setBuyMode(10)">×10<span class="discount">−2%</span></button>
+    <button class="buy-btn ${buyMode===100?'active':''}" onclick="setBuyMode(100)">×100<span class="discount">−4%</span></button>
+  </div>`;
+
+  for (let i = 0; i < BUILDINGS.length; i++) {
+    const b = BUILDINGS[i];
+    const cnt  = G.counts[b.id] || 0;
+    const cost = bldCostN(b, buyMode);
+    const can  = G.moves >= cost;
+    const mult = (G.bldMults[b.id] || 1) * G.globalMult;
+    const mpsEach  = b.baseMPS * mult;
+    const mpsTotal = mpsEach * cnt;
+
+    // Lock if previous building has never been bought and we can't afford this one
+    const prevHasAny = i === 0 || (G.counts[BUILDINGS[i-1].id] || 0) > 0;
+    const locked = !prevHasAny && !cnt && !can;
+
+    if (!locked) anyUnlocked = true;
+
+    const tier       = Math.floor(cnt / 10);
+    const progress   = cnt % 10;
+    const nextAt     = tier * 10 + 10;
+    const pct        = progress * 10;
+    const tierMult   = G.bldMults[b.id] || 1;
+    const tierBadge  = tier > 0 ? `<span class="b-tier">Tier ${tier} ×${tierMult}</span>` : '';
+    const nextLabel  = `${cnt % 10}/10 → ×2`;
+    const barFull    = progress === 0 && cnt > 0;
+
+    h += `<div class="building ${can?'affordable':''} ${locked?'locked':''}" onclick="${locked?'':` buyBuilding('${b.id}')`}">
+      <div class="b-icon">${b.icon}</div>
+      <div class="b-info">
+        <div class="b-name">${b.name} ${tierBadge}</div>
+        <div class="b-desc">${b.desc}</div>
+        <div class="b-prod">${cnt > 0
+          ? `${fmtMPS(mpsTotal)}/s total &bull; ${mpsEach < 1 ? mpsEach.toFixed(2) : fmtMPS(mpsEach)}/s each`
+          : `Each produces ${mpsEach < 1 ? mpsEach.toFixed(2) : fmtMPS(mpsEach)}/s`
+        }</div>
+        <div class="b-auto">
+          <div class="b-prog-track"><div class="b-prog-fill ${barFull?'full':''}" style="width:${barFull?100:pct}%"></div></div>
+          <div class="b-auto-label">${nextLabel}</div>
+        </div>
+      </div>
+      <div class="b-right">
+        <div class="b-count">${cnt}</div>
+        <div class="b-cost ${can?'':'red'}">${fmtNum(cost)} ♟</div>
+      </div>
+    </div>`;
+  }
+
+  // Magnus card
+  if (MAGNUS.unlock() || G.magnusHired) {
+    const canAfford = G.moves >= MAGNUS.cost;
+    if (G.magnusHired) {
+      const nextFire = Math.max(0, Math.ceil(MAGNUS.passive - G.magnusTimer));
+      const pct = (G.magnusTimer / MAGNUS.passive) * 100;
+      h += `<div class="magnus-card hired">
+        <div class="magnus-avatar">👑</div>
+        <div class="magnus-info">
+          <div class="magnus-name">Magnus Carlsen <span class="magnus-badge">HIRED</span></div>
+          <div class="magnus-title">World Chess Champion · ${fmtMPS(MAGNUS.mps)}/s</div>
+          <div class="magnus-passive-row">
+            <div class="magnus-prog-track"><div class="magnus-prog-fill" style="width:${pct}%"></div></div>
+            <div class="magnus-next">Norwegian Gambit in ${nextFire}s</div>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      h += `<div class="magnus-card ${canAfford?'affordable':''}" onclick="buyMagnus()">
+        <div class="magnus-avatar">👑</div>
+        <div class="magnus-info">
+          <div class="magnus-name">Magnus Carlsen</div>
+          <div class="magnus-title">World Chess Champion</div>
+          <div class="magnus-desc">The greatest chess player of all time. Generates ${fmtMPS(MAGNUS.mps)}/s and fires a Norwegian Gambit every ${MAGNUS.passive}s for massive bonus moves.</div>
+        </div>
+        <div class="magnus-buy">
+          <div class="magnus-cost ${canAfford?'':'red'}">${fmtNum(MAGNUS.cost)} ♟</div>
+          <div class="magnus-one-time">One-time hire</div>
+        </div>
+      </div>`;
+    }
+  }
+
+  return h;
+}
+
+function renderStats() {
+  const mps = calcMPS();
+  let piecesH = '';
+  for (const b of BUILDINGS) {
+    const cnt = G.counts[b.id] || 0;
+    if (cnt > 0) {
+      piecesH += `<tr>
+        <td>${b.icon} ${b.name}</td>
+        <td>${cnt.toLocaleString()}</td>
+      </tr>`;
+    }
+  }
+
+  const upgBought = UPGRADES.filter(u => G.boughtUpgrades[u.id]).length;
+  const tier = BOARD_TIERS[boardTier()];
+  const nextTier = BOARD_TIERS[Math.min(G.prestigeCount + 1, BOARD_TIERS.length - 1)];
+  const prestigeReady = canPrestige();
+  const progressPct = Math.min(100, (G.totalMoves / PRESTIGE_COST) * 100);
+
+  return `<div style="padding:12px">
+    <div class="prestige-block ${prestigeReady ? 'ready' : ''}">
+      <div class="prestige-block-header">
+        <span class="prestige-board-name">${tier.name}</span>
+        <span class="prestige-cp-badge">${G.cp} CP</span>
+      </div>
+      <div class="prestige-desc">
+        ${G.prestigeCount > 0 ? `Active multiplier: ×${G.prestigeMult} on all towers.` : 'Prestige to permanently boost all tower production.'}
+        <br>Next prestige: <strong>${nextTier.name}</strong> → +50 CP, ×${2 + G.nextPrestigeBonus} boost${G.nextPrestigeBonus > 0 ? ` <span style="color:#80d080">(+${G.nextPrestigeBonus} bonus!)</span>` : ''}
+        ${G.bonusMilestoneIdx < BONUS_MILESTONES.length ? `<br>Next bonus at: <strong>1 ${BONUS_MILESTONES[G.bonusMilestoneIdx].name}</strong> all-time` : ''}
+      </div>
+      <div class="prestige-prog-track">
+        <div class="prestige-prog-fill" style="width:${progressPct}%"></div>
+      </div>
+      <div class="prestige-prog-label">${fmtNum(G.totalMoves)} / 1 quadrillion all-time ♟</div>
+      <button class="btn-prestige ${prestigeReady ? 'ready' : 'locked'}" onclick="doPrestige()" ${prestigeReady ? '' : 'disabled'}>
+        ${prestigeReady ? `♟ Upgrade to ${nextTier.name}` : `Need ${fmtNum(PRESTIGE_COST - G.totalMoves)} more all-time ♟`}
+      </button>
+    </div>
+    <div class="section-label">Stats</div>
+    <table class="stats-table">
+      <tr><td>Current Moves</td><td>${fmtNum(G.moves)}</td></tr>
+      <tr><td>All-time Moves</td><td>${fmtNum(G.totalMoves)}</td></tr>
+      <tr><td>Moves per Second</td><td>${fmtMPS(mps)}/s</td></tr>
+      <tr><td>Click Power</td><td>${fmtNum(clickPower())} ♟ per click</td></tr>
+      <tr><td>Prestige Count</td><td>${G.prestigeCount}</td></tr>
+      <tr><td>Prestige Multiplier</td><td>×${G.prestigeMult}</td></tr>
+      <tr><td>Chess Prestige (CP)</td><td>${G.cp}</td></tr>
+      <tr><td>Upgrades Purchased</td><td>${upgBought} / ${UPGRADES.length}</td></tr>
+    </table>
+    ${piecesH ? `<div class="section-label">Pieces Owned</div><table class="stats-table">${piecesH}</table>` : ''}
+    <div style="margin-top:16px">
+      <button class="btn-reset" onclick="resetGame()">Reset Game</button>
+      <button class="btn-save" onclick="manualSave()">Save Now</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  MILESTONES
+// ═══════════════════════════════════════════════════
+
+function checkMilestones() {
+  for (const [thresh, msg] of MILESTONES) {
+    if (!G.seenMilestones[thresh] && G.totalMoves >= thresh) {
+      G.seenMilestones[thresh] = true;
+      showToast(msg);
+    }
+  }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ═══════════════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════════════
+
+const SAVE_KEY = 'chesscookie_v1';
+
+function saveGame() {
+  localStorage.setItem(SAVE_KEY, JSON.stringify(G));
+  const el = document.getElementById('save-dot');
+  el.textContent = 'saved ✓';
+  setTimeout(() => el.textContent = 'auto-saved', 2000);
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    Object.assign(G, d);
+    // Retroactively apply any auto-upgrades for saves that predate the system
+    for (const b of BUILDINGS) {
+      const cnt = G.counts[b.id] || 0;
+      for (let m = 10; m <= cnt; m += 10) {
+        checkAutoUpgrades(b.id, m, true);
+      }
+    }
+  } catch(e) { console.warn('Load failed', e); }
+}
+
+function manualSave() {
+  saveGame();
+}
+
+function resetGame() {
+  if (!confirm('Reset ALL progress? This cannot be undone!')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════
+
+let lastTick = performance.now();
+let shopTimer = 0;
+let idleAnimTimer = 0;
+let saveTimer = 0;
+
+function loop(now) {
+  const dt = Math.min((now - lastTick) / 1000, 0.1); // cap at 100ms
+  lastTick = now;
+
+  const mps = calcMPS();
+  G.moves      += mps * dt;
+  G.totalMoves += mps * dt;
+
+  checkBonusMilestones();
+
+  // CPS: +1 per prestige
+  if (G.prestigeCount > 0) {
+    const cpsIncome = G.prestigeCount * clickPower() * dt;
+    G.moves      += cpsIncome;
+    G.totalMoves += cpsIncome;
+  }
+
+  updateHUD();
+
+  shopTimer += dt;
+  if (shopTimer >= 1.0 || shopDirty) {
+    shopTimer = 0;
+    renderTab();
+  }
+
+  idleAnimTimer += dt;
+  if (idleAnimTimer >= 2.0 && mps > 0) {
+    idleAnimTimer = 0;
+    doRandomMove();
+  }
+
+  if (G.magnusHired) {
+    G.magnusTimer += dt;
+    if (G.magnusTimer >= MAGNUS.passive) {
+      G.magnusTimer = 0;
+      triggerNorwegianGambit();
+    }
+  }
+
+  saveTimer += dt;
+  if (saveTimer >= 10) {
+    saveTimer = 0;
+    saveGame();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+
+loadGame();
+initBoardState();
+buildBoardLabels();
+renderBoard();
+checkMilestones();
+renderTab();
+updateHUD();
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
