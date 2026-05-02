@@ -300,8 +300,24 @@ function updFloats(dt){FLOATS=FLOATS.filter(f=>f.life>0);FLOATS.forEach(f=>{f.y+
 function drawFloats(){FLOATS.forEach(f=>{const a=Math.min(1,f.life);ctx.save();ctx.globalAlpha=a;ctx.font=`bold ${f.sz}px sans-serif`;ctx.textAlign='center';ctx.shadowColor=f.col;ctx.shadowBlur=10;ctx.fillStyle=f.col;ctx.fillText(f.txt,f.x,f.y);ctx.restore();});}
 
 // ── SAVE / LOAD ───────────────────────────────────────────────
-function saveGame(){try{localStorage.setItem('wof_v5',JSON.stringify({coins:G.coins,roster:G.roster,cid:CHARS[G.charIdx].id,wi:G.weaponIdx,ai:G.armorIdx,upg:G.upgrades,inv:G.inventory.map(p=>p.id)}));}catch(e){}}
-function loadGame(){try{const d=JSON.parse(localStorage.getItem('wof_v5')||'null');if(!d)return;G.coins=Math.max(0,d.coins||50);G.roster=d.roster||['warrior'];const ci=CHARS.findIndex(c=>c.id===d.cid);if(ci>=0)G.charIdx=ci;if(d.wi>=0&&d.wi<WEAPONS.length)G.weaponIdx=d.wi;if(d.ai>=0&&d.ai<ARMORS.length)G.armorIdx=d.ai;if(d.upg)Object.assign(G.upgrades,d.upg);G.inventory=(d.inv||[]).map(id=>POWERUPS.find(p=>p.id===id)).filter(Boolean).slice(0,3);}catch(e){}}
+const SAVE_KEY='wheeloffate';
+function saveGame(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({coins:G.coins,roster:G.roster,cid:CHARS[G.charIdx].id,wi:G.weaponIdx,ai:G.armorIdx,upg:G.upgrades,inv:G.inventory.map(p=>p.id)}));}catch(e){}
+}
+function loadGame(){
+  try{
+    // Try stable key first, then old versioned keys as fallback
+    const raw=localStorage.getItem(SAVE_KEY)||localStorage.getItem('wof_v5')||localStorage.getItem('wof_v4')||localStorage.getItem('wof_v3')||'null';
+    const d=JSON.parse(raw);if(!d)return;
+    G.coins=typeof d.coins==='number'?Math.max(0,d.coins):50;
+    G.roster=d.roster||['warrior'];
+    const ci=CHARS.findIndex(c=>c.id===d.cid);if(ci>=0)G.charIdx=ci;
+    if(d.wi>=0&&d.wi<WEAPONS.length)G.weaponIdx=d.wi;
+    if(d.ai>=0&&d.ai<ARMORS.length)G.armorIdx=d.ai;
+    if(d.upg)Object.assign(G.upgrades,d.upg);
+    G.inventory=(d.inv||[]).map(id=>POWERUPS.find(p=>p.id===id)).filter(Boolean).slice(0,3);
+  }catch(e){}
+}
 setInterval(saveGame,10000);
 
 // ── GAME STATE ────────────────────────────────────────────────
@@ -462,9 +478,9 @@ function updBattle(dt){
   B.timer-=dt;B.atkCD-=dt;B.atkAnim=Math.max(0,B.atkAnim-dt*3);B.playerFlash=Math.max(0,B.playerFlash-dt*4);
   const ps=pStats();['shield','rage','slow','invince'].forEach(k=>{if(B.effects[k]>0)B.effects[k]-=dt;});
   B.monsters.filter(m=>!m.dead).forEach(m=>{m.hitFlash=Math.max(0,m.hitFlash-dt*5);m.atkCD-=dt*(B.effects.slow>0?0.4:1);if(m.poisonT>0){m.poisonT-=dt;m.hp=Math.max(0,m.hp-10*dt);if(m.hp<=0)killM(m,B);}if(m.atkCD<=0&&!m.dead){m.atkCD=1.8+Math.random()*1.5;if(B.effects.invince<=0){const dmg=Math.max(1,Math.floor(m.atk-ps.def*(B.effects.shield>0?1.8:1))*(B.effects.shield>0?0.5:1));B.playerHp-=dmg;B.playerFlash=1;SFX.hit();addFloat(`-${Math.floor(dmg)}`,240,360,'#e74c3c',26);PS.hit(230,380,'#e74c3c');}SFX.roar(m.type);}});
-  if(B.playerHp<=0){B.playerHp=0;B.lost=true;G.screen='gameover';SFX.death();return;}
-  if(B.timer<=0){B.lost=true;G.screen='gameover';SFX.death();return;}
-  if(B.monsters.filter(m=>!m.dead).length===0){B.won=true;G.coins+=B.coinsEarned;B._cashed=true;SFX.victory();G.screen='victory';return;}
+  if(B.playerHp<=0){B.playerHp=0;B.lost=true;G.coins+=B.coinsEarned;B._cashed=true;G.screen='gameover';SFX.death();saveGame();return;}
+  if(B.timer<=0){B.lost=true;G.coins+=B.coinsEarned;B._cashed=true;G.screen='gameover';SFX.death();saveGame();return;}
+  if(B.monsters.filter(m=>!m.dead).length===0){B.won=true;G.coins+=B.coinsEarned;B._cashed=true;SFX.victory();G.screen='victory';saveGame();return;}
   PS.update(dt);updFloats(dt);
 }
 function doAttack(idx){
@@ -514,7 +530,7 @@ function updSpin(dt){
   const segs=WSEGS[W.active],arc=Math.PI*2/segs.length;
   const ps=((-prev%(Math.PI*2)+Math.PI*2)%(Math.PI*2)/arc)|0,cs=((-W.angle%(Math.PI*2)+Math.PI*2)%(Math.PI*2)/arc)|0;
   if(ps!==cs)SFX.tick();
-  if(Math.abs(W.vel)<0.035){W.spinning=false;const seg=segAt(WSEGS[W.active],W.angle);applyResult(W.active,seg);PS.sparkle(310,355,'#f1c40f');SFX.coin();refreshWheelUI();}
+  if(Math.abs(W.vel)<0.035){W.spinning=false;const seg=segAt(WSEGS[W.active],W.angle);applyResult(W.active,seg);PS.sparkle(310,355,'#f1c40f');SFX.coin();refreshWheelUI();saveGame();}
 }
 function applyResult(wi,seg){
   const it=seg.it,rc=RAR[it.rare]||RAR.common;
@@ -586,7 +602,7 @@ function showRosterPanel(){
     if(owned){
       card.addEventListener('click',()=>{
         try{SFX.boot();SFX.resume();}catch(e){}
-        G.charIdx=i;showRosterPanel();
+        G.charIdx=i;showRosterPanel();saveGame();
       });
     }
     rosterGrid.appendChild(card);
@@ -628,7 +644,6 @@ canvas.addEventListener('click',e=>{
     else if(inRect(p,BW/2+110,402,220,58)){G.screen='menu';}
   }
   else if(G.screen==='gameover'){
-    if(!G.battle._cashed){G.coins+=G.battle.coinsEarned;G.battle._cashed=true;}
     if(inRect(p,BW/2-230,378,215,58))startBattle(G.diff||DIFFS[2]);
     else if(inRect(p,BW/2+15,378,215,58))G.screen='menu';
   }
