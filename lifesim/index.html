@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life — A 100 Year Journey</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --bg: #0a0a0f;
+  --card: rgba(255,255,255,0.04);
+  --accent: #c9a96e;
+  --text: #e8ddd0;
+  --muted: rgba(232,221,208,0.55);
+  --bar-good: #4caf87;
+  --bar-mid: #e8b84b;
+  --bar-low: #e05c5c;
+}
+
+body{
+  font-family:'Lato',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  transition:background 3s ease;
+}
+
+/* ===== PARTICLES ===== */
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+
+/* ===== TITLE SCREEN ===== */
+#title-screen{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:100;
+  background:radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a0f 70%);
+}
+.title-main{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(4rem,12vw,9rem);
+  font-weight:700;
+  letter-spacing:-2px;
+  background:linear-gradient(135deg,#c9a96e,#e8d5b7,#a07040);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:fadeIn 2s ease forwards;
+}
+.title-sub{
+  font-family:'Playfair Display',serif;
+  font-style:italic;
+  font-size:clamp(1rem,3vw,1.5rem);
+  color:var(--muted);
+  margin-top:.5rem;
+  letter-spacing:4px;
+  animation:fadeIn 2.5s ease forwards;
+}
+.title-quote{
+  max-width:480px;text-align:center;
+  font-size:.95rem;color:var(--muted);
+  margin:2.5rem 0;line-height:1.8;
+  animation:fadeIn 3s ease forwards;
+}
+#start-btn{
+  margin-top:1rem;
+  padding:1rem 3rem;
+  font-family:'Playfair Display',serif;
+  font-size:1.2rem;
+  background:transparent;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  cursor:pointer;
+  letter-spacing:3px;
+  transition:all .4s;
+  animation:fadeIn 3.5s ease forwards;
+  position:relative;overflow:hidden;
+}
+#start-btn::before{
+  content:'';position:absolute;inset:0;
+  background:var(--accent);transform:scaleX(0);
+  transform-origin:left;transition:transform .4s;
+}
+#start-btn:hover::before{transform:scaleX(1);}
+#start-btn:hover{color:#0a0a0f;}
+#start-btn span{position:relative;z-index:1;}
+
+/* music toggle on title */
+.music-note{
+  position:absolute;bottom:2rem;right:2rem;
+  background:none;border:1px solid var(--muted);
+  color:var(--muted);padding:.5rem 1rem;
+  cursor:pointer;font-size:.85rem;border-radius:4px;
+  transition:all .3s;
+}
+.music-note:hover{color:var(--accent);border-color:var(--accent);}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+
+/* ===== GAME SCREEN ===== */
+#game-screen{
+  display:none;
+  min-height:100vh;
+  padding:1rem;
+  position:relative;z-index:10;
+}
+
+/* Age bar */
+#age-bar-wrapper{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,10,15,0.92);
+  backdrop-filter:blur(10px);
+  padding:.75rem 1.5rem;
+  border-bottom:1px solid rgba(201,169,110,0.15);
+}
+#age-bar-label{
+  display:flex;justify-content:space-between;
+  font-size:.78rem;letter-spacing:2px;
+  color:var(--muted);margin-bottom:.4rem;
+}
+#age-track{
+  height:4px;background:rgba(255,255,255,0.08);
+  border-radius:2px;position:relative;
+}
+#age-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,#4caf87,#c9a96e,#e05c5c);
+  transition:width 1s ease;width:0%;
+}
+#age-marker{
+  position:absolute;top:-6px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--accent);border:2px solid #0a0a0f;
+  transform:translateX(-50%);transition:left 1s ease;left:0%;
+  box-shadow:0 0 12px var(--accent);
+}
+#stage-label{
+  text-align:center;margin-top:.4rem;
+  font-size:.72rem;letter-spacing:3px;
+  color:var(--accent);text-transform:uppercase;
+}
+
+/* Game layout */
+#game-layout{
+  max-width:1100px;margin:2rem auto;
+  display:grid;
+  grid-template-columns:260px 1fr;
+  gap:1.5rem;
+}
+
+/* Left panel */
+#left-panel{
+  display:flex;flex-direction:column;gap:1rem;
+}
+
+#character-card{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:1.5rem;
+  text-align:center;
+}
+#avatar{
+  width:100px;height:100px;margin:0 auto 1rem;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:3.5rem;
+  border:2px solid rgba(201,169,110,0.3);
+  background:rgba(255,255,255,0.03);
+  transition:all 1s ease;
+}
+#char-age{
+  font-family:'Playfair Display',serif;
+  font-size:2.5rem;font-weight:700;
+  color:var(--accent);
+}
+#char-age-label{font-size:.72rem;letter-spacing:2px;color:var(--muted);}
+#char-stage{font-size:.8rem;margin-top:.4rem;color:var(--muted);font-style:italic;}
+
+#stats-card{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;padding:1.25rem;
+}
+.stat-row{margin-bottom:.9rem;}
+.stat-label{
+  display:flex;justify-content:space-between;
+  font-size:.72rem;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:.3rem;
+}
+.stat-val{color:var(--text);}
+.stat-track{height:13px;background:rgba(255,255,255,0.07);border-radius:6px;overflow:visible;position:relative;}
+.stat-bar{height:100%;border-radius:6px;transition:width .65s cubic-bezier(.22,1,.36,1), background .35s;}
+.stat-bar.pulse{animation:barPulse .55s ease;}
+@keyframes barPulse{0%{filter:brightness(1);}35%{filter:brightness(3) saturate(2);}100%{filter:brightness(1);}}
+.stat-row.flash{animation:rowFlash .5s ease;}
+@keyframes rowFlash{0%{background:transparent;}30%{background:rgba(201,169,110,0.08);}100%{background:transparent;}}
+
+/* Floating delta */
+.stat-delta{
+  position:fixed;
+  font-size:.85rem;font-weight:700;
+  pointer-events:none;z-index:9999;
+  animation:floatUp .9s ease forwards;
+  text-shadow:0 2px 8px rgba(0,0,0,.6);
+}
+.stat-delta.pos{color:#4cff9f;}
+.stat-delta.neg{color:#ff6060;}
+@keyframes floatUp{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  60%{opacity:1;transform:translateY(-28px) scale(1.1);}
+  100%{opacity:0;transform:translateY(-50px) scale(.9);}
+}
+
+#memories-card{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;padding:1.25rem;
+  flex:1;
+}
+.memories-title{
+  font-size:.7rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--accent);
+  margin-bottom:.75rem;
+  border-bottom:1px solid rgba(201,169,110,0.15);
+  padding-bottom:.5rem;
+}
+.memory-item{
+  font-size:.78rem;color:var(--muted);
+  margin-bottom:.5rem;line-height:1.5;
+  padding-left:.75rem;
+  border-left:2px solid rgba(201,169,110,0.3);
+}
+.memory-age{color:var(--accent);font-weight:700;margin-right:.4rem;}
+
+/* Right panel - event card */
+#event-card{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;
+  padding:2.5rem;
+  min-height:520px;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+}
+#event-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  animation:shimmer 3s infinite;
+}
+@keyframes shimmer{0%,100%{opacity:.3;}50%{opacity:1;}}
+
+#event-scene{
+  width:100%;border-radius:8px;overflow:hidden;
+  margin-bottom:1.25rem;
+  border:1px solid rgba(201,169,110,0.1);
+  background:#060609;
+  min-height:155px;
+  position:relative;
+}
+#event-scene svg{
+  width:100%;height:auto;display:block;
+  transition:opacity .5s ease;
+}
+#event-scene.scene-fade{animation:sceneFade .5s ease;}
+@keyframes sceneFade{from{opacity:0;transform:scale(1.02);}to{opacity:1;transform:scale(1);}}
+
+#event-year-badge{
+  font-size:.7rem;letter-spacing:3px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:1rem;
+}
+#event-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.4rem,3vw,2rem);
+  font-weight:700;margin-bottom:1.25rem;
+  line-height:1.3;
+}
+#event-description{
+  font-size:.95rem;line-height:1.85;
+  color:rgba(232,221,208,0.85);
+  margin-bottom:2rem;flex:1;
+}
+#choices-container{display:flex;flex-direction:column;gap:.75rem;}
+
+.choice-btn{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.1);
+  color:var(--text);
+  padding:1rem 1.25rem;
+  text-align:left;
+  cursor:pointer;
+  border-radius:8px;
+  font-size:.9rem;
+  line-height:1.5;
+  transition:all .3s;
+  position:relative;overflow:hidden;
+}
+.choice-btn:hover{
+  border-color:var(--accent);
+  background:rgba(201,169,110,0.08);
+  transform:translateX(4px);
+}
+.choice-btn::before{
+  content:'›';
+  position:absolute;left:.75rem;top:50%;transform:translateY(-50%);
+  color:var(--accent);opacity:0;transition:opacity .3s;
+}
+.choice-btn:hover::before{opacity:1;}
+.choice-btn:hover{padding-left:1.75rem;}
+
+/* Outcome overlay */
+#outcome-overlay{
+  display:none;
+  position:absolute;inset:0;
+  background:rgba(10,10,15,0.97);
+  border-radius:12px;
+  padding:2.5rem;
+  flex-direction:column;
+  justify-content:center;align-items:center;
+  text-align:center;
+}
+#outcome-text{
+  font-family:'Playfair Display',serif;
+  font-size:1.05rem;
+  line-height:1.9;
+  max-width:480px;
+  color:var(--text);
+  margin-bottom:1.5rem;
+}
+#outcome-effects{
+  display:flex;flex-wrap:wrap;gap:.5rem;
+  justify-content:center;margin-bottom:2rem;
+}
+.effect-chip{
+  padding:.35rem .85rem;
+  border-radius:20px;
+  font-size:.78rem;font-weight:700;letter-spacing:1px;
+}
+.effect-pos{background:rgba(76,175,135,0.15);color:#4caf87;border:1px solid rgba(76,175,135,0.3);}
+.effect-neg{background:rgba(224,92,92,0.15);color:#e05c5c;border:1px solid rgba(224,92,92,0.3);}
+
+#continue-btn{
+  padding:.85rem 2.5rem;
+  background:transparent;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  font-family:'Playfair Display',serif;
+  font-size:1rem;letter-spacing:2px;
+  cursor:pointer;border-radius:6px;
+  transition:all .3s;
+}
+#continue-btn:hover{background:var(--accent);color:#0a0a0f;}
+
+/* Random event flash */
+#random-event-banner{
+  display:none;
+  position:fixed;top:80px;left:50%;transform:translateX(-50%);
+  background:rgba(30,20,50,0.97);
+  border:1px solid var(--accent);
+  border-radius:10px;padding:1.25rem 2rem;
+  text-align:center;max-width:480px;
+  z-index:200;animation:bannerIn .5s ease;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);
+}
+@keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+#banner-title{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.5rem;color:var(--accent);}
+#banner-text{font-size:.88rem;color:var(--muted);line-height:1.6;}
+
+/* ===== END SCREEN ===== */
+#end-screen{
+  display:none;
+  min-height:100vh;
+  padding:3rem 1.5rem;
+  position:relative;z-index:10;
+  background:radial-gradient(ellipse at top, #1a0a2e 0%, #0a0a0f 60%);
+}
+#end-inner{max-width:700px;margin:0 auto;text-align:center;}
+#end-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(2rem,6vw,3.5rem);
+  color:var(--accent);margin-bottom:.5rem;
+}
+#end-sub{font-style:italic;color:var(--muted);font-family:'Playfair Display',serif;margin-bottom:2rem;}
+#epitaph{
+  font-family:'Playfair Display',serif;
+  font-style:italic;
+  font-size:1.15rem;
+  line-height:1.9;
+  color:var(--text);
+  padding:2rem;
+  border:1px solid rgba(201,169,110,0.2);
+  border-radius:8px;
+  margin-bottom:2.5rem;
+  background:rgba(255,255,255,0.02);
+}
+#end-stats{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-bottom:2rem;}
+.end-stat{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:10px;padding:1.25rem 1.5rem;
+  min-width:120px;text-align:center;
+}
+.end-stat-val{font-family:'Playfair Display',serif;font-size:2rem;color:var(--accent);}
+.end-stat-label{font-size:.7rem;letter-spacing:2px;color:var(--muted);margin-top:.25rem;text-transform:uppercase;}
+#life-summary{
+  font-size:.9rem;line-height:1.9;color:rgba(232,221,208,0.8);
+  margin-bottom:2.5rem;text-align:left;
+}
+.summary-memory{
+  padding:.6rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  font-size:.85rem;color:var(--muted);
+}
+.summary-memory strong{color:var(--accent);}
+#play-again-btn{
+  padding:1rem 3rem;font-family:'Playfair Display',serif;
+  font-size:1.1rem;letter-spacing:2px;
+  background:transparent;border:1px solid var(--accent);
+  color:var(--accent);cursor:pointer;border-radius:6px;transition:all .3s;
+}
+#play-again-btn:hover{background:var(--accent);color:#0a0a0f;}
+
+/* Audio controls */
+#audio-controls{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;
+  display:flex;gap:.5rem;
+}
+.audio-btn{
+  background:rgba(10,10,15,0.8);
+  border:1px solid rgba(201,169,110,0.3);
+  color:var(--muted);
+  width:40px;height:40px;
+  border-radius:50%;cursor:pointer;
+  font-size:1rem;transition:all .3s;
+  backdrop-filter:blur(8px);
+}
+.audio-btn:hover{color:var(--accent);border-color:var(--accent);}
+.audio-btn.active{color:var(--accent);border-color:var(--accent);}
+
+/* Death screen */
+#death-screen{
+  display:none;
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.95);
+  align-items:center;justify-content:center;
+  flex-direction:column;text-align:center;padding:2rem;
+}
+#death-title{
+  font-family:'Playfair Display',serif;
+  font-size:3rem;color:#e05c5c;margin-bottom:1rem;
+}
+#death-sub{font-size:1rem;color:var(--muted);line-height:1.8;max-width:480px;margin-bottom:2rem;}
+#death-age{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:2rem;}
+
+/* Transitions */
+.fade-out{animation:fadeOut .6s ease forwards;}
+.fade-in{animation:fadeIn2 .6s ease forwards;}
+@keyframes fadeOut{to{opacity:0;}}
+@keyframes fadeIn2{from{opacity:0;}to{opacity:1;}}
+
+/* Responsive */
+@media(max-width:768px){
+  #game-layout{grid-template-columns:1fr;}
+  #left-panel{flex-direction:row;flex-wrap:wrap;}
+  #character-card,#stats-card{flex:1;min-width:200px;}
+  #memories-card{width:100%;}
+}
+
+/* Stage backgrounds */
+body[data-stage="infancy"]{background:#0a0e1a;}
+body[data-stage="childhood"]{background:#0a1410;}
+body[data-stage="teen"]{background:#130a1a;}
+body[data-stage="young-adult"]{background:#0a0f1a;}
+body[data-stage="adult"]{background:#0f0a0a;}
+body[data-stage="middle-age"]{background:#100d0a;}
+body[data-stage="senior"]{background:#0d0d12;}
+body[data-stage="elderly"]{background:#0a0a0f;}
+
+/* Glowing text effect for milestone ages */
+.milestone-glow{
+  animation:milestoneGlow 1s ease;
+}
+@keyframes milestoneGlow{
+  0%{text-shadow:0 0 0 transparent;}
+  50%{text-shadow:0 0 30px var(--accent);}
+  100%{text-shadow:0 0 0 transparent;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <div class="title-main">LIFE</div>
+  <div class="title-sub">A 100 YEAR JOURNEY</div>
+  <div class="title-quote">"In the end, it's not the years in your life that count. It's the life in your years."<br>— Abraham Lincoln</div>
+  <button id="start-btn" onclick="startGame()"><span>BEGIN YOUR LIFE</span></button>
+  <button class="music-note" onclick="toggleMusic()" id="music-toggle-title">♪ Music: ON</button>
+</div>
+
+<!-- AUDIO CONTROLS (in-game) -->
+<div id="audio-controls" style="display:none">
+  <button class="audio-btn active" id="music-btn" onclick="toggleMusic()" title="Toggle Music">♪</button>
+  <button class="audio-btn active" id="sfx-btn" onclick="toggleSFX()" title="Toggle SFX">🔊</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div id="age-bar-wrapper">
+    <div id="age-bar-label">
+      <span>BIRTH</span>
+      <span id="age-display">AGE 0</span>
+      <span>100</span>
+    </div>
+    <div id="age-track">
+      <div id="age-fill"></div>
+      <div id="age-marker"></div>
+    </div>
+    <div id="stage-label">Infancy</div>
+  </div>
+
+  <div id="game-layout">
+    <!-- LEFT PANEL -->
+    <div id="left-panel">
+      <div id="character-card">
+        <div id="avatar">👶</div>
+        <div id="char-age">0</div>
+        <div id="char-age-label">YEARS OLD</div>
+        <div id="char-stage">Just Beginning</div>
+        <div id="life-score-wrap" style="margin-top:1rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,0.06);">
+          <div style="font-size:.65rem;letter-spacing:2px;color:var(--muted);margin-bottom:.35rem;">LIFE QUALITY</div>
+          <div id="life-score" style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;transition:color .5s;">50</div>
+          <div id="life-score-bar-wrap" style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px;margin-top:.4rem;overflow:hidden;">
+            <div id="life-score-bar" style="height:100%;border-radius:3px;width:50%;background:var(--bar-mid);transition:width .8s cubic-bezier(.22,1,.36,1),background .4s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="stats-card">
+        <div class="stat-row">
+          <div class="stat-label"><span>❤ HEALTH</span><span class="stat-val" id="val-health">50</span></div>
+          <div class="stat-track"><div class="stat-bar" id="bar-health" style="width:50%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>☺ HAPPINESS</span><span class="stat-val" id="val-happiness">50</span></div>
+          <div class="stat-track"><div class="stat-bar" id="bar-happiness" style="width:50%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>$ WEALTH</span><span class="stat-val" id="val-wealth">50</span></div>
+          <div class="stat-track"><div class="stat-bar" id="bar-wealth" style="width:50%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>♥ RELATIONSHIPS</span><span class="stat-val" id="val-relationships">50</span></div>
+          <div class="stat-track"><div class="stat-bar" id="bar-relationships" style="width:50%"></div></div>
+        </div>
+        <div class="stat-row" style="margin-bottom:0">
+          <div class="stat-label"><span>✦ INTELLIGENCE</span><span class="stat-val" id="val-intelligence">50</span></div>
+          <div class="stat-track"><div class="stat-bar" id="bar-intelligence" style="width:50%"></div></div>
+        </div>
+      </div>
+
+      <div id="memories-card">
+        <div class="memories-title">Life Memories</div>
+        <div id="memories-list"><div class="memory-item" style="color:rgba(232,221,208,0.3)">Your story begins...</div></div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="event-card">
+      <div id="event-scene"></div>
+      <div id="event-year-badge">YEAR 0 — INFANCY</div>
+      <div id="event-title">Welcome to the World</div>
+      <div id="event-description">Loading your story...</div>
+      <div id="choices-container"></div>
+
+      <!-- OUTCOME OVERLAY -->
+      <div id="outcome-overlay">
+        <div id="outcome-text"></div>
+        <div id="outcome-effects"></div>
+        <button id="continue-btn" onclick="continueLife()">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEATH SCREEN -->
+<div id="death-screen">
+  <div id="death-title">You Have Died</div>
+  <div id="death-age"></div>
+  <div id="death-sub"></div>
+  <button class="audio-btn" style="width:auto;border-radius:6px;padding:.75rem 2rem;margin-bottom:1rem" onclick="showEndScreen()">See Your Legacy →</button>
+  <button class="audio-btn" style="width:auto;border-radius:6px;padding:.75rem 2rem" onclick="restartGame()">Try Again</button>
+</div>
+
+<!-- RANDOM EVENT BANNER -->
+<div id="random-event-banner">
+  <div id="banner-title"></div>
+  <div id="banner-text"></div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end-screen">
+  <div id="end-inner">
+    <div id="end-title">A Life Well Lived</div>
+    <div id="end-sub">You have reached 100 years old.</div>
+    <div id="epitaph"></div>
+    <div id="end-stats"></div>
+    <div id="life-summary"></div>
+    <button id="play-again-btn" onclick="restartGame()">Live Again</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  AUDIO ENGINE
+// ============================================================
+let audioCtx = null;
+let musicEnabled = true;
+let sfxEnabled = true;
+let currentMusicNodes = [];
+let musicScheduled = false;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+let musicRunId = 0;
+
+function stopMusic() {
+  musicRunId++;
+  currentMusicNodes.forEach(n => { try { n.stop(0); } catch(e){} });
+  currentMusicNodes = [];
+  musicScheduled = false;
+}
+
+// ── Real note-sequencer ──────────────────────────────────────
+const N = {
+  C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,A3:220.00,B3:246.94,
+  C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,
+  C5:523.25,D5:587.33,E5:659.26,G5:784.00,A5:880.00,
+  Eb4:311.13,Bb3:233.08,Bb4:466.16,F4s:369.99,C4s:277.18,Ab3:207.65
+};
+
+const STAGE_TRACKS = {
+  infancy:{
+    bpm:68,
+    melody:[N.C4,N.E4,N.G4,N.C5, N.B4,N.G4,N.E4,N.G4, N.A4,N.G4,N.E4,N.D4, N.C4,null,N.C4,null],
+    bass:  [N.C3,null,N.G3,null,  N.F3,null,N.G3,null],
+    mw:'sine',bw:'triangle',mg:0.30,bg:0.16
+  },
+  childhood:{
+    bpm:108,
+    melody:[N.C4,N.D4,N.E4,N.G4, N.E4,N.D4,N.C4,N.E4, N.F4,N.E4,N.D4,N.C4, N.G4,N.E4,N.C4,null],
+    bass:  [N.C3,N.G3,N.F3,N.G3, N.C3,N.G3,N.F3,N.C3],
+    mw:'triangle',bw:'triangle',mg:0.28,bg:0.18
+  },
+  teen:{
+    bpm:116,
+    melody:[N.A3,N.C4,N.E4,N.A4, N.G4,N.E4,N.D4,N.C4, N.E4,N.D4,N.C4,N.B3, N.A3,null,N.A3,null],
+    bass:  [N.A3*0.5,null,N.E3,null, N.F3,null,N.E3,null],
+    mw:'sawtooth',bw:'triangle',mg:0.16,bg:0.14
+  },
+  'young-adult':{
+    bpm:124,
+    melody:[N.D4,N.F4s,N.A4,N.D5, N.A4,N.F4s,N.E4,N.D4, N.G4,N.F4s,N.E4,N.D4, N.A4,null,N.D4,null],
+    bass:  [N.D3,N.A3,N.G3,N.A3,  N.D3,N.A3,N.F4s*0.5,N.G3],
+    mw:'sine',bw:'triangle',mg:0.26,bg:0.17
+  },
+  adult:{
+    bpm:88,
+    melody:[N.C4,N.E4,N.G4,N.E4, N.F4,N.E4,N.D4,N.C4, N.G4,N.E4,N.D4,N.C4, N.E4,N.G4,N.C5,null],
+    bass:  [N.C3,N.G3,N.F3,N.G3, N.C3,N.G3,N.A3,N.G3],
+    mw:'sine',bw:'triangle',mg:0.27,bg:0.15
+  },
+  'middle-age':{
+    bpm:78,
+    melody:[N.C4,N.Eb4,N.G4,N.Bb4, N.G4,N.Eb4,N.D4,N.C4, N.F4,N.Eb4,N.D4,N.C4, N.G4,null,N.C4,null],
+    bass:  [N.C3,N.G3,N.Bb3,N.G3,  N.F3,N.G3,N.C3,N.G3],
+    mw:'sine',bw:'sine',mg:0.24,bg:0.13
+  },
+  senior:{
+    bpm:62,
+    melody:[N.E4,N.G4,N.B4,N.E5*0.5*2, N.D5*0.5*2,N.B4,N.G4,N.E4, N.A4,N.G4,N.E4,N.D4, N.E4,null,null,null],
+    bass:  [N.E3,N.B3,N.A3,N.B3,       N.E3,N.B3,N.A3,N.E3],
+    mw:'sine',bw:'triangle',mg:0.22,bg:0.11
+  },
+  elderly:{
+    bpm:52,
+    melody:[N.C4,null,N.G4,null, N.E4,null,N.C5,null, null,N.G4,null,N.E4, null,null,N.C4,null],
+    bass:  [N.C3,null,null,null, N.G3,null,null,null],
+    mw:'sine',bw:'sine',mg:0.20,bg:0.09
+  }
+};
+
+function makeReverb(ctx, secs) {
+  const len = ctx.sampleRate * secs;
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/len, 2.5);
+  }
+  const conv = ctx.createConvolver();
+  conv.buffer = buf;
+  return conv;
+}
+
+function schedNote(ctx, freq, t, dur, wave, gain, dest, rev) {
+  if (!freq) return;
+  const osc = ctx.createOscillator();
+  const g   = ctx.createGain();
+  osc.type = wave;
+  osc.frequency.value = freq;
+  const att = Math.min(0.04, dur * 0.1);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + att);
+  g.gain.setValueAtTime(gain * 0.72, t + dur * 0.45);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g); g.connect(dest);
+  if (rev) g.connect(rev);
+  osc.start(t); osc.stop(t + dur + 0.06);
+  currentMusicNodes.push(osc);
+}
+
+function playMusic(stage) {
+  if (!musicEnabled) return;
+  stopMusic();
+  const ctx = getAudioCtx();
+  const tr = STAGE_TRACKS[stage] || STAGE_TRACKS.adult;
+  const myId = ++musicRunId;
+  musicScheduled = true;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0, ctx.currentTime);
+  master.gain.linearRampToValueAtTime(0.72, ctx.currentTime + 2.5);
+  master.connect(ctx.destination);
+  currentMusicNodes.push(master);
+
+  const rev = makeReverb(ctx, 1.8);
+  const revG = ctx.createGain(); revG.gain.value = 0.22;
+  rev.connect(revG); revG.connect(master);
+
+  const beat = 60 / tr.bpm;
+  const melLen = tr.melody.length;
+  const basLen = tr.bass.length;
+  const barDur = melLen * beat;
+  const bassBeat = barDur / basLen;
+
+  function bar(t) {
+    if (musicRunId !== myId) return;
+    // melody
+    for (let i = 0; i < melLen; i++)
+      schedNote(ctx, tr.melody[i], t + i*beat, beat*0.87, tr.mw, tr.mg, master, rev);
+    // bass
+    for (let i = 0; i < basLen; i++)
+      schedNote(ctx, tr.bass[i], t + i*bassBeat, bassBeat*0.84, tr.bw, tr.bg, master, rev);
+    // pad swells on beats 1 & 3
+    [0, barDur*0.5].forEach(offset => {
+      const chord = [tr.melody[0], tr.melody[2], tr.melody[4]].filter(Boolean);
+      chord.forEach(f => schedNote(ctx, f*0.5, t+offset, barDur*0.48, 'sine', 0.04, master, rev));
+    });
+    setTimeout(() => bar(ctx.currentTime + 0.05), (barDur - 0.12) * 1000);
+  }
+
+  bar(ctx.currentTime + 0.05);
+}
+
+// SFX
+function playSFX(type) {
+  if (!sfxEnabled) return;
+  const ctx = getAudioCtx();
+  const sfxMap = {
+    click: () => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 600; o.type = 'sine';
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.1);
+    },
+    good: () => {
+      [523, 659, 784].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        const t = ctx.currentTime + i * 0.1;
+        o.frequency.value = f; o.type = 'sine';
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.25, t + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.4);
+      });
+    },
+    bad: () => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 200; o.type = 'sawtooth';
+      g.gain.setValueAtTime(0.2, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.5);
+    },
+    transition: () => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(300, ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(800, ctx.currentTime + 0.5);
+      g.gain.setValueAtTime(0.15, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.7);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.7);
+    },
+    death: () => {
+      [180, 220, 260].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = f; o.type = 'sine';
+        g.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.2);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.2 + 3);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + i * 0.2);
+        o.stop(ctx.currentTime + i * 0.2 + 3);
+      });
+    },
+    milestone: () => {
+      [880, 1046, 1318].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        const t = ctx.currentTime + i * 0.12;
+        o.frequency.value = f; o.type = 'sine';
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.2, t + 0.06);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.8);
+      });
+    }
+  };
+  if (sfxMap[type]) sfxMap[type]();
+}
+
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+  const btn = document.getElementById('music-btn');
+  const titleBtn = document.getElementById('music-toggle-title');
+  if (musicEnabled) {
+    if (btn) { btn.classList.add('active'); btn.textContent = '♪'; }
+    if (titleBtn) titleBtn.textContent = '♪ Music: ON';
+    if (gameState) playMusic(gameState.currentStage);
+  } else {
+    stopMusic();
+    if (btn) { btn.classList.remove('active'); btn.textContent = '♪'; }
+    if (titleBtn) titleBtn.textContent = '♪ Music: OFF';
+  }
+}
+
+function toggleSFX() {
+  sfxEnabled = !sfxEnabled;
+  const btn = document.getElementById('sfx-btn');
+  if (btn) btn.classList.toggle('active', sfxEnabled);
+}
+
+// ============================================================
+//  GAME DATA — LIFE EVENTS
+// ============================================================
+const AVATARS = {
+  infancy: '👶', childhood: '🧒', teen: '🧑', 'young-adult': '👨',
+  adult: '👨‍💼', 'middle-age': '🧔', senior: '👴', elderly: '🧓'
+};
+
+const STAGE_NAMES = {
+  infancy: 'Infancy', childhood: 'Childhood', teen: 'Adolescence',
+  'young-adult': 'Young Adulthood', adult: 'Adulthood',
+  'middle-age': 'Middle Age', senior: 'Senior Years', elderly: 'Twilight Years'
+};
+
+const STAGE_BG_COLORS = {
+  infancy: '#0a0e1a', childhood: '#0a1410', teen: '#130a1a',
+  'young-adult': '#0a0f1a', adult: '#0f0a0a', 'middle-age': '#100d0a',
+  senior: '#0d0d12', elderly: '#0a0a0f'
+};
+
+// ── Scene illustrations ──────────────────────────────────────
+const SCENES = {
+inf_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="40%" r="65%"><stop offset="0%" stop-color="#1e1030"/><stop offset="100%" stop-color="#05050a"/></radialGradient><radialGradient id="b" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".25"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><circle cx="50" cy="18" r="1.1" fill="#e8d5b7" opacity=".65"/><circle cx="110" cy="9" r=".8" fill="#c9a96e" opacity=".5"/><circle cx="300" cy="13" r="1" fill="#e8d5b7" opacity=".5"/><circle cx="360" cy="22" r=".9" fill="#c9a96e" opacity=".7"/><circle cx="370" cy="8" r="1.1" fill="#e8d5b7" opacity=".4"/><circle cx="62" cy="38" r="14" fill="#1e1030"/><circle cx="58" cy="34" r="13" fill="#c9a96e" opacity=".12"/><ellipse cx="200" cy="128" rx="85" ry="32" fill="url(#b)"/><path d="M135 108 Q200 93 265 108 Q265 143 200 153 Q135 143 135 108Z" fill="#120e1e" stroke="#c9a96e" stroke-width="1.2" stroke-opacity=".35"/><path d="M135 108 Q168 78 200 73 Q232 78 265 108" fill="#0e0c18" stroke="#c9a96e" stroke-width="1" stroke-opacity=".22"/><ellipse cx="200" cy="130" rx="22" ry="10" fill="#1e1830" opacity=".9"/><line x1="200" y1="44" x2="200" y2="70" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".35"/><line x1="200" y1="54" x2="176" y2="68" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".28"/><line x1="200" y1="54" x2="224" y2="68" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".28"/><circle cx="176" cy="71" r="4" fill="#c9a96e" opacity=".2"/><circle cx="224" cy="71" r="4" fill="#c9a96e" opacity=".2"/><circle cx="330" cy="82" r="18" fill="#c9a96e" opacity=".04"/><circle cx="330" cy="82" r="8" fill="#c9a96e" opacity=".08"/><circle cx="330" cy="82" r="3" fill="#c9a96e" opacity=".35"/></svg>`,
+
+inf_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#101c28"/><stop offset="100%" stop-color="#0a1218"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="118" width="400" height="37" fill="#080c10"/><rect x="55" y="92" width="22" height="22" fill="#c9a96e" opacity=".38" rx="2"/><rect x="83" y="98" width="18" height="16" fill="#4caf87" opacity=".38" rx="2"/><rect x="107" y="94" width="20" height="20" fill="#e05c5c" opacity=".32" rx="2"/><circle cx="192" cy="86" r="11" fill="#162030"/><rect x="185" y="97" width="14" height="20" fill="#162030" rx="1"/><circle cx="230" cy="83" r="10" fill="#132030"/><rect x="223" y="93" width="14" height="24" fill="#132030" rx="1"/><circle cx="163" cy="88" r="10" fill="#162030"/><rect x="156" y="98" width="14" height="19" fill="#162030" rx="1"/><circle cx="270" cy="90" r="9" fill="#132030"/><rect x="263" y="99" width="12" height="18" fill="#132030" rx="1"/><rect x="295" y="28" width="78" height="62" fill="#c9a96e" opacity=".07" rx="3"/><line x1="334" y1="28" x2="334" y2="90" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".25"/><line x1="295" y1="59" x2="373" y2="59" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".25"/><polygon points="295,28 373,28 373,90 295,90" fill="#c9a96e" opacity=".04"/><text x="40" y="50" font-size="22" fill="#c9a96e" opacity=".18">ABC</text></svg>`,
+
+inf_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#182030"/><stop offset="100%" stop-color="#080e14"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><ellipse cx="200" cy="152" rx="200" ry="22" fill="#060a0e"/><rect x="45" y="55" width="7" height="70" fill="#070a0e"/><circle cx="49" cy="50" r="23" fill="#070a0e"/><rect x="318" y="50" width="7" height="75" fill="#070a0e"/><circle cx="322" cy="46" r="20" fill="#070a0e"/><circle cx="230" cy="102" r="9" fill="#101828"/><rect x="223" y="111" width="12" height="18" fill="#101828" rx="1"/><circle cx="238" cy="106" r="2" fill="#4a9fd4" opacity=".55"/><circle cx="175" cy="100" r="10" fill="#182535"/><rect x="168" y="110" width="12" height="20" fill="#182535" rx="1"/><line x1="180" y1="116" x2="220" y2="113" stroke="#182535" stroke-width="5" stroke-linecap="round"/><ellipse cx="203" cy="113" rx="18" ry="7" fill="#c9a96e" opacity=".08"/><circle cx="290" cy="95" r="12" fill="#0c1220"/><rect x="283" y="107" width="14" height="22" fill="#0c1220" rx="1"/></svg>`,
+
+chi_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a1020"/><stop offset="45%" stop-color="#2a1820"/><stop offset="100%" stop-color="#080808"/></linearGradient><radialGradient id="b" cx="12%" cy="55%" r="32%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".42"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#b)"/><rect x="0" y="123" width="400" height="32" fill="#06060a"/><rect x="105" y="58" width="190" height="68" fill="#0c1020"/><polygon points="92,58 200,18 308,58" fill="#080c1a"/><rect x="224" y="33" width="16" height="30" fill="#070a16"/><rect x="122" y="75" width="27" height="20" fill="#c9a96e" opacity=".14" rx="2"/><rect x="162" y="75" width="27" height="20" fill="#c9a96e" opacity=".1" rx="2"/><rect x="211" y="75" width="27" height="20" fill="#c9a96e" opacity=".2" rx="2"/><rect x="251" y="75" width="27" height="20" fill="#c9a96e" opacity=".07" rx="2"/><rect x="180" y="96" width="40" height="30" fill="#08090e" rx="2"/><circle cx="218" cy="112" r="1.8" fill="#c9a96e" opacity=".4"/><line x1="200" y1="18" x2="200" y2="4" stroke="#c9a96e" stroke-width=".9" stroke-opacity=".3"/><polygon points="200,4 215,8 200,12" fill="#c9a96e" opacity=".28"/><circle cx="140" cy="112" r="7" fill="#182030"/><rect x="134" y="119" width="10" height="13" fill="#182030" rx="1"/><rect x="142" y="117" width="8" height="9" fill="#0e1620" rx="1"/><line x1="0" y1="128" x2="180" y2="122" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".18" stroke-dasharray="4 4"/></svg>`,
+
+chi_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#07080f"/><stop offset="50%" stop-color="#0e1020"/><stop offset="100%" stop-color="#07080f"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><polygon points="0,155 400,155 310,98 90,98" fill="#080a12"/><line x1="200" y1="98" x2="200" y2="155" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".14"/><line x1="0" y1="155" x2="90" y2="98" stroke="#e8d5b7" stroke-width=".5" stroke-opacity=".1"/><line x1="400" y1="155" x2="310" y2="98" stroke="#e8d5b7" stroke-width=".5" stroke-opacity=".1"/><ellipse cx="200" cy="24" rx="14" ry="5" fill="#c9a96e" opacity=".07"/><ellipse cx="130" cy="33" rx="9" ry="4" fill="#c9a96e" opacity=".05"/><ellipse cx="270" cy="33" rx="9" ry="4" fill="#c9a96e" opacity=".05"/><circle cx="238" cy="88" r="15" fill="#0d1020"/><rect x="228" y="103" width="20" height="30" fill="#0d1020" rx="1"/><rect x="248" y="112" width="18" height="9" fill="#0d1020" rx="3"/><circle cx="168" cy="97" r="12" fill="#10182a"/><rect x="161" y="109" width="14" height="22" fill="#10182a" rx="1"/><line x1="188" y1="108" x2="208" y2="110" stroke="#e05c5c" stroke-width=".9" stroke-opacity=".28" stroke-dasharray="2 2"/><rect x="8" y="58" width="22" height="68" fill="#09090e" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".13"/><rect x="32" y="58" width="22" height="68" fill="#09090e" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".1"/><rect x="362" y="58" width="22" height="68" fill="#09090e" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".13"/></svg>`,
+
+chi_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0e0a14"/><stop offset="100%" stop-color="#060608"/></linearGradient><radialGradient id="lamp" cx="62%" cy="32%" r="45%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#lamp)"/><rect x="25" y="108" width="350" height="8" fill="#110f18"/><rect x="25" y="116" width="350" height="39" fill="#0d0c16"/><rect x="45" y="72" width="12" height="36" fill="#4caf87" opacity=".5" rx="1"/><rect x="59" y="67" width="11" height="41" fill="#c9a96e" opacity=".48" rx="1"/><rect x="71" y="74" width="13" height="34" fill="#e05c5c" opacity=".42" rx="1"/><rect x="85" y="70" width="10" height="38" fill="#4a9fd4" opacity=".44" rx="1"/><circle cx="200" cy="88" r="21" fill="#181828"/><circle cx="200" cy="88" r="20" fill="none" stroke="#c9a96e" stroke-width="1.4" stroke-opacity=".28"/><path d="M181 84 Q200 92 219 84" fill="none" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".2"/><path d="M181 92 Q200 100 219 92" fill="none" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".2"/><rect x="285" y="74" width="5" height="34" fill="#c9a96e" opacity=".4" rx="2"/><rect x="294" y="70" width="5" height="38" fill="#4caf87" opacity=".44" rx="2"/><rect x="303" y="72" width="5" height="36" fill="#e05c5c" opacity=".4" rx="2"/><rect x="312" y="76" width="5" height="32" fill="#4a9fd4" opacity=".44" rx="2"/><rect x="321" y="78" width="5" height="30" fill="#c9a96e" opacity=".32" rx="2"/><line x1="248" y1="38" x2="248" y2="108" stroke="#c9a96e" stroke-width="2" stroke-opacity=".22"/><ellipse cx="248" cy="36" rx="22" ry="10" fill="#161525" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".2"/></svg>`,
+
+chi_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="0%" r="80%"><stop offset="0%" stop-color="#08080f"/><stop offset="100%" stop-color="#04040a"/></radialGradient><radialGradient id="wg" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".38"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><circle cx="30" cy="14" r="1" fill="#e8d5b7" opacity=".6"/><circle cx="88" cy="7" r=".8" fill="#c9a96e" opacity=".5"/><circle cx="308" cy="11" r="1" fill="#e8d5b7" opacity=".4"/><circle cx="368" cy="19" r=".9" fill="#c9a96e" opacity=".6"/><rect x="0" y="132" width="400" height="23" fill="#040408"/><rect x="108" y="68" width="184" height="68" fill="#09071a"/><polygon points="94,68 200,24 306,68" fill="#07060e"/><rect x="228" y="33" width="16" height="30" fill="#07060e"/><rect x="128" y="83" width="32" height="26" fill="#07060a" rx="2" stroke="#191830" stroke-width="1"/><rect x="240" y="83" width="32" height="26" fill="#07060a" rx="2" stroke="#191830" stroke-width="1"/><rect x="182" y="80" width="36" height="28" fill="#c9a96e" opacity=".17" rx="2"/><rect x="182" y="80" width="36" height="28" fill="url(#wg)" rx="2"/><line x1="200" y1="80" x2="200" y2="108" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".28"/><line x1="182" y1="94" x2="218" y2="94" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".28"/><ellipse cx="200" cy="98" rx="6" ry="6" fill="#c9a96e" opacity=".38"/><rect x="196" y="104" width="8" height="10" fill="#c9a96e" opacity=".32"/><ellipse cx="200" cy="136" rx="20" ry="5" fill="#c9a96e" opacity=".06"/><rect x="181" y="111" width="38" height="25" fill="#04040a" rx="2"/></svg>`,
+
+chi_5:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0808"/><stop offset="38%" stop-color="#2a1408"/><stop offset="68%" stop-color="#1a1008"/><stop offset="100%" stop-color="#060506"/></linearGradient><radialGradient id="s" cx="72%" cy="44%" r="35%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".52"/><stop offset="55%" stop-color="#c9a96e" stop-opacity=".16"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><circle cx="288" cy="70" r="18" fill="#c9a96e" opacity=".5"/><circle cx="288" cy="70" r="11" fill="#c9a96e" opacity=".38"/><rect x="0" y="112" width="400" height="43" fill="#07070c"/><path d="M0 112 Q100 88 200 109 Q300 126 400 105 L400 112 Z" fill="#09080e"/><circle cx="170" cy="118" r="17" fill="none" stroke="#0d1020" stroke-width="3.2"/><circle cx="228" cy="118" r="17" fill="none" stroke="#0d1020" stroke-width="3.2"/><line x1="170" y1="118" x2="199" y2="100" stroke="#0d1020" stroke-width="2.8"/><line x1="199" y1="100" x2="228" y2="118" stroke="#0d1020" stroke-width="2.8"/><line x1="199" y1="100" x2="199" y2="118" stroke="#0d1020" stroke-width="1.8"/><line x1="170" y1="118" x2="228" y2="118" stroke="#0d1020" stroke-width="2.2"/><line x1="199" y1="100" x2="185" y2="106" stroke="#0d1020" stroke-width="2.2"/><circle cx="199" cy="88" r="8" fill="#0d1020"/><line x1="199" y1="96" x2="199" y2="100" stroke="#0d1020" stroke-width="3.5"/><path d="M98 44 Q103 41 108 44" fill="none" stroke="#c9a96e" stroke-width="1.1" stroke-opacity=".32"/><path d="M116 37 Q121 34 126 37" fill="none" stroke="#c9a96e" stroke-width="1.1" stroke-opacity=".28"/><path d="M76 54 Q81 51 86 54" fill="none" stroke="#c9a96e" stroke-width="1" stroke-opacity=".24"/></svg>`,
+
+teen_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="50%" r="80%"><stop offset="0%" stop-color="#0a0515"/><stop offset="100%" stop-color="#040408"/></radialGradient><radialGradient id="r" cx="20%" cy="30%" r="38%"><stop offset="0%" stop-color="#8b1a1a" stop-opacity=".42"/><stop offset="100%" stop-color="#8b1a1a" stop-opacity="0"/></radialGradient><radialGradient id="bl" cx="78%" cy="22%" r="32%"><stop offset="0%" stop-color="#1a2a8b" stop-opacity=".44"/><stop offset="100%" stop-color="#1a2a8b" stop-opacity="0"/></radialGradient><radialGradient id="g" cx="52%" cy="18%" r="22%"><stop offset="0%" stop-color="#1a6b3a" stop-opacity=".5"/><stop offset="100%" stop-color="#1a6b3a" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#r)"/><rect width="400" height="155" fill="url(#bl)"/><rect width="400" height="155" fill="url(#g)"/><rect x="0" y="128" width="400" height="27" fill="#06060e"/><circle cx="118" cy="88" r="11" fill="#0e0c1a"/><rect x="111" y="99" width="13" height="24" fill="#0e0c1a" rx="1"/><circle cx="158" cy="83" r="10" fill="#0c0b18"/><rect x="151" y="93" width="14" height="28" fill="#0c0b18" rx="1"/><circle cx="198" cy="86" r="11" fill="#0e0c1a"/><rect x="191" y="97" width="13" height="26" fill="#0e0c1a" rx="1"/><circle cx="245" cy="82" r="11" fill="#0c0b18"/><rect x="238" y="93" width="13" height="28" fill="#0c0b18" rx="1"/><circle cx="284" cy="88" r="10" fill="#0e0c1a"/><rect x="277" y="98" width="13" height="25" fill="#0e0c1a" rx="1"/><circle cx="200" cy="21" r="9" fill="#191928" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".4"/><line x1="200" y1="12" x2="200" y2="5" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".38"/><line x1="209" y1="14" x2="215" y2="9" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".32"/><line x1="191" y1="14" x2="185" y2="9" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".32"/><line x1="209" y1="27" x2="217" y2="29" stroke="#e05c5c" stroke-width=".8" stroke-opacity=".5"/><line x1="191" y1="27" x2="183" y2="29" stroke="#4a9fd4" stroke-width=".8" stroke-opacity=".5"/><line x1="200" y1="30" x2="200" y2="38" stroke="#4caf87" stroke-width=".8" stroke-opacity=".5"/><text x="325" y="58" font-size="17" fill="#c9a96e" opacity=".18">♪</text><text x="55" y="48" font-size="13" fill="#c9a96e" opacity=".15">♫</text></svg>`,
+
+teen_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="32%" cy="35%" r="52%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".28"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#06060a"/><rect width="400" height="155" fill="url(#a)"/><rect x="22" y="108" width="356" height="9" fill="#100f1a"/><rect x="22" y="117" width="356" height="38" fill="#0d0c16"/><line x1="78" y1="108" x2="78" y2="63" stroke="#191830" stroke-width="2.8"/><line x1="78" y1="63" x2="118" y2="48" stroke="#191830" stroke-width="2.8"/><ellipse cx="122" cy="46" rx="20" ry="9" fill="#130f1e" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".28"/><rect x="258" y="80" width="58" height="29" fill="#4caf87" opacity=".28" rx="2"/><rect x="263" y="73" width="52" height="9" fill="#c9a96e" opacity=".24" rx="1"/><rect x="256" y="63" width="60" height="12" fill="#e05c5c" opacity=".28" rx="2"/><rect x="118" y="86" width="118" height="22" fill="#e8d5b7" opacity=".07" rx="2"/><line x1="177" y1="86" x2="177" y2="108" stroke="#c9a96e" stroke-width=".55" stroke-opacity=".18"/><text x="128" y="100" font-size="9" fill="#4caf87" opacity=".38">A+</text><text x="150" y="100" font-size="9" fill="#e8b84b" opacity=".38">B-</text><text x="182" y="100" font-size="9" fill="#e05c5c" opacity=".38">D</text><text x="204" y="100" font-size="9" fill="#4caf87" opacity=".38">A</text><line x1="238" y1="103" x2="252" y2="90" stroke="#c9a96e" stroke-width="2.2" stroke-opacity=".32" stroke-linecap="round"/><polygon points="252,90 255,86 256,91" fill="#c9a96e" opacity=".32"/><rect x="312" y="18" width="70" height="78" fill="#040408" rx="3" stroke="#181828" stroke-width="1.4"/><circle cx="347" cy="38" r="7" fill="#c9a96e" opacity=".07"/></svg>`,
+
+teen_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0808"/><stop offset="32%" stop-color="#281208"/><stop offset="62%" stop-color="#18100a"/><stop offset="100%" stop-color="#060506"/></linearGradient><radialGradient id="s" cx="50%" cy="55%" r="42%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".55"/><stop offset="48%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><circle cx="200" cy="86" r="26" fill="#c9a96e" opacity=".32"/><circle cx="200" cy="86" r="16" fill="#c9a96e" opacity=".22"/><rect x="0" y="115" width="400" height="40" fill="#050508"/><ellipse cx="200" cy="120" rx="75" ry="7" fill="#c9a96e" opacity=".07"/><circle cx="184" cy="90" r="12" fill="#060408"/><rect x="176" y="102" width="15" height="26" fill="#060408" rx="2"/><circle cx="216" cy="93" r="11" fill="#060408"/><rect x="208" y="104" width="15" height="24" fill="#060408" rx="2"/><line x1="191" y1="117" x2="208" y2="117" stroke="#060408" stroke-width="5" stroke-linecap="round"/><ellipse cx="200" cy="108" rx="16" ry="9" fill="#c9a96e" opacity=".08"/><text x="196" y="80" font-size="10" fill="#c9a96e" opacity=".28">♥</text></svg>`,
+
+teen_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#04040a"/><stop offset="100%" stop-color="#07080e"/></linearGradient><radialGradient id="h" cx="50%" cy="70%" r="55%"><stop offset="0%" stop-color="#e8d5b7" stop-opacity=".48"/><stop offset="100%" stop-color="#e8d5b7" stop-opacity="0"/></radialGradient><radialGradient id="p" cx="30%" cy="50%" r="28%"><stop offset="0%" stop-color="#4a9fd4" stop-opacity=".42"/><stop offset="100%" stop-color="#4a9fd4" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#h)"/><rect width="400" height="155" fill="url(#p)"/><polygon points="0,155 400,155 315,98 85,98" fill="#09090e"/><line x1="200" y1="155" x2="200" y2="98" stroke="#c9a96e" stroke-width="1.8" stroke-opacity=".18" stroke-dasharray="8 7"/><line x1="0" y1="155" x2="85" y2="98" stroke="#e8d5b7" stroke-width="1.2" stroke-opacity=".13"/><line x1="400" y1="155" x2="315" y2="98" stroke="#e8d5b7" stroke-width="1.2" stroke-opacity=".13"/><rect x="152" y="110" width="96" height="34" fill="#0b0b18" rx="5"/><rect x="165" y="98" width="70" height="17" fill="#0a0a16" rx="4"/><circle cx="167" cy="133" r="6.5" fill="#e8d5b7" opacity=".38"/><circle cx="233" cy="133" r="6.5" fill="#e8d5b7" opacity=".38"/><rect x="186" y="101" width="28" height="10" fill="#4a9fd4" opacity=".38" rx="2"/><rect x="12" y="58" width="6" height="72" fill="#06060c"/><circle cx="15" cy="53" r="16" fill="#06060c"/><rect x="372" y="52" width="6" height="75" fill="#06060c"/><circle cx="375" cy="48" r="15" fill="#06060c"/><circle cx="78" cy="19" r=".9" fill="#e8d5b7" opacity=".5"/><circle cx="198" cy="11" r="1" fill="#c9a96e" opacity=".38"/><circle cx="338" cy="17" r=".8" fill="#e8d5b7" opacity=".45"/></svg>`,
+
+teen_5:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0a18"/><stop offset="50%" stop-color="#10101e"/><stop offset="100%" stop-color="#070707"/></linearGradient><radialGradient id="g" cx="50%" cy="60%" r="48%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".28"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#g)"/><rect x="0" y="102" width="400" height="53" fill="#050508"/><rect x="25" y="77" width="24" height="50" fill="#070708"/><rect x="55" y="62" width="17" height="65" fill="#060608"/><rect x="76" y="72" width="28" height="55" fill="#070708"/><rect x="108" y="55" width="21" height="72" fill="#060608"/><rect x="172" y="42" width="28" height="85" fill="#080810"/><line x1="186" y1="42" x2="186" y2="26" stroke="#c9a96e" stroke-width=".9" stroke-opacity=".38"/><circle cx="186" cy="24" r="2" fill="#c9a96e" opacity=".48"/><rect x="206" y="68" width="18" height="60" fill="#070708"/><rect x="228" y="57" width="24" height="70" fill="#060608"/><rect x="256" y="76" width="17" height="52" fill="#070708"/><rect x="278" y="64" width="28" height="64" fill="#060608"/><rect x="312" y="74" width="20" height="55" fill="#070708"/><rect x="338" y="59" width="15" height="70" fill="#060608"/><rect x="178" y="52" width="5" height="4" fill="#c9a96e" opacity=".2"/><rect x="188" y="59" width="5" height="4" fill="#c9a96e" opacity=".15"/><rect x="63" y="68" width="4" height="3" fill="#c9a96e" opacity=".12"/><circle cx="200" cy="91" r="7" fill="#0e0c16"/><rect x="194" y="98" width="12" height="17" fill="#0e0c16" rx="1"/><polygon points="173,155 227,155 211,103 189,103" fill="#09090e" opacity=".6"/></svg>`,
+
+ya_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0a14"/><stop offset="100%" stop-color="#050508"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="62" y="18" width="276" height="137" fill="#080810" rx="3"/><rect x="62" y="18" width="276" height="8" fill="#0c0c18" rx="3"/><rect x="78" y="32" width="35" height="28" fill="#c9a96e" opacity=".14" rx="1"/><rect x="122" y="32" width="35" height="28" fill="#c9a96e" opacity=".08" rx="1"/><rect x="166" y="32" width="35" height="28" fill="#c9a96e" opacity=".2" rx="1"/><rect x="210" y="32" width="35" height="28" fill="#c9a96e" opacity=".06" rx="1"/><rect x="254" y="32" width="35" height="28" fill="#c9a96e" opacity=".16" rx="1"/><rect x="78" y="68" width="35" height="28" fill="#4a9fd4" opacity=".1" rx="1"/><rect x="122" y="68" width="35" height="28" fill="#c9a96e" opacity=".12" rx="1"/><rect x="166" y="68" width="35" height="28" fill="#c9a96e" opacity=".04" rx="1"/><rect x="210" y="68" width="35" height="28" fill="#4caf87" opacity=".1" rx="1"/><rect x="254" y="68" width="35" height="28" fill="#c9a96e" opacity=".18" rx="1"/><rect x="135" y="104" width="130" height="48" fill="#0a0a18" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".22" rx="2"/><circle cx="200" cy="120" r="6" fill="#c9a96e" opacity=".18"/><rect x="145" y="114" width="18" height="14" fill="#c9a96e" opacity=".06" rx="1"/><rect x="170" y="114" width="18" height="14" fill="#c9a96e" opacity=".08" rx="1"/><rect x="237" y="114" width="18" height="14" fill="#c9a96e" opacity=".05" rx="1"/><text x="174" y="140" font-size="8" fill="#c9a96e" opacity=".22">$842 remaining</text></svg>`,
+
+ya_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#0c0c1a"/><stop offset="100%" stop-color="#040408"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="105" y="22" width="190" height="120" fill="#09080e" rx="3" stroke="#181828" stroke-width="1.4"/><line x1="200" y1="22" x2="200" y2="142" stroke="#181828" stroke-width=".8"/><line x1="105" y1="82" x2="295" y2="82" stroke="#181828" stroke-width=".8"/><rect x="108" y="25" width="186" height="54" fill="#070710" opacity=".9"/><circle cx="128" cy="38" r="1.2" fill="#e8d5b7" opacity=".35"/><circle cx="155" cy="30" r=".9" fill="#e8d5b7" opacity=".3"/><circle cx="200" cy="34" r="1.1" fill="#c9a96e" opacity=".28"/><circle cx="245" cy="28" r=".9" fill="#e8d5b7" opacity=".32"/><circle cx="268" cy="42" r="1" fill="#c9a96e" opacity=".25"/><rect x="155" y="110" width="90" height="25" fill="#c9a96e" opacity=".07" rx="2"/><circle cx="178" cy="92" r="11" fill="#0e0c1e"/><rect x="171" y="103" width="14" height="22" fill="#0e0c1e" rx="1"/><rect x="181" y="108" width="35" height="22" fill="#0e0c1e" rx="1"/><path d="M108 25 Q118 28 125 35 Q132 42 130 55 Q128 68 120 75 Q112 82 108 82" fill="none" stroke="#4a9fd4" stroke-width=".7" stroke-opacity=".2"/><path d="M295 25 Q285 30 280 38 Q275 48 278 58 Q281 68 288 75 Q294 80 295 82" fill="none" stroke="#4a9fd4" stroke-width=".7" stroke-opacity=".2"/></svg>`,
+
+ya_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="#0e0a16"/><stop offset="100%" stop-color="#050508"/></radialGradient><radialGradient id="w" cx="50%" cy="60%" r="40%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#w)"/><rect x="0" y="130" width="400" height="25" fill="#040408"/><rect x="65" y="30" width="270" height="120" fill="#090810" rx="2" stroke="#161625" stroke-width="1"/><rect x="80" y="38" width="80" height="55" fill="#c9a96e" opacity=".06" rx="2"/><line x1="120" y1="38" x2="120" y2="93" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".14"/><line x1="80" y1="65" x2="160" y2="65" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".14"/><circle cx="182" cy="96" r="12" fill="#0e0c1a"/><rect x="174" y="108" width="16" height="25" fill="#0e0c1a" rx="1"/><circle cx="218" cy="99" r="11" fill="#0e0c1a"/><rect x="210" y="110" width="16" height="22" fill="#0e0c1a" rx="1"/><line x1="198" y1="122" x2="210" y2="122" stroke="#0e0c1a" stroke-width="5" stroke-linecap="round"/><ellipse cx="200" cy="115" rx="16" ry="8" fill="#c9a96e" opacity=".08"/><rect x="240" y="38" width="70" height="55" fill="#070710" rx="1"/><rect x="248" y="48" width="16" height="12" fill="#4a9fd4" opacity=".12" rx="1"/><rect x="270" y="52" width="28" height="6" fill="#c9a96e" opacity=".1" rx="1"/><rect x="248" y="66" width="48" height="6" fill="#c9a96e" opacity=".08" rx="1"/></svg>`,
+
+ya_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#060810"/><stop offset="50%" stop-color="#0a0c18"/><stop offset="100%" stop-color="#060810"/></linearGradient><radialGradient id="d" cx="78%" cy="50%" r="28%"><stop offset="0%" stop-color="#e8d5b7" stop-opacity=".4"/><stop offset="100%" stop-color="#e8d5b7" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#d)"/><polygon points="0,155 400,155 320,80 80,80" fill="#08080f"/><line x1="200" y1="80" x2="200" y2="155" stroke="#181830" stroke-width=".6" stroke-opacity=".2"/><line x1="0" y1="155" x2="80" y2="80" stroke="#181830" stroke-width=".4"/><line x1="400" y1="155" x2="320" y2="80" stroke="#181830" stroke-width=".4"/><rect x="280" y="18" width="70" height="130" fill="#0c0c1a" rx="2"/><line x1="315" y1="18" x2="315" y2="148" stroke="#181835" stroke-width=".6"/><rect x="286" y="30" width="22" height="16" fill="#c9a96e" opacity=".12" rx="1"/><rect x="286" y="54" width="22" height="16" fill="#c9a96e" opacity=".08" rx="1"/><rect x="286" y="78" width="22" height="16" fill="#c9a96e" opacity=".15" rx="1"/><rect x="322" y="30" width="22" height="16" fill="#c9a96e" opacity=".07" rx="1"/><rect x="322" y="54" width="22" height="16" fill="#c9a96e" opacity=".1" rx="1"/><rect x="322" y="78" width="22" height="16" fill="#e8d5b7" opacity=".3" rx="1"/><ellipse cx="336" cy="86" rx="4" ry="5" fill="#e8d5b7" opacity=".5"/><circle cx="170" cy="110" r="9" fill="#0c0a18"/><rect x="163" y="119" width="14" height="22" fill="#0c0a18" rx="1"/></svg>`,
+
+ya_5:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c0c1e"/><stop offset="50%" stop-color="#10101e"/><stop offset="100%" stop-color="#060608"/></linearGradient><radialGradient id="g" cx="50%" cy="58%" r="45%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".28"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#g)"/><rect x="0" y="118" width="400" height="37" fill="#050508"/><path d="M200 118 L200 78" stroke="#c9a96e" stroke-width="1.8" stroke-opacity=".22"/><path d="M200 90 L140 118" stroke="#c9a96e" stroke-width="1.8" stroke-opacity=".18"/><path d="M200 90 L260 118" stroke="#c9a96e" stroke-width="1.8" stroke-opacity=".18"/><path d="M200 90 L100 118" stroke="#c9a96e" stroke-width="1.2" stroke-opacity=".12"/><path d="M200 90 L300 118" stroke="#c9a96e" stroke-width="1.2" stroke-opacity=".12"/><circle cx="200" cy="88" r="8" fill="#0e0c18"/><rect x="194" y="96" width="12" height="20" fill="#0e0c18" rx="1"/><text x="60" y="112" font-size="8" fill="#c9a96e" opacity=".3">TRAVEL</text><text x="130" y="112" font-size="8" fill="#c9a96e" opacity=".3">STAY</text><text x="215" y="112" font-size="8" fill="#c9a96e" opacity=".3">NEW CITY</text><text x="300" y="112" font-size="8" fill="#c9a96e" opacity=".3">GRIND</text></svg>`,
+
+ad_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#08080f"/><stop offset="100%" stop-color="#050508"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="80" y="30" width="100" height="125" fill="#0a0a14"/><rect x="80" y="30" width="100" height="6" fill="#0e0e1a"/><rect x="220" y="50" width="100" height="105" fill="#080810"/><rect x="220" y="50" width="100" height="5" fill="#0c0c18"/><rect x="88" y="40" width="14" height="10" fill="#c9a96e" opacity=".2" rx="1"/><rect x="108" y="40" width="14" height="10" fill="#c9a96e" opacity=".12" rx="1"/><rect x="128" y="40" width="14" height="10" fill="#c9a96e" opacity=".18" rx="1"/><rect x="148" y="40" width="14" height="10" fill="#c9a96e" opacity=".08" rx="1"/><rect x="88" y="56" width="14" height="10" fill="#c9a96e" opacity=".1" rx="1"/><rect x="108" y="56" width="14" height="10" fill="#4caf87" opacity=".22" rx="1"/><rect x="128" y="56" width="14" height="10" fill="#c9a96e" opacity=".14" rx="1"/><rect x="148" y="56" width="14" height="10" fill="#c9a96e" opacity=".06" rx="1"/><rect x="228" y="60" width="14" height="10" fill="#c9a96e" opacity=".18" rx="1"/><rect x="248" y="60" width="14" height="10" fill="#c9a96e" opacity=".1" rx="1"/><rect x="268" y="60" width="14" height="10" fill="#c9a96e" opacity=".22" rx="1"/><rect x="288" y="60" width="14" height="10" fill="#4a9fd4" opacity=".18" rx="1"/><rect x="155" y="90" width="90" height="65" fill="#090910" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".25"/><line x1="200" y1="90" x2="200" y2="155" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".22"/><line x1="195" y1="118" x2="205" y2="118" stroke="#c9a96e" stroke-width="2.5" stroke-opacity=".35" stroke-linecap="round"/><circle cx="200" cy="112" r="5" fill="#c9a96e" opacity=".22"/></svg>`,
+
+ad_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0a08"/><stop offset="35%" stop-color="#261208"/><stop offset="65%" stop-color="#180e0a"/><stop offset="100%" stop-color="#060406"/></linearGradient><radialGradient id="s" cx="50%" cy="52%" r="42%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".52"/><stop offset="48%" stop-color="#c9a96e" stop-opacity=".18"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><circle cx="200" cy="83" r="26" fill="#c9a96e" opacity=".3"/><circle cx="200" cy="83" r="16" fill="#c9a96e" opacity=".2"/><rect x="0" y="115" width="400" height="40" fill="#040406"/><ellipse cx="200" cy="120" rx="78" ry="7" fill="#c9a96e" opacity=".07"/><circle cx="184" cy="87" r="12" fill="#060406"/><rect x="176" y="99" width="16" height="26" fill="#060406" rx="1"/><circle cx="217" cy="90" r="11" fill="#060406"/><rect x="209" y="101" width="16" height="24" fill="#060406" rx="1"/><line x1="192" y1="115" x2="209" y2="115" stroke="#060406" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="200" cy="105" rx="18" ry="9" fill="#c9a96e" opacity=".09"/><circle cx="200" cy="70" r="5" fill="#e8d5b7" opacity=".28"/><path d="M196 70 Q200 66 204 70 Q200 73 196 70" fill="#c9a96e" opacity=".4"/></svg>`,
+
+ad_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a0e16"/><stop offset="100%" stop-color="#060608"/></linearGradient><radialGradient id="w" cx="50%" cy="55%" r="50%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#w)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><circle cx="192" cy="88" r="13" fill="#0e0c1e"/><rect x="184" y="101" width="16" height="28" fill="#0e0c1e" rx="1"/><circle cx="218" cy="84" r="13" fill="#0e0c1e"/><rect x="210" y="97" width="16" height="28" fill="#0e0c1e" rx="1"/><line x1="208" y1="108" x2="218" y2="108" stroke="#0e0c1e" stroke-width="5.5" stroke-linecap="round"/><circle cx="205" cy="112" r="9" fill="#1a1830"/><rect x="199" y="121" width="12" height="16" fill="#1a1830" rx="1"/><ellipse cx="205" cy="118" rx="10" ry="5" fill="#c9a96e" opacity=".1"/><path d="M175 85 Q168 75 178 68 Q188 62 192 72" fill="none" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".2"/><path d="M225 80 Q235 70 228 63 Q220 57 215 68" fill="none" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".2"/></svg>`,
+
+ad_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="35%" cy="50%" r="55%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".16"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#06060c"/><rect width="400" height="155" fill="url(#a)"/><rect x="60" y="40" width="140" height="115" fill="#08080e" rx="2"/><rect x="80" y="22" width="45" height="148" fill="#07070d"/><rect x="95" y="62" width="60" height="80" fill="#09090f" stroke="#181828" stroke-width=".8"/><circle cx="132" cy="82" r="8" fill="#1a1828"/><rect x="126" y="90" width="12" height="22" fill="#1a1828" rx="1"/><ellipse cx="115" cy="100" rx="35" ry="22" fill="#c9a96e" opacity=".04"/><rect x="100" y="105" width="55" height="5" fill="#c9a96e" opacity=".07" rx="2"/><circle cx="232" cy="95" r="14" fill="#0e0c1c"/><rect x="224" y="109" width="16" height="30" fill="#0e0c1c" rx="1"/><line x1="232" y1="118" x2="138" y2="100" stroke="#0e0c1c" stroke-width="4" stroke-linecap="round"/><rect x="290" y="60" width="60" height="95" fill="#07070e" rx="2"/><rect x="298" y="70" width="16" height="12" fill="#c9a96e" opacity=".08" rx="1"/><rect x="322" y="70" width="20" height="12" fill="#c9a96e" opacity=".05" rx="1"/><rect x="298" y="90" width="16" height="12" fill="#c9a96e" opacity=".06" rx="1"/></svg>`,
+
+ad_5:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0a0810"/><stop offset="50%" stop-color="#080610"/><stop offset="100%" stop-color="#0a0810"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="30" y="30" width="160" height="110" fill="#080810" stroke="#141425" stroke-width="1"/><rect x="210" y="30" width="160" height="110" fill="#080810" stroke="#141425" stroke-width="1"/><line x1="195" y1="30" x2="205" y2="155" stroke="#141425" stroke-width="3"/><circle cx="148" cy="85" r="13" fill="#0e0c1c"/><rect x="141" y="98" width="14" height="25" fill="#0e0c1c" rx="1"/><circle cx="252" cy="85" r="13" fill="#0e0c1c"/><rect x="245" y="98" width="14" height="25" fill="#0e0c1c" rx="1"/><rect x="100" y="45" width="60" height="35" fill="#c9a96e" opacity=".06" rx="2"/><rect x="240" y="45" width="60" height="35" fill="#c9a96e" opacity=".06" rx="2"/><line x1="108" y1="58" x2="152" y2="58" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".15"/><line x1="108" y1="65" x2="145" y2="65" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".12"/><line x1="248" y1="58" x2="292" y2="58" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".15"/></svg>`,
+
+ma_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#0e0c18"/><stop offset="100%" stop-color="#050508"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="70" y="20" width="260" height="135" fill="#090810" rx="3"/><rect x="70" y="20" width="260" height="7" fill="#0d0c16" rx="3"/><rect x="85" y="35" width="80" height="60" fill="#080810" rx="2" stroke="#181828" stroke-width="1"/><path d="M125 55 Q125 45 135 45 Q145 45 145 55 Q145 65 125 75 Q105 65 105 55 Q105 45 115 45 Q125 45 125 55Z" fill="#c9a96e" opacity=".12"/><rect x="178" y="35" width="140" height="10" fill="#e05c5c" opacity=".18" rx="2"/><rect x="178" y="52" width="120" height="8" fill="#c9a96e" opacity=".14" rx="2"/><rect x="178" y="67" width="130" height="8" fill="#c9a96e" opacity=".1" rx="2"/><rect x="178" y="82" width="110" height="8" fill="#e8b84b" opacity=".18" rx="2"/><text x="178" y="32" font-size="7" fill="#c9a96e" opacity=".3">HEALTH REPORT</text><rect x="85" y="105" width="230" height="40" fill="#07070e" rx="2" stroke="#141424" stroke-width=".8"/><text x="98" y="118" font-size="7" fill="#c9a96e" opacity=".25">BLOOD PRESSURE</text><text x="98" y="130" font-size="7" fill="#c9a96e" opacity=".25">CHOLESTEROL</text><text x="98" y="142" font-size="7" fill="#c9a96e" opacity=".25">BLOOD SUGAR</text><text x="245" y="118" font-size="7" fill="#e05c5c" opacity=".45">HIGH</text><text x="245" y="130" font-size="7" fill="#e8b84b" opacity=".45">ELEVATED</text><text x="245" y="142" font-size="7" fill="#4caf87" opacity=".45">NORMAL</text></svg>`,
+
+ma_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c0c18"/><stop offset="100%" stop-color="#060608"/></linearGradient><radialGradient id="g" cx="50%" cy="58%" r="50%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".22"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#g)"/><rect x="0" y="120" width="400" height="35" fill="#040408"/><path d="M0 120 Q100 95 200 115 Q300 132 400 108 L400 120Z" fill="#060610"/><rect x="78" y="55" width="4" height="75" fill="#060610"/><circle cx="80" cy="50" r="20" fill="#060610"/><rect x="168" y="45" width="4" height="85" fill="#060610"/><circle cx="170" cy="40" r="18" fill="#060610"/><rect x="258" y="50" width="4" height="80" fill="#060610"/><circle cx="260" cy="46" r="16" fill="#060610"/><rect x="338" y="60" width="4" height="70" fill="#060610"/><circle cx="340" cy="55" r="14" fill="#060610"/><path d="M0 118 L100 115 L200 108 L400 118" stroke="#c9a96e" stroke-width="1.4" stroke-opacity=".18" fill="none"/><path d="M80 118 L200 115 L320 118" stroke="#c9a96e" stroke-width="1.8" stroke-opacity=".1" fill="none" stroke-dasharray="6 4"/><circle cx="200" cy="105" r="8" fill="#0e0c18"/><rect x="194" y="113" width="12" height="22" fill="#0e0c18" rx="1"/><text x="88" y="140" font-size="7.5" fill="#c9a96e" opacity=".28">SAME ROAD</text><text x="165" y="140" font-size="7.5" fill="#c9a96e" opacity=".28">NEW PATH</text><text x="245" y="140" font-size="7.5" fill="#c9a96e" opacity=".28">HALF &amp; HALF</text></svg>`,
+
+ma_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="35%" cy="45%" r="52%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".14"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#060608"/><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="50" y="60" width="120" height="90" fill="#08080e" rx="2" stroke="#141422" stroke-width="1"/><rect x="62" y="72" width="45" height="55" fill="#070710" stroke="#141420" stroke-width=".7"/><rect x="70" y="82" width="28" height="35" fill="#c9a96e" opacity=".05" rx="1"/><ellipse cx="200" cy="100" rx="30" ry="25" fill="#0a0a12" stroke="#1a1828" stroke-width="1.4"/><rect x="180" y="80" width="40" height="5" fill="#1a1828"/><ellipse cx="200" cy="80" rx="14" ry="7" fill="#1a1828"/><rect x="225" y="70" width="90" height="115" fill="#08080e" stroke="#141422" stroke-width="1"/><rect x="235" y="80" width="30" height="22" fill="#c9a96e" opacity=".12" rx="2"/><rect x="271" y="80" width="30" height="22" fill="#07070e" rx="2" stroke="#181828" stroke-width=".6"/><rect x="235" y="110" width="65" height="6" fill="#c9a96e" opacity=".08" rx="1"/><rect x="235" y="120" width="50" height="6" fill="#c9a96e" opacity=".06" rx="1"/><ellipse cx="200" cy="104" rx="5" ry="3" fill="#c9a96e" opacity=".18"/><text x="62" y="158" font-size="7" fill="#c9a96e" opacity=".2">The room holds them still.</text></svg>`,
+
+ma_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="38%" cy="40%" r="55%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".18"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#06060a"/><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="35" y="100" width="330" height="8" fill="#0e0c16"/><rect x="35" y="108" width="330" height="40" fill="#0c0a14"/><rect x="55" y="45" width="110" height="58" fill="#090810" rx="2" stroke="#18182a" stroke-width="1"/><text x="68" y="60" font-size="7" fill="#c9a96e" opacity=".28">RETIREMENT CALC</text><rect x="65" y="65" width="80" height="5" fill="#4caf87" opacity=".28" rx="2"/><rect x="65" y="74" width="55" height="5" fill="#e8b84b" opacity=".28" rx="2"/><rect x="65" y="83" width="68" height="5" fill="#4caf87" opacity=".22" rx="2"/><rect x="65" y="92" width="42" height="5" fill="#e05c5c" opacity=".28" rx="2"/><rect x="185" y="45" width="165" height="58" fill="#090810" rx="2" stroke="#18182a" stroke-width="1"/><text x="198" y="60" font-size="7" fill="#c9a96e" opacity=".28">CALENDAR</text><rect x="198" y="66" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="218" y="66" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="238" y="66" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="258" y="66" width="15" height="12" fill="#c9a96e" opacity=".25" rx="1"/><rect x="278" y="66" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="198" y="83" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="218" y="83" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="238" y="83" width="15" height="12" fill="#0d0c18" rx="1"/><rect x="258" y="83" width="15" height="12" fill="#4caf87" opacity=".22" rx="1"/><rect x="278" y="83" width="15" height="12" fill="#0d0c18" rx="1"/></svg>`,
+
+ma_5:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#0e0a14"/><stop offset="100%" stop-color="#050508"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#040408"/><rect x="60" y="30" width="8" height="115" fill="#080810"/><rect x="332" y="30" width="8" height="115" fill="#080810"/><rect x="60" y="30" width="280" height="8" fill="#0a0a14"/><rect x="155" y="30" width="90" height="125" fill="#09090f" stroke="#181830" stroke-width="1.4"/><rect x="165" y="45" width="70" height="50" fill="#070710" stroke="#141428" stroke-width=".8"/><rect x="173" y="52" width="22" height="28" fill="#c9a96e" opacity=".06" rx="1"/><rect x="203" y="55" width="22" height="5" fill="#c9a96e" opacity=".1" rx="1"/><rect x="203" y="63" width="16" height="5" fill="#c9a96e" opacity=".08" rx="1"/><rect x="203" y="71" width="19" height="5" fill="#c9a96e" opacity=".06" rx="1"/><rect x="165" y="100" width="70" height="50" fill="#070710"/><rect x="180" y="112" width="40" height="28" fill="#c9a96e" opacity=".04" rx="1"/><rect x="75" y="42" width="68" height="85" fill="#090910" stroke="#16162a" stroke-width=".8"/><path d="M78 50 Q80 42 82 50" fill="none" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".25"/><rect x="268" y="42" width="60" height="38" fill="#090910" stroke="#16162a" stroke-width=".8"/><rect x="276" y="52" width="42" height="8" fill="#c9a96e" opacity=".07" rx="1"/><rect x="276" y="63" width="32" height="8" fill="#c9a96e" opacity=".05" rx="1"/><text x="162" y="148" font-size="7" fill="#c9a96e" opacity=".2">The house echoes now.</text></svg>`,
+
+sen_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1218"/><stop offset="45%" stop-color="#12181e"/><stop offset="100%" stop-color="#060809"/></linearGradient><radialGradient id="s" cx="18%" cy="38%" r="32%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".4"/><stop offset="55%" stop-color="#c9a96e" stop-opacity=".12"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><rect x="0" y="115" width="400" height="40" fill="#04060a"/><path d="M0 115 Q80 95 160 112 Q240 128 320 108 Q360 100 400 110 L400 115Z" fill="#060810"/><circle cx="72" cy="55" r="18" fill="#c9a96e" opacity=".42"/><circle cx="72" cy="55" r="12" fill="#c9a96e" opacity=".28"/><rect x="55" y="62" width="4" height="62" fill="#06080c"/><circle cx="57" cy="58" r="18" fill="#06080c"/><rect x="160" y="50" width="4" height="72" fill="#06080c"/><circle cx="162" cy="46" r="22" fill="#06080c"/><rect x="280" y="55" width="4" height="67" fill="#06080c"/><circle cx="282" cy="50" r="20" fill="#06080c"/><rect x="360" y="60" width="4" height="62" fill="#06080c"/><circle cx="362" cy="55" r="17" fill="#06080c"/><path d="M38 115 Q140 108 240 115 Q320 120 400 112" fill="none" stroke="#c9a96e" stroke-width="1" stroke-opacity=".12"/><circle cx="200" cy="100" r="8" fill="#0e0c14"/><rect x="194" y="108" width="12" height="20" fill="#0e0c14" rx="1"/><path d="M194 118 Q186 112 180 118" fill="none" stroke="#0e0c14" stroke-width="3.5" stroke-linecap="round"/><path d="M206 118 Q214 112 220 118" fill="none" stroke="#0e0c14" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+
+sen_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0c0c1a"/><stop offset="100%" stop-color="#060608"/></linearGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="115" width="400" height="40" fill="#040408"/><rect x="30" y="65" width="8" height="68" fill="#07070d"/><rect x="70" y="55" width="8" height="78" fill="#07070d"/><rect x="110" y="60" width="8" height="72" fill="#07070d"/><rect x="150" y="50" width="8" height="82" fill="#07070d"/><circle cx="34" cy="60" r="20" fill="#07070d"/><circle cx="74" cy="50" r="22" fill="#07070d"/><circle cx="114" cy="55" r="20" fill="#07070d"/><circle cx="154" cy="45" r="22" fill="#07070d"/><rect x="250" y="62" width="8" height="70" fill="#07070d"/><rect x="290" y="55" width="8" height="77" fill="#07070d"/><rect x="330" y="60" width="8" height="70" fill="#07070d"/><circle cx="254" cy="57" r="18" fill="#07070d"/><circle cx="294" cy="50" r="20" fill="#07070d"/><circle cx="334" cy="55" r="18" fill="#07070d"/><line x1="0" y1="113" x2="400" y2="113" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".14"/><circle cx="210" cy="103" r="9" fill="#0c0a18"/><rect x="204" y="112" width="12" height="22" fill="#0c0a18" rx="1"/><line x1="204" y1="125" x2="196" y2="118" stroke="#0c0a18" stroke-width="3.5" stroke-linecap="round"/><line x1="222" y1="120" x2="230" y2="115" stroke="#0c0a18" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+
+sen_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#080a14"/><stop offset="55%" stop-color="#0e1018"/><stop offset="100%" stop-color="#060608"/></linearGradient><radialGradient id="s" cx="50%" cy="55%" r="50%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".25"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><circle cx="30" cy="20" r=".9" fill="#e8d5b7" opacity=".5"/><circle cx="80" cy="12" r="1.1" fill="#c9a96e" opacity=".45"/><circle cx="200" cy="15" r=".8" fill="#e8d5b7" opacity=".4"/><circle cx="340" cy="10" r="1" fill="#c9a96e" opacity=".5"/><circle cx="380" cy="22" r=".9" fill="#e8d5b7" opacity=".4"/><ellipse cx="200" cy="70" rx="75" ry="18" fill="#c9a96e" opacity=".07"/><path d="M95 68 L305 68 L280 90 L120 90 Z" fill="#0e1020" opacity=".9"/><path d="M120 68 L280 68 L260 62 L140 62 Z" fill="#0c0e1c" opacity=".9"/><path d="M140 62 L260 62 L250 54 L150 54 Z" fill="#0a0c18" opacity=".9"/><ellipse cx="200" cy="68" rx="80" ry="8" fill="none" stroke="#c9a96e" stroke-width=".8" stroke-opacity=".2"/><ellipse cx="200" cy="62" rx="60" ry="6" fill="none" stroke="#c9a96e" stroke-width=".6" stroke-opacity=".16"/><ellipse cx="200" cy="54" rx="40" ry="4" fill="none" stroke="#c9a96e" stroke-width=".5" stroke-opacity=".14"/><rect x="85" y="88" width="230" height="15" fill="#0c0e1a"/><rect x="0" y="125" width="400" height="30" fill="#040408"/><path d="M0 125 Q100 108 200 120 Q300 132 400 115 L400 125Z" fill="#06060c"/><rect x="128" y="102" width="4" height="30" fill="#4a9fd4" opacity=".12"/><rect x="200" y="100" width="4" height="32" fill="#4a9fd4" opacity=".1"/><rect x="268" y="103" width="4" height="29" fill="#4a9fd4" opacity=".12"/></svg>`,
+
+sen_4:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="28%" cy="40%" r="48%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".16"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#050508"/><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#030306"/><rect x="80" y="92" width="240" height="12" fill="#0c0a18" rx="2"/><rect x="80" y="104" width="240" height="40" fill="#0a0814" rx="2"/><circle cx="145" cy="72" r="16" fill="#0c0a16" stroke="#181828" stroke-width="1.2"/><ellipse cx="145" cy="88" rx="15" ry="6" fill="#0c0a16"/><circle cx="255" cy="72" r="16" fill="#0a0812" stroke="#14141e" stroke-width=".8" opacity=".5"/><ellipse cx="255" cy="88" rx="15" ry="6" fill="#0a0812" opacity=".5"/><circle cx="138" cy="62" r="5" fill="#c9a96e" opacity=".28"/><ellipse cx="138" cy="68" rx="4" ry="6" fill="#c9a96e" opacity=".06"/><ellipse cx="255" cy="66" rx="5" ry="5" fill="#c9a96e" opacity=".06"/><circle cx="255" cy="62" r="4" fill="#c9a96e" opacity=".1"/><line x1="145" y1="88" x2="145" y2="92" stroke="#0c0a16" stroke-width="4"/><line x1="255" y1="88" x2="255" y2="92" stroke="#0a0812" stroke-width="4" opacity=".5"/><rect x="130" y="36" width="30" height="50" fill="#0a0810" rx="2" stroke="#181828" stroke-width=".8"/><rect x="240" y="36" width="30" height="50" fill="#0a0810" rx="2" stroke="#141418" stroke-width=".6" opacity=".5"/><text x="105" y="150" font-size="7" fill="#c9a96e" opacity=".22">One cup. Still warm. Untouched.</text></svg>`,
+
+el_1:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="#12101e"/><stop offset="100%" stop-color="#050508"/></radialGradient><radialGradient id="f" cx="50%" cy="70%" r="40%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".18"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#f)"/><rect x="0" y="125" width="400" height="30" fill="#040408"/><rect x="40" y="30" width="320" height="110" fill="#090910" rx="3" stroke="#181828" stroke-width="1.2"/><rect x="40" y="30" width="320" height="7" fill="#0d0d18" rx="3"/><rect x="55" y="45" width="35" height="28" fill="#c9a96e" opacity=".12" rx="2"/><rect x="96" y="45" width="35" height="28" fill="#c9a96e" opacity=".08" rx="2"/><rect x="137" y="45" width="35" height="28" fill="#c9a96e" opacity=".15" rx="2"/><rect x="178" y="45" width="35" height="28" fill="#c9a96e" opacity=".1" rx="2"/><rect x="219" y="45" width="35" height="28" fill="#c9a96e" opacity=".07" rx="2"/><rect x="260" y="45" width="35" height="28" fill="#c9a96e" opacity=".14" rx="2"/><rect x="301" y="45" width="35" height="28" fill="#c9a96e" opacity=".1" rx="2"/><rect x="55" y="80" width="290" height="55" fill="#07070e" rx="2"/><circle cx="120" cy="107" r="10" fill="#0e0c1c"/><rect x="113" y="117" width="14" height="18" fill="#0e0c1c" rx="1"/><circle cx="165" cy="100" r="8" fill="#0e0c1c"/><rect x="159" y="108" width="12" height="20" fill="#0e0c1c" rx="1"/><circle cx="210" cy="104" r="7" fill="#0e0c1c"/><rect x="204" y="111" width="12" height="16" fill="#0e0c1c" rx="1"/><circle cx="255" cy="98" r="9" fill="#0e0c1c"/><rect x="249" y="107" width="12" height="22" fill="#0e0c1c" rx="1"/><ellipse cx="180" cy="120" rx="70" ry="6" fill="#c9a96e" opacity=".06"/></svg>`,
+
+el_2:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="a" cx="35%" cy="38%" r="52%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="#05050a"/><rect width="400" height="155" fill="url(#a)"/><rect x="0" y="128" width="400" height="27" fill="#030306"/><rect x="30" y="100" width="340" height="8" fill="#0e0c16"/><rect x="30" y="108" width="340" height="40" fill="#0c0a14"/><line x1="78" y1="100" x2="78" y2="55" stroke="#181828" stroke-width="2.5"/><line x1="78" y1="55" x2="118" y2="40" stroke="#181828" stroke-width="2.5"/><ellipse cx="122" cy="38" rx="18" ry="8" fill="#120f1e" stroke="#c9a96e" stroke-width=".7" stroke-opacity=".28"/><rect x="40" y="20" width="165" height="85" fill="#07070e" rx="2" stroke="#141425" stroke-width="1"/><rect x="52" y="30" width="140" height="68" fill="#05050a" rx="1"/><rect x="60" y="36" width="80" height="6" fill="#c9a96e" opacity=".22" rx="1"/><rect x="60" y="46" width="100" height="5" fill="#c9a96e" opacity=".14" rx="1"/><rect x="60" y="55" width="90" height="5" fill="#c9a96e" opacity=".1" rx="1"/><rect x="60" y="64" width="95" height="5" fill="#c9a96e" opacity=".12" rx="1"/><rect x="60" y="73" width="70" height="5" fill="#c9a96e" opacity=".08" rx="1"/><rect x="60" y="82" width="85" height="5" fill="#c9a96e" opacity=".1" rx="1"/><line x1="148" y1="94" x2="162" y2="80" stroke="#c9a96e" stroke-width="2" stroke-opacity=".3" stroke-linecap="round"/><polygon points="162,80 165,76 166,81" fill="#c9a96e" opacity=".3"/><rect x="235" y="20" width="130" height="85" fill="#07070e" rx="2" stroke="#141425" stroke-width="1"/><rect x="245" y="30" width="18" height="62" fill="#4caf87" opacity=".28" rx="1"/><rect x="266" y="35" width="16" height="57" fill="#c9a96e" opacity=".28" rx="1"/><rect x="285" y="25" width="18" height="67" fill="#e05c5c" opacity=".22" rx="1"/><rect x="306" y="30" width="16" height="62" fill="#4a9fd4" opacity=".25" rx="1"/><rect x="325" y="35" width="16" height="57" fill="#c9a96e" opacity=".22" rx="1"/><text x="40" y="148" font-size="7" fill="#c9a96e" opacity=".22">For those who come after.</text></svg>`,
+
+el_3:`<svg viewBox="0 0 400 155" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a0a08"/><stop offset="35%" stop-color="#261208"/><stop offset="65%" stop-color="#180e0a"/><stop offset="100%" stop-color="#050405"/></linearGradient><radialGradient id="s" cx="78%" cy="42%" r="38%"><stop offset="0%" stop-color="#c9a96e" stop-opacity=".55"/><stop offset="50%" stop-color="#c9a96e" stop-opacity=".2"/><stop offset="100%" stop-color="#c9a96e" stop-opacity="0"/></radialGradient></defs><rect width="400" height="155" fill="url(#a)"/><rect width="400" height="155" fill="url(#s)"/><circle cx="312" cy="66" r="20" fill="#c9a96e" opacity=".48"/><circle cx="312" cy="66" r="13" fill="#c9a96e" opacity=".32"/><rect x="0" y="118" width="400" height="37" fill="#040405"/><path d="M0 118 Q80 104 160 115 Q240 126 320 108 L400 112 L400 118Z" fill="#060508"/><rect x="50" y="52" width="200" height="80" fill="#09080e" rx="2" stroke="#161524" stroke-width="1.2"/><rect x="50" y="52" width="200" height="6" fill="#0d0c18" rx="2"/><rect x="62" y="65" width="175" height="55" fill="#07060c" rx="1"/><rect x="210" y="52" width="7" height="86" fill="#07060c"/><ellipse cx="250" cy="110" rx="55" ry="18" fill="#c9a96e" opacity=".05"/><circle cx="115" cy="90" r="11" fill="#0e0c1c" opacity=".9"/><rect x="108" y="101" width="14" height="20" fill="#0e0c1c" rx="1"/><line x1="108" y1="112" x2="98" y2="106" stroke="#0e0c1c" stroke-width="3.2" stroke-linecap="round"/><path d="M86 122 Q100 115 118 115" fill="none" stroke="#0e0c1c" stroke-width="3" stroke-linecap="round"/><rect x="70" y="128" width="80" height="20" fill="#07060c" rx="1"/><rect x="160" y="128" width="80" height="20" fill="#07060c" rx="1"/><path d="M50 118 L250 118" stroke="#141424" stroke-width="1.2" stroke-opacity=".5"/><line x1="50" y1="52" x2="50" y2="118" stroke="#141424" stroke-width="1.2" stroke-opacity=".5"/><text x="62" y="150" font-size="7" fill="#c9a96e" opacity=".22">Ninety-two years of sky.</text></svg>`
+};
+
+const EVENTS = [
+  // =========================================================
+  //  INFANCY  (0–5)
+  // =========================================================
+  {
+    id:'inf_1', age:1, stage:'infancy',
+    title:'Your First Year',
+    description:'You are one year old. You don\'t understand language yet, but you feel everything with crystalline clarity — warmth, cold, comfort, fear. The environment you grow up in will shape your brain for the rest of your life. Neurons are forming at 700 per second. What is your earliest world like?',
+    choices:[
+      {
+        text:'A warm, attentive home. Parents who respond quickly, read to you, sing you songs.',
+        effects:{health:12,happiness:15,relationships:12,intelligence:8,wealth:0},
+        outcome:'Secure attachment forms like a foundation poured in concrete. You grow up feeling fundamentally safe in the world — a gift most people never know they\'re missing. This will sustain you through storms you can\'t yet imagine.'
+      },
+      {
+        text:'A busy household. Working parents, grandparents helping, constant activity.',
+        effects:{health:5,happiness:3,relationships:2,intelligence:6,wealth:5},
+        outcome:'You become adaptable early, comfortable with different caregivers and situations. The constant motion of the house means you\'re never bored, but sometimes you reach for arms that aren\'t there.'
+      },
+      {
+        text:'A difficult home. Financial stress, occasional neglect, raised voices after midnight.',
+        effects:{health:-8,happiness:-15,relationships:-10,intelligence:3,wealth:0},
+        outcome:'Your nervous system learns vigilance. Stress hormones flood a brain too small to process them. You can\'t remember this time, but your body will. Resilience, however, grows fiercest in rocky soil.'
+      }
+    ]
+  },
+  {
+    id:'inf_2', age:3, stage:'infancy',
+    title:'The Question of Daycare',
+    description:'You are three years old, and the world has become a place of terrifying wonder. You\'ve started saying "why" to everything. Your parents face a decision about your days — a decision that will shape your social development more than they realize.',
+    choices:[
+      {
+        text:'Full-time daycare with other children. Chaos, laughter, germs, friendship.',
+        effects:{health:-3,happiness:5,relationships:14,intelligence:5,wealth:0},
+        outcome:'You get sick constantly at first — twelve colds your first year. But your immune system hardens, and so does your social confidence. You learn to share, to fight, to forgive. You learn that other people exist.'
+      },
+      {
+        text:'Home with a parent. One-on-one attention, structured learning, story time.',
+        effects:{health:5,happiness:8,relationships:-5,intelligence:12,wealth:0},
+        outcome:'Your vocabulary grows at double the average rate. You have an almost unsettling depth of conversation for a three-year-old. But walking into a room full of children your age feels like stepping into a foreign country.'
+      },
+      {
+        text:'Part-time care, part-time home. A compromise.',
+        effects:{health:3,happiness:6,relationships:6,intelligence:7,wealth:0},
+        outcome:'Balance proves its worth early. You get the social exposure without overwhelm, the focused attention without isolation. Your development is steady, unremarkable, and quietly strong.'
+      }
+    ]
+  },
+  {
+    id:'inf_3', age:5, stage:'infancy',
+    title:'A Question of Character',
+    description:'You are five years old. You\'ve just watched an older kid rip a toy from a smaller child in the park. The little one is crying. The adults are talking and haven\'t noticed. Something stirs in you for the first time — a choice between comfort and action.',
+    choices:[
+      {
+        text:'Walk over and offer the crying child your own toy.',
+        effects:{happiness:10,relationships:12,health:0,intelligence:3,wealth:0},
+        outcome:'The child stops crying and looks at you with pure, uncomplicated gratitude. You feel something warm spread through your chest. You don\'t have a word for it yet. Decades later, this feeling will still be the thing you chase.'
+      },
+      {
+        text:'Tell an adult what happened.',
+        effects:{happiness:5,relationships:5,intelligence:8,health:0,wealth:0},
+        outcome:'The adult handles it, which is the right thing, probably. But some part of you wished you\'d done it yourself. You learn early to work through systems. Not always the most satisfying path, but often the most effective.'
+      },
+      {
+        text:'Look away. It\'s not your problem, and you don\'t want trouble.',
+        effects:{happiness:-5,relationships:-5,intelligence:5,health:0,wealth:0},
+        outcome:'You go back to your own play. The crying fades. But something small and uncomfortable stays with you — the first time you chose comfort over courage. It won\'t be the last.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  CHILDHOOD  (6–12)
+  // =========================================================
+  {
+    id:'chi_1', age:6, stage:'childhood',
+    title:'First Day of School',
+    description:'September. A new backpack, stiff and chemical-smelling. Thirty strangers your age arranged in rows, looking just as terrified as you feel. The teacher has kind eyes and a ruler. This single room will be your whole world for the next year. Who do you decide to be?',
+    choices:[
+      {
+        text:'Launch yourself at the nearest kid with wild, desperate friendliness.',
+        effects:{happiness:12,relationships:18,intelligence:-3,health:0,wealth:0},
+        outcome:'By October, you know everyone\'s name, their pets, their parents\' jobs, their fears. You become the social center of the class almost by accident. Some of those connections will outlast everything else.'
+      },
+      {
+        text:'Find a corner, watch, listen. Learn the terrain before you act.',
+        effects:{happiness:-3,relationships:-5,intelligence:14,health:0,wealth:0},
+        outcome:'You\'re the one who notices things. Who\'s kind, who\'s cruel, who pretends. By winter, your assessments of people are nearly always right. You make fewer friends, but the ones you make are real.'
+      },
+      {
+        text:'Focus on impressing the teacher. Answer every question. Ace every test.',
+        effects:{happiness:5,relationships:-8,intelligence:16,health:0,wealth:0},
+        outcome:'The teacher loves you. Your classmates have a less charitable assessment. You learn early that excellence and popularity are rarely achieved simultaneously, and you\'ve already made your choice.'
+      }
+    ]
+  },
+  {
+    id:'chi_2', age:8, stage:'childhood',
+    title:'The Bully',
+    description:'There\'s a kid who makes your school days a slow, grinding dread. Not bruises — nothing you could explain to an adult. Just words, just laughter, just that particular look that says you are less than. Today it happens again in the lunch line, and everyone is watching.',
+    choices:[
+      {
+        text:'Snap back. Say the sharp thing you\'ve been rehearsing for weeks.',
+        effects:{happiness:10,relationships:5,health:0,intelligence:3,wealth:0},
+        outcome:'The laughs turn uncertain. The bully backs off — not forever, but enough to matter. You discover something important: the courage to defend yourself, used once, becomes easier to access ever after.'
+      },
+      {
+        text:'Say nothing. Eat your lunch. Wait it out.',
+        effects:{happiness:-12,relationships:-5,health:-5,intelligence:5,wealth:0},
+        outcome:'You become invisible, which is exactly what you wanted. The bullying continues but slides past you more easily. You\'re developing a tolerance for cruelty that will serve you — and haunt you — in equal measure.'
+      },
+      {
+        text:'Tell a teacher or parent, even knowing it might make things worse.',
+        effects:{happiness:3,relationships:3,health:5,intelligence:8,wealth:0},
+        outcome:'It gets worse for two weeks, then stops. The intervention works, eventually. You learn that asking for help isn\'t weakness, even when it feels like it. This lesson will take years to fully integrate.'
+      }
+    ]
+  },
+  {
+    id:'chi_3', age:9, stage:'childhood',
+    title:'A Hobby Appears',
+    description:'Something has caught you. You can\'t explain why, but you find yourself returning to it again and again — a library corner, a field, a garage full of your grandfather\'s old tools. Your parents notice. They can make time for this, or they can\'t.',
+    choices:[
+      {
+        text:'You\'re drawn to reading. Devouring books faster than the library can supply them.',
+        effects:{happiness:8,intelligence:18,relationships:-5,health:0,wealth:0},
+        outcome:'You build an interior world so rich and strange that the exterior one sometimes feels like a lesser copy. Words become your native language. You will always feel slightly foreign everywhere except inside a book.'
+      },
+      {
+        text:'Sports. The smell of cut grass, the clarity of a body that knows what to do.',
+        effects:{happiness:10,health:15,relationships:12,intelligence:0,wealth:0},
+        outcome:'Your body becomes something you understand and trust. The team teaches you things about loyalty and failure that no classroom can. You sleep deeply and wake easily. For a decade, this will be the best part of your life.'
+      },
+      {
+        text:'Art — drawing, building, making things that didn\'t exist before you touched them.',
+        effects:{happiness:14,intelligence:10,relationships:3,health:3,wealth:0},
+        outcome:'You discover that creation is the closest feeling to control that a child can have. Your room fills with unfinished projects. Some of the things you make are genuinely beautiful. You will always need to be making something.'
+      }
+    ]
+  },
+  {
+    id:'chi_4', age:11, stage:'childhood',
+    title:'Something Cracks at Home',
+    description:'For months there have been signs — hushed arguments, a parent coming home later than before, the particular silence of a house holding its breath. Tonight you overhear something that confirms it. Your parents\' marriage is in trouble. You are eleven years old and shouldn\'t know this.',
+    choices:[
+      {
+        text:'Pretend you didn\'t hear. Be the best possible child. Maybe it helps.',
+        effects:{happiness:-10,relationships:-5,health:-8,intelligence:5,wealth:0},
+        outcome:'You become so careful, so quiet, so perfect that you nearly disappear. The marriage doesn\'t improve, but you shrink yourself enough that it feels like your fault less often. You learn to carry things alone. This will cost you later.'
+      },
+      {
+        text:'Talk to a trusted adult outside the family — a teacher, an aunt.',
+        effects:{happiness:5,relationships:8,health:5,intelligence:5,wealth:0},
+        outcome:'They can\'t fix it, but they listen in a way that makes the weight shareable. You learn that problems spoken out loud are always smaller than problems inside your head. This, too, will take years to fully trust.'
+      },
+      {
+        text:'Pour the feelings into something — your hobby, a journal, a friend.',
+        effects:{happiness:7,relationships:5,health:3,intelligence:8,wealth:0},
+        outcome:'Art or words or friendship becomes a container for something that had no container. You process more than you realize. When you look back at this time as an adult, you\'ll be quietly proud of the kid who found a way through.'
+      }
+    ]
+  },
+  {
+    id:'chi_5', age:12, stage:'childhood',
+    title:'The Last Summer',
+    description:'You are twelve. In three months, you start middle school. Something in you knows, with the particular animal intelligence of a child, that this is the last summer of something. The last summer of pure, uncomplicated play. How do you spend it?',
+    choices:[
+      {
+        text:'Completely, recklessly outside. Sunburned and dirty and free until dark.',
+        effects:{happiness:18,health:10,relationships:10,intelligence:0,wealth:0},
+        outcome:'You spend the summer memorizing the sensation of your own body in motion — running, climbing, swimming, falling. These memories will surface thirty years later on a bad night and remind you who you are underneath everything.'
+      },
+      {
+        text:'Diving into books, movies, music — discovering the culture that will define your taste.',
+        effects:{happiness:12,intelligence:12,relationships:0,health:0,wealth:0},
+        outcome:'You find the artists who seem to have lived inside your head. You develop opinions, a sensibility, an inner aesthetic you will spend the rest of your life refining. Sophistication arrives unexpectedly early.'
+      },
+      {
+        text:'Getting a small summer job — mowing lawns, babysitting. Your first dollar earned.',
+        effects:{happiness:5,wealth:12,intelligence:8,relationships:5,health:3},
+        outcome:'The weight of earned money in your pocket feels entirely different from given money. You learn that you can produce value in the world. This seed of economic confidence will compound for decades.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  TEEN  (13–17)
+  // =========================================================
+  {
+    id:'teen_1', age:13, stage:'teen',
+    title:'The First Party',
+    description:'A Friday night. Your body has become a stranger\'s — larger, louder, betraying you at random intervals. You\'ve been invited to a party where you know there will be alcohol, and possibly other things. The host is exactly the kind of person you want to impress. Your parents don\'t know.',
+    choices:[
+      {
+        text:'Go. Have one drink to take the edge off. Navigate it.',
+        effects:{happiness:8,relationships:12,health:-5,intelligence:3,wealth:0},
+        outcome:'The drink tastes like poison, but the feeling after it is electric. You talk to people you\'ve never talked to. You laugh at nothing. For one night, your skin feels like it fits. The cost is small. This time.'
+      },
+      {
+        text:'Go, stay sober, watch. The social anthropology is fascinating.',
+        effects:{happiness:5,relationships:5,intelligence:12,health:5,wealth:0},
+        outcome:'You see everything — who gets mean, who gets sad, who pretends to be drunker than they are. You\'re the person who holds the cup but never drinks it. People begin to trust you with secrets. This has its own intoxication.'
+      },
+      {
+        text:'Don\'t go. You\'re not ready, and you know it. That\'s enough.',
+        effects:{happiness:-5,relationships:-8,intelligence:8,health:8,wealth:0},
+        outcome:'You spend the night alone, certain you\'re missing something essential. Monday at school, you hear about what happened. You weren\'t missing anything essential. The people who actually needed you weren\'t at that party anyway.'
+      }
+    ]
+  },
+  {
+    id:'teen_2', age:14, stage:'teen',
+    title:'Grades',
+    description:'Your first report card that actually matters — the one that goes in a permanent file. Your grades are exactly as you expected, which is either good or bad depending on what you\'ve been doing with your time. A teacher pulls you aside: "I think you\'re capable of more." What do you do with that?',
+    choices:[
+      {
+        text:'Lean into it. Start studying seriously. Show everyone what you\'re actually capable of.',
+        effects:{happiness:5,intelligence:18,relationships:-5,wealth:5,health:0},
+        outcome:'The grades come. Slowly at first, then with a sudden, satisfying click. You discover that intelligence isn\'t a fixed thing — it\'s something you can build. This realization will shape how you approach failure for the rest of your life.'
+      },
+      {
+        text:'Maintain solid but not exceptional grades. Preserve time for everything else.',
+        effects:{happiness:8,intelligence:8,relationships:8,wealth:3,health:3},
+        outcome:'Balance is harder than excellence, actually. You have to consciously choose it every day against the pressure to optimize. But you arrive at high school a more complete person than the kids who only ever studied.'
+      },
+      {
+        text:'The grades slide. Other things feel more urgent, more real.',
+        effects:{happiness:3,intelligence:-5,relationships:10,wealth:-5,health:5},
+        outcome:'You\'re living fully, just not academically. Some of what you learn this way — about people, about yourself — can\'t be taught in a classroom. But doors are quietly closing. You\'ll find them later, locked, and wonder.'
+      }
+    ]
+  },
+  {
+    id:'teen_3', age:15, stage:'teen',
+    title:'First Love',
+    description:'It happened the way it always does — suddenly and completely, like falling asleep. A person in your orbit who used to be just a person has become the gravitational center of your entire universe. Every song is about them. Every spare moment is occupied by their face. They might feel the same way. Or they might not.',
+    choices:[
+      {
+        text:'Tell them. Directly, terrifyingly, in plain words.',
+        effects:{happiness:15,relationships:15,health:3,intelligence:5,wealth:0},
+        outcome:'They feel the same. The next eight months are the most intensely alive you\'ve felt — and might ever feel again. Even when it ends, as first loves always end, you carry something from it that doesn\'t corrode.'
+      },
+      {
+        text:'Tell them. And they don\'t feel the same.',
+        effects:{happiness:-15,relationships:5,intelligence:10,health:-5,wealth:0},
+        outcome:'The rejection is physical — like something moved out of your chest and left the space raw. But you said the brave thing. And you\'ll do it again someday, with the confidence of someone who\'s already survived the worst.'
+      },
+      {
+        text:'Say nothing. Love them from a distance that\'s safe enough to bear.',
+        effects:{happiness:-8,relationships:-5,intelligence:5,health:-3,wealth:0},
+        outcome:'They start dating someone else by spring. The ache is different from rejection — longer, quieter, laced with what-ifs. You write terrible poetry that you will be grateful no one ever finds. You resolve to be braver next time.'
+      }
+    ]
+  },
+  {
+    id:'teen_4', age:16, stage:'teen',
+    title:'The Road',
+    description:'You have your driver\'s license and access to a car. One night, driving home after midnight from something you probably shouldn\'t have been at, your phone buzzes. For a fraction of a second, you reach for it.',
+    choices:[
+      {
+        text:'Ignore it. Eyes on the road. It can wait.',
+        effects:{happiness:5,health:15,intelligence:8,relationships:0,wealth:0},
+        outcome:'Nothing happens. Nothing happened because of a choice so small it barely registers. You arrive home safely, set your phone on the nightstand, and go to sleep. Some of the most important moments of your life are the disasters that don\'t occur.'
+      },
+      {
+        text:'Glance at it. Just a glance.',
+        effects:{happiness:-5,health:-20,intelligence:-5,relationships:-5,wealth:-10},
+        outcome:'You drift. The correction is violent. You clip a mailbox, scrape a parked car. No one is hurt, but the insurance, the call to your parents at 1am, the shaking hands — you will remember this every time you drive for the next decade.'
+      },
+      {
+        text:'Pull over completely to check the phone, then keep driving.',
+        effects:{happiness:3,health:10,intelligence:10,relationships:0,wealth:0},
+        outcome:'The three minutes you lose mean nothing. The habit you build — of choosing patience over urgency — means everything. Wisdom, at sixteen, is mostly just common sense acted on. You\'re learning to act on it.'
+      }
+    ]
+  },
+  {
+    id:'teen_5', age:17, stage:'teen',
+    title:'The Next Chapter',
+    description:'College applications, entrance exams, the weight of futures not yet chosen pressing against the present. Everyone seems to have a plan. You\'re trying to find the shape of a life that doesn\'t exist yet. What matters most to you in this decision?',
+    choices:[
+      {
+        text:'Academic excellence. Top school, student loans if needed. Go where the doors open.',
+        effects:{happiness:5,intelligence:18,wealth:-10,relationships:0,health:-3},
+        outcome:'Accepted. The debt is real and will be real for a long time. But the credential opens doors that would otherwise require a decade of side entrances. You bet on yourself. The odds are better than they look.'
+      },
+      {
+        text:'Practical path. State school, affordable, close to home.',
+        effects:{happiness:8,intelligence:10,wealth:8,relationships:8,health:5},
+        outcome:'You graduate without debt. Your friends from home are still close. The education is real — maybe less prestigious, but real. You enter your twenties with fewer obligations and more options than you expected.'
+      },
+      {
+        text:'Skip college. Work, travel, figure it out from the inside.',
+        effects:{happiness:12,intelligence:8,wealth:-5,relationships:5,health:8},
+        outcome:'You learn differently — faster in some ways, slower in others. The world is a rougher teacher than a professor, but also more honest. Some doors close. Others, unexpected ones, swing open. Your path will be unusual. Unusual isn\'t the same as wrong.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  YOUNG ADULT  (18–25)
+  // =========================================================
+  {
+    id:'ya_1', age:19, stage:'young-adult',
+    title:'Money & Rent',
+    description:'You\'re on your own for the first time, or close to it. The numbers don\'t quite work — they never do at first. Groceries, utilities, rent or tuition, the creeping terror of an empty bank account three days before the month ends. A financial choice faces you early.',
+    choices:[
+      {
+        text:'Get a part-time job and build discipline around a tight budget.',
+        effects:{happiness:-5,wealth:15,intelligence:8,relationships:0,health:-3},
+        outcome:'You eat a lot of pasta. You learn every trick — the manager\'s special, the library instead of the bookstore, free events instead of bars. You graduate from this period with a bone-deep understanding of money\'s actual weight.'
+      },
+      {
+        text:'Take on more debt/rely on family. Focus entirely on academics or career.',
+        effects:{happiness:5,wealth:-10,intelligence:12,relationships:5,health:5},
+        outcome:'The investment pays off in credentials and connections. The debt is real. You\'ll be paying it for years while friends who took the other path have equity on houses. The trade-offs of early life are long and slow to resolve.'
+      },
+      {
+        text:'Start a small hustle — freelance, selling things, a side income.',
+        effects:{happiness:8,wealth:12,intelligence:12,relationships:-5,health:-5},
+        outcome:'The first time a stranger pays you for something you made, something shifts permanently. You become someone who makes things happen rather than waits for them. This entrepreneurial instinct will compound for decades.'
+      }
+    ]
+  },
+  {
+    id:'ya_2', age:20, stage:'young-adult',
+    title:'A Dark Season',
+    description:'Something heavy has settled over you. It started gradually — sleeping too much, or not enough. Eating nothing or everything. The things you used to love feeling flat and far away. You\'re not sure if this is a rough patch or something else. Someone notices and asks if you\'re okay.',
+    choices:[
+      {
+        text:'Be honest. "No, actually. I\'m not okay." Seek help — therapy, a doctor.',
+        effects:{happiness:10,health:18,relationships:8,intelligence:5,wealth:-5},
+        outcome:'The therapist\'s office smells like neutral carpet and tissues. It takes three sessions before it feels like anything other than performance. By the fifth, something real happens. You learn to understand your own mind. This changes everything.'
+      },
+      {
+        text:'White-knuckle through it. Push harder. Stay busy enough not to think.',
+        effects:{happiness:-10,health:-15,intelligence:5,relationships:-8,wealth:5},
+        outcome:'You survive it, the way you survive things by not looking directly at them. But the root is still there. It will grow back. The hard thing you refused to deal with at twenty will be harder at thirty, and harder still at forty.'
+      },
+      {
+        text:'Confide in someone you trust. Let them help you carry it.',
+        effects:{happiness:8,health:10,relationships:18,intelligence:5,wealth:0},
+        outcome:'They sit with you for three hours one night and say almost nothing that helps, but being witnessed is enough. You understand for the first time that love is presence, not solution. You will love the people in your life differently because of this.'
+      }
+    ]
+  },
+  {
+    id:'ya_3', age:22, stage:'young-adult',
+    title:'First Real Relationship',
+    description:'You\'re two years in with someone. Not a teenager crush — a real relationship with real history, real disagreements, real intimacy. It\'s complicated in ways you didn\'t anticipate, and you have a choice to make about where this goes.',
+    choices:[
+      {
+        text:'Commit deeper. Move in together. Build something real, even if it\'s frightening.',
+        effects:{happiness:12,relationships:18,wealth:-5,health:0,intelligence:3},
+        outcome:'The first year of living together teaches you more about yourself than the previous twenty-two combined. Not everything is compatible. Not everything survives. But what does survive becomes the strongest thing in your life.'
+      },
+      {
+        text:'End it honestly. This person is good, but not right for you.',
+        effects:{happiness:-8,relationships:5,health:5,intelligence:10,wealth:5},
+        outcome:'The conversation is hard and long and ends with both of you crying. You spend two months in a particular kind of grief — mourning not a person, but a possible future. Then you wake up one day and feel, unmistakably, free.'
+      },
+      {
+        text:'Stay, but stop investing. Drift in a comfortable nothing.',
+        effects:{happiness:-12,relationships:-15,health:-5,intelligence:0,wealth:0},
+        outcome:'You don\'t hurt each other actively. You just slowly stop feeding the connection until it starves. You part after another year without a climactic moment, just a quiet accumulation of absences. This kind of ending is the most common. It is also the most regrettable.'
+      }
+    ]
+  },
+  {
+    id:'ya_4', age:24, stage:'young-adult',
+    title:'Health Scare',
+    description:'A routine checkup reveals something that requires more tests. For two weeks, you sit with a possible diagnosis that reframes everything — your plans, your priorities, the casual assumption of future time. Then the results come back.',
+    choices:[
+      {
+        text:'The news is good. False alarm. You walk out of the clinic into ordinary daylight.',
+        effects:{happiness:15,health:8,relationships:5,intelligence:8,wealth:-3},
+        outcome:'The world looks different for a month — more vivid, more specific, more precious. Then it slowly returns to normal. But some residue stays: you floss your teeth more consistently. You call your parents. You stop postponing things that actually matter.'
+      },
+      {
+        text:'The news is manageable. Something to monitor, to treat, to live with.',
+        effects:{happiness:-5,health:-10,relationships:5,intelligence:10,wealth:-8},
+        outcome:'You learn to negotiate with your body instead of ignoring it. The diagnosis becomes part of your identity — not the whole of it, but a real piece. You become, over time, someone who takes health seriously because they know it can be taken.'
+      },
+      {
+        text:'You avoid the follow-up appointment. You don\'t want to know.',
+        effects:{happiness:-8,health:-18,relationships:-3,intelligence:-3,wealth:0},
+        outcome:'The not-knowing has its own weight, heavier than knowledge usually is. Three years later, the same symptom appears worse. By then the intervention is harder. The thing you were afraid to face grew in the dark while you looked away.'
+      }
+    ]
+  },
+  {
+    id:'ya_5', age:25, stage:'young-adult',
+    title:'The Quarter-Life Crisis',
+    description:'You are twenty-five. The life you imagined having by now doesn\'t match the life you actually have. This is normal, but it doesn\'t feel normal — it feels like evidence of something broken. What do you do with the gap between who you are and who you thought you\'d be?',
+    choices:[
+      {
+        text:'Radically change course. New city, new career, new people. Burn it down, start fresh.',
+        effects:{happiness:10,wealth:-10,relationships:-8,intelligence:8,health:3},
+        outcome:'The chaos is real and the loss is real, but so is the relief of momentum. You discover that the self you were afraid to lose was mostly a costume. The self underneath is more interesting. The new city doesn\'t fix anything. It clarifies everything.'
+      },
+      {
+        text:'Commit harder to where you are. Stop looking at the exits.',
+        effects:{happiness:5,wealth:10,relationships:10,intelligence:5,health:5},
+        outcome:'Depth over breadth turns out to be its own kind of adventure. The grass elsewhere is photographable but not livable. You stop auditioning other lives and begin, slowly, to inhabit your own. This is harder than it sounds.'
+      },
+      {
+        text:'Give it time. Travel if you can. Read. Think. Don\'t make permanent decisions in a temporary feeling.',
+        effects:{happiness:12,wealth:-5,relationships:5,intelligence:15,health:8},
+        outcome:'The world turns out to be large and strange and specific in ways that reset your sense of proportion. You return — or stay — with a wider context for your own small life. The restlessness doesn\'t disappear. It becomes useful.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  ADULT  (26–40)
+  // =========================================================
+  {
+    id:'ad_1', age:28, stage:'adult',
+    title:'Career Crossroads',
+    description:'A significant opportunity arrives: a promotion that means more money but longer hours and less of yourself. Or a new company that\'s riskier but closer to the work you actually want to do. Your current position is comfortable. All three options are real. None is obviously right.',
+    choices:[
+      {
+        text:'Take the promotion. Security, money, status. Build from the inside.',
+        effects:{happiness:3,wealth:20,relationships:-8,health:-8,intelligence:8},
+        outcome:'The money is real and changes your daily texture in ways that matter — the neighborhood you can afford, the vacations, the absence of financial anxiety at 3am. The costs are subtler: less time, more compromise, a self slightly sanded down.'
+      },
+      {
+        text:'Jump to the new company. Higher risk, higher alignment.',
+        effects:{happiness:12,wealth:5,relationships:3,health:3,intelligence:12},
+        outcome:'The first six months are terror and exhilaration in equal measure. The work is harder and more visible and more yours. You grow faster here than you would have stayed comfortable somewhere else. The paycheck catches up eventually.'
+      },
+      {
+        text:'Stay where you are. There\'s still more to extract from this position.',
+        effects:{happiness:0,wealth:8,relationships:8,health:5,intelligence:5},
+        outcome:'The choice not to choose is still a choice. You spend another three years here, going deeper rather than wider. What you build in this time — expertise, relationships, institutional knowledge — has real value. It\'s just harder to see.'
+      }
+    ]
+  },
+  {
+    id:'ad_2', age:30, stage:'adult',
+    title:'The Question of Marriage',
+    description:'You\'ve been with someone for three years, and the word "forever" has started appearing in conversations — sometimes directly, sometimes in the way they talk about the future using "we." You love them. But love and forever are different questions.',
+    choices:[
+      {
+        text:'Yes. Say yes. Build a life together.',
+        effects:{happiness:18,relationships:22,wealth:-5,health:5,intelligence:3},
+        outcome:'The wedding is smaller than you imagined and more emotional. The marriage is harder than you imagined and more sustaining. You become, over years, each other\'s primary witness — someone who knows the unedited version of your life. This is rarer than it sounds.'
+      },
+      {
+        text:'Not yet. You love them, but you\'re not ready. Say that honestly.',
+        effects:{happiness:5,relationships:-5,wealth:5,health:3,intelligence:8},
+        outcome:'They accept this, or they don\'t. If they stay, you figure it out. If they leave, you mourn and eventually understand they were right to. The honesty was the right thing regardless of the outcome. Timing matters. So does truth.'
+      },
+      {
+        text:'This isn\'t the right person. End it now, before it goes further.',
+        effects:{happiness:-8,relationships:-10,wealth:5,health:5,intelligence:10},
+        outcome:'The ending is terrible. Long and specific and laced with the particular cruelty of choosing to hurt someone you care for. Three years later, you meet someone who makes you understand why you made this choice. It was worth it.'
+      }
+    ]
+  },
+  {
+    id:'ad_3', age:32, stage:'adult',
+    title:'Children',
+    description:'The question has become inescapable. Some of your friends are on their second. Others are resolved to never. You exist somewhere in the middle — wanting and fearing in almost exactly equal measure. The window is not infinite, and you both know it.',
+    choices:[
+      {
+        text:'Yes. Start trying. All the fear and all the wanting both.',
+        effects:{happiness:15,relationships:18,wealth:-15,health:-5,intelligence:0},
+        outcome:'The first months are a study in patience and grief and hope cycling with disorienting speed. Then positive. Then birth — the most violent and sacred thing you have ever witnessed or survived. You become someone\'s whole world overnight. You are entirely unprepared. You manage anyway.'
+      },
+      {
+        text:'Not biological, but consider adoption or fostering.',
+        effects:{happiness:12,relationships:15,wealth:-10,health:5,intelligence:8},
+        outcome:'The process is long and bureaucratic and occasionally maddening. The child who arrives — whatever age, whatever history — needs everything you have. Giving it changes you in ways you didn\'t know you needed to be changed. Family, you learn, is built more than born.'
+      },
+      {
+        text:'Choose a child-free life. Deliberately, fully, without apology.',
+        effects:{happiness:10,relationships:5,wealth:15,health:8,intelligence:10},
+        outcome:'You invest the energy and resources elsewhere — in each other, in work, in the world. The choice is still questioned by everyone until about forty-five, and then stops being questioned. The life you build is genuinely full. Fullness doesn\'t require children. It requires intention.'
+      }
+    ]
+  },
+  {
+    id:'ad_4', age:35, stage:'adult',
+    title:'A Parent\'s Decline',
+    description:'Your mother or father has been struggling. At first it was small things — forgetting appointments, needing rides. Now it\'s more. The parent who was once your whole sky is becoming smaller and more dependent. Decisions must be made about care, money, time.',
+    choices:[
+      {
+        text:'Move them in. Become their primary caregiver. Be present for every hard thing.',
+        effects:{happiness:-8,relationships:15,health:-10,wealth:-10,intelligence:5},
+        outcome:'The hardest thing you ever do is watch someone you love become a different person, and love them anyway in the new form. The two years you give them are real years — imperfect and exhausting and sometimes beautiful. When it ends, you have no regrets. That matters more than you expected.'
+      },
+      {
+        text:'Research and fund quality care. Visit regularly. Be their advocate, not their nurse.',
+        effects:{happiness:3,relationships:8,health:3,wealth:-15,intelligence:5},
+        outcome:'The facility is good, chosen with care. The guilt comes anyway, reliable as weather. But you can\'t pour from an empty cup, and the decision lets you remain present without being destroyed. This is not abandonment. It is competence in the face of limitation.'
+      },
+      {
+        text:'Work with siblings to share the load. No single person holds everything.',
+        effects:{happiness:5,relationships:12,health:5,wealth:-8,intelligence:8},
+        outcome:'The sibling negotiations are hard — old wounds and old roles surfacing at the worst possible time. But something else also surfaces: the deep, animal comfort of people who knew you before you knew yourself. Family, in crisis, often becomes what it was supposed to be all along.'
+      }
+    ]
+  },
+  {
+    id:'ad_5', age:38, stage:'adult',
+    title:'Marriage Strain',
+    description:'Fourteen years in, something has gone quiet between you. Not hostile — just absent. The conversations feel scripted. The intimacy has become occasional and perfunctory. Your partner feels this too. You can see it in the careful politeness, which is its own kind of distance.',
+    choices:[
+      {
+        text:'Name it directly. "We\'ve drifted. I don\'t want to keep drifting." Start counseling.',
+        effects:{happiness:8,relationships:18,health:5,intelligence:10,wealth:-5},
+        outcome:'The therapist says things that are obvious and still somehow revelatory. You fight in session in a way you wouldn\'t at home, with the structure of a witness, and something cracks open that was sealed. It takes a year. It is worth every session.'
+      },
+      {
+        text:'Invest in the relationship unilaterally. Plan something, initiate something, be present.',
+        effects:{happiness:5,relationships:12,health:3,intelligence:5,wealth:-3},
+        outcome:'The first few attempts feel artificial, and they are. Then something shifts — they start showing up too. You remember why you chose each other. The drift reverses slowly, the way it started. The quiet becomes comfortable again rather than hollow.'
+      },
+      {
+        text:'Acknowledge privately that this isn\'t working. Start thinking about what\'s next.',
+        effects:{happiness:-10,relationships:-18,health:-8,intelligence:5,wealth:-10},
+        outcome:'The divorce is civil and is still one of the hardest things you\'ll survive. You become someone who lives in an apartment and picks up the kids on weekends. The loss reshapes you entirely. Some of what emerges from the reshaping is better. The cost is real regardless.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  MIDDLE AGE  (41–60)
+  // =========================================================
+  {
+    id:'ma_1', age:43, stage:'middle-age',
+    title:'The Body\'s First Invoice',
+    description:'Your doctor uses the word "concerning" about a test result. Blood pressure, cholesterol, blood sugar — the body has been keeping records you ignored, and now it\'s presenting the bill. You\'re forty-three. Your parents\' health at your age is not reassuring.',
+    choices:[
+      {
+        text:'Overhaul everything. Diet, exercise, sleep. Treat your body like an asset finally.',
+        effects:{happiness:8,health:22,relationships:3,intelligence:8,wealth:-5},
+        outcome:'The first month is misery. The third month is routine. The sixth month is transformation — you feel twenty years younger in a body that is finally being maintained properly. The doctor\'s expression at the next checkup tells you everything.'
+      },
+      {
+        text:'Make the medication changes but resist the lifestyle changes.',
+        effects:{happiness:3,health:8,relationships:0,intelligence:3,wealth:-5},
+        outcome:'The numbers improve on paper. The underlying causes remain. You\'re treating the dashboard warning light by disconnecting the wire. This buys time but not health. The invoice will come again.'
+      },
+      {
+        text:'Ignore it. You feel fine. You\'ve always felt fine.',
+        effects:{happiness:0,health:-20,relationships:-3,intelligence:-3,wealth:0},
+        outcome:'You feel fine until you don\'t. The event — a minor stroke, a cardiac episode, a hospitalization — arrives at fifty-one with a specificity that rearranges everything. You wish, with precise and lasting clarity, that you had listened at forty-three.'
+      }
+    ]
+  },
+  {
+    id:'ma_2', age:47, stage:'middle-age',
+    title:'The Pivot',
+    description:'You\'ve spent twenty years in a career that has provided and constrained in roughly equal measure. An opportunity arrives — unplanned, genuinely exciting, requiring a significant sacrifice. You are forty-seven. The risk tolerance equation has changed.',
+    choices:[
+      {
+        text:'Take the leap. You have enough saved. You\'ll regret not trying more than failing.',
+        effects:{happiness:14,wealth:-8,intelligence:15,relationships:5,health:5},
+        outcome:'The first year is the hardest of your professional life. So is the payoff, when it comes. You build something you\'re proud of from a vantage point — expertise, clarity, self-knowledge — that younger people can\'t access yet. Midlife pivots are underrated.'
+      },
+      {
+        text:'Decline. Stay the course. Your responsibilities are real and the risk is real.',
+        effects:{happiness:-5,wealth:12,intelligence:3,relationships:3,health:0},
+        outcome:'You make the responsible choice, and it provides, and you resent it quietly for a few years, and then the resentment fades and the provision remains. Life is mostly this: choosing between various forms of loss, and learning to live with the choice.'
+      },
+      {
+        text:'Negotiate a middle path. Half-time on the old, part-time on the new.',
+        effects:{happiness:8,wealth:5,intelligence:10,relationships:0,health:-5},
+        outcome:'You are tired constantly for three years. You are also, during that time, fully alive in a way you\'d forgotten was possible. The split eventually resolves — the new work takes over, or it doesn\'t. Either way, you didn\'t do nothing. That matters.'
+      }
+    ]
+  },
+  {
+    id:'ma_3', age:50, stage:'middle-age',
+    title:'Losing a Parent',
+    description:'The call came in the morning. The parent you\'ve been watching decline — or the one you thought you\'d have more time with — is gone. You stand in the hospital corridor or kitchen or parking lot at fifty years old, and you are, suddenly, not anyone\'s child anymore.',
+    choices:[
+      {
+        text:'Let yourself grieve fully. Take time. Allow the enormity of it.',
+        effects:{happiness:-10,health:10,relationships:10,intelligence:8,wealth:0},
+        outcome:'Grief done honestly moves through you instead of inhabiting you. You cry at unpredictable things for a year — a song, their handwriting on an envelope you find. And then, slowly, what was heavy becomes something else: a permanent tenderness for the fact of their life.'
+      },
+      {
+        text:'Hold the family together. Plan the service. Handle the estate. Be strong.',
+        effects:{happiness:-15,health:-10,relationships:12,intelligence:5,wealth:5},
+        outcome:'You are strong and it costs you. The grief waits, patient and specific, and surfaces eighteen months later during an ordinary Thursday — their birthday, their favorite show, nothing at all. Grief deferred is not grief avoided. It\'s grief with interest.'
+      },
+      {
+        text:'Reconnect with siblings and family. Make sure this loss draws you together.',
+        effects:{happiness:5,health:3,relationships:18,intelligence:5,wealth:0},
+        outcome:'Something about shared grief breaks down old barriers faster than decades of trying. You find, in the aftermath, that you have siblings in a way you hadn\'t since childhood — people who carry the same DNA-deep memories, who know the same specific version of the person you\'ve lost.'
+      }
+    ]
+  },
+  {
+    id:'ma_4', age:55, stage:'middle-age',
+    title:'Retirement Planning',
+    description:'Fifty-five. The financial planners say you should have had this figured out a decade ago. You have some savings, a vague plan, and a growing awareness that the math doesn\'t yet work the way it needs to. The window for course correction is closing but not closed.',
+    choices:[
+      {
+        text:'Maximize contributions, cut expenses, get a financial advisor. Take it seriously now.',
+        effects:{happiness:3,wealth:20,health:-3,relationships:0,intelligence:8},
+        outcome:'The decade of discipline is unglamorous and effective. You arrive at retirement with enough — not abundant, but secure. The relief of enough is one of the better feelings in adult life. You stop waking at 3am thinking about money. This is underrated luxury.'
+      },
+      {
+        text:'Invest modestly and plan to work past sixty-five. That\'s fine with you.',
+        effects:{happiness:5,wealth:10,health:3,relationships:5,intelligence:5},
+        outcome:'Work longer, worry less about the number. Your identity is partly professional and you like it that way. You\'ll work until your late sixties, part-time in your early seventies. The line between work and retirement blurs in ways that suit you.'
+      },
+      {
+        text:'Ignore it. You\'ll figure it out. You always do.',
+        effects:{happiness:0,wealth:-15,health:-3,relationships:-3,intelligence:-3},
+        outcome:'You don\'t. Or you do, in the narrow sense of surviving, but not in the fuller sense of having options. Retirement becomes not a choice but a capitulation to circumstances. The freedom you wanted turns out to require the planning you skipped.'
+      }
+    ]
+  },
+  {
+    id:'ma_5', age:58, stage:'middle-age',
+    title:'Your Children Leave',
+    description:'The last one is gone now — their room quieter than you expected, their absence a new kind of presence in the house. You and your partner look at each other across a dinner table set for two for the first time in twenty-some years. This is either a loss or an opening.',
+    choices:[
+      {
+        text:'Rediscover each other. Plan things, go places, remember who you were before.',
+        effects:{happiness:18,relationships:18,health:8,wealth:-8,intelligence:5},
+        outcome:'The second marriage — to the same person, after the children — is its own distinct thing. More spacious, more deliberate. You make up for lost dinners, neglected trips, conversations cut short. This phase becomes, unexpectedly, one of the best of your life.'
+      },
+      {
+        text:'Pour yourself into work, hobbies, friends. Find your individual second act.',
+        effects:{happiness:12,relationships:5,wealth:5,intelligence:12,health:8},
+        outcome:'You had things to do that weren\'t about them, and now you do them. A business, a craft, a cause. You become, in your late fifties, someone your younger self would recognize as fully realized. The parallel paths with your partner diverge and then reconnect.'
+      },
+      {
+        text:'Struggle. The house is too quiet. The purpose that organized your life is gone.',
+        effects:{happiness:-10,relationships:-8,health:-10,intelligence:0,wealth:0},
+        outcome:'This is real and common and not a character flaw. The empty nest grief is legitimate. You spend a year being honestly lost before something new begins to take shape. The lost year is not wasted. It\'s the processing fee for a life\'s worth of investment.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  SENIOR  (61–80)
+  // =========================================================
+  {
+    id:'sen_1', age:63, stage:'senior',
+    title:'Retirement',
+    description:'The last day of work arrives — planned or sudden or gradual. The desk is cleared, the card is signed, the party is smaller than you\'d hoped or larger than you needed. You walk out of the building for the last time and into a Monday with nothing scheduled. This is either freedom or void.',
+    choices:[
+      {
+        text:'Structure it. A schedule, projects, commitments. Retirement as a full-time endeavor.',
+        effects:{happiness:14,health:10,relationships:8,intelligence:10,wealth:0},
+        outcome:'You become one of those retired people who seems busier than when they worked. Volunteer board, woodshop, grandchildren twice a week, language classes. The shape of the days is self-designed, which turns out to be both harder and more satisfying than having it handed to you.'
+      },
+      {
+        text:'Decompress first. Let the years of urgency exhale. Nothing scheduled for six months.',
+        effects:{happiness:12,health:15,relationships:5,intelligence:5,wealth:0},
+        outcome:'The first month you sleep more than you have since childhood. Then clarity arrives — slow and seasonal, like spring. You begin to see what you actually want now that you\'ve stopped running toward what you needed. The rest of the list is shorter than expected. Better, too.'
+      },
+      {
+        text:'Struggle with the loss of identity and purpose. This is harder than expected.',
+        effects:{happiness:-8,health:-10,relationships:-5,intelligence:0,wealth:0},
+        outcome:'The work wasn\'t just income — it was scaffolding for your sense of self, and now it\'s gone. The recognition of this is the beginning of addressing it. You spend a year and a half in genuine difficulty before the new identity arrives. It\'s worth waiting for.'
+      }
+    ]
+  },
+  {
+    id:'sen_2', age:66, stage:'senior',
+    title:'Health Renegotiation',
+    description:'Your body at sixty-six is a negotiation rather than a given. A diagnosis has arrived — the kind you manage rather than cure. Arthritis, a heart valve, hearing loss, something requiring ongoing medication and adjustment. The question is what kind of life you build around it.',
+    choices:[
+      {
+        text:'Adapt fully. New exercises, new diet, new specialists. Fight for quality of life.',
+        effects:{happiness:8,health:15,relationships:5,wealth:-8,intelligence:8},
+        outcome:'You become, almost despite yourself, an expert in your own condition. The management becomes routine. You live better inside the limitation than you expected to live, because you stopped pretending the limitation wasn\'t there.'
+      },
+      {
+        text:'Accept gracefully. Scale back, accommodate, find what\'s still possible.',
+        effects:{happiness:5,health:8,relationships:10,intelligence:8,wealth:0},
+        outcome:'Acceptance is not giving up. It\'s accuracy. You find that the smaller circumference of what\'s possible contains more richness than the larger circumference of what used to be. Some of your happiest afternoons are in this quiet time.'
+      },
+      {
+        text:'Resist. Refuse to acknowledge limits. Keep doing everything as before.',
+        effects:{happiness:-3,health:-15,relationships:-5,intelligence:0,wealth:-5},
+        outcome:'The body doesn\'t negotiate. It insists. The fall, the setback, the hospitalization — these arrive because the limits existed whether or not you acknowledged them. Recovery is harder from this place than it needed to be.'
+      }
+    ]
+  },
+  {
+    id:'sen_3', age:70, stage:'senior',
+    title:'The Last Great Trip',
+    description:'You\'ve talked about it for years — the place you always said you\'d go. The window is still open, but you can feel it narrowing. The logistics are more complicated than they were. The question is whether you still want it badly enough to chase it.',
+    choices:[
+      {
+        text:'Go. Book it. Sacrifice something else. This matters more.',
+        effects:{happiness:22,health:5,relationships:12,intelligence:8,wealth:-12},
+        outcome:'Every inconvenience of the trip — the delays, the wrong hotel, the knee that protests the cobblestones — becomes part of the story you tell for the rest of your life. You took the trip. The taking is the thing. You come home more yourself than when you left.'
+      },
+      {
+        text:'Go somewhere closer, more manageable. Still a trip, still intentional.',
+        effects:{happiness:12,health:8,relationships:8,wealth:-5,intelligence:5},
+        outcome:'The destination is less exotic and more perfect than the original plan. You discover that the quality of attention you bring to a place matters more than the place\'s reputation. You see things ten miles from home you\'ve passed a hundred times without seeing.'
+      },
+      {
+        text:'Decide the imagining is enough. Save the money. Stay home.',
+        effects:{happiness:-5,health:3,relationships:0,wealth:8,intelligence:3},
+        outcome:'You keep the picture on the fridge. Sometimes you wonder. The wondering doesn\'t ruin you — you have other things. But at eighty-five, when travel is truly not possible, you\'ll revisit this decision with some regret. Not crippling regret. But real.'
+      }
+    ]
+  },
+  {
+    id:'sen_4', age:74, stage:'senior',
+    title:'Loss',
+    description:'Someone central to your life is gone — a spouse, a best friend of forty years, a sibling. The person who knew your whole story, who carried memories only they still held, who had become as much infrastructure as relationship. The grief at seventy-four is different from grief at thirty.',
+    choices:[
+      {
+        text:'Grieve fully, and then — when ready — let people in. Don\'t close.',
+        effects:{happiness:-8,health:5,relationships:12,intelligence:8,wealth:0},
+        outcome:'You spend months in the acute phase, and then the months after that, and then you notice you\'re still here. You let the grandchildren, the friends, the neighbors into the space that was left. Nothing fills it. But the presence of people gives the space a different quality: inhabited, rather than abandoned.'
+      },
+      {
+        text:'Withdraw. The grief is private and needs to stay that way for a while.',
+        effects:{happiness:-15,health:-12,relationships:-10,intelligence:5,wealth:0},
+        outcome:'The solitude is necessary for a time and too long after that. The world keeps moving while you hold still. Recovery from this particular withdrawal takes longer than it needed to. But you were working in your own way, even when it didn\'t look like work.'
+      },
+      {
+        text:'Honor them through action — a cause, a scholarship, a commitment they cared about.',
+        effects:{happiness:8,health:5,relationships:8,intelligence:10,wealth:-8},
+        outcome:'The doing gives the grief somewhere useful to go. You make their name mean something in the world in a way that extends past memory. This is what people mean when they say someone lives on. You are the vehicle of that continuation.'
+      }
+    ]
+  },
+
+  // =========================================================
+  //  ELDERLY  (81–100)
+  // =========================================================
+  {
+    id:'el_1', age:82, stage:'elderly',
+    title:'The Body\'s Final Terms',
+    description:'Eighty-two. The body has become the central fact of daily life in a way it wasn\'t even ten years ago. Steps that were easy aren\'t. Sleep that was reliable isn\'t. You are being asked to negotiate with time in ways that are, finally, non-negotiable.',
+    choices:[
+      {
+        text:'Accept help — from family, from professionals, from the infrastructure of care.',
+        effects:{happiness:10,health:10,relationships:12,intelligence:5,wealth:-10},
+        outcome:'The accepting turns out to be its own kind of wisdom. You let people take care of you the way you took care of them, and you discover that this exchange is how families stay families. The help given and the help received make one continuous human thing.'
+      },
+      {
+        text:'Maintain independence for as long as humanly possible. Insist on your own authority.',
+        effects:{happiness:8,health:3,relationships:-5,intelligence:8,wealth:5},
+        outcome:'There are ways in which this costs the people who love you. And ways in which it honors the self you spent eighty-two years building. Both things are true. The last years contain some of the hardest versions of the oldest questions.'
+      },
+      {
+        text:'Move closer to family. Prioritize presence over independence.',
+        effects:{happiness:12,health:8,relationships:18,intelligence:3,wealth:-5},
+        outcome:'The move is difficult and right. You watch the grandchildren more closely than you could from a distance. The ordinary Tuesday afternoons — the homework at the kitchen table, the chaos of dinner — become the texture of your last chapter. It is enough. More than enough.'
+      }
+    ]
+  },
+  {
+    id:'el_2', age:87, stage:'elderly',
+    title:'Legacy',
+    description:'What do you leave? Not money — though that matters. Not the house — though that matters too. But the invisible inheritance: the ways of thinking, the stories, the values, the particular way you faced hard things. These are already being transmitted. The question is whether you transmit them deliberately.',
+    choices:[
+      {
+        text:'Write it down. Letters, a memoir, a recording of your voice telling the stories.',
+        effects:{happiness:15,relationships:15,intelligence:12,health:5,wealth:0},
+        outcome:'The grandchildren read it at twenty-three and thirty-eight and fifty-one. Each time they find something different — something they needed for the stage of life they\'re in. You speak across time in your own voice. This is an extraordinary thing to have done.'
+      },
+      {
+        text:'Spend time with family. Tell the stories in person. Be present while you can.',
+        effects:{happiness:18,relationships:20,health:5,intelligence:8,wealth:0},
+        outcome:'The afternoons around the kitchen table become the memories that will be described at other kitchen tables, decades from now. You are present at your own living wake — the celebration held before departure. It is the best party you\'ve ever attended.'
+      },
+      {
+        text:'Trust that the life itself was the message. Let it speak without annotation.',
+        effects:{happiness:10,relationships:8,intelligence:10,health:8,wealth:5},
+        outcome:'The example is real and they carry it without being told to. Your granddaughter makes a decision at thirty-five that she traces back to watching you make a similar decision at seventy. The chain of influence you\'ll never fully know. This is how legacy actually works.'
+      }
+    ]
+  },
+  {
+    id:'el_3', age:92, stage:'elderly',
+    title:'Peace',
+    description:'Ninety-two years. Most of the people who knew you first are gone. The world has changed past recognition three or four times over. You are, in some ways, the last living repository of a way of life that no longer exists anywhere but inside you. What do you feel about the life you lived?',
+    choices:[
+      {
+        text:'Peace. The life was imperfect and real and I would live it again.',
+        effects:{happiness:20,health:8,relationships:10,intelligence:10,wealth:5},
+        outcome:'This particular peace — not the absence of regret, but the acceptance of regret as part of the whole — is the rarest human attainment. You have arrived somewhere most people spend their lives pointed toward without reaching. Rest in it.'
+      },
+      {
+        text:'Some regret, but mostly gratitude. The losses were real and the gifts were real.',
+        effects:{happiness:12,health:5,relationships:8,intelligence:12,wealth:0},
+        outcome:'The honest accounting is neither triumphant nor despairing. You are someone who lived — who tried, who failed, who loved, who lost, who kept going. The balance sheet, added up, is richer than it would have appeared on any given Wednesday.'
+      },
+      {
+        text:'Regret. There were roads not taken that I should have taken.',
+        effects:{happiness:-5,health:-5,relationships:5,intelligence:15,wealth:0},
+        outcome:'The regret is specific — not a fog of vague disappointment, but precise knowledge of the moments and choices. This specificity is a kind of wisdom. You hope it is useful to the people watching. The honest accounting matters, even at the end. Perhaps especially then.'
+      }
+    ]
+  }
+];
+
+// Random events that can fire between main events
+const RANDOM_EVENTS = [
+  { title:'Unexpected Inheritance', text:'A distant relative has left you something. A modest windfall.', stat:'wealth', amount:12, minAge:25, maxAge:60, positive:true },
+  { title:'Fender Bender', text:'A minor car accident. Insurance handles it, mostly.', stat:'wealth', amount:-8, minAge:18, maxAge:80, positive:false },
+  { title:'Friendship Rekindled', text:'An old friend finds you. The years fall away.', stat:'relationships', amount:10, minAge:30, maxAge:90, positive:true },
+  { title:'Medical Bill', text:'An unexpected health expense arrives.', stat:'wealth', amount:-10, minAge:20, maxAge:90, positive:false },
+  { title:'Recognition at Work', text:'Your contributions are formally recognized. A bonus follows.', stat:'wealth', amount:12, minAge:22, maxAge:65, positive:true },
+  { title:'A Difficult Diagnosis', text:'Something requires attention. Caught early.', stat:'health', amount:-8, minAge:35, maxAge:90, positive:false },
+  { title:'A Good Night\'s Sleep', text:'For one month, everything aligns and you sleep perfectly.', stat:'health', amount:8, minAge:10, maxAge:90, positive:true },
+  { title:'Investment Wins', text:'A long-held investment finally pays off.', stat:'wealth', amount:15, minAge:30, maxAge:75, positive:true },
+  { title:'Natural Disaster', text:'Local flooding damages property. Setback.', stat:'wealth', amount:-12, minAge:20, maxAge:90, positive:false },
+  { title:'Viral Illness', text:'A bad flu keeps you down for two weeks.', stat:'health', amount:-6, minAge:5, maxAge:90, positive:false },
+  { title:'Beautiful Accident', text:'An unplanned meeting changes your week and maybe more.', stat:'relationships', amount:12, minAge:18, maxAge:70, positive:true },
+  { title:'Company Layoffs', text:'Downsizing hits. A difficult few months follow.', stat:'wealth', amount:-15, minAge:22, maxAge:62, positive:false },
+  { title:'Mental Clarity', text:'A period of unusual focus and creativity.', stat:'intelligence', amount:10, minAge:15, maxAge:90, positive:true },
+  { title:'Family Celebration', text:'A wedding, a birth — the family gathers. Joy, briefly, is uncomplicated.', stat:'happiness', amount:12, minAge:20, maxAge:90, positive:true }
+];
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let gameState = null;
+
+function initGameState() {
+  return {
+    age: 0,
+    stats: { health: 50, happiness: 50, wealth: 50, relationships: 50, intelligence: 50 },
+    currentStage: 'infancy',
+    eventQueue: [...EVENTS],
+    currentEventIndex: 0,
+    memories: [],
+    dead: false,
+    pendingRandomEvent: null
+  };
+}
+
+// ============================================================
+//  PARTICLE SYSTEM
+// ============================================================
+const canvas = document.getElementById('particles');
+const pctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function createParticles() {
+  particles = [];
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      speed: Math.random() * 0.3 + 0.1,
+      opacity: Math.random() * 0.4 + 0.1,
+      drift: (Math.random() - 0.5) * 0.2
+    });
+  }
+}
+createParticles();
+
+function animateParticles() {
+  pctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.y -= p.speed;
+    p.x += p.drift;
+    if (p.y < -5) { p.y = canvas.height + 5; p.x = Math.random() * canvas.width; }
+    pctx.beginPath();
+    pctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    pctx.fillStyle = `rgba(201,169,110,${p.opacity})`;
+    pctx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ============================================================
+//  GAME LOGIC
+// ============================================================
+function getStageForAge(age) {
+  if (age <= 5) return 'infancy';
+  if (age <= 12) return 'childhood';
+  if (age <= 17) return 'teen';
+  if (age <= 25) return 'young-adult';
+  if (age <= 40) return 'adult';
+  if (age <= 60) return 'middle-age';
+  if (age <= 80) return 'senior';
+  return 'elderly';
+}
+
+function clampStat(v) { return Math.max(0, Math.min(100, v)); }
+
+function applyStat(key, amount) {
+  gameState.stats[key] = clampStat(gameState.stats[key] + amount);
+}
+
+function applyEffects(effects) {
+  // Multiply by 2 so every choice feels viscerally impactful
+  for (const [key, val] of Object.entries(effects)) {
+    const scaled = Math.round(val * 2);
+    if (scaled === 0) continue;
+    const barEl = document.getElementById('bar-' + key);
+    const trackEl = barEl ? barEl.parentElement : null;
+    const rowEl = trackEl ? trackEl.parentElement : null;
+    applyStat(key, scaled);
+    if (trackEl) spawnDelta(trackEl, scaled);
+    if (barEl) {
+      barEl.classList.remove('pulse');
+      void barEl.offsetWidth;
+      barEl.classList.add('pulse');
+    }
+    if (rowEl) {
+      rowEl.classList.remove('flash');
+      void rowEl.offsetWidth;
+      rowEl.classList.add('flash');
+    }
+  }
+}
+
+function spawnDelta(anchorEl, amount) {
+  const rect = anchorEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'stat-delta ' + (amount > 0 ? 'pos' : 'neg');
+  el.textContent = (amount > 0 ? '+' : '') + amount;
+  el.style.left = (rect.right - 40) + 'px';
+  el.style.top = (rect.top - 4) + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+function checkDeath() {
+  if (gameState.stats.health <= 0 && !gameState.dead) {
+    gameState.dead = true;
+    return true;
+  }
+  return false;
+}
+
+function maybeFireRandomEvent() {
+  const age = gameState.age;
+  const eligible = RANDOM_EVENTS.filter(e => age >= e.minAge && age <= e.maxAge);
+  if (eligible.length === 0 || Math.random() > 0.3) return null;
+  const e = eligible[Math.floor(Math.random() * eligible.length)];
+  return e;
+}
+
+function startGame() {
+  playSFX('transition');
+  getAudioCtx();
+  gameState = initGameState();
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  document.getElementById('audio-controls').style.display = 'flex';
+  playMusic('infancy');
+  loadEvent(0);
+}
+
+function loadEvent(index) {
+  if (index >= EVENTS.length) {
+    showEndScreen();
+    return;
+  }
+  const event = EVENTS[index];
+  gameState.currentEventIndex = index;
+  gameState.age = event.age;
+  const newStage = getStageForAge(event.age);
+
+  if (newStage !== gameState.currentStage) {
+    gameState.currentStage = newStage;
+    playSFX('milestone');
+    playMusic(newStage);
+    document.body.setAttribute('data-stage', newStage);
+  }
+
+  updateUI(event);
+}
+
+function updateUI(event) {
+  const age = event.age;
+  const stage = gameState.currentStage;
+
+  // Age bar
+  const pct = (age / 100) * 100;
+  document.getElementById('age-fill').style.width = pct + '%';
+  document.getElementById('age-marker').style.left = pct + '%';
+  document.getElementById('age-display').textContent = 'AGE ' + age;
+  document.getElementById('stage-label').textContent = STAGE_NAMES[stage];
+
+  // Character card
+  document.getElementById('char-age').textContent = age;
+  document.getElementById('char-stage').textContent = STAGE_NAMES[stage];
+  const avatar = document.getElementById('avatar');
+  avatar.textContent = AVATARS[stage];
+  avatar.classList.add('milestone-glow');
+  setTimeout(() => avatar.classList.remove('milestone-glow'), 1000);
+
+  // Stats
+  const stats = gameState.stats;
+  const statKeys = ['health','happiness','wealth','relationships','intelligence'];
+  statKeys.forEach(key => {
+    const val = stats[key];
+    const bar = document.getElementById('bar-' + key);
+    document.getElementById('val-' + key).textContent = val;
+    bar.style.width = val + '%';
+    bar.style.background = val > 60 ? 'var(--bar-good)' : val > 30 ? 'var(--bar-mid)' : 'var(--bar-low)';
+  });
+
+  // Event card
+  // Scene illustration
+  const sceneEl = document.getElementById('event-scene');
+  const sceneSVG = SCENES[event.id];
+  if (sceneSVG) {
+    sceneEl.innerHTML = sceneSVG;
+    sceneEl.style.display = 'block';
+    sceneEl.classList.remove('scene-fade');
+    void sceneEl.offsetWidth;
+    sceneEl.classList.add('scene-fade');
+  } else {
+    sceneEl.style.display = 'none';
+  }
+
+  document.getElementById('event-year-badge').textContent = `AGE ${age} — ${STAGE_NAMES[stage].toUpperCase()}`;
+  document.getElementById('event-title').textContent = event.title;
+  document.getElementById('event-description').textContent = event.description;
+
+  updateLifeScore();
+
+  // Choices
+  const choicesEl = document.getElementById('choices-container');
+  choicesEl.innerHTML = '';
+  event.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = choice.text;
+    btn.onclick = () => makeChoice(i);
+    choicesEl.appendChild(btn);
+  });
+
+  // Hide outcome
+  const overlay = document.getElementById('outcome-overlay');
+  overlay.style.display = 'none';
+}
+
+function makeChoice(choiceIndex) {
+  playSFX('click');
+  const event = EVENTS[gameState.currentEventIndex];
+  const choice = event.choices[choiceIndex];
+
+  applyEffects(choice.effects);
+  updateStatBars();
+
+  // Check for death
+  if (checkDeath()) {
+    setTimeout(showDeath, 800);
+    showOutcome(choice, event.age, true);
+    return;
+  }
+
+  // Determine if good/bad overall
+  const total = Object.values(choice.effects).reduce((a,b) => a+b, 0);
+  playSFX(total >= 0 ? 'good' : 'bad');
+
+  showOutcome(choice, event.age, false);
+}
+
+function showOutcome(choice, age, dying) {
+  const overlay = document.getElementById('outcome-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('outcome-text').textContent = choice.outcome;
+
+  // Effect chips
+  const effectsEl = document.getElementById('outcome-effects');
+  effectsEl.innerHTML = '';
+  const labels = { health:'Health', happiness:'Happiness', wealth:'Wealth', relationships:'Relationships', intelligence:'Intelligence' };
+  for (const [key, val] of Object.entries(choice.effects)) {
+    if (val === 0) continue;
+    const chip = document.createElement('div');
+    chip.className = 'effect-chip ' + (val > 0 ? 'effect-pos' : 'effect-neg');
+    chip.textContent = (val > 0 ? '+' : '') + val + ' ' + labels[key];
+    effectsEl.appendChild(chip);
+  }
+
+  // Add memory
+  gameState.memories.push({ age, text: choice.text.substring(0, 60) + (choice.text.length > 60 ? '...' : '') });
+  updateMemories();
+
+  if (dying) {
+    document.getElementById('continue-btn').style.display = 'none';
+  } else {
+    document.getElementById('continue-btn').style.display = 'inline-block';
+  }
+}
+
+function updateStatBars() {
+  const stats = gameState.stats;
+  ['health','happiness','wealth','relationships','intelligence'].forEach(key => {
+    const val = stats[key];
+    const bar = document.getElementById('bar-' + key);
+    const valEl = document.getElementById('val-' + key);
+    valEl.textContent = val;
+    valEl.style.fontWeight = '700';
+    valEl.style.color = val > 60 ? '#4cff9f' : val > 30 ? '#e8b84b' : '#ff6060';
+    bar.style.width = val + '%';
+    bar.style.background = val > 60 ? 'var(--bar-good)' : val > 30 ? 'var(--bar-mid)' : 'var(--bar-low)';
+  });
+  updateLifeScore();
+}
+
+function updateLifeScore() {
+  const s = gameState.stats;
+  const score = Math.round((s.health + s.happiness + s.wealth + s.relationships + s.intelligence) / 5);
+  const el = document.getElementById('life-score');
+  const bar = document.getElementById('life-score-bar');
+  if (!el) return;
+  el.textContent = score;
+  el.style.color = score > 65 ? '#4cff9f' : score > 40 ? '#e8b84b' : '#ff6060';
+  if (bar) {
+    bar.style.width = score + '%';
+    bar.style.background = score > 65 ? 'var(--bar-good)' : score > 40 ? 'var(--bar-mid)' : 'var(--bar-low)';
+  }
+}
+
+function updateMemories() {
+  const listEl = document.getElementById('memories-list');
+  const recent = gameState.memories.slice(-5).reverse();
+  listEl.innerHTML = recent.map(m =>
+    `<div class="memory-item"><span class="memory-age">Age ${m.age}</span>${m.text}</div>`
+  ).join('');
+}
+
+function continueLife() {
+  playSFX('click');
+
+  // Maybe fire a random event
+  const re = maybeFireRandomEvent();
+  if (re) {
+    applyStat(re.stat, re.amount);
+    updateStatBars();
+    showRandomEventBanner(re);
+    if (checkDeath()) { setTimeout(showDeath, 1500); return; }
+  }
+
+  const next = gameState.currentEventIndex + 1;
+  if (next >= EVENTS.length) {
+    showEndScreen();
+  } else {
+    loadEvent(next);
+  }
+}
+
+function showRandomEventBanner(event) {
+  const banner = document.getElementById('random-event-banner');
+  document.getElementById('banner-title').textContent = (event.positive ? '✦ ' : '⚡ ') + event.title;
+  document.getElementById('banner-text').textContent = event.text;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 3500);
+}
+
+// ============================================================
+//  DEATH SCREEN
+// ============================================================
+function showDeath() {
+  playSFX('death');
+  stopMusic();
+  const ds = document.getElementById('death-screen');
+  ds.style.display = 'flex';
+  document.getElementById('death-age').textContent = `You lived to be ${gameState.age} years old.`;
+  const healthNote = [
+    'Your body gave way before your time. The choices we make write themselves into our biology.',
+    'The health you neglected accumulated into something impossible to ignore.',
+    'A life lived hard wears on the instrument that carries it.',
+    'We are given one body. It kept a ledger.'
+  ];
+  document.getElementById('death-sub').textContent = healthNote[Math.floor(Math.random()*healthNote.length)];
+}
+
+// ============================================================
+//  END SCREEN
+// ============================================================
+function showEndScreen() {
+  stopMusic();
+  playSFX('milestone');
+
+  const gs = gameState;
+  const stats = gs.stats;
+  const endAge = gs.dead ? gs.age : 100;
+
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('end-screen').style.display = 'block';
+
+  // Title based on overall life score
+  const score = Object.values(stats).reduce((a,b) => a+b, 0) / 5;
+  let title = 'A Life Fully Lived';
+  if (score > 75) title = 'A Life Extraordinarily Lived';
+  else if (score > 55) title = 'A Life Well Lived';
+  else if (score > 35) title = 'A Life Honestly Lived';
+  else title = 'A Life Courageously Survived';
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-sub').textContent = `You reached ${endAge} years old.`;
+
+  // Epitaph
+  const epitaph = buildEpitaph(stats, gs.memories);
+  document.getElementById('epitaph').textContent = epitaph;
+
+  // End stats
+  const endStatsEl = document.getElementById('end-stats');
+  const statLabels = {health:'Health',happiness:'Happiness',wealth:'Wealth',relationships:'Relationships',intelligence:'Intelligence'};
+  endStatsEl.innerHTML = Object.entries(stats).map(([k,v]) =>
+    `<div class="end-stat"><div class="end-stat-val">${v}</div><div class="end-stat-label">${statLabels[k]}</div></div>`
+  ).join('');
+
+  // Life summary
+  const summaryEl = document.getElementById('life-summary');
+  summaryEl.innerHTML = `<p style="margin-bottom:1rem;color:var(--muted)">KEY MOMENTS</p>` +
+    gs.memories.map(m =>
+      `<div class="summary-memory"><strong>Age ${m.age}:</strong> ${m.text}</div>`
+    ).join('');
+
+  // Play gentle ending music
+  if (musicEnabled) {
+    setTimeout(() => playMusic('elderly'), 1000);
+  }
+}
+
+function buildEpitaph(stats, memories) {
+  const { health, happiness, wealth, relationships, intelligence } = stats;
+  const parts = [];
+
+  if (happiness > 70) parts.push('They knew joy — not as a destination, but as a practice.');
+  else if (happiness > 40) parts.push('They found joy where it lived: in small moments, honestly received.');
+  else parts.push('They faced life\'s weight with the stubborn grace of someone who kept going anyway.');
+
+  if (relationships > 70) parts.push('They were loved, and they knew how to love in return. This is no small thing.');
+  else if (relationships > 40) parts.push('They built connections that mattered, one difficult conversation at a time.');
+  else parts.push('They walked much of the road alone, and made peace with the solitude.');
+
+  if (wealth > 70) parts.push('They were comfortable, and used comfort wisely.');
+  else if (wealth > 40) parts.push('They lived within their means, which is its own form of freedom.');
+  else parts.push('They learned that what you need and what you want are different questions.');
+
+  if (intelligence > 70) parts.push('They thought carefully, questioned deeply, and left the world more understood than they found it.');
+  else if (intelligence > 40) parts.push('They were curious, even when certainty would have been easier.');
+  else parts.push('They acted on instinct more than analysis, and were right more often than expected.');
+
+  if (health > 70) parts.push('They treated their body as a partner, not an afterthought.');
+  else parts.push('Their body carried them the whole distance, imperfect and faithful.');
+
+  parts.push('They lived one hundred years. What they did with them was their own.');
+
+  return parts.join(' ');
+}
+
+// ============================================================
+//  RESTART
+// ============================================================
+function restartGame() {
+  location.reload();
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('load', () => {
+  document.body.setAttribute('data-stage', 'infancy');
+});
+</script>
+</body>
+</html>
