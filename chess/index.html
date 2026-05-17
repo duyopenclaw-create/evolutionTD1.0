@@ -1329,106 +1329,91 @@ const AC = new (window.AudioContext||window.webkitAudioContext)();
 let musicGain, sfxGain, musicPlaying=true, sfxOn=true;
 
 function initAudio() {
-  musicGain = AC.createGain(); musicGain.gain.value = 0.15; musicGain.connect(AC.destination);
+  musicGain = AC.createGain(); musicGain.gain.value = 0.42; musicGain.connect(AC.destination);
   sfxGain   = AC.createGain(); sfxGain.gain.value   = 0.4;  sfxGain.connect(AC.destination);
   startMusic();
 }
 
-// ─── Bach Prelude in C Major — scheduled arpeggio music ───
-const BACH_DUR = 0.32; // 8th note duration (~94 BPM)
-const BACH_BARS = [
-  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
-  { b:130.81, n:[261.63,293.66,440.00,587.33,698.46,440.00,587.33,698.46] }, // ii7 Dm7
-  { b:123.47, n:[246.94,293.66,392.00,587.33,698.46,293.66,392.00,698.46] }, // V7  G7
-  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
-  { b:110.00, n:[220.00,261.63,329.63,440.00,523.25,329.63,440.00,523.25] }, // vi  Am
-  { b:146.83, n:[293.66,349.23,440.00,523.25,587.33,440.00,523.25,587.33] }, // ii  Dm
-  { b: 98.00, n:[196.00,246.94,392.00,493.88,587.33,392.00,493.88,587.33] }, // V   G
-  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
-  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,523.25,659.25,784.00] }, // I   C (rise)
-  { b:146.83, n:[293.66,349.23,440.00,587.33,698.46,587.33,698.46,880.00] }, // ii  Dm (rise)
-  { b:123.47, n:[246.94,329.63,392.00,493.88,659.25,493.88,587.33,784.00] }, // V7  G7 (rise)
-  { b:130.81, n:[261.63,329.63,523.25,659.25,523.25,392.00,329.63,261.63] }, // I   C (fall)
+// ─── Pachelbel Canon in D Major — harpsichord + warm bass ───
+const CANON_DUR = 0.38; // 8th note at ~79 BPM
+// Each bar: bass = root note, melo = 8 arpeggio tones (up-peak-down)
+const CANON_BARS = [
+  { bass:73.42,  melo:[146.83,185.00,220.00,293.66,369.99,293.66,220.00,185.00] }, // D
+  { bass:110.00, melo:[110.00,138.59,164.81,220.00,277.18,220.00,164.81,138.59] }, // A
+  { bass:123.47, melo:[123.47,146.83,185.00,246.94,293.66,246.94,185.00,146.83] }, // Bm
+  { bass:92.50,  melo:[92.50, 110.00,138.59,185.00,220.00,185.00,138.59,110.00] }, // F#m
+  { bass:98.00,  melo:[98.00, 123.47,146.83,196.00,246.94,196.00,146.83,123.47] }, // G
+  { bass:73.42,  melo:[146.83,220.00,293.66,369.99,440.00,369.99,293.66,220.00] }, // D (high run)
+  { bass:98.00,  melo:[196.00,246.94,293.66,392.00,493.88,392.00,293.66,246.94] }, // G (high run)
+  { bass:110.00, melo:[220.00,277.18,329.63,440.00,554.37,440.00,329.63,277.18] }, // A (high run)
 ];
-let bachBar=0, bachNote=0, bachNext=0, bachSched=null;
+let canonBar=0, canonNote=0, canonNext=0, canonSched=null;
 
 function startMusic() {
   if(!musicPlaying) return;
-  bachBar=0; bachNote=0; bachNext=AC.currentTime+0.1;
-  bachSched=setInterval(scheduleBach, 200);
+  canonBar=0; canonNote=0; canonNext=AC.currentTime+0.1;
+  canonSched=setInterval(scheduleCanon, 150);
 }
 
-function scheduleBach() {
+function scheduleCanon() {
   if(!musicPlaying) return;
-  while(bachNext < AC.currentTime + 0.9) {
-    const bar = BACH_BARS[bachBar % BACH_BARS.length];
-    if(bachNote===0) {
-      bachPlayNote(bar.b,       bachNext, BACH_DUR*7,   0.18, 'violin');
-      bachPlayNote(bar.b*1.5,   bachNext, BACH_DUR*3.5, 0.07, 'violin');
+  while(canonNext < AC.currentTime + 1.0) {
+    const bar = CANON_BARS[canonBar % CANON_BARS.length];
+    if(canonNote===0) {
+      // Bass note held for entire bar (8 eighth notes)
+      playCanonNote(bar.bass, canonNext, CANON_DUR*8*0.92, 0.30, 'bass');
     }
-    bachPlayNote(bar.n[bachNote], bachNext, BACH_DUR*0.88, 0.14, 'piano');
-    bachNext += BACH_DUR;
-    if(++bachNote >= 8){ bachNote=0; bachBar++; }
+    // Harpsichord arpeggio
+    playCanonNote(bar.melo[canonNote], canonNext, CANON_DUR*0.85, 0.22, 'harp');
+    canonNext += CANON_DUR;
+    if(++canonNote >= 8){ canonNote=0; canonBar++; }
   }
 }
 
-function bachPlayNote(freq, t, dur, gain, voice) {
+function playCanonNote(freq, t, dur, gain, voice) {
   try {
     const o=AC.createOscillator(), g=AC.createGain();
-    o.frequency.setValueAtTime(freq, t);
-    if(voice==='piano') {
-      // Soft piano: sine fundamental + harmonics, fast decay
-      o.type='sine';
-      // 2nd harmonic (octave) — brightens tone
-      const o2=AC.createOscillator(), g2=AC.createGain();
-      o2.type='sine'; o2.frequency.setValueAtTime(freq*2, t);
-      g2.gain.setValueAtTime(0,t);
-      g2.gain.linearRampToValueAtTime(gain*0.22, t+0.005);
-      g2.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur*0.6,0.9));
-      o2.connect(g2); g2.connect(musicGain); o2.start(t); o2.stop(t+Math.min(dur*0.6,0.9)+0.02);
-      // 3rd harmonic — adds warmth
-      const o3=AC.createOscillator(), g3=AC.createGain();
-      o3.type='sine'; o3.frequency.setValueAtTime(freq*3, t);
-      g3.gain.setValueAtTime(0,t);
-      g3.gain.linearRampToValueAtTime(gain*0.08, t+0.004);
-      g3.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur*0.3,0.4));
-      o3.connect(g3); g3.connect(musicGain); o3.start(t); o3.stop(t+Math.min(dur*0.3,0.4)+0.02);
-      // Fundamental envelope: sharp strike, fast decay, soft tail
-      g.gain.setValueAtTime(0,t);
-      g.gain.linearRampToValueAtTime(gain, t+0.006);
-      g.gain.exponentialRampToValueAtTime(gain*0.12, t+0.08);
-      g.gain.exponentialRampToValueAtTime(gain*0.03, t+0.35);
-      g.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur,1.8));
-      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+Math.min(dur,1.8)+0.05);
-    } else {
-      // Violin: filtered sawtooth + slow attack + vibrato — warmer than raw sawtooth
-      o.type='sawtooth';
+    o.frequency.value = freq;
+    if(voice==='harp') {
+      // Harpsichord: bright sawtooth, swept low-pass, plucked decay
       const filt=AC.createBiquadFilter();
-      filt.type='lowpass'; filt.frequency.setValueAtTime(1400,t); filt.Q.value=0.7;
-      const vLFO=AC.createOscillator(), vG=AC.createGain();
-      vLFO.type='sine'; vLFO.frequency.value=5.2;
-      vG.gain.value=freq*0.010;
-      vLFO.connect(vG); vG.connect(o.frequency);
-      vLFO.start(t+0.12); vLFO.stop(t+dur+0.1);
+      o.type='sawtooth';
+      filt.type='lowpass';
+      filt.frequency.setValueAtTime(freq*14, t);
+      filt.frequency.exponentialRampToValueAtTime(freq*2.2, t+0.09);
+      filt.Q.value=1.4;
       g.gain.setValueAtTime(0,t);
-      g.gain.linearRampToValueAtTime(gain*0.35, t+0.07);
-      g.gain.linearRampToValueAtTime(gain, t+0.18);
-      g.gain.setValueAtTime(gain*0.78, Math.max(t+0.2, t+dur-0.15));
-      g.gain.exponentialRampToValueAtTime(0.001, t+dur+0.1);
-      o.connect(filt); filt.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.15);
+      g.gain.linearRampToValueAtTime(gain, t+0.003);    // instant pluck
+      g.gain.exponentialRampToValueAtTime(gain*0.35, t+0.065);
+      g.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur,1.1));
+      o.connect(filt); filt.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t+Math.min(dur,1.15));
+    } else {
+      // Warm bass: sine fundamental + 2nd harmonic, slow bow-like attack
+      const o2=AC.createOscillator(), g2=AC.createGain();
+      o.type='sine'; o2.type='sine';
+      o2.frequency.value=freq*2;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(gain, t+0.12);
+      g.gain.setValueAtTime(gain*0.82, t+dur-0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      g2.gain.setValueAtTime(0,t);
+      g2.gain.linearRampToValueAtTime(gain*0.28, t+0.09);
+      g2.gain.exponentialRampToValueAtTime(0.001, t+dur*0.7);
+      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.05);
+      o2.connect(g2); g2.connect(musicGain); o2.start(t); o2.stop(t+dur*0.75);
     }
   } catch(e){}
 }
 
-
 function toggleMusic() {
   musicPlaying = !musicPlaying;
   if(musicPlaying){
-    bachNext=AC.currentTime+0.1;
-    bachSched=setInterval(scheduleBach,200);
+    canonNext=AC.currentTime+0.1;
+    canonSched=setInterval(scheduleCanon,150);
     document.getElementById('musicBtn').textContent='♫ Music: On';
   } else {
-    clearInterval(bachSched);
+    clearInterval(canonSched);
     document.getElementById('musicBtn').textContent='♫ Music: Off';
   }
 }
@@ -2154,7 +2139,8 @@ function assessQuality(st, m, pColor, moveSAN='') {
   const stA = applyMove(st, m);
   const caps = generateMoves(stA, true);
   let best = quickEval(stA.board, pColor);
-  for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(pColor===WHITE?ev<best:ev>best) best=ev; }
+  // Opponent picks the response that minimises pColor's score (always seek minimum)
+  for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(ev<best) best=ev; }
   const delta = best - before;
   if(delta < -280) return 'blunder';
   if(delta < -100) return 'mistake';
@@ -2197,15 +2183,19 @@ function executeMove(m) {
   const isForced = legalMoves.length === 1;
   const quality = isForced ? 'forced' : assessQuality(state, m, wasPlayer ? playerColor : opp(playerColor), san);
 
-  // Best engine move from this position (for review display)
+  // Best engine move (recapture-aware, so it won't suggest hanging pieces)
   let snapBestFrom = -1, snapBestTo = -1;
   {
     const bMoves = orderMoves([...legalMoves], state.board);
-    let bBest = bMoves[0], bScore = -Infinity;
+    const bBefore = quickEval(state.board, state.turn);
+    let bBest = bMoves[0], bBestDelta = -Infinity;
     for(const bm of bMoves) {
       const ns = applyMove(state, bm);
-      const sc = quickEval(ns.board, state.turn);
-      if(sc > bScore){ bScore = sc; bBest = bm; }
+      const rsp = generateMoves(ns, true);
+      let after = quickEval(ns.board, state.turn);
+      for(const rm of rsp){ const ev=quickEval(applyMove(ns,rm).board,state.turn); if(ev<after) after=ev; }
+      const delta = after - bBefore;
+      if(delta > bBestDelta){ bBestDelta = delta; bBest = bm; }
     }
     if(bBest){ snapBestFrom = mFrom(bBest); snapBestTo = mTo(bBest); }
   }
@@ -2615,7 +2605,7 @@ function startCustomGame() {
   customMode = true;
   // Use same options as already selected in setup
   if(AC.state==='suspended') AC.resume();
-  if(!musicGain) initAudio(); else if(musicPlaying && !bachSched){ bachNext=AC.currentTime+0.1; bachSched=setInterval(scheduleBach,200); }
+  if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
   snapshots=[]; reviewMode=false;
   legalMoves=generateMoves(state);
