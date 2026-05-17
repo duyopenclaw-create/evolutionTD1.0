@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0d0d;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(101,67,33,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(50,30,10,0.2) 0%, transparent 50%);
+    font-family: 'Cinzel', serif;
+    color: #e8d5b0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* ── SETUP SCREEN ── */
+  #setup {
+    text-align: center;
+    padding: 40px;
+    background: linear-gradient(145deg, #1a1008, #0d0a05);
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(212,175,55,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+    max-width: 560px;
+    width: 90vw;
+  }
+  #setup h1 {
+    font-size: 3em;
+    color: #d4af37;
+    text-shadow: 0 0 30px rgba(212,175,55,0.5);
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+  }
+  #setup .subtitle {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    color: #a08050;
+    margin-bottom: 36px;
+    font-size: 1.1em;
+  }
+  .setup-section { margin-bottom: 28px; }
+  .setup-section label {
+    display: block;
+    font-size: 0.75em;
+    letter-spacing: 3px;
+    color: #a08050;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .opt-btn {
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 8px;
+    color: #c8b080;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .opt-btn:hover { border-color: #d4af37; color: #d4af37; background: rgba(212,175,55,0.08); }
+  .opt-btn.active {
+    background: linear-gradient(135deg, rgba(212,175,55,0.25), rgba(180,140,30,0.15));
+    border-color: #d4af37;
+    color: #d4af37;
+    box-shadow: 0 0 15px rgba(212,175,55,0.2);
+  }
+  .color-btn {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    font-size: 2.2em;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .color-btn span.lbl { font-size: 0.3em; letter-spacing: 2px; font-family: 'Cinzel', serif; margin-top: 2px; }
+  .color-btn.white-btn { background: radial-gradient(circle, #f5f0e8, #d8cdb0); color: #1a1008; }
+  .color-btn.black-btn { background: radial-gradient(circle, #3a2a18, #1a0e05); color: #e8d5b0; }
+  .color-btn.active { border-color: #d4af37; box-shadow: 0 0 20px rgba(212,175,55,0.4); transform: scale(1.05); }
+  #startBtn {
+    margin-top: 10px;
+    padding: 16px 48px;
+    background: linear-gradient(135deg, #d4af37, #b8922a);
+    border: none;
+    border-radius: 10px;
+    color: #0d0a05;
+    font-family: 'Cinzel', serif;
+    font-size: 1em;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(212,175,55,0.3);
+  }
+  #startBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212,175,55,0.4); }
+
+  /* ── GAME SCREEN ── */
+  #game {
+    display: none;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 20px;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 200px;
+  }
+  .panel {
+    background: linear-gradient(145deg, #1a1008, #0d0a05);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel-title {
+    font-size: 0.6em;
+    letter-spacing: 3px;
+    color: #a08050;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .timer-display {
+    font-size: 2em;
+    color: #d4af37;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(212,175,55,0.4);
+    letter-spacing: 2px;
+  }
+  .timer-display.urgent { color: #e04040; text-shadow: 0 0 20px rgba(224,64,64,0.5); animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+  .timer-label { font-size: 0.55em; letter-spacing: 2px; color: #a08050; text-align: center; text-transform: uppercase; }
+
+  .status-text {
+    font-family: 'Crimson Text', serif;
+    font-size: 1em;
+    line-height: 1.5;
+    color: #c8b080;
+    text-align: center;
+  }
+  .status-text.check { color: #e04040; font-weight: 600; }
+  .status-text.mate { color: #d4af37; font-weight: 600; font-size: 1.2em; }
+
+  .captured-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    min-height: 28px;
+    font-size: 1.4em;
+  }
+
+  .move-list {
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.85em;
+    color: #a08050;
+    scrollbar-width: thin;
+    scrollbar-color: #3a2a18 transparent;
+  }
+  .move-pair { display: flex; gap: 6px; padding: 3px 0; }
+  .move-num { color: #605040; min-width: 22px; }
+  .move-san { color: #c8b080; }
+  .move-san:last-child { color: #a08050; }
+
+  .ctrl-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 7px;
+    color: #c8b080;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7em;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .ctrl-btn:hover { border-color: #d4af37; color: #d4af37; }
+
+  .music-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ── BOARD ── */
+  #boardWrap {
+    position: relative;
+    user-select: none;
+  }
+  #coords-files {
+    display: flex;
+    justify-content: space-around;
+    padding: 0 32px;
+    margin-top: 6px;
+  }
+  #coords-ranks {
+    position: absolute;
+    left: 0;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: calc(100% - 64px);
+    font-size: 0.65em;
+    color: #806040;
+    letter-spacing: 1px;
+    width: 24px;
+    text-align: center;
+  }
+  .coord { font-family: 'Cinzel', serif; font-size: 0.65em; color: #806040; }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    border: 3px solid #3a2a18;
+    box-shadow:
+      0 0 0 1px rgba(212,175,55,0.3),
+      0 0 40px rgba(0,0,0,0.8),
+      inset 0 0 20px rgba(0,0,0,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: default;
+    position: relative;
+  }
+
+  .sq {
+    width: 80px; height: 80px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    cursor: default;
+  }
+  .sq.light { background: #f0d9b5; }
+  .sq.dark  { background: #b58863; }
+
+  /* Square highlights via ::before — never touches piece layer */
+  .sq::before {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  }
+  .sq.selected::before       { background: rgba(50,150,255,0.45); box-shadow: inset 0 0 0 3px rgba(50,150,255,0.85); }
+  .sq.last-move-from::before { background: rgba(255,220,50,0.42); }
+  .sq.last-move-to::before   { background: rgba(255,220,50,0.58); }
+  .sq.in-check::before       { background: rgba(200,30,30,0.58); }
+  .sq.hoverable:hover::before { background: rgba(50,150,255,0.18); }
+  .sq.best-move-from::before { background: rgba(0,200,100,0.35); box-shadow: inset 0 0 0 3px rgba(0,200,100,0.7); }
+  .sq.best-move-to::before   { background: rgba(0,200,100,0.5); box-shadow: inset 0 0 0 3px rgba(0,200,100,0.85); }
+  .sq.selected::before, .sq.last-move-from::before,
+  .sq.last-move-to::before, .sq.in-check::before { /* override hover */ }
+
+  /* Move dots */
+  .sq .dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.38);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .sq.can-capture .dot {
+    background: transparent;
+    border: 5px solid rgba(0,0,0,0.35);
+    width: 90%; height: 90%;
+  }
+
+  /* Piece divs — inline SVG, always visible */
+  .piece {
+    position: absolute;
+    top: 6%; left: 6%;
+    width: 88%; height: 88%;
+    z-index: 2;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.55));
+    transition: transform 0.12s ease;
+  }
+  .piece svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .sq.hoverable:hover .piece { transform: scale(1.08); }
+  .sq.hoverable { cursor: pointer; }
+  .sq:focus { outline: 3px solid rgba(255,200,50,0.8); outline-offset: -2px; z-index: 5; }
+  .sq.kb-cursor::before { background: rgba(255,200,50,0.3) !important; box-shadow: inset 0 0 0 3px rgba(255,200,50,0.9) !important; }
+
+  /* Move quality badges shown in review */
+  .move-badge {
+    position: absolute; bottom: 1px; right: 1px;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 900;
+    z-index: 6; pointer-events: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.55);
+    border: 2px solid rgba(255,255,255,0.25);
+    font-family: sans-serif;
+  }
+  .badge-book     { background: #6b3f1a; color: #fff; }
+  .badge-good     { background: #2db34e; color: #fff; }
+  .badge-mistake  { background: #e07800; color: #fff; }
+  .badge-blunder  { background: #d63030; color: #fff; }
+  .badge-brilliant{ background: #d4af37; color: #fff; }
+
+  /* Promotion modal */
+  #promoModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #promoModal.show { display: flex; }
+  .promo-box {
+    background: linear-gradient(145deg, #1a1008, #0d0a05);
+    border: 1px solid rgba(212,175,55,0.4);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+  }
+  .promo-box h3 { color: #d4af37; letter-spacing: 3px; margin-bottom: 16px; font-size: 0.9em; }
+  .promo-pieces { display: flex; gap: 12px; }
+  .promo-piece {
+    width: 70px; height: 70px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.2s;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+  .promo-piece:hover { border-color: #d4af37; transform: scale(1.1); }
+
+  /* Result overlay */
+  #resultOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #resultOverlay.show { display: flex; }
+  .result-box {
+    background: linear-gradient(145deg, #1a1008, #0d0a05);
+    border: 1px solid rgba(212,175,55,0.5);
+    border-radius: 16px;
+    padding: 48px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(212,175,55,0.2);
+  }
+  .result-box h2 { color: #d4af37; font-size: 2.5em; letter-spacing: 4px; margin-bottom: 12px; }
+  .result-box p { font-family: 'Crimson Text', serif; color: #a08050; font-size: 1.2em; margin-bottom: 32px; }
+  .result-box button {
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #d4af37, #b8922a);
+    border: none; border-radius: 8px;
+    color: #0d0a05; font-family: 'Cinzel', serif;
+    font-size: 0.9em; font-weight: 700; letter-spacing: 2px;
+    cursor: pointer; margin: 0 8px;
+  }
+
+  /* Thinking indicator */
+  .thinking {
+    display: inline-block;
+    animation: dots 1.2s infinite;
+  }
+  @keyframes dots {
+    0%   { content: '.'; }
+    33%  { content: '..'; }
+    66%  { content: '...'; }
+    100% { content: '.'; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3a2a18; border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    #game { flex-direction: column; align-items: center; }
+    .sidebar { flex-direction: row; flex-wrap: wrap; width: 640px; }
+    .sq { width: 70px; height: 70px; }
+    .sq.can-capture .dot { width: 64px; height: 64px; }
+  }
+  @media (max-width: 700px) {
+    .sq { width: 44px; height: 44px; }
+    .sq .dot { width: 18px; height: 18px; }
+    .sq.can-capture .dot { width: 40px; height: 40px; }
+    .sidebar { width: 352px; }
+  }
+
+  /* Wooden board theme */
+  #board.wooden .sq.light { background: #D4B483; }
+  #board.wooden .sq.dark  { background: #8B5C2A; }
+
+  /* Fire king */
+  @keyframes fireKing {
+    0%  { filter: drop-shadow(0 0 4px #ff4400) drop-shadow(0 0 12px #ff8800); }
+    50% { filter: drop-shadow(0 0 10px #ff2200) drop-shadow(0 0 24px #ffcc00); }
+    100%{ filter: drop-shadow(0 0 4px #ff4400) drop-shadow(0 0 12px #ff8800); }
+  }
+  .piece.fire-king { animation: fireKing 0.35s infinite; }
+
+  /* Board themes (achievement unlocks) */
+  #board.board-gold .sq.light    { background: #f5d07a; }
+  #board.board-gold .sq.dark     { background: #c89030; }
+  #board.board-marble .sq.light  { background: #dedbd4; }
+  #board.board-marble .sq.dark   { background: #8e8880; }
+  #board.board-emerald .sq.light { background: #89c490; }
+  #board.board-emerald .sq.dark  { background: #2e6b38; }
+  #board.board-night .sq.light   { background: #575e6e; }
+  #board.board-night .sq.dark    { background: #252c3e; }
+  #board.board-glow { box-shadow: 0 0 0 3px rgba(212,175,55,0.8), 0 0 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.45), inset 0 0 20px rgba(0,0,0,0.3); }
+  #board.border-silver   { outline: 3px solid #b8b8c8; outline-offset: 1px; }
+  #board.border-bronze   { outline: 3px solid #cd7f32; outline-offset: 1px; }
+  #board.border-platinum { outline: 3px solid #e5e4e2; outline-offset: 2px; box-shadow: 0 0 20px rgba(229,228,226,0.35), 0 0 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.3); }
+
+  /* Piece effects */
+  @keyframes rainbowKing {
+    0%  { filter: drop-shadow(0 0 8px #ff2200); }
+    16% { filter: drop-shadow(0 0 8px #ff9900); }
+    33% { filter: drop-shadow(0 0 8px #ffee00); }
+    50% { filter: drop-shadow(0 0 8px #00cc44); }
+    66% { filter: drop-shadow(0 0 8px #0088ff); }
+    83% { filter: drop-shadow(0 0 8px #aa00ee); }
+    100%{ filter: drop-shadow(0 0 8px #ff2200); }
+  }
+  .piece.rainbow-king { animation: rainbowKing 2.5s linear infinite; }
+  .piece.gold-piece   { filter: drop-shadow(0 2px 8px rgba(212,175,55,0.85)) sepia(0.5) saturate(2) brightness(1.1); }
+
+  /* Ghost trail (en_passant reward) */
+  @keyframes ghostFade { from { opacity: 0.45; } to { opacity: 0; } }
+  .piece-ghost {
+    position: absolute; top: 6%; left: 6%; width: 88%; height: 88%;
+    z-index: 1; pointer-events: none;
+    animation: ghostFade 0.65s ease forwards;
+  }
+  .piece-ghost svg { width: 100%; height: 100%; display: block; }
+
+  /* Move quality badges */
+  .badge-forced { background: #1a7a1a; color: #fff; }
+  .badge-ok     { background: #2db34e; color: #fff; }
+  .badge-win    { background: #d4af37; color: #0d0a05; font-size: 15px; }
+  .badge-draw   { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
+
+  /* Comeback banner */
+  #comebackBanner {
+    display: none; position: fixed; top: 30%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Cinzel', serif; font-size: 2.5em; color: #fff;
+    text-shadow: 0 0 30px rgba(212,175,55,0.9), 0 0 60px rgba(212,175,55,0.5);
+    letter-spacing: 6px; z-index: 400; pointer-events: none;
+    animation: comebackAnim 3s ease forwards;
+  }
+  @keyframes comebackAnim {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+    20%  { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+    80%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+  }
+
+  /* Status icons row */
+  #statusIcons { text-align:center; font-size:1.1em; letter-spacing:3px; margin-top:4px; min-height:18px; }
+
+  /* Achievement toast */
+  #achieveToast {
+    display: none;
+    position: fixed;
+    bottom: 80px; right: 20px;
+    background: linear-gradient(145deg, #1a1008, #0d0a05);
+    border: 1px solid rgba(212,175,55,0.5);
+    border-radius: 12px;
+    padding: 14px 18px;
+    z-index: 300;
+    max-width: 280px;
+    box-shadow: 0 0 30px rgba(212,175,55,0.3);
+    animation: toastIn 0.4s ease;
+  }
+  @keyframes toastIn {
+    from { transform: translateX(100px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Achievement button in sidebar */
+  .achieve-btn {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(180,140,30,0.08));
+    border: 1px solid rgba(212,175,55,0.35);
+    border-radius: 7px;
+    color: #d4af37;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7em;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  /* Achievement modal overlay */
+  #achieveModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+  #achieveModal.show { display: flex; }
+  .achieve-box {
+    background: linear-gradient(145deg,#1a1008,#0d0a05);
+    border: 1px solid rgba(212,175,55,0.4);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 640px;
+    width: 100%;
+  }
+  .achieve-box h2 { color:#d4af37; font-size:1.4em; letter-spacing:4px; margin-bottom:24px; text-align:center; }
+  .achieve-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 10px;
+  }
+  .achieve-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(212,175,55,0.12);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .achieve-item.unlocked {
+    border-color: rgba(212,175,55,0.4);
+    background: rgba(212,175,55,0.07);
+  }
+  .achieve-item .ach-icon { font-size: 1.8em; margin-bottom: 4px; }
+  .achieve-item .ach-name { font-family:'Cinzel',serif; font-size:0.6em; letter-spacing:1px; color:#d4af37; }
+  .achieve-item .ach-desc { font-family:'Crimson Text',serif; font-size:0.75em; color:#806040; margin-top:4px; line-height:1.3; }
+  .achieve-item.locked .ach-icon { filter: grayscale(1); opacity:0.4; }
+  .achieve-item.locked .ach-name { color:#605040; }
+  @media (max-width:600px) { .achieve-grid { grid-template-columns:repeat(2,1fr); } }
+
+  /* Custom game button in setup */
+  #customGameBtn {
+    margin-top: 10px;
+    padding: 12px 36px;
+    background: linear-gradient(135deg, rgba(180,100,20,0.3), rgba(140,70,10,0.2));
+    border: 1px solid rgba(212,175,55,0.4);
+    border-radius: 10px;
+    color: #d4af37;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85em;
+    font-weight: 600;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #customGameBtn:hover { background: linear-gradient(135deg, rgba(212,175,55,0.25), rgba(180,140,30,0.15)); transform: translateY(-1px); }
+
+  /* Tutorial / custom mode modal */
+  #tutorialModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 500;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 30px 16px;
+    overflow-y: auto;
+  }
+  #tutorialModal.show { display: flex; }
+  .tut-box {
+    background: linear-gradient(145deg,#1a1008,#0d0a05);
+    border: 1px solid rgba(212,175,55,0.45);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 700px;
+    width: 100%;
+  }
+  .tut-box h2 { color:#d4af37; font-size:1.3em; letter-spacing:4px; text-align:center; margin-bottom:6px; }
+  .tut-box .tut-sub { font-family:'Crimson Text',serif; color:#a08050; text-align:center; font-style:italic; margin-bottom:24px; }
+  .tut-pieces { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px; }
+  @media(max-width:600px){ .tut-pieces { grid-template-columns:1fr; } }
+  .tut-piece-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(212,175,55,0.15);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .tut-piece-icon { width:54px; height:54px; flex-shrink:0; }
+  .tut-piece-icon svg { width:100%; height:100%; }
+  .tut-piece-name { font-family:'Cinzel',serif; font-size:0.75em; letter-spacing:2px; color:#d4af37; margin-bottom:4px; }
+  .tut-piece-replaces { font-family:'Crimson Text',serif; font-size:0.8em; color:#806040; margin-bottom:6px; }
+  .tut-piece-desc { font-family:'Crimson Text',serif; font-size:0.9em; color:#c8b080; line-height:1.5; }
+  .tut-piece-moves { display:inline-block; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.2); border-radius:6px; padding:3px 8px; font-size:0.78em; color:#d4af37; margin-top:4px; font-family:monospace; }
+  .tut-buttons { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .tut-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .tut-tab {
+    padding:8px 18px; background:rgba(255,255,255,0.04); border:1px solid rgba(212,175,55,0.2);
+    border-radius:6px; color:#a08050; font-family:'Cinzel',serif; font-size:0.7em; letter-spacing:1px;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .tut-tab.active, .tut-tab:hover { border-color:#d4af37; color:#d4af37; background:rgba(212,175,55,0.1); }
+  .tut-rule-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
+  @media(max-width:600px){ .tut-rule-grid { grid-template-columns:1fr; } }
+  .tut-rule-card {
+    background:rgba(255,255,255,0.03); border:1px solid rgba(212,175,55,0.12);
+    border-radius:10px; padding:12px 14px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .tut-rule-icon { font-size:1.6em; flex-shrink:0; margin-top:2px; }
+  .tut-rule-card strong { font-family:'Cinzel',serif; font-size:0.7em; letter-spacing:1px; color:#d4af37; display:block; margin-bottom:4px; }
+  .tut-rule-card p { font-family:'Crimson Text',serif; font-size:0.88em; color:#c8b080; line-height:1.45; margin:0; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ SETUP ══════════════════ -->
+<div id="setup">
+  <h1>CHESS</h1>
+  <p class="subtitle">A game of infinite depth</p>
+
+  <div class="setup-section">
+    <label>Choose Your Color</label>
+    <div class="btn-group">
+      <button class="color-btn white-btn active" id="colorWhite" onclick="selectColor('white')">
+        ♔<span class="lbl">WHITE</span>
+      </button>
+      <button class="color-btn black-btn" id="colorBlack" onclick="selectColor('black')">
+        ♚<span class="lbl">BLACK</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <label>Difficulty</label>
+    <div class="btn-group">
+      <button class="opt-btn active" id="diffEasy"   onclick="selectDiff('easy')">Easy<br><small style="font-size:0.7em;opacity:0.7">500 ELO</small></button>
+      <button class="opt-btn"        id="diffMedium" onclick="selectDiff('medium')">Medium<br><small style="font-size:0.7em;opacity:0.7">1300 ELO</small></button>
+      <button class="opt-btn"        id="diffHard"   onclick="selectDiff('hard')">Hard<br><small style="font-size:0.7em;opacity:0.7">1800 ELO</small></button>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <label>Timer (Optional)</label>
+    <div class="btn-group">
+      <button class="opt-btn active" id="timeNone" onclick="selectTime(0)">No Timer</button>
+      <button class="opt-btn" id="time600"  onclick="selectTime(600)">10 Min</button>
+      <button class="opt-btn" id="time300"  onclick="selectTime(300)">5 Min</button>
+      <button class="opt-btn" id="time120"  onclick="selectTime(120)">2 Min</button>
+      <button class="opt-btn" id="time30"   onclick="selectTime(30)">30 Sec</button>
+    </div>
+  </div>
+
+  <button id="startBtn" onclick="startGame()">BEGIN GAME</button>
+  <button id="customGameBtn" onclick="showTutorial('custom')">⚗ CUSTOM GAME</button>
+  <button id="howToPlayBtn" onclick="showTutorial('rules')" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:8px;color:#a08050;font-family:'Cinzel',serif;font-size:0.75em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#a08050'">? HOW TO PLAY</button>
+</div>
+
+<!-- ══════════════════ GAME ══════════════════ -->
+<div id="game">
+  <!-- Left sidebar -->
+  <div class="sidebar" id="sidebarLeft">
+    <!-- Opponent timer -->
+    <div class="panel" id="oppTimerPanel" style="display:none">
+      <div class="panel-title" id="oppTimerLabel">Computer</div>
+      <div class="timer-display" id="oppTimer">10:00</div>
+    </div>
+
+    <!-- Status -->
+    <div class="panel">
+      <div class="panel-title">Status</div>
+      <div class="status-text" id="statusText">Your turn</div>
+      <div id="statusIcons"></div>
+    </div>
+
+    <!-- Captured pieces -->
+    <div class="panel">
+      <div class="panel-title">Captured</div>
+      <div class="captured-row" id="capByPlayer"></div>
+      <hr style="border-color:rgba(255,255,255,0.05);margin:8px 0">
+      <div class="captured-row" id="capByComp"></div>
+    </div>
+
+    <!-- Player timer -->
+    <div class="panel" id="playerTimerPanel" style="display:none">
+      <div class="panel-title" id="playerTimerLabel">You</div>
+      <div class="timer-display" id="playerTimer">10:00</div>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div id="boardWrap">
+    <div id="board"></div>
+    <div id="coords-files"></div>
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="sidebar" id="sidebarRight">
+    <!-- Move history -->
+    <div class="panel">
+      <div class="panel-title">Moves</div>
+      <div class="move-list" id="moveList"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel">
+      <div class="panel-title">Controls</div>
+      <button class="ctrl-btn music-btn" id="musicBtn" onclick="toggleMusic()">♫ Music: On</button>
+      <button class="ctrl-btn" style="margin-top:8px" onclick="toggleSFX()">🔊 SFX: On</button>
+      <button class="ctrl-btn" style="margin-top:8px" onclick="resignGame()">Resign</button>
+      <button class="ctrl-btn" style="margin-top:8px" onclick="location.reload()">New Game</button>
+      <button class="achieve-btn" onclick="openAchievements()">🏆 Achievements</button>
+    </div>
+  </div>
+</div>
+
+<!-- Promotion modal -->
+<div id="promoModal">
+  <div class="promo-box">
+    <h3>PROMOTE PAWN</h3>
+    <div class="promo-pieces" id="promoPieces"></div>
+  </div>
+</div>
+
+<!-- Result overlay -->
+<div id="resultOverlay">
+  <div class="result-box">
+    <h2 id="resultTitle"></h2>
+    <p id="resultMsg"></p>
+    <button onclick="location.reload()">New Game</button>
+    <button onclick="enterReview()">Review Game</button>
+  </div>
+</div>
+
+<!-- Tutorial modal — tabbed: Rules / Pieces / Controls / Custom -->
+<div id="tutorialModal">
+  <div class="tut-box">
+    <h2 id="tutTitle">HOW TO PLAY</h2>
+    <div class="tut-tabs" id="tutTabs">
+      <button class="tut-tab active" onclick="showTutTab('rules')">Rules</button>
+      <button class="tut-tab" onclick="showTutTab('pieces')">Pieces</button>
+      <button class="tut-tab" onclick="showTutTab('controls')">Controls</button>
+      <button class="tut-tab" onclick="showTutTab('custom')">Custom Mode</button>
+    </div>
+
+    <!-- Rules tab -->
+    <div class="tut-section" id="tutTab-rules">
+      <div class="tut-rule-grid">
+        <div class="tut-rule-card"><span class="tut-rule-icon">♟</span><div><strong>Goal</strong><p>Checkmate the opponent's king — put it under attack with no escape.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🔄</span><div><strong>Turns</strong><p>White moves first. Players alternate turns, one piece per turn.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">⚔</span><div><strong>Capture</strong><p>Move onto an opponent's square to capture their piece and remove it.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🏰</span><div><strong>Castling</strong><p>King moves 2 squares toward a rook; rook jumps to the other side. Neither piece can have moved before.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">👻</span><div><strong>En Passant</strong><p>If a pawn advances 2 squares past an adjacent enemy pawn, that enemy pawn may capture it as if it moved only 1 square — but only immediately after.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">♛</span><div><strong>Promotion</strong><p>When your pawn reaches the far rank, promote it to a queen, rook, bishop, or knight.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">½</span><div><strong>Draw</strong><p>Stalemate (no legal moves but not in check) or 50 moves without a capture/pawn move.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">⚠</span><div><strong>Check</strong><p>Your king is in check if any opponent piece attacks it. You must escape check immediately.</p></div></div>
+      </div>
+    </div>
+
+    <!-- Pieces tab -->
+    <div class="tut-section" id="tutTab-pieces" style="display:none">
+      <div class="tut-pieces" id="tutStdPiecesGrid"></div>
+    </div>
+
+    <!-- Controls tab -->
+    <div class="tut-section" id="tutTab-controls" style="display:none">
+      <div class="tut-rule-grid">
+        <div class="tut-rule-card"><span class="tut-rule-icon">🖱</span><div><strong>Select &amp; Move</strong><p>Click a piece to select it (blue highlight + dots show legal moves). Click a dot or highlighted square to move there.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">⌨</span><div><strong>Keyboard</strong><p>Arrow keys navigate the board. Enter or Space to select/move. Escape to deselect.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">↔</span><div><strong>Review Mode</strong><p>After the game ends, press "Review Game" to replay all moves. Use ← → arrow keys or the Prev/Next buttons to step through.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🎯</span><div><strong>Best Move</strong><p>In review, green highlights show what the engine considers the best move from each position.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">↗</span><div><strong>Arrows</strong><p>Right-click and drag on the board to draw analysis arrows. Left-click clears them. Hold Shift/Alt/Ctrl for different colors.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🏆</span><div><strong>Achievements</strong><p>Earn achievements by playing. Each unlocks a visual reward — board themes, piece effects, and special animations.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🎵</span><div><strong>Music &amp; SFX</strong><p>Toggle background music (Bach Prelude) and sound effects independently via the Controls panel.</p></div></div>
+        <div class="tut-rule-card"><span class="tut-rule-icon">🔍</span><div><strong>Move Badges</strong><p>Each move gets a quality badge: Brilliant (!), Book (📖), Forced (→), OK (✓), Mistake (?), Blunder (??).</p></div></div>
+      </div>
+    </div>
+
+    <!-- Custom mode tab -->
+    <div class="tut-section" id="tutTab-custom" style="display:none">
+      <p class="tut-sub" style="margin-top:0">Fairy chess — more powerful pieces, wilder battles</p>
+      <div class="tut-pieces" id="tutPiecesGrid"></div>
+    </div>
+
+    <div class="tut-buttons" id="tutButtons">
+      <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" id="tutPlayBtn" onclick="startCustomGame()" style="display:none">▶ PLAY CUSTOM</button>
+      <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" onclick="closeTutorial()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="achieveToast"></div>
+<div id="achieveModal">
+  <div class="achieve-box">
+    <h2>ACHIEVEMENTS</h2>
+    <div class="achieve-grid" id="achieveGrid"></div>
+    <button class="ctrl-btn" style="margin-top:20px;width:auto;padding:10px 28px" onclick="closeAchievements()">Close</button>
+  </div>
+</div>
+
+<!-- Review nav bar (shown below board during review) -->
+<div id="reviewBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(90deg,#1a1008,#0d0a05);border-top:1px solid rgba(212,175,55,0.3);padding:12px 24px;display:none;align-items:center;justify-content:center;gap:16px;z-index:50;">
+  <button class="ctrl-btn" style="width:auto;padding:8px 18px" onclick="reviewStep(-1)">&#8592; Prev</button>
+  <span id="reviewLabel" style="font-family:'Cinzel',serif;font-size:0.75em;letter-spacing:2px;color:#d4af37;min-width:100px;text-align:center"></span>
+  <button class="ctrl-btn" style="width:auto;padding:8px 18px" onclick="reviewStep(1)">Next &#8594;</button>
+  <button class="ctrl-btn" style="width:auto;padding:8px 18px;margin-left:16px;border-color:rgba(212,175,55,0.5)" onclick="exitReview()">Exit Review</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CHESS ENGINE
+// ═══════════════════════════════════════════════
+const PIECE = { EMPTY:0, PAWN:1, KNIGHT:2, BISHOP:3, ROOK:4, QUEEN:5, KING:6 };
+const WHITE = 8, BLACK = 16;
+
+function makeBoard() {
+  const b = new Int8Array(64);
+  const back = [PIECE.ROOK,PIECE.KNIGHT,PIECE.BISHOP,PIECE.QUEEN,PIECE.KING,PIECE.BISHOP,PIECE.KNIGHT,PIECE.ROOK];
+  for(let i=0;i<8;i++) { b[56+i]=WHITE|back[i]; b[48+i]=WHITE|PIECE.PAWN; }
+  for(let i=0;i<8;i++) { b[i]=BLACK|back[i];    b[8+i]=BLACK|PIECE.PAWN;  }
+  return b;
+}
+
+function color(p) { return p & 0x18; }
+function type(p)  { return p & 0x07; }
+function opp(c)   { return c===WHITE?BLACK:WHITE; }
+
+// ── Move encoding ──
+// bits: from(6) | to(6) | promo(3) | flags(3)
+// flags: capture(1) ep(1) castle(1)
+function encMove(from,to,promo=0,flags=0){ return from|(to<<6)|(promo<<12)|(flags<<15); }
+function mFrom(m)  { return m&63; }
+function mTo(m)    { return (m>>6)&63; }
+function mPromo(m) { return (m>>12)&7; }
+function mFlags(m) { return (m>>15)&7; }
+const F_CAP=1, F_EP=2, F_CASTLE=4;
+
+// ── Game state ──
+let state;
+function initState() {
+  state = {
+    board: makeBoard(),
+    turn: WHITE,
+    castling: 0b1111, // KQkq bits
+    ep: -1,
+    halfmove: 0,
+    fullmove: 1,
+    kings: [60, 4], // [white king sq, black king sq]
+    history: [],
+    moveList: []
+  };
+}
+
+function sq(r,f){ return r*8+f; }
+function row(s){ return s>>3; }
+function col(s){ return s&7; }
+
+function isAttacked(board, s, byColor, castling, ep) {
+  const r=row(s), f=col(s);
+  const pd = byColor===WHITE?1:-1;
+
+  if(customMode) {
+    // Zebra (KNIGHT type): 2×1 + 3×1 L-jumps
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]){
+      const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KNIGHT)return true;}
+    }
+    // Chancellor (ROOK type): rook slides + 2×1 knight jumps
+    for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&type(p)===PIECE.ROOK)return true; break;} rr+=dr;ff+=df;}}
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
+      const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.ROOK)return true;}
+    }
+    // Queen-bishop (BISHOP type): all 8 sliding directions
+    for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&type(p)===PIECE.BISHOP)return true; break;} rr+=dr;ff+=df;}}
+    // MIXER (QUEEN type): all 8 slides + 2×1 + 3×1 jumps
+    for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&type(p)===PIECE.QUEEN)return true; break;} rr+=dr;ff+=df;}}
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]){
+      const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.QUEEN)return true;}
+    }
+    // King
+    for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KING)return true;}}
+    // Cricket (PAWN type): still attacks diagonally only
+    for(const df of [1,-1]){const rr=r+pd,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.PAWN)return true;}}
+    return false;
+  }
+
+  // Standard chess
+  for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KNIGHT)return true;}}
+  for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&(type(p)===PIECE.ROOK||type(p)===PIECE.QUEEN))return true; break;} rr+=dr;ff+=df;}}
+  for(const [dr,df] of [[1,1],[1,-1],[-1,1],[-1,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&(type(p)===PIECE.BISHOP||type(p)===PIECE.QUEEN))return true; break;} rr+=dr;ff+=df;}}
+  for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KING)return true;}}
+  for(const df of [1,-1]){const rr=r+pd,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.PAWN)return true;}}
+  return false;
+}
+
+function generateMoves(st, onlyCaptures=false) {
+  const {board, turn, castling, ep, kings} = st;
+  const moves = [];
+  const pawnDir = turn===WHITE?-1:1;
+  const pawnStart = turn===WHITE?6:1;
+  const promoRow = turn===WHITE?0:7;
+  const kingIdx = turn===WHITE?0:1;
+
+  for(let s=0;s<64;s++){
+    const p=board[s];
+    if(!p||color(p)!==turn) continue;
+    const r=row(s),f=col(s);
+    const t=type(p);
+
+    if(t===PIECE.PAWN){
+      const nr=r+pawnDir;
+      if(nr>=0&&nr<8){
+        if(!onlyCaptures){
+          if(customMode){
+            // Cricket: jumps straight forward — leaps over any blocking piece
+            if(!board[sq(nr,f)]){
+              const isPromo=nr===promoRow;
+              if(isPromo){for(const pp of [PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,sq(nr,f),pp));}
+              else moves.push(encMove(s,sq(nr,f)));
+            } else {
+              // Square ahead occupied — jump over it to the square beyond
+              const nr2=nr+pawnDir;
+              if(nr2>=0&&nr2<8&&!board[sq(nr2,f)]){
+                const isPromo=nr2===promoRow;
+                if(isPromo){for(const pp of [PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,sq(nr2,f),pp));}
+                else moves.push(encMove(s,sq(nr2,f)));
+              }
+            }
+          } else {
+            if(!board[sq(nr,f)]){
+              const isPromo=nr===promoRow;
+              if(isPromo){for(const pp of [PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,sq(nr,f),pp));}
+              else{
+                moves.push(encMove(s,sq(nr,f)));
+                if(r===pawnStart&&!board[sq(nr+pawnDir,f)])moves.push(encMove(s,sq(nr+pawnDir,f)));
+              }
+            }
+          }
+        }
+        for(const df of [-1,1]){
+          const nf=f+df;
+          if(nf<0||nf>=8) continue;
+          const ts=sq(nr,nf);
+          if(board[ts]&&color(board[ts])!==turn){
+            const isPromo=nr===promoRow;
+            if(isPromo){const pps=customMode?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];for(const pp of pps)moves.push(encMove(s,ts,pp,F_CAP));}
+            else moves.push(encMove(s,ts,0,F_CAP));
+          } else if(ts===ep&&ep!==-1 && !customMode){
+            moves.push(encMove(s,ts,0,F_EP|F_CAP));
+          }
+        }
+      }
+    }
+    else if(t===PIECE.KNIGHT){
+      const knJumps=customMode?
+        [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]:
+        [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+      for(const [dr,df] of knJumps){
+        const rr=r+dr,ff=f+df;
+        if(rr<0||rr>=8||ff<0||ff>=8) continue;
+        const ts=sq(rr,ff);
+        if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+        else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+      }
+    }
+    else if(t===PIECE.KING){
+      for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+        const rr=r+dr,ff=f+df;
+        if(rr<0||rr>=8||ff<0||ff>=8) continue;
+        const ts=sq(rr,ff);
+        if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+        else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+      }
+      if(!onlyCaptures){
+        const rank=turn===WHITE?7:0;
+        const ksq=sq(rank,4);
+        if(s===ksq){
+          // Kingside
+          const kBit=turn===WHITE?1:4;
+          if(castling&kBit){
+            if(!board[sq(rank,5)]&&!board[sq(rank,6)]&&
+               !isAttacked(board,sq(rank,4),opp(turn),castling,ep)&&
+               !isAttacked(board,sq(rank,5),opp(turn),castling,ep)&&
+               !isAttacked(board,sq(rank,6),opp(turn),castling,ep))
+              moves.push(encMove(s,sq(rank,6),0,F_CASTLE));
+          }
+          // Queenside
+          const qBit=turn===WHITE?2:8;
+          if(castling&qBit){
+            if(!board[sq(rank,1)]&&!board[sq(rank,2)]&&!board[sq(rank,3)]&&
+               !isAttacked(board,sq(rank,4),opp(turn),castling,ep)&&
+               !isAttacked(board,sq(rank,3),opp(turn),castling,ep)&&
+               !isAttacked(board,sq(rank,2),opp(turn),castling,ep))
+              moves.push(encMove(s,sq(rank,2),0,F_CASTLE));
+          }
+        }
+      }
+    }
+    else {
+      let slideDirs, extraJumps=[];
+      if(customMode) {
+        if(t===PIECE.ROOK){slideDirs=[[1,0],[-1,0],[0,1],[0,-1]];extraJumps=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];}
+        else if(t===PIECE.BISHOP){slideDirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];}
+        else{slideDirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];extraJumps=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]];}
+      } else {
+        slideDirs=t===PIECE.BISHOP?[[1,1],[1,-1],[-1,1],[-1,-1]]:t===PIECE.ROOK?[[1,0],[-1,0],[0,1],[0,-1]]:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      }
+      for(const [dr,df] of slideDirs){
+        let rr=r+dr,ff=f+df;
+        while(rr>=0&&rr<8&&ff>=0&&ff<8){
+          const ts=sq(rr,ff);
+          if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+          else{if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP)); break;}
+          rr+=dr;ff+=df;
+        }
+      }
+      for(const [dr,df] of extraJumps){
+        const rr=r+dr,ff=f+df;
+        if(rr<0||rr>=8||ff<0||ff>=8) continue;
+        const ts=sq(rr,ff);
+        if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+        else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+      }
+    }
+  }
+  // Filter illegal moves
+  return moves.filter(m=>isLegal(st,m));
+}
+
+function isLegal(st, m) {
+  const newSt = applyMove(st, m);
+  const kingIdx = st.turn===WHITE?0:1;
+  const k = newSt.kings[kingIdx];
+  return !isAttacked(newSt.board, k, opp(st.turn), newSt.castling, newSt.ep);
+}
+
+function applyMove(st, m) {
+  const board = new Int8Array(st.board);
+  const from=mFrom(m), to=mTo(m), promo=mPromo(m), flags=mFlags(m);
+  const kings = [...st.kings];
+  const p=board[from];
+  const t=type(p);
+  const c=color(p);
+
+  let newCastling=st.castling;
+  let newEp=-1;
+  let newHalf=st.halfmove+1;
+
+  if(t===PIECE.KING){
+    kings[c===WHITE?0:1]=to;
+    newCastling &= c===WHITE ? ~0b0011 : ~0b1100;
+    if(flags&F_CASTLE){
+      const rank=row(from);
+      if(to===sq(rank,6)){ board[sq(rank,5)]=board[sq(rank,7)]; board[sq(rank,7)]=0; }
+      else               { board[sq(rank,3)]=board[sq(rank,0)]; board[sq(rank,0)]=0; }
+    }
+  }
+  if(t===PIECE.ROOK){
+    if(from===sq(7,0)) newCastling &= ~0b0010;
+    if(from===sq(7,7)) newCastling &= ~0b0001;
+    if(from===sq(0,0)) newCastling &= ~0b1000;
+    if(from===sq(0,7)) newCastling &= ~0b0100;
+  }
+  if(board[to]&&type(board[to])===PIECE.ROOK){
+    if(to===sq(7,0)) newCastling &= ~0b0010;
+    if(to===sq(7,7)) newCastling &= ~0b0001;
+    if(to===sq(0,0)) newCastling &= ~0b1000;
+    if(to===sq(0,7)) newCastling &= ~0b0100;
+  }
+
+  if(flags&F_EP) {
+    board[sq(row(from),col(to))]=0;
+  }
+
+  if(t===PIECE.PAWN){
+    newHalf=0;
+    if(!customMode && Math.abs(row(to)-row(from))===2) newEp=sq((row(from)+row(to))>>1, col(from));
+  }
+  if(flags&F_CAP) newHalf=0;
+
+  board[to] = promo ? (c|promo) : p;
+  board[from] = 0;
+
+  return {
+    board, turn: opp(c), castling: newCastling, ep: newEp,
+    halfmove: newHalf, fullmove: st.fullmove+(c===BLACK?1:0),
+    kings, history: st.history, moveList: st.moveList
+  };
+}
+
+function inCheck(st) {
+  const k = st.kings[st.turn===WHITE?0:1];
+  return isAttacked(st.board, k, opp(st.turn), st.castling, st.ep);
+}
+
+// ── Move to SAN notation ──
+function toSAN(st, m, legalMoves) {
+  const from=mFrom(m), to=mTo(m), promo=mPromo(m), flags=mFlags(m);
+  const p=st.board[from], t=type(p);
+  if(flags&F_CASTLE) return col(to)===6?'O-O':'O-O-O';
+  const files='abcdefgh', ranks='87654321';
+  const pnames=[,'','N','B','R','Q','K'];
+  let san=pnames[t];
+  if(t===PIECE.PAWN){
+    if(flags&(F_CAP|F_EP)) san+=files[col(from)];
+  } else {
+    // Disambiguation
+    const ambig = legalMoves.filter(mm=>mm!==m&&type(st.board[mFrom(mm)])===t&&mTo(mm)===to);
+    if(ambig.length){
+      const sameCol=ambig.some(mm=>col(mFrom(mm))===col(from));
+      const sameRow=ambig.some(mm=>row(mFrom(mm))===row(from));
+      if(!sameCol) san+=files[col(from)];
+      else if(!sameRow) san+=ranks[row(from)];
+      else san+=files[col(from)]+ranks[row(from)];
+    }
+  }
+  if(flags&(F_CAP|F_EP)) san+='x';
+  san+=files[col(to)]+ranks[row(to)];
+  if(promo) san+='='+pnames[promo];
+  // Check/mate
+  const newSt=applyMove(st,m);
+  const newMoves=generateMoves(newSt);
+  if(inCheck(newSt)) san+=newMoves.length===0?'#':'+';
+  return san;
+}
+
+// ═══════════════════════════════════════════════
+//  AI ENGINE
+// ═══════════════════════════════════════════════
+
+// Piece-square tables (from white's perspective)
+const PST = {
+  [PIECE.PAWN]: [
+     0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+     5,  5, 10, 25, 25, 10,  5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0
+  ],
+  [PIECE.KNIGHT]: [
+    -50,-40,-30,-30,-30,-30,-40,-50,
+    -40,-20,  0,  0,  0,  0,-20,-40,
+    -30,  0, 10, 15, 15, 10,  0,-30,
+    -30,  5, 15, 20, 20, 15,  5,-30,
+    -30,  0, 15, 20, 20, 15,  0,-30,
+    -30,  5, 10, 15, 15, 10,  5,-30,
+    -40,-20,  0,  5,  5,  0,-20,-40,
+    -50,-40,-30,-30,-30,-30,-40,-50
+  ],
+  [PIECE.BISHOP]: [
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20
+  ],
+  [PIECE.ROOK]: [
+     0,  0,  0,  0,  0,  0,  0,  0,
+     5, 10, 10, 10, 10, 10, 10,  5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+     0,  0,  0,  5,  5,  0,  0,  0
+  ],
+  [PIECE.QUEEN]: [
+    -20,-10,-10, -5, -5,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5,  5,  5,  5,  0,-10,
+     -5,  0,  5,  5,  5,  5,  0, -5,
+      0,  0,  5,  5,  5,  5,  0, -5,
+    -10,  5,  5,  5,  5,  5,  0,-10,
+    -10,  0,  5,  0,  0,  0,  0,-10,
+    -20,-10,-10, -5, -5,-10,-10,-20
+  ],
+  [PIECE.KING]: [
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -20,-30,-30,-40,-40,-30,-30,-20,
+    -10,-20,-20,-20,-20,-20,-20,-10,
+     20, 20,  0,  0,  0,  0, 20, 20,
+     20, 30, 10,  0,  0, 10, 30, 20
+  ]
+};
+const PIECE_VAL = [0,100,320,330,500,900,20000];
+
+function evaluate(st) {
+  let score = 0;
+  for(let s=0;s<64;s++){
+    const p=st.board[s];
+    if(!p) continue;
+    const t=type(p), c=color(p);
+    const pstIdx = c===WHITE ? s : (7-row(s))*8+col(s);
+    const val = PIECE_VAL[t] + (PST[t]?PST[t][pstIdx]:0);
+    score += c===WHITE ? val : -val;
+  }
+  return st.turn===WHITE ? score : -score;
+}
+
+function orderMoves(moves, board) {
+  return moves.sort((a,b)=>{
+    let va=0,vb=0;
+    if(mFlags(a)&F_CAP) va+=PIECE_VAL[type(board[mTo(a)])]*10-PIECE_VAL[type(board[mFrom(a)])];
+    if(mFlags(b)&F_CAP) vb+=PIECE_VAL[type(board[mTo(b)])]*10-PIECE_VAL[type(board[mFrom(b)])];
+    if(mPromo(a)) va+=PIECE_VAL[mPromo(a)];
+    if(mPromo(b)) vb+=PIECE_VAL[mPromo(b)];
+    return vb-va;
+  });
+}
+
+const TT = new Map();
+function alphaBeta(st, depth, alpha, beta, maxDepth) {
+  const key = boardKey(st);
+  const cached = TT.get(key);
+  if(cached && cached.depth>=depth) return cached.score;
+
+  if(depth===0) return qSearch(st, alpha, beta);
+
+  const moves = generateMoves(st);
+  if(moves.length===0) return inCheck(st) ? -20000+maxDepth-depth : 0;
+
+  const ordered = orderMoves(moves, st.board);
+  let best = -Infinity;
+  for(const m of ordered){
+    const newSt = applyMove(st, m);
+    const score = -alphaBeta(newSt, depth-1, -beta, -alpha, maxDepth);
+    if(score > best) best = score;
+    if(score > alpha) alpha = score;
+    if(alpha >= beta) break;
+  }
+  TT.set(key, {depth, score:best});
+  if(TT.size > 200000) TT.clear();
+  return best;
+}
+
+function qSearch(st, alpha, beta) {
+  const stand = evaluate(st);
+  if(stand >= beta) return beta;
+  if(stand > alpha) alpha = stand;
+  const captures = orderMoves(generateMoves(st, true), st.board);
+  for(const m of captures){
+    const newSt = applyMove(st, m);
+    const score = -qSearch(newSt, -beta, -alpha);
+    if(score >= beta) return beta;
+    if(score > alpha) alpha = score;
+  }
+  return alpha;
+}
+
+function boardKey(st) {
+  let k = '';
+  for(let i=0;i<64;i++) k+=st.board[i]+',';
+  return k+st.turn+st.castling+st.ep;
+}
+
+// Difficulty config
+const DIFF_CONFIG = {
+  easy:   { depth:1, randPct:0.80, blunderPct:0.35 },
+  medium: { depth:3, randPct:0.20, blunderPct:0.08 },
+  hard:   { depth:4, randPct:0.02, blunderPct:0.01 }
+};
+
+function getBestMove(st, difficulty) {
+  const cfg = DIFF_CONFIG[difficulty];
+  const moves = generateMoves(st);
+  if(!moves.length) return null;
+
+  // Random/blunder injection for lower ELOs
+  if(Math.random() < cfg.randPct) {
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+
+  // Depth search
+  const ordered = orderMoves([...moves], st.board);
+  let bestMove = ordered[0], bestScore = -Infinity;
+  const alpha = -Infinity, beta = Infinity;
+
+  for(const m of ordered){
+    const newSt = applyMove(st, m);
+    const score = -alphaBeta(newSt, cfg.depth-1, -beta, -alpha, cfg.depth);
+    if(score > bestScore){ bestScore=score; bestMove=m; }
+  }
+
+  // Occasional blunder
+  if(Math.random() < cfg.blunderPct) {
+    return ordered[Math.floor(Math.random()*Math.min(5,ordered.length))];
+  }
+  return bestMove;
+}
+
+// ═══════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════
+const AC = new (window.AudioContext||window.webkitAudioContext)();
+let musicGain, sfxGain, musicPlaying=true, sfxOn=true;
+
+function initAudio() {
+  musicGain = AC.createGain(); musicGain.gain.value = 0.15; musicGain.connect(AC.destination);
+  sfxGain   = AC.createGain(); sfxGain.gain.value   = 0.4;  sfxGain.connect(AC.destination);
+  startMusic();
+}
+
+// ─── Bach Prelude in C Major — scheduled arpeggio music ───
+const BACH_DUR = 0.32; // 8th note duration (~94 BPM)
+const BACH_BARS = [
+  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
+  { b:130.81, n:[261.63,293.66,440.00,587.33,698.46,440.00,587.33,698.46] }, // ii7 Dm7
+  { b:123.47, n:[246.94,293.66,392.00,587.33,698.46,293.66,392.00,698.46] }, // V7  G7
+  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
+  { b:110.00, n:[220.00,261.63,329.63,440.00,523.25,329.63,440.00,523.25] }, // vi  Am
+  { b:146.83, n:[293.66,349.23,440.00,523.25,587.33,440.00,523.25,587.33] }, // ii  Dm
+  { b: 98.00, n:[196.00,246.94,392.00,493.88,587.33,392.00,493.88,587.33] }, // V   G
+  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,392.00,523.25,659.25] }, // I   C major
+  { b:130.81, n:[261.63,329.63,392.00,523.25,659.25,523.25,659.25,784.00] }, // I   C (rise)
+  { b:146.83, n:[293.66,349.23,440.00,587.33,698.46,587.33,698.46,880.00] }, // ii  Dm (rise)
+  { b:123.47, n:[246.94,329.63,392.00,493.88,659.25,493.88,587.33,784.00] }, // V7  G7 (rise)
+  { b:130.81, n:[261.63,329.63,523.25,659.25,523.25,392.00,329.63,261.63] }, // I   C (fall)
+];
+let bachBar=0, bachNote=0, bachNext=0, bachSched=null;
+
+function startMusic() {
+  if(!musicPlaying) return;
+  bachBar=0; bachNote=0; bachNext=AC.currentTime+0.1;
+  bachSched=setInterval(scheduleBach, 200);
+}
+
+function scheduleBach() {
+  if(!musicPlaying) return;
+  while(bachNext < AC.currentTime + 0.9) {
+    const bar = BACH_BARS[bachBar % BACH_BARS.length];
+    if(bachNote===0) {
+      bachPlayNote(bar.b,       bachNext, BACH_DUR*7,   0.18, 'violin');
+      bachPlayNote(bar.b*1.5,   bachNext, BACH_DUR*3.5, 0.07, 'violin');
+    }
+    bachPlayNote(bar.n[bachNote], bachNext, BACH_DUR*0.88, 0.14, 'piano');
+    bachNext += BACH_DUR;
+    if(++bachNote >= 8){ bachNote=0; bachBar++; }
+  }
+}
+
+function bachPlayNote(freq, t, dur, gain, voice) {
+  try {
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.frequency.setValueAtTime(freq, t);
+    if(voice==='piano') {
+      // Soft piano: sine fundamental + harmonics, fast decay
+      o.type='sine';
+      // 2nd harmonic (octave) — brightens tone
+      const o2=AC.createOscillator(), g2=AC.createGain();
+      o2.type='sine'; o2.frequency.setValueAtTime(freq*2, t);
+      g2.gain.setValueAtTime(0,t);
+      g2.gain.linearRampToValueAtTime(gain*0.22, t+0.005);
+      g2.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur*0.6,0.9));
+      o2.connect(g2); g2.connect(musicGain); o2.start(t); o2.stop(t+Math.min(dur*0.6,0.9)+0.02);
+      // 3rd harmonic — adds warmth
+      const o3=AC.createOscillator(), g3=AC.createGain();
+      o3.type='sine'; o3.frequency.setValueAtTime(freq*3, t);
+      g3.gain.setValueAtTime(0,t);
+      g3.gain.linearRampToValueAtTime(gain*0.08, t+0.004);
+      g3.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur*0.3,0.4));
+      o3.connect(g3); g3.connect(musicGain); o3.start(t); o3.stop(t+Math.min(dur*0.3,0.4)+0.02);
+      // Fundamental envelope: sharp strike, fast decay, soft tail
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(gain, t+0.006);
+      g.gain.exponentialRampToValueAtTime(gain*0.12, t+0.08);
+      g.gain.exponentialRampToValueAtTime(gain*0.03, t+0.35);
+      g.gain.exponentialRampToValueAtTime(0.001, t+Math.min(dur,1.8));
+      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+Math.min(dur,1.8)+0.05);
+    } else {
+      // Violin: filtered sawtooth + slow attack + vibrato — warmer than raw sawtooth
+      o.type='sawtooth';
+      const filt=AC.createBiquadFilter();
+      filt.type='lowpass'; filt.frequency.setValueAtTime(1400,t); filt.Q.value=0.7;
+      const vLFO=AC.createOscillator(), vG=AC.createGain();
+      vLFO.type='sine'; vLFO.frequency.value=5.2;
+      vG.gain.value=freq*0.010;
+      vLFO.connect(vG); vG.connect(o.frequency);
+      vLFO.start(t+0.12); vLFO.stop(t+dur+0.1);
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(gain*0.35, t+0.07);
+      g.gain.linearRampToValueAtTime(gain, t+0.18);
+      g.gain.setValueAtTime(gain*0.78, Math.max(t+0.2, t+dur-0.15));
+      g.gain.exponentialRampToValueAtTime(0.001, t+dur+0.1);
+      o.connect(filt); filt.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.15);
+    }
+  } catch(e){}
+}
+
+
+function toggleMusic() {
+  musicPlaying = !musicPlaying;
+  if(musicPlaying){
+    bachNext=AC.currentTime+0.1;
+    bachSched=setInterval(scheduleBach,200);
+    document.getElementById('musicBtn').textContent='♫ Music: On';
+  } else {
+    clearInterval(bachSched);
+    document.getElementById('musicBtn').textContent='♫ Music: Off';
+  }
+}
+function toggleSFX() {
+  sfxOn = !sfxOn;
+  document.querySelectorAll('.ctrl-btn')[1].textContent = '🔊 SFX: '+(sfxOn?'On':'Off');
+}
+
+function playSFX(type) {
+  if(!sfxOn) return;
+  try {
+    const now = AC.currentTime;
+    const o = AC.createOscillator();
+    const g = AC.createGain();
+    o.connect(g); g.connect(sfxGain);
+    if(type==='move'){
+      o.type='square'; o.frequency.setValueAtTime(800,now); o.frequency.linearRampToValueAtTime(600,now+0.06);
+      g.gain.setValueAtTime(0.3,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.1);
+      o.start(now); o.stop(now+0.1);
+    } else if(type==='capture'){
+      o.type='sawtooth'; o.frequency.setValueAtTime(300,now); o.frequency.linearRampToValueAtTime(100,now+0.15);
+      g.gain.setValueAtTime(0.5,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.2);
+      o.start(now); o.stop(now+0.2);
+    } else if(type==='check'){
+      o.type='square'; o.frequency.setValueAtTime(1200,now); o.frequency.linearRampToValueAtTime(900,now+0.2);
+      g.gain.setValueAtTime(0.4,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.25);
+      o.start(now); o.stop(now+0.25);
+    } else if(type==='castle'){
+      for(const [f,t] of [[500,now],[600,now+0.08],[700,now+0.16]]){
+        const oo=AC.createOscillator(), gg=AC.createGain();
+        oo.type='triangle'; oo.frequency.value=f;
+        gg.gain.setValueAtTime(0,t); gg.gain.linearRampToValueAtTime(0.3,t+0.04); gg.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+        oo.connect(gg); gg.connect(sfxGain); oo.start(t); oo.stop(t+0.15);
+      }
+    } else if(type==='illegal'){
+      o.type='sine'; o.frequency.setValueAtTime(200,now);
+      g.gain.setValueAtTime(0.3,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.15);
+      o.start(now); o.stop(now+0.15);
+    } else if(type==='gameover'){
+      for(const [f,t] of [[523,now],[440,now+0.15],[349,now+0.3],[261,now+0.5]]){
+        const oo=AC.createOscillator(), gg=AC.createGain();
+        oo.type='triangle'; oo.frequency.value=f;
+        gg.gain.setValueAtTime(0,t); gg.gain.linearRampToValueAtTime(0.4,t+0.05); gg.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+        oo.connect(gg); gg.connect(sfxGain); oo.start(t); oo.stop(t+0.6);
+      }
+    }
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════════════
+//  ACHIEVEMENTS
+// ═══════════════════════════════════════════════
+const ACHIEVEMENTS = [
+  { id:'first_win',        icon:'🏆', name:'First Blood',       desc:'Win your first game — GOLDEN BOARD GLOW' },
+  { id:'castle_k',         icon:'🏰', name:'Castled',           desc:'Castle kingside — SILVER BOARD OUTLINE' },
+  { id:'castle_q',         icon:'🏰', name:'Fortress',          desc:'Castle queenside — BRONZE BOARD OUTLINE' },
+  { id:'en_passant',       icon:'💨', name:'En Passant!',       desc:'Capture en passant — GHOST PIECE TRAIL' },
+  { id:'first_promo',      icon:'👑', name:'Pawn Power',        desc:'Promote a pawn — PLATINUM BOARD OUTLINE' },
+  { id:'scholars_mate',    icon:'📖', name:"Scholar's Mate",    desc:"Win in 4 moves or fewer — 📖 STATUS ICON" },
+  { id:'blitzkrieg',       icon:'⚡', name:'Blitzkrieg',        desc:'Win in under 15 moves — ⚡ STATUS ICON' },
+  { id:'fork_master',      icon:'🍴', name:'Fork Master',       desc:'Fork two pieces with a knight — 🍴 STATUS ICON' },
+  { id:'opening_sicilian', icon:'📚', name:'Sicilian',          desc:'Play the Sicilian Defense — OPENING BANNER' },
+  { id:'opening_italian',  icon:'📚', name:'Italian Game',      desc:'Play the Italian Game — OPENING BANNER' },
+  { id:'opening_queens',   icon:'📚', name:"Queen's Gambit",    desc:"Play the Queen's Gambit — OPENING BANNER" },
+  { id:'classical_scholar',icon:'🌳', name:'Classical Scholar', desc:'Play 3 classic openings — WOODEN BOARD' },
+  { id:'speed_chess',      icon:'💨', name:'Speed Chess',       desc:'Win on 30s or 2min timer — EMERALD BOARD' },
+  { id:'hunter',           icon:'🎯', name:'Hunter',            desc:'Capture 20 pieces total — SKULL CAPTURES' },
+  { id:'marathon_pawn',    icon:'♟️', name:'Marathon PAWN!!',   desc:'Promote 5 pawns total — FIRE KING' },
+  { id:'ruthless',         icon:'⚔️', name:'Ruthless',          desc:'Beat Hard difficulty — NIGHT BOARD' },
+  { id:'brilliant_game',   icon:'✨', name:'Brilliant!',        desc:'Make 5+ brilliant moves in one game — RAINBOW KING' },
+  { id:'last_stand',       icon:'🛡️', name:'Last Stand',        desc:'Win with King + 1 piece only — GOLD PIECES' },
+  { id:'comeback',         icon:'🔄', name:'Comeback Kid',      desc:'Win after losing your queen — COMEBACK BANNER' },
+  { id:'grandmaster',      icon:'🌟', name:'Grandmaster',       desc:'Win 10 games total — GOLD BOARD' },
+  { id:'philosopher',      icon:'🧠', name:'Philosopher',       desc:'Reach move 50 in a game — MARBLE BOARD' },
+];
+
+function loadStats() {
+  try {
+    const s = JSON.parse(localStorage.getItem('chess_stats')||'{}');
+    return {
+      wins: s.wins||0,
+      promotions: s.promotions||0,
+      capturedTotal: s.capturedTotal||0,
+      openingsPlayed: new Set(s.openingsPlayed||[]),
+    };
+  } catch(e) { return {wins:0,promotions:0,capturedTotal:0,openingsPlayed:new Set()}; }
+}
+function saveStats(st) {
+  try { localStorage.setItem('chess_stats', JSON.stringify({...st, openingsPlayed:[...st.openingsPlayed]})); } catch(e){}
+}
+function loadUnlocked() {
+  try { return new Set(JSON.parse(localStorage.getItem('chess_unlocked')||'[]')); } catch(e){ return new Set(); }
+}
+function saveUnlocked(u) {
+  try { localStorage.setItem('chess_unlocked', JSON.stringify([...u])); } catch(e){}
+}
+
+let unlockedAch = loadUnlocked();
+let persistStats = loadStats();
+
+function unlockAchievement(id) {
+  if(unlockedAch.has(id)) return;
+  unlockedAch.add(id); saveUnlocked(unlockedAch);
+  const ach = ACHIEVEMENTS.find(a=>a.id===id);
+  if(!ach) return;
+  showAchievementToast(ach);
+  applyReward(id);
+}
+
+function showAchievementToast(ach) {
+  const t = document.getElementById('achieveToast');
+  t.innerHTML = `<div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.6em">${ach.icon}</span><div><div style="font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;color:#d4af37">ACHIEVEMENT UNLOCKED</div><div style="font-family:'Crimson Text',serif;font-size:1em;color:#e8d5b0">${ach.name}</div></div></div>`;
+  t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
+}
+
+function applyReward(id) {
+  const b=document.getElementById('board');
+  switch(id){
+    case 'classical_scholar': b.classList.add('wooden'); break;
+    case 'first_win':         b.classList.add('board-glow'); break;
+    case 'grandmaster':       b.classList.add('board-gold'); break;
+    case 'philosopher':       b.classList.add('board-marble'); break;
+    case 'speed_chess':       b.classList.add('board-emerald'); break;
+    case 'ruthless':          b.classList.add('board-night'); break;
+    case 'castle_k':          b.classList.add('border-silver'); break;
+    case 'castle_q':          b.classList.add('border-bronze'); break;
+    case 'first_promo':       b.classList.add('border-platinum'); break;
+    case 'marathon_pawn':     window._fireKingUnlocked=true; break;
+    case 'brilliant_game':    window._rainbowKingUnlocked=true; break;
+    case 'last_stand':        window._goldPiecesUnlocked=true; break;
+    case 'en_passant':        window._ghostTrailUnlocked=true; break;
+    case 'hunter':            window._skullCapturesUnlocked=true; break;
+    case 'comeback': break; // banner handled in onPlayerWin
+    case 'scholars_mate': case 'blitzkrieg': case 'fork_master':
+      updateStatusIcons(); break;
+  }
+}
+
+function applyStoredRewards() {
+  const b=document.getElementById('board');
+  if(unlockedAch.has('classical_scholar')) b.classList.add('wooden');
+  if(unlockedAch.has('first_win'))         b.classList.add('board-glow');
+  if(unlockedAch.has('grandmaster'))       b.classList.add('board-gold');
+  if(unlockedAch.has('philosopher'))       b.classList.add('board-marble');
+  if(unlockedAch.has('speed_chess'))       b.classList.add('board-emerald');
+  if(unlockedAch.has('ruthless'))          b.classList.add('board-night');
+  if(unlockedAch.has('castle_k'))          b.classList.add('border-silver');
+  if(unlockedAch.has('castle_q'))          b.classList.add('border-bronze');
+  if(unlockedAch.has('first_promo'))       b.classList.add('border-platinum');
+  if(unlockedAch.has('marathon_pawn'))     window._fireKingUnlocked=true;
+  if(unlockedAch.has('brilliant_game'))    window._rainbowKingUnlocked=true;
+  if(unlockedAch.has('last_stand'))        window._goldPiecesUnlocked=true;
+  if(unlockedAch.has('en_passant'))        window._ghostTrailUnlocked=true;
+  if(unlockedAch.has('hunter'))            window._skullCapturesUnlocked=true;
+  updateStatusIcons();
+}
+
+function updateStatusIcons() {
+  const el=document.getElementById('statusIcons');
+  if(!el) return;
+  const icons=[];
+  if(unlockedAch.has('scholars_mate')) icons.push('📖');
+  if(unlockedAch.has('blitzkrieg'))    icons.push('⚡');
+  if(unlockedAch.has('fork_master'))   icons.push('🍴');
+  el.textContent=icons.join(' ');
+}
+
+function openAchievements() {
+  const grid = document.getElementById('achieveGrid');
+  grid.innerHTML = '';
+  ACHIEVEMENTS.forEach(a => {
+    const div = document.createElement('div');
+    const unlocked = unlockedAch.has(a.id);
+    div.className = 'achieve-item ' + (unlocked ? 'unlocked' : 'locked');
+    div.innerHTML = `<div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${unlocked ? a.desc : '???'}</div>`;
+    grid.appendChild(div);
+  });
+  document.getElementById('achieveModal').classList.add('show');
+}
+function closeAchievements() {
+  document.getElementById('achieveModal').classList.remove('show');
+}
+
+function checkOpenings() {
+  const sans = moveHistory.map(m=>m.san);
+  let detected = null;
+  if(sans.length>=2 && sans[0]==='e4' && sans[1]==='c5'){unlockAchievement('opening_sicilian');detected='🐉 Sicilian Defence';}
+  if(sans.length>=5 && sans[0]==='e4'&&sans[1]==='e5'&&sans[2]==='Nf3'&&sans[3]==='Nc6'&&sans[4]==='Bc4'){unlockAchievement('opening_italian');detected='🍕 Italian Game';}
+  if(sans.length>=3 && sans[0]==='d4'&&sans[1]==='d5'&&sans[2]==='c4'){unlockAchievement('opening_queens');detected="♛ Queen's Gambit";}
+  const openingIds=['opening_sicilian','opening_italian','opening_queens'];
+  if(openingIds.every(id=>unlockedAch.has(id))) unlockAchievement('classical_scholar');
+  if(detected && !window._openingDetected){
+    window._openingDetected=detected;
+    const el=document.getElementById('statusText');
+    const prev=el.innerHTML;
+    el.innerHTML=`<span style="color:#d4af37">${detected}</span>`;
+    setTimeout(()=>{ if(el.innerHTML.includes(detected)) el.innerHTML=prev; },2500);
+  }
+}
+
+function checkFork(st, m) {
+  if(type(st.board[mFrom(m)]) !== PIECE.KNIGHT) return;
+  const toSq = mTo(m);
+  const newSt = applyMove(st, m);
+  const oppColor = opp(st.turn);
+  let attacked = 0;
+  for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]) {
+    const r=row(toSq)+dr, f=col(toSq)+df;
+    if(r>=0&&r<8&&f>=0&&f<8) {
+      const p=newSt.board[sq(r,f)];
+      if(p && color(p)===oppColor && type(p)!==PIECE.KING) attacked++;
+    }
+  }
+  if(attacked >= 2) unlockAchievement('fork_master');
+}
+
+// ═══════════════════════════════════════════════
+//  GAME UI
+// ═══════════════════════════════════════════════
+let playerColor = WHITE;
+let difficulty = 'easy';
+let timeControl = 0;
+let playerTime, compTime;
+let timerInterval = null;
+let selectedSq = -1;
+let legalMoves = [];
+let selectedMoves = [];
+let gameOver = false;
+let thinking = false;
+let lastFrom=-1, lastTo=-1;
+let capturedByPlayer=[], capturedByComp=[];
+let moveHistory=[];
+let sfxToggle=true;
+let snapshots = [];   // board snapshots after each half-move
+let gameResult = null;
+let reviewMode = false;
+let reviewIdx = 0;
+let arrowStart = -1;
+let drawnArrows = []; // [{from, to, color}] — to=-1 means circle highlight
+
+// Per-game achievement tracking
+let gamePromos = 0;
+let gameBrilliant = 0;
+let gameCaptured = 0;
+let lostQueen = false;
+let hadCastle = false;
+
+function selectColor(c) {
+  playerColor = c==='white'?WHITE:BLACK;
+  document.getElementById('colorWhite').classList.toggle('active',c==='white');
+  document.getElementById('colorBlack').classList.toggle('active',c==='black');
+}
+function selectDiff(d) {
+  difficulty=d;
+  ['easy','medium','hard'].forEach(x=>document.getElementById('diff'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===d));
+}
+function selectTime(t) {
+  timeControl=t;
+  ['None','600','300','120','30'].forEach(x=>{
+    const btn=document.getElementById('time'+x);
+    if(btn) btn.classList.toggle('active', (x==='None'&&t===0)||(parseInt(x)===t));
+  });
+}
+
+function startGame() {
+  customMode = false;
+  if(AC.state==='suspended') AC.resume();
+  initAudio();
+  initState();
+  snapshots = [];
+  reviewMode = false;
+
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='flex';
+
+  playerTime = timeControl;
+  compTime   = timeControl;
+
+  if(timeControl > 0) {
+    document.getElementById('playerTimerPanel').style.display='block';
+    document.getElementById('oppTimerPanel').style.display='block';
+    document.getElementById('playerTimerLabel').textContent = playerColor===WHITE?'You (White)':'You (Black)';
+    document.getElementById('oppTimerLabel').textContent = playerColor===WHITE?'Computer (Black)':'Computer (White)';
+    updateTimerDisplay();
+  }
+
+  // Reset per-game achievement tracking
+  gamePromos = 0;
+  gameBrilliant = 0;
+  gameCaptured = 0;
+  lostQueen = false;
+  hadCastle = false;
+
+  legalMoves = generateMoves(state);
+  buildBoard();
+  applyStoredRewards();
+  renderBoard();
+  updateStatus();
+
+  if(state.turn !== playerColor) {
+    setTimeout(()=>doComputerMove(), 500);
+  }
+}
+
+const FILES = ['a','b','c','d','e','f','g','h'];
+const RANKS = ['8','7','6','5','4','3','2','1'];
+
+// CBurnett Staunton-style SVG pieces
+const _S = {
+  wP:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C16.83 16.5 15.5 18.59 15.5 21c0 2.03.94 3.84 2.41 5.03C14.91 27.09 10.5 31.58 10.5 39.5h23c0-7.92-4.41-12.41-7.41-13.47C27.56 24.84 28.5 23.03 28.5 21c0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#fffaf0" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bP:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M22 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C16.83 16.5 15.5 18.59 15.5 21c0 2.03.94 3.84 2.41 5.03C14.91 27.09 10.5 31.58 10.5 39.5h23c0-7.92-4.41-12.41-7.41-13.47C27.56 24.84 28.5 23.03 28.5 21c0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+  wR:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#fffaf0" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zm3-3v-4h21v4H12zm-1-22V9h4v2h5V9h5v2h5V9h4v5" stroke-linejoin="miter"/><path d="M34 14l-3 3H14l-3-3"/><path d="M31 17v12.5H14V17" fill="#fffaf0" stroke-linejoin="miter"/><path d="M31 29.5l1.5 2.5h-19l1.5-2.5"/><path d="M11 14h23" fill="none"/></g></svg>`,
+  bR:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zm3-3v-4h21v4H12zm-1-22V9h4v2h5V9h5v2h5V9h4v5"/><path d="M34 14l-3 3H14l-3-3"/><path d="M31 17v12.5H14V17"/><path d="M31 29.5l1.5 2.5h-19l1.5-2.5"/><path d="M13 17h19M13 24h19M13 29h19" stroke="#fff" stroke-width="1" fill="none"/></g></svg>`,
+
+  wN:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" fill-rule="evenodd" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#fffaf0" d="M22 10C32.5 11 38.5 18 38 39H15C15 30 25 32.5 23 18"/><path fill="#fffaf0" d="M24 18C24.38 20.91 18.45 25.37 16 27 13 29 13.18 31.34 11 31 9.96 30.06 12.41 27.96 11 28 10 28 11.19 29.23 10 30 9 30 6 31 6 26 6 24 12 14 12 14 12 14 13.89 12.1 14 10.5 13.27 9.5 13.5 8.5 13.5 7.5 14.5 6.5 16.5 10 16.5 10H18.5C18.5 10 19.28 8 21 7 22 7 22 10 22 10"/><path fill="#fffaf0" stroke-linejoin="miter" d="M9.5 37h26v2.5h-26z"/><path d="M11.5 30C17 28 27 28 32.5 30" fill="none"/><circle cx="9" cy="25.5" r=".75" fill="#333" stroke="#333"/><ellipse cx="14.5" cy="15.5" rx=".75" ry="2" transform="rotate(30,14.5,15.5)" fill="#333" stroke="#333"/></g></svg>`,
+  bN:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" fill-rule="evenodd" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#1a1a1a" d="M22 10C32.5 11 38.5 18 38 39H15C15 30 25 32.5 23 18"/><path fill="#1a1a1a" d="M24 18C24.38 20.91 18.45 25.37 16 27 13 29 13.18 31.34 11 31 9.96 30.06 12.41 27.96 11 28 10 28 11.19 29.23 10 30 9 30 6 31 6 26 6 24 12 14 12 14 12 14 13.89 12.1 14 10.5 13.27 9.5 13.5 8.5 13.5 7.5 14.5 6.5 16.5 10 16.5 10H18.5C18.5 10 19.28 8 21 7 22 7 22 10 22 10"/><path fill="#1a1a1a" stroke-linejoin="miter" d="M9.5 37h26v2.5h-26z"/><circle cx="9" cy="25.5" r=".75" fill="#fff" stroke="#fff"/><ellipse cx="14.5" cy="15.5" rx=".75" ry="2" transform="rotate(30,14.5,15.5)" fill="#fff" stroke="#fff"/></g></svg>`,
+
+  wB:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g fill="#fffaf0" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.35.49-2.32.47-3-.5 1.35-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><circle cx="22.5" cy="8" r="2.5"/></g><path d="M17.5 26h10M15 30h15M22.5 15.5v5M20 18h5" stroke-linejoin="miter"/></g></svg>`,
+  bB:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><g fill="#1a1a1a" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.35.49-2.32.47-3-.5 1.35-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><circle cx="22.5" cy="8" r="2.5"/></g><path d="M17.5 26h10M15 30h15M22.5 15.5v5M20 18h5" stroke="#fff" stroke-linejoin="miter"/></g></svg>`,
+
+  wQ:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#fffaf0" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15L14 11v14L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c4-1.5 17-1.5 21 0M13 37c3.5-1 15.5-1 19 0" fill="none"/></g></svg>`,
+  bQ:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15L14 11v14L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c4-1.5 17-1.5 21 0M13 37c3.5-1 15.5-1 19 0" stroke="#fff" fill="none"/></g></svg>`,
+
+  wK:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#fffaf0" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 5 10 5 10V37z" fill="#fffaf0"/><path d="M11.5 30c5.5-3 15.5-3 21 0M11.5 33.5c5.5-3 15.5-3 21 0M11.5 37c5.5-3 15.5-3 21 0"/></g></svg>`,
+  bK:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke="#1a1a1a" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#1a1a1a" stroke="#1a1a1a" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-2.5-7.5-12-10.5-16-4-3 6 5 10 5 10V37z" fill="#1a1a1a" stroke="#1a1a1a"/><path d="M11.5 30c5.5-3 15.5-3 21 0M11.5 33.5c5.5-3 15.5-3 21 0M11.5 37c5.5-3 15.5-3 21 0" stroke="#fff"/></g></svg>`,
+
+  // Cricket — custom pawn replacement (jumps over pieces straight forward)
+  wCr:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#fffaf0" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 39h24v-2.5h-24z" stroke-linejoin="miter"/><ellipse cx="22.5" cy="30" rx="9" ry="6"/><circle cx="22.5" cy="19" r="4.5"/><line x1="21" y1="22.5" x2="21" y2="25" stroke-width="1.2"/><line x1="24" y1="22.5" x2="24" y2="25" stroke-width="1.2"/><line x1="20" y1="15.5" x2="13" y2="8" stroke-width="1.2"/><line x1="25" y1="15.5" x2="32" y2="8" stroke-width="1.2"/><line x1="14" y1="26" x2="7" y2="22" stroke-width="1.3"/><line x1="13" y1="30" x2="6" y2="30" stroke-width="1.3"/><line x1="14" y1="34" x2="8" y2="38" stroke-width="1.3"/><line x1="31" y1="26" x2="38" y2="22" stroke-width="1.3"/><line x1="32" y1="30" x2="39" y2="30" stroke-width="1.3"/><line x1="31" y1="34" x2="37" y2="38" stroke-width="1.3"/><circle cx="22.5" cy="17.5" r="1.4" fill="#333" stroke="#333"/></g></svg>`,
+  bCr:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 39h24v-2.5h-24z" stroke-linejoin="miter"/><ellipse cx="22.5" cy="30" rx="9" ry="6"/><circle cx="22.5" cy="19" r="4.5"/><line x1="21" y1="22.5" x2="21" y2="25" stroke="#555" stroke-width="1.2"/><line x1="24" y1="22.5" x2="24" y2="25" stroke="#555" stroke-width="1.2"/><line x1="20" y1="15.5" x2="13" y2="8" stroke="#555" stroke-width="1.2"/><line x1="25" y1="15.5" x2="32" y2="8" stroke="#555" stroke-width="1.2"/><line x1="14" y1="26" x2="7" y2="22" stroke="#555" stroke-width="1.3"/><line x1="13" y1="30" x2="6" y2="30" stroke="#555" stroke-width="1.3"/><line x1="14" y1="34" x2="8" y2="38" stroke="#555" stroke-width="1.3"/><line x1="31" y1="26" x2="38" y2="22" stroke="#555" stroke-width="1.3"/><line x1="32" y1="30" x2="39" y2="30" stroke="#555" stroke-width="1.3"/><line x1="31" y1="34" x2="37" y2="38" stroke="#555" stroke-width="1.3"/><circle cx="22.5" cy="17.5" r="1.4" fill="#fff" stroke="#fff"/></g></svg>`,
+
+  // Custom mode pieces
+  wCh:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#fffaf0" d="M9 39h27v-3H9z" stroke-linejoin="miter"/><path fill="#fffaf0" d="M12 36v-4h21v4H12z"/><path fill="#fffaf0" d="M12 32v-10h21v10H12z"/><path fill="#fffaf0" d="M22 22C15 22 11 17 12.5 10 14 5 19 6 21.5 9.5c1-3 3.5-4.5 5.5-3.5 4 2 5 8 3 16z"/><path fill="#fffaf0" d="M12 22C9 20 9 15 11 13l3.5 6z"/><circle cx="26" cy="13.5" r="1.2" fill="#333" stroke="#333"/><path d="M12 22h21M12 27h21M12 32h21" fill="none" stroke-width="0.8"/></g></svg>`,
+  bCh:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#1a1a1a" d="M9 39h27v-3H9z" stroke-linejoin="miter"/><path fill="#1a1a1a" d="M12 36v-4h21v4H12z"/><path fill="#1a1a1a" d="M12 32v-10h21v10H12z"/><path fill="#1a1a1a" d="M22 22C15 22 11 17 12.5 10 14 5 19 6 21.5 9.5c1-3 3.5-4.5 5.5-3.5 4 2 5 8 3 16z"/><path fill="#1a1a1a" d="M12 22C9 20 9 15 11 13l3.5 6z"/><circle cx="26" cy="13.5" r="1.2" fill="#fff" stroke="#fff"/><path d="M12 22h21M12 27h21M12 32h21" fill="none" stroke="#555" stroke-width="0.8"/></g></svg>`,
+  wZe:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" fill-rule="evenodd" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#fffaf0" d="M22 10C32.5 11 38.5 18 38 39H15C15 30 25 32.5 23 18"/><path fill="#fffaf0" d="M24 18C24.38 20.91 18.45 25.37 16 27 13 29 13.18 31.34 11 31 9.96 30.06 12.41 27.96 11 28 10 28 11.19 29.23 10 30 9 30 6 31 6 26 6 24 12 14 12 14 12 14 13.89 12.1 14 10.5 13.27 9.5 13.5 8.5 13.5 7.5 14.5 6.5 16.5 10 16.5 10H18.5C18.5 10 19.28 8 21 7 22 7 22 10 22 10"/><path fill="#fffaf0" stroke-linejoin="miter" d="M9.5 37h26v2.5h-26z"/><path d="M17 16l9 6M14 22l11 7M13 29l9 6" stroke="#666" stroke-width="2.2" fill="none"/><circle cx="9" cy="25.5" r=".75" fill="#333" stroke="#333"/><ellipse cx="14.5" cy="15.5" rx=".75" ry="2" transform="rotate(30,14.5,15.5)" fill="#333" stroke="#333"/></g></svg>`,
+  bZe:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="none" fill-rule="evenodd" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path fill="#1a1a1a" d="M22 10C32.5 11 38.5 18 38 39H15C15 30 25 32.5 23 18"/><path fill="#1a1a1a" d="M24 18C24.38 20.91 18.45 25.37 16 27 13 29 13.18 31.34 11 31 9.96 30.06 12.41 27.96 11 28 10 28 11.19 29.23 10 30 9 30 6 31 6 26 6 24 12 14 12 14 12 14 13.89 12.1 14 10.5 13.27 9.5 13.5 8.5 13.5 7.5 14.5 6.5 16.5 10 16.5 10H18.5C18.5 10 19.28 8 21 7 22 7 22 10 22 10"/><path fill="#1a1a1a" stroke-linejoin="miter" d="M9.5 37h26v2.5h-26z"/><path d="M17 16l9 6M14 22l11 7M13 29l9 6" stroke="#888" stroke-width="2.2" fill="none"/><circle cx="9" cy="25.5" r=".75" fill="#fff" stroke="#fff"/><ellipse cx="14.5" cy="15.5" rx=".75" ry="2" transform="rotate(30,14.5,15.5)" fill="#fff" stroke="#fff"/></g></svg>`,
+  wMi:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#fffaf0" stroke="#333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15L14 11v14L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c4-1.5 17-1.5 21 0M13 37c3.5-1 15.5-1 19 0" fill="none"/><path d="M22.5 14l1.8 3.5 3.9.6-2.8 2.7.7 3.8-3.6-1.9-3.6 1.9.7-3.8-2.8-2.7 3.9-.6z" fill="#d4af37" stroke="#a07820" stroke-width="1"/></g></svg>`,
+  bMi:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15L14 11v14L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c4-1.5 17-1.5 21 0M13 37c3.5-1 15.5-1 19 0" stroke="#fff" fill="none"/><path d="M22.5 14l1.8 3.5 3.9.6-2.8 2.7.7 3.8-3.6-1.9-3.6 1.9.7-3.8-2.8-2.7 3.9-.6z" fill="#d4af37" stroke="#a07820" stroke-width="1"/></g></svg>`,
+};
+
+// Pre-parse all SVGs for reliable rendering
+const _SV = {};
+(function(){
+  const dp = new DOMParser();
+  for(const [k,v] of Object.entries(_S)){
+    try{
+      const doc = dp.parseFromString(v,'image/svg+xml');
+      const svg = doc.documentElement;
+      if(svg.nodeName !== 'parsererror'){
+        svg.setAttribute('width','100%');
+        svg.setAttribute('height','100%');
+        svg.style.display = 'block';
+        _SV[k] = svg;
+      }
+    }catch(e){}
+  }
+})();
+
+const PIECE_KEY = {
+  [WHITE|PIECE.KING]:'wK',[WHITE|PIECE.QUEEN]:'wQ',[WHITE|PIECE.ROOK]:'wR',
+  [WHITE|PIECE.BISHOP]:'wB',[WHITE|PIECE.KNIGHT]:'wN',[WHITE|PIECE.PAWN]:'wP',
+  [BLACK|PIECE.KING]:'bK',[BLACK|PIECE.QUEEN]:'bQ',[BLACK|PIECE.ROOK]:'bR',
+  [BLACK|PIECE.BISHOP]:'bB',[BLACK|PIECE.KNIGHT]:'bN',[BLACK|PIECE.PAWN]:'bP',
+};
+
+let customMode = false;
+
+function getPieceKey(p) {
+  if(!customMode) return PIECE_KEY[p];
+  const c = color(p)===WHITE ? 'w' : 'b';
+  switch(type(p)) {
+    case PIECE.PAWN:   return c+'Cr';  // Cricket
+    case PIECE.ROOK:   return c+'Ch';
+    case PIECE.KNIGHT: return c+'Ze';
+    case PIECE.BISHOP: return c+'Q';
+    case PIECE.QUEEN:  return c+'Mi';
+    default:           return PIECE_KEY[p];
+  }
+}
+
+function getPieceSrc(p) {
+  const k = PIECE_KEY[p];
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(_S[k])}`;
+}
+
+function getPieceName(p) {
+  const c = color(p)===WHITE ? 'white' : 'black';
+  const names = {1:'pawn',2:'knight',3:'bishop',4:'rook',5:'queen',6:'king'};
+  const t = customMode ? {1:'cricket',2:'zebra',3:'queen-bishop',4:'chancellor',5:'mixer',6:'king'} : names;
+  return c + ' ' + (t[type(p)] || names[type(p)] || 'piece');
+}
+
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML='';
+  board.setAttribute('role', 'grid');
+  board.setAttribute('aria-label', 'Chess board');
+  const filesRow = document.getElementById('coords-files');
+  filesRow.innerHTML='';
+
+  for(let r=0;r<8;r++){
+    for(let f=0;f<8;f++){
+      const sq=document.createElement('div');
+      sq.className='sq '+(((r+f)%2===0)?'light':'dark');
+      sq.dataset.sq=String(r*8+f);
+      sq.addEventListener('click',onSquareClick);
+      sq.setAttribute('tabindex', '0');
+      sq.setAttribute('role', 'gridcell');
+      board.appendChild(sq);
+    }
+  }
+
+  // Arrow / annotation SVG overlay
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.id='arrowSvg';
+  svg.setAttribute('style','position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:10;overflow:visible');
+  board.appendChild(svg);
+
+  board.addEventListener('mousedown', onArrowMouseDown);
+  board.addEventListener('mouseup',   onArrowMouseUp);
+  board.addEventListener('contextmenu', e=>e.preventDefault());
+
+  FILES.forEach(f=>{
+    const span=document.createElement('span');
+    span.className='coord'; span.textContent=f;
+    filesRow.appendChild(span);
+  });
+}
+
+function visualSq(sq) {
+  if(playerColor===WHITE) return sq;
+  return (7-row(sq))*8+(7-col(sq));
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  const squares = boardEl.querySelectorAll('.sq');
+
+  // Reset all squares
+  squares.forEach((el,i)=>{
+    const s = playerColor===WHITE ? i : (7-row(i))*8+(7-col(i));
+    el.dataset.sq=String(s);
+    el.className='sq '+(((row(i)+col(i))%2===0)?'light':'dark');
+    el.innerHTML='';
+    el.classList.toggle('hoverable', state.board[s]&&color(state.board[s])===state.turn&&state.turn===playerColor);
+    const piece = state.board[s];
+    const pieceName = piece ? getPieceName(piece) : 'empty';
+    el.setAttribute('aria-label', `${FILES[col(s)]}${8-row(s)} ${pieceName}`);
+  });
+
+  // Highlights
+  if(lastFrom>=0){
+    const vf=playerColor===WHITE?lastFrom:(7-row(lastFrom))*8+(7-col(lastFrom));
+    const vt=playerColor===WHITE?lastTo:(7-row(lastTo))*8+(7-col(lastTo));
+    if(squares[vf]) squares[vf].classList.add('last-move-from');
+    if(squares[vt]) squares[vt].classList.add('last-move-to');
+  }
+
+  // Selected square
+  if(selectedSq>=0){
+    const vs=playerColor===WHITE?selectedSq:(7-row(selectedSq))*8+(7-col(selectedSq));
+    if(squares[vs]) squares[vs].classList.add('selected');
+    // Show move dots
+    for(const m of selectedMoves){
+      const ts=mTo(m);
+      const vts=playerColor===WHITE?ts:(7-row(ts))*8+(7-col(ts));
+      const sqEl=squares[vts];
+      if(sqEl){
+        const dot=document.createElement('div');
+        dot.className='dot';
+        sqEl.appendChild(dot);
+        sqEl.classList.add(state.board[ts]?'can-capture':'');
+        sqEl.classList.add('hoverable');
+      }
+    }
+  }
+
+  // King in check
+  if(inCheck(state)){
+    const k=state.kings[state.turn===WHITE?0:1];
+    const vk=playerColor===WHITE?k:(7-row(k))*8+(7-col(k));
+    if(squares[vk]) squares[vk].classList.add('in-check');
+  }
+
+  // Render pieces — using pre-parsed SVG clones for reliable visibility
+  squares.forEach((el)=>{
+    const s=parseInt(el.dataset.sq);
+    const p=state.board[s];
+    if(p){
+      const pd=document.createElement('div');
+      pd.className='piece';
+      const svgEl=_SV[getPieceKey(p)];
+      if(svgEl) pd.appendChild(svgEl.cloneNode(true));
+      else pd.innerHTML=_S[getPieceKey(p)]||'';
+      el.appendChild(pd);
+    }
+  });
+
+  // Fire king on checkmate
+  if(gameOver && window._fireKingUnlocked && inCheck(state)){
+    const kingIdx=state.turn===WHITE?0:1;
+    const kSq=state.kings[kingIdx];
+    const vk=playerColor===WHITE?kSq:(7-row(kSq))*8+(7-col(kSq));
+    const kEl=squares[vk];
+    if(kEl){
+      const piece=kEl.querySelector('.piece');
+      if(piece) piece.classList.add('fire-king');
+    }
+  }
+  // Rainbow king
+  if(window._rainbowKingUnlocked) {
+    const pKIdx = playerColor===WHITE?0:1;
+    const pkSq  = state.kings[pKIdx];
+    const vpkSq = playerColor===WHITE ? pkSq : (7-row(pkSq))*8+(7-col(pkSq));
+    const kEl2  = squares[vpkSq];
+    if(kEl2){const pc=kEl2.querySelector('.piece');if(pc)pc.classList.add('rainbow-king');}
+  }
+  // Gold pieces
+  if(window._goldPiecesUnlocked) {
+    squares.forEach(el=>{
+      const s=parseInt(el.dataset.sq);
+      if(state.board[s]&&color(state.board[s])===playerColor){
+        const pc=el.querySelector('.piece');if(pc)pc.classList.add('gold-piece');
+      }
+    });
+  }
+  // Ghost trail
+  if(window._ghostTrailUnlocked && lastFrom>=0 && window._ghostPiece) {
+    const vfG = playerColor===WHITE ? lastFrom : (7-row(lastFrom))*8+(7-col(lastFrom));
+    const gEl = squares[vfG];
+    if(gEl && !gEl.querySelector('.piece')) {
+      const ghost=document.createElement('div');
+      ghost.className='piece-ghost';
+      ghost.innerHTML=window._ghostPiece;
+      gEl.appendChild(ghost);
+      window._ghostPiece=null;
+      setTimeout(()=>ghost.remove(),700);
+    }
+  }
+}
+
+// ── Arrow / annotation drawing (right-click drag) ──────────────────────────
+function onArrowMouseDown(e) {
+  if(e.button===2) {
+    const sqEl=e.target.closest('.sq');
+    if(sqEl) arrowStart=parseInt(sqEl.dataset.sq);
+    e.preventDefault();
+  } else if(e.button===0 && drawnArrows.length) {
+    drawnArrows=[];
+    renderArrows();
+  }
+}
+
+function onArrowMouseUp(e) {
+  if(e.button!==2||arrowStart<0) return;
+  const sqEl=e.target.closest('.sq');
+  const endSq=sqEl?parseInt(sqEl.dataset.sq):-1;
+  if(endSq<0){arrowStart=-1;return;}
+  const color=e.shiftKey?'#1565C0':e.altKey?'#E65100':e.ctrlKey?'#B71C1C':'#15781B';
+  const a={from:arrowStart, to:endSq===arrowStart?-1:endSq, color};
+  const key=`${a.from}:${a.to}:${a.color}`;
+  const idx=drawnArrows.findIndex(x=>`${x.from}:${x.to}:${x.color}`===key);
+  if(idx>=0) drawnArrows.splice(idx,1); else drawnArrows.push(a);
+  arrowStart=-1;
+  renderArrows();
+}
+
+function sqCenter(logicalSq, sqSz) {
+  if(logicalSq<0) return {x:0,y:0};
+  const vi=playerColor===WHITE?logicalSq:(7-row(logicalSq))*8+(7-col(logicalSq));
+  return {x:(vi%8+0.5)*sqSz, y:(Math.floor(vi/8)+0.5)*sqSz};
+}
+
+function renderArrows() {
+  const svg=document.getElementById('arrowSvg');
+  if(!svg) return;
+  svg.innerHTML='';
+  const sqSz=document.querySelector('.sq')?.offsetWidth||80;
+  for(const a of drawnArrows) {
+    const f=sqCenter(a.from,sqSz);
+    if(a.to<0) {
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',f.x); c.setAttribute('cy',f.y);
+      c.setAttribute('r',sqSz*0.44); c.setAttribute('fill','none');
+      c.setAttribute('stroke',a.color); c.setAttribute('stroke-width',sqSz*0.09);
+      c.setAttribute('opacity','0.82');
+      svg.appendChild(c);
+    } else {
+      const t=sqCenter(a.to,sqSz);
+      drawArrow(svg,f.x,f.y,t.x,t.y,a.color,sqSz);
+    }
+  }
+}
+
+function drawArrow(svg,x1,y1,x2,y2,color,sqSz) {
+  const dx=x2-x1, dy=y2-y1;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  if(len<10) return;
+  const ux=dx/len, uy=dy/len, px=-uy, py=ux;
+  const bw=sqSz*0.11, hw=sqSz*0.24, hl=sqSz*0.29;
+  const x1s=x1+ux*sqSz*0.14, y1s=y1+uy*sqSz*0.14;
+  const nx=x2-ux*hl, ny=y2-uy*hl;
+  const d=[
+    `M${x1s+px*bw},${y1s+py*bw}`,
+    `L${nx+px*bw},${ny+py*bw}`,
+    `L${nx+px*hw},${ny+py*hw}`,
+    `L${x2},${y2}`,
+    `L${nx-px*hw},${ny-py*hw}`,
+    `L${nx-px*bw},${ny-py*bw}`,
+    `L${x1s-px*bw},${y1s-py*bw}`,
+    'Z'
+  ].join(' ');
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',d);
+  path.setAttribute('fill',color);
+  path.setAttribute('opacity','0.82');
+  svg.appendChild(path);
+}
+
+function onSquareClick(e) {
+  if(gameOver||thinking||state.turn!==playerColor) return;
+  if(AC.state==='suspended') AC.resume();
+
+  const s=parseInt(this.dataset.sq);
+  const p=state.board[s];
+
+  if(selectedSq<0){
+    if(!p||color(p)!==playerColor) return;
+    selectedSq=s;
+    selectedMoves=legalMoves.filter(m=>mFrom(m)===s);
+    if(!selectedMoves.length){ selectedSq=-1; playSFX('illegal'); return; }
+  } else {
+    if(s===selectedSq){ selectedSq=-1; selectedMoves=[]; renderBoard(); return; }
+
+    // Try to move
+    const movesTo=selectedMoves.filter(m=>mTo(m)===s);
+    if(movesTo.length){
+      if(movesTo.length>1){
+        // Promotion
+        showPromotion(selectedSq, s, movesTo);
+        return;
+      }
+      executeMove(movesTo[0]);
+      return;
+    }
+
+    // Select new piece
+    if(p&&color(p)===playerColor){
+      selectedSq=s;
+      selectedMoves=legalMoves.filter(m=>mFrom(m)===s);
+    } else {
+      playSFX('illegal');
+      selectedSq=-1; selectedMoves=[];
+    }
+  }
+  renderBoard();
+}
+
+function quickEval(board, pColor) {
+  let s=0;
+  for(let i=0;i<64;i++){const p=board[i];if(!p)continue;s+=color(p)===WHITE?PIECE_VAL[type(p)]:-PIECE_VAL[type(p)];}
+  return pColor===WHITE?s:-s;
+}
+
+// Known classic opening lines (any move that continues one of these is a book move)
+const BOOK_LINES = [
+  // First moves
+  ['e4'],['d4'],['c4'],['Nf3'],
+  // Open game
+  ['e4','e5'],['e4','e5','Nf3'],['e4','e5','Nf3','Nc6'],
+  // Italian Game
+  ['e4','e5','Nf3','Nc6','Bc4'],['e4','e5','Nf3','Nc6','Bc4','Bc5'],['e4','e5','Nf3','Nc6','Bc4','Nf6'],
+  // Ruy Lopez
+  ['e4','e5','Nf3','Nc6','Bb5'],['e4','e5','Nf3','Nc6','Bb5','a6'],['e4','e5','Nf3','Nc6','Bb5','Nf6'],
+  // Scotch Game
+  ['e4','e5','Nf3','Nc6','d4'],['e4','e5','Nf3','Nc6','d4','exd4'],
+  // Petrov's Defense
+  ['e4','e5','Nf3','Nf6'],['e4','e5','Nf3','Nf6','Nxe5'],
+  // Sicilian Defense
+  ['e4','c5'],['e4','c5','Nf3'],['e4','c5','Nf3','d6'],['e4','c5','Nf3','Nc6'],['e4','c5','Nf3','e6'],
+  ['e4','c5','d4'],['e4','c5','Nc3'],
+  // French Defense
+  ['e4','e6'],['e4','e6','d4'],['e4','e6','d4','d5'],['e4','e6','d4','d5','Nc3'],['e4','e6','d4','d5','Nd2'],
+  // Caro-Kann Defense
+  ['e4','c6'],['e4','c6','d4'],['e4','c6','d4','d5'],['e4','c6','d4','d5','Nc3'],['e4','c6','d4','d5','Nd2'],
+  // Pirc Defense
+  ['e4','d6'],['e4','d6','d4'],['e4','d6','d4','Nf6'],
+  // Modern Defense
+  ['e4','g6'],['e4','g6','d4'],
+  // Queen's Gambit
+  ['d4','d5'],['d4','d5','c4'],['d4','d5','c4','e6'],['d4','d5','c4','c6'],['d4','d5','c4','dxc4'],
+  ['d4','d5','Nf3'],['d4','d5','Nf3','Nf6'],
+  // King's Indian Defense
+  ['d4','Nf6'],['d4','Nf6','c4'],['d4','Nf6','c4','g6'],['d4','Nf6','c4','g6','Nc3'],['d4','Nf6','c4','g6','Nc3','Bg7'],
+  // Nimzo-Indian Defense
+  ['d4','Nf6','c4','e6'],['d4','Nf6','c4','e6','Nc3'],['d4','Nf6','c4','e6','Nc3','Bb4'],
+  // Grünfeld Defense
+  ['d4','Nf6','c4','g6','Nc3','d5'],
+  // Dutch Defense
+  ['d4','f5'],['d4','f5','c4'],
+  // London System
+  ['d4','d5','Nf3','Nf6','Bf4'],['d4','Nf6','Nf3','d5','Bf4'],
+  // English Opening
+  ['c4','e5'],['c4','c5'],['c4','Nf6'],['c4','e6'],['c4','e5','Nc3'],
+  // Réti Opening
+  ['Nf3','d5'],['Nf3','Nf6'],['Nf3','d5','c4'],
+];
+
+function isBookMove(sanLine) {
+  return BOOK_LINES.some(bl =>
+    sanLine.length <= bl.length &&
+    sanLine.every((s,i) => s === bl[i])
+  );
+}
+
+function assessQuality(st, m, pColor, moveSAN='') {
+  if(moveSAN) {
+    const fullLine = [...moveHistory.map(h=>h.san), moveSAN];
+    if(isBookMove(fullLine)) return 'book';
+  }
+  const before = quickEval(st.board, pColor);
+  const stA = applyMove(st, m);
+  const caps = generateMoves(stA, true);
+  let best = quickEval(stA.board, pColor);
+  for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(pColor===WHITE?ev<best:ev>best) best=ev; }
+  const delta = best - before;
+  if(delta < -280) return 'blunder';
+  if(delta < -100) return 'mistake';
+  if(delta >  150) return 'brilliant';
+  return 'ok';
+}
+
+function onPlayerWin() {
+  persistStats.wins++;
+  saveStats(persistStats);
+  unlockAchievement('first_win');
+  if(persistStats.wins >= 10) unlockAchievement('grandmaster');
+  if(difficulty === 'hard') unlockAchievement('ruthless');
+  if(timeControl===30 || timeControl===120) unlockAchievement('speed_chess');
+  const totalMoves = moveHistory.length;
+  if(totalMoves <= 4) unlockAchievement('scholars_mate');
+  if(totalMoves <= 30) unlockAchievement('blitzkrieg');
+  if(lostQueen) {
+    unlockAchievement('comeback');
+    const cb=document.getElementById('comebackBanner');
+    if(cb){cb.style.display='block';setTimeout(()=>{cb.style.display='none';},3000);}
+  }
+  let pieceCt = 0;
+  for(let i=0;i<64;i++){ if(state.board[i]&&color(state.board[i])===playerColor) pieceCt++; }
+  if(pieceCt <= 2) unlockAchievement('last_stand');
+}
+
+function executeMove(m) {
+  const stateBefore = state;
+  const movingPiece = state.board[mFrom(m)];
+  if(window._ghostTrailUnlocked) window._ghostPiece = _S[getPieceKey(movingPiece)] || null;
+  const flags=mFlags(m);
+  const captured=state.board[mTo(m)];
+  const isCapture=(flags&(F_CAP|F_EP))!==0;
+  const isCastle=(flags&F_CASTLE)!==0;
+
+  const san=toSAN(state, m, legalMoves);
+  lastFrom=mFrom(m); lastTo=mTo(m);
+  const wasPlayer = state.turn === playerColor;
+  const isForced = legalMoves.length === 1;
+  const quality = isForced ? 'forced' : assessQuality(state, m, wasPlayer ? playerColor : opp(playerColor), san);
+
+  // Best engine move from this position (for review display)
+  let snapBestFrom = -1, snapBestTo = -1;
+  {
+    const bMoves = orderMoves([...legalMoves], state.board);
+    let bBest = bMoves[0], bScore = -Infinity;
+    for(const bm of bMoves) {
+      const ns = applyMove(state, bm);
+      const sc = quickEval(ns.board, state.turn);
+      if(sc > bScore){ bScore = sc; bBest = bm; }
+    }
+    if(bBest){ snapBestFrom = mFrom(bBest); snapBestTo = mTo(bBest); }
+  }
+
+  selectedSq=-1; selectedMoves=[];
+  drawnArrows=[]; renderArrows();
+
+  if(isCapture){
+    const capturedPiece=flags&F_EP ? (state.turn===WHITE?(BLACK|PIECE.PAWN):(WHITE|PIECE.PAWN)) : captured;
+    if(state.turn===playerColor) capturedByPlayer.push(capturedPiece);
+    else capturedByComp.push(capturedPiece);
+    // Track if computer captured player's queen
+    if(!wasPlayer && type(capturedPiece)===PIECE.QUEEN && color(capturedPiece)===playerColor) lostQueen=true;
+    playSFX('capture');
+  } else if(isCastle){
+    playSFX('castle');
+  } else {
+    playSFX('move');
+  }
+
+  state = applyMove(state, m);
+  legalMoves = generateMoves(state);
+  moveHistory.push({san, turn: opp(state.turn), quality, wasPlayer});
+  snapshots.push({ board: new Int8Array(state.board), kings:[...state.kings], lastFrom, lastTo, moveIdx:moveHistory.length-1, quality, wasPlayer, snapBestFrom, snapBestTo });
+
+  const a11y = document.getElementById('a11yAnnounce');
+  if(a11y) a11y.textContent = (wasPlayer ? 'You played ' : 'Computer played ') + san;
+
+  updateCaptured();
+  updateMoveList();
+
+  // Achievement checks
+  checkOpenings();
+
+  if(wasPlayer) {
+    // Castling
+    if(flags&F_CASTLE) {
+      unlockAchievement(col(mTo(m))===6 ? 'castle_k' : 'castle_q');
+    }
+    // En passant
+    if(flags&F_EP) unlockAchievement('en_passant');
+    // Promotion
+    if(mPromo(m)) {
+      unlockAchievement('first_promo');
+      persistStats.promotions++;
+      gamePromos++;
+      saveStats(persistStats);
+      if(persistStats.promotions >= 5) unlockAchievement('marathon_pawn');
+    }
+    // Captures
+    if(isCapture) {
+      gameCaptured++;
+      persistStats.capturedTotal++;
+      saveStats(persistStats);
+      if(persistStats.capturedTotal >= 20) unlockAchievement('hunter');
+    }
+    // Brilliant move
+    if(quality==='brilliant') {
+      gameBrilliant++;
+      if(gameBrilliant >= 5) unlockAchievement('brilliant_game');
+    }
+    // Fork check
+    checkFork(stateBefore, m);
+  }
+
+  // Move 50
+  if(state.fullmove >= 50) unlockAchievement('philosopher');
+
+  if(inCheck(state)) {
+    playSFX(legalMoves.length===0?'gameover':'check');
+  }
+
+  if(legalMoves.length===0){
+    gameOver=true;
+    renderBoard();
+    updateStatus();
+    const check=inCheck(state);
+    setTimeout(()=>{
+      if(check){
+        const winner=state.turn===playerColor?'Computer':'You';
+        if(winner==='You') onPlayerWin();
+        showResult(winner==='You'?'VICTORY':'DEFEAT', winner==='You'?'You delivered checkmate!':'The computer delivers checkmate.');
+      } else {
+        showResult('DRAW','Stalemate — no legal moves.');
+      }
+    }, 500);
+    return;
+  }
+
+  if(state.halfmove>=100){
+    gameOver=true; renderBoard(); updateStatus();
+    setTimeout(()=>showResult('DRAW','50-move rule.'), 300);
+    return;
+  }
+
+  renderBoard();
+  updateStatus();
+
+  if(state.turn!==playerColor && !gameOver){
+    startComputerTimer();
+    thinking=true;
+    const delay=getComputerDelay();
+    setTimeout(()=>doComputerMove(), delay);
+  } else if(timeControl>0){
+    startPlayerTimer();
+  }
+}
+
+function getComputerDelay() {
+  if(!timeControl) {
+    return {easy:800,medium:1200,hard:1800}[difficulty];
+  }
+  // Faster for shorter time controls
+  const base = {easy:[300,600,1000,1500],medium:[200,400,800,1200],hard:[150,300,600,1000]};
+  const timeIdx = [30,120,300,600].indexOf(timeControl);
+  return base[difficulty][Math.max(0,timeIdx)] || 800;
+}
+
+let playerTimerActive=false, compTimerActive=false;
+
+function startPlayerTimer() {
+  if(!timeControl) return;
+  stopTimers();
+  playerTimerActive=true;
+  timerInterval=setInterval(()=>{
+    if(playerTimerActive){
+      playerTime--;
+      updateTimerDisplay();
+      if(playerTime<=0){stopTimers();gameOver=true;showResult('DEFEAT','You ran out of time!');}
+    }
+  },1000);
+}
+function startComputerTimer() {
+  if(!timeControl) return;
+  stopTimers();
+  compTimerActive=true;
+  timerInterval=setInterval(()=>{
+    if(compTimerActive){
+      compTime--;
+      updateTimerDisplay();
+      if(compTime<=0){stopTimers();gameOver=true;onPlayerWin();showResult('VICTORY','Computer ran out of time!');}
+    }
+  },1000);
+}
+function stopTimers() {
+  clearInterval(timerInterval);
+  playerTimerActive=false; compTimerActive=false;
+}
+
+function updateTimerDisplay() {
+  function fmt(s) {
+    const m=Math.floor(s/60), sec=s%60;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
+  const pEl=document.getElementById('playerTimer');
+  const cEl=document.getElementById('oppTimer');
+  pEl.textContent=fmt(Math.max(0,playerTime));
+  cEl.textContent=fmt(Math.max(0,compTime));
+  pEl.classList.toggle('urgent',playerTime<=10&&playerTime>0);
+  cEl.classList.toggle('urgent',compTime<=10&&compTime>0);
+}
+
+function doComputerMove() {
+  if(gameOver) return;
+  const m=getBestMove(state, difficulty);
+  thinking=false;
+  if(!m){ gameOver=true; renderBoard(); updateStatus(); return; }
+  stopTimers();
+  executeMove(m);
+}
+
+function updateStatus() {
+  const el=document.getElementById('statusText');
+  if(gameOver){
+    el.className='status-text mate';
+    el.textContent=legalMoves.length===0&&inCheck(state)?'Checkmate':'Game Over';
+    return;
+  }
+  if(thinking){
+    el.className='status-text';
+    el.innerHTML='Computer thinking<span class="thinking">...</span>';
+    return;
+  }
+  if(inCheck(state)){
+    el.className='status-text check';
+    el.textContent=state.turn===playerColor?'You are in check!':'Computer in check';
+    return;
+  }
+  el.className='status-text';
+  el.textContent=state.turn===playerColor?'Your turn':'Computer thinking...';
+}
+
+function updateCaptured() {
+  const pEl=document.getElementById('capByPlayer');
+  const cEl=document.getElementById('capByComp');
+  const skull=window._skullCapturesUnlocked?'<span style="margin-right:2px">💀</span>':'';
+  pEl.innerHTML=skull+capturedByPlayer.map(p=>`<img src="${getPieceSrc(p)}" style="width:22px;height:22px;vertical-align:middle">`).join('');
+  cEl.innerHTML=skull+capturedByComp.map(p=>`<img src="${getPieceSrc(p)}" style="width:22px;height:22px;vertical-align:middle">`).join('');
+}
+
+function updateMoveList() {
+  const el=document.getElementById('moveList');
+  el.innerHTML='';
+  for(let i=0;i<moveHistory.length;i+=2){
+    const div=document.createElement('div');
+    div.className='move-pair';
+    const num=document.createElement('span'); num.className='move-num'; num.textContent=`${Math.floor(i/2)+1}.`;
+    const m1=document.createElement('span'); m1.className='move-san'; m1.textContent=moveHistory[i].san;
+    div.appendChild(num); div.appendChild(m1);
+    if(moveHistory[i+1]){
+      const m2=document.createElement('span'); m2.className='move-san'; m2.textContent=moveHistory[i+1].san;
+      div.appendChild(m2);
+    }
+    el.appendChild(div);
+  }
+  el.scrollTop=el.scrollHeight;
+}
+
+function showPromotion(from, to, moves) {
+  const modal=document.getElementById('promoModal');
+  const piecesEl=document.getElementById('promoPieces');
+  piecesEl.innerHTML='';
+  modal.classList.add('show');
+  const promoTypes=customMode?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];
+  for(const pt of promoTypes){
+    const m=moves.find(mm=>mPromo(mm)===pt);
+    if(!m) continue;
+    const wrap=document.createElement('div');
+    wrap.style.cssText=`cursor:pointer;width:70px;height:70px;display:flex;align-items:center;justify-content:center;
+      border:2px solid transparent;border-radius:8px;transition:all 0.2s;padding:4px;background:rgba(255,255,255,0.05);`;
+    const img=document.createElement('img');
+    const pk=getPieceKey(playerColor|pt); img.src=`data:image/svg+xml;charset=utf-8,${encodeURIComponent(_S[pk]||'')}`;
+    img.style.cssText=`width:60px;height:60px;pointer-events:none;`;
+    img.draggable=false;
+    wrap.appendChild(img);
+    wrap.addEventListener('mouseover',()=>{wrap.style.borderColor='#d4af37';wrap.style.transform='scale(1.08)';});
+    wrap.addEventListener('mouseout',()=>{wrap.style.borderColor='transparent';wrap.style.transform='scale(1)';});
+    wrap.addEventListener('click',()=>{
+      modal.classList.remove('show');
+      executeMove(m);
+    });
+    piecesEl.appendChild(wrap);
+  }
+}
+
+function showResult(title, msg) {
+  gameResult = title==='VICTORY'?'win':title==='DRAW'?'draw':'loss';
+  playSFX('gameover');
+  stopTimers();
+  document.getElementById('resultTitle').textContent=title;
+  document.getElementById('resultMsg').textContent=msg;
+  document.getElementById('resultOverlay').classList.add('show');
+}
+function closeResult() {
+  document.getElementById('resultOverlay').classList.remove('show');
+}
+
+function enterReview() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  if(!snapshots.length) return;
+  reviewMode = true;
+  reviewIdx = snapshots.length - 1;
+  const bar = document.getElementById('reviewBar');
+  bar.style.display = 'flex';
+  renderReview();
+}
+
+function renderReview() {
+  const snap = snapshots[reviewIdx];
+  const boardEl = document.getElementById('board');
+  const squares = boardEl.querySelectorAll('.sq');
+  const vf = snap.lastFrom>=0 ? (playerColor===WHITE?snap.lastFrom:(7-row(snap.lastFrom))*8+(7-col(snap.lastFrom))) : -1;
+  const vt = snap.lastTo>=0   ? (playerColor===WHITE?snap.lastTo  :(7-row(snap.lastTo))*8+(7-col(snap.lastTo)))   : -1;
+
+  squares.forEach((el, i) => {
+    const s = playerColor===WHITE ? i : (7-row(i))*8+(7-col(i));
+    el.dataset.sq = String(s);
+    el.className = 'sq ' + (((row(i)+col(i))%2===0) ? 'light' : 'dark');
+    el.innerHTML = '';
+    if(i===vf) el.classList.add('last-move-from');
+    if(i===vt) el.classList.add('last-move-to');
+    const p = snap.board[s];
+    if(p){
+      const pd=document.createElement('div');
+      pd.className='piece';
+      const svgEl=_SV[getPieceKey(p)];
+      if(svgEl) pd.appendChild(svgEl.cloneNode(true));
+      else pd.innerHTML=_S[getPieceKey(p)]||'';
+      el.appendChild(pd);
+    }
+  });
+
+  // Quality badge on destination square (shown for both player and opponent)
+  const qClassMap = { book:'badge-book', ok:'badge-ok', forced:'badge-forced', mistake:'badge-mistake', blunder:'badge-blunder', brilliant:'badge-brilliant' };
+  const qIcons    = { book:'📖', ok:'✓', forced:'→', mistake:'?', blunder:'??', brilliant:'!' };
+  if(vt>=0 && squares[vt]) {
+    const badge = document.createElement('div');
+    badge.className = 'move-badge ' + (qClassMap[snap.quality]||'badge-ok');
+    badge.textContent = qIcons[snap.quality] || '✓';
+    squares[vt].appendChild(badge);
+  }
+
+  // Best move highlight (engine suggestion)
+  if(snap.snapBestFrom>=0 && snap.snapBestFrom!==snap.lastFrom) {
+    const vbf=playerColor===WHITE?snap.snapBestFrom:(7-row(snap.snapBestFrom))*8+(7-col(snap.snapBestFrom));
+    const vbt=playerColor===WHITE?snap.snapBestTo:(7-row(snap.snapBestTo))*8+(7-col(snap.snapBestTo));
+    if(squares[vbf]) squares[vbf].classList.add('best-move-from');
+    if(squares[vbt]) squares[vbt].classList.add('best-move-to');
+  }
+
+  // Win / Draw result badge on last snapshot
+  if(reviewIdx === snapshots.length-1 && gameResult) {
+    const kSq  = snap.kings[playerColor===WHITE?0:1];
+    const vkSq = playerColor===WHITE ? kSq : (7-row(kSq))*8+(7-col(kSq));
+    if(squares[vkSq]) {
+      const rb=document.createElement('div');
+      if(gameResult==='win'){rb.className='move-badge badge-win'; rb.textContent='♛';}
+      else if(gameResult==='draw'){rb.className='move-badge badge-draw'; rb.textContent='½-½';}
+      squares[vkSq].appendChild(rb);
+    }
+  }
+
+  const moveNum = Math.floor(snap.moveIdx/2)+1;
+  const san = moveHistory[snap.moveIdx]?.san || '';
+  const qNames = { book:'Book', ok:'Ok', forced:'Forced', mistake:'Mistake', blunder:'Blunder', brilliant:'Brilliant!' };
+  const qLabel = ` · ${qNames[snap.quality]||'Ok'}`;
+  document.getElementById('reviewLabel').textContent = `Move ${moveNum}${san?' — '+san:''}${qLabel}`;
+}
+
+function reviewStep(dir) {
+  reviewIdx = Math.max(0, Math.min(snapshots.length-1, reviewIdx+dir));
+  renderReview();
+}
+
+function exitReview() {
+  reviewMode = false;
+  document.getElementById('reviewBar').style.display = 'none';
+  renderBoard();
+}
+
+// ── Custom / Tutorial ────────────────────────────────────────────────────────
+const STD_PIECE_INFO = [
+  { key:'wK', name:'King',   desc:'Moves one square in any direction. Cannot move into check. Special: castling with rook.', moves:'1 square any direction' },
+  { key:'wQ', name:'Queen',  desc:'The most powerful piece. Slides any number of squares in all 8 directions (rows, columns, diagonals).', moves:'Any direction, any distance' },
+  { key:'wR', name:'Rook',   desc:'Slides any number of squares horizontally or vertically. Special: castling with king.', moves:'Horizontal & vertical' },
+  { key:'wB', name:'Bishop', desc:'Slides any number of squares diagonally. Each bishop stays on one color for the whole game.', moves:'Diagonal only' },
+  { key:'wN', name:'Knight', desc:'Moves in an L-shape: 2 squares in one direction and 1 square perpendicular. The ONLY piece that can jump over others.', moves:'L-shape jump (2+1)' },
+  { key:'wP', name:'Pawn',   desc:'Moves forward 1 square (2 on first move). Captures diagonally. Promotes on reaching the far rank. Special: en passant.', moves:'1 forward, captures diagonal' },
+];
+
+const CUSTOM_PIECE_INFO = [
+  { key:'wCr', name:'Cricket',     replaces:'Pawn',   desc:'Hops 1 square straight forward. <em>Jumps over blocking pieces</em> — if the square ahead is occupied, it leaps past to land on the next empty square beyond. Still captures diagonally. No double-step.', moves:'1 forward (jump) · diagonal capture' },
+  { key:'wCh', name:'Chancellor',  replaces:'Rook',   desc:'Moves like a Rook <em>and</em> a Knight. The rook slides can be blocked, but the knight-jumps cannot.', moves:'Rook + Knight' },
+  { key:'wZe', name:'Zebra',       replaces:'Knight', desc:'Moves like a Knight (2+1 L-shape) <em>and</em> a Zebra (3+1 L-shape). All moves are jumps — nothing can block a Zebra.', moves:'Knight + 3×1 L jump' },
+  { key:'wQ',  name:'Queen',       replaces:'Bishop', desc:'Your old bishops are gone. Each of these pieces slides like a full Queen — in all 8 directions, any distance.', moves:'Full Queen slides' },
+  { key:'wMi', name:'MIXER',       replaces:'Queen',  desc:'The most powerful piece ever conceived. Slides like a Queen, jumps like a Knight, AND jumps like a Zebra. Cannot be created by promotion.', moves:'Queen + Knight + Zebra' },
+];
+
+function showTutorial(startTab) {
+  // Populate custom pieces grid
+  const grid = document.getElementById('tutPiecesGrid');
+  if(!grid.children.length) {
+    CUSTOM_PIECE_INFO.forEach(info => {
+      const card = document.createElement('div');
+      card.className = 'tut-piece-card';
+      card.innerHTML = `<div class="tut-piece-icon">${_S[info.key]||''}</div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-replaces">Replaces: ${info.replaces}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+  // Populate standard pieces grid
+  const sgrid = document.getElementById('tutStdPiecesGrid');
+  if(!sgrid.children.length) {
+    STD_PIECE_INFO.forEach(info => {
+      const card = document.createElement('div');
+      card.className = 'tut-piece-card';
+      card.innerHTML = `<div class="tut-piece-icon">${_S[info.key]||''}</div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
+      sgrid.appendChild(card);
+    });
+  }
+  showTutTab(startTab || 'rules');
+  document.getElementById('tutorialModal').classList.add('show');
+}
+
+function showTutTab(tab) {
+  ['rules','pieces','controls','custom'].forEach(t => {
+    const el = document.getElementById('tutTab-'+t);
+    if(el) el.style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('.tut-tab').forEach((btn,i)=>{
+    btn.classList.toggle('active', ['rules','pieces','controls','custom'][i]===tab);
+  });
+  const playBtn = document.getElementById('tutPlayBtn');
+  if(playBtn) playBtn.style.display = tab==='custom' ? 'inline-block' : 'none';
+  document.getElementById('tutTitle').textContent = tab==='custom' ? 'CUSTOM GAME' : 'HOW TO PLAY';
+}
+
+function closeTutorial() {
+  document.getElementById('tutorialModal').classList.remove('show');
+}
+
+function startCustomGame() {
+  closeTutorial();
+  customMode = true;
+  // Use same options as already selected in setup
+  if(AC.state==='suspended') AC.resume();
+  if(!musicGain) initAudio(); else if(musicPlaying && !bachSched){ bachNext=AC.currentTime+0.1; bachSched=setInterval(scheduleBach,200); }
+  initState();
+  snapshots=[]; reviewMode=false;
+  legalMoves=generateMoves(state);
+  gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
+
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='flex';
+
+  playerTime=timeControl; compTime=timeControl;
+  if(timeControl>0){
+    document.getElementById('playerTimerPanel').style.display='block';
+    document.getElementById('oppTimerPanel').style.display='block';
+    document.getElementById('playerTimerLabel').textContent=playerColor===WHITE?'You (White)':'You (Black)';
+    document.getElementById('oppTimerLabel').textContent=playerColor===WHITE?'Computer (Black)':'Computer (White)';
+    updateTimerDisplay();
+  }
+
+  buildBoard();
+  applyStoredRewards();
+  renderBoard();
+  updateStatus();
+
+  if(state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+}
+
+function resignGame() {
+  if(gameOver) return;
+  gameOver=true;
+  stopTimers();
+  showResult('DEFEAT','You resigned.');
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+initState();
+legalMoves = generateMoves(state);
+
+// ── Keyboard navigation ────────────────────────────
+let kbCursorSq = -1;
+
+function getKbSquareEl(logSq) {
+  const boardEl = document.getElementById('board');
+  return boardEl ? [...boardEl.querySelectorAll('.sq')].find(el=>parseInt(el.dataset.sq)===logSq) : null;
+}
+
+function setKbCursor(logSq) {
+  if(kbCursorSq >= 0) {
+    const old = getKbSquareEl(kbCursorSq);
+    if(old) old.classList.remove('kb-cursor');
+  }
+  kbCursorSq = logSq;
+  if(logSq >= 0) {
+    const el = getKbSquareEl(logSq);
+    if(el){ el.classList.add('kb-cursor'); el.focus(); }
+  }
+}
+
+document.addEventListener('keydown', e => {
+  // Review navigation
+  if(reviewMode) {
+    if(e.key==='ArrowLeft')  { e.preventDefault(); reviewStep(-1); return; }
+    if(e.key==='ArrowRight') { e.preventDefault(); reviewStep(1); return; }
+    if(e.key==='Escape')     { e.preventDefault(); exitReview(); return; }
+  }
+
+  // Board keyboard navigation (only during active game)
+  if(gameOver || reviewMode) return;
+  if(!document.getElementById('game') || document.getElementById('game').style.display==='none') return;
+
+  const boardEl = document.getElementById('board');
+  if(!boardEl || !document.activeElement?.closest('#board')) {
+    if(e.key==='Tab') return;
+    // Initialize cursor to player's king on first arrow press
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      const startSq = state.kings[playerColor===WHITE?0:1];
+      setKbCursor(startSq);
+      e.preventDefault();
+      return;
+    }
+    return;
+  }
+
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    let r = row(kbCursorSq < 0 ? 0 : kbCursorSq);
+    let f = col(kbCursorSq < 0 ? 0 : kbCursorSq);
+    const dr = playerColor===WHITE ? -1 : 1;
+    const df = playerColor===WHITE ?  1 : -1;
+    if(e.key==='ArrowUp')    r = Math.max(0, Math.min(7, r + dr));
+    if(e.key==='ArrowDown')  r = Math.max(0, Math.min(7, r - dr));
+    if(e.key==='ArrowRight') f = Math.max(0, Math.min(7, f + df));
+    if(e.key==='ArrowLeft')  f = Math.max(0, Math.min(7, f - df));
+    setKbCursor(sq(r, f));
+  }
+  if((e.key==='Enter'||e.key===' ') && kbCursorSq >= 0) {
+    e.preventDefault();
+    const el = getKbSquareEl(kbCursorSq);
+    if(el) el.click();
+  }
+  if(e.key==='Escape') {
+    e.preventDefault();
+    selectedSq = -1; selectedMoves = [];
+    kbCursorSq = -1;
+    renderBoard();
+  }
+});
+</script>
+<div id="comebackBanner">COMEBACK!</div>
+<div id="a11yAnnounce" aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>
+</body>
+</html>
