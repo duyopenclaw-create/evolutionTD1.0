@@ -284,21 +284,19 @@
     width: 90%; height: 90%;
   }
 
-  /* Piece divs — inline SVG, always visible */
+  /* Piece divs — background-image SVG, always visible */
   .piece {
     position: absolute;
-    top: 6%; left: 6%;
-    width: 88%; height: 88%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     z-index: 2;
     pointer-events: none;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.55));
+    background-size: 82% 82%;
+    background-repeat: no-repeat;
+    background-position: center;
     transition: transform 0.12s ease;
   }
-  .piece svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+  .piece svg { display: none; }
   .sq.hoverable:hover .piece { transform: scale(1.08); }
   .sq.hoverable { cursor: pointer; }
   .sq:focus { outline: 3px solid rgba(255,200,50,0.8); outline-offset: -2px; z-index: 5; }
@@ -453,11 +451,11 @@
   /* Ghost trail (en_passant reward) */
   @keyframes ghostFade { from { opacity: 0.45; } to { opacity: 0; } }
   .piece-ghost {
-    position: absolute; top: 6%; left: 6%; width: 88%; height: 88%;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     z-index: 1; pointer-events: none;
+    background-size: 82% 82%; background-repeat: no-repeat; background-position: center;
     animation: ghostFade 0.65s ease forwards;
   }
-  .piece-ghost svg { width: 100%; height: 100%; display: block; }
 
   /* Move quality badges */
   .badge-forced { background: #1a7a1a; color: #fff; }
@@ -616,8 +614,7 @@
     gap: 14px;
     align-items: flex-start;
   }
-  .tut-piece-icon { width:54px; height:54px; flex-shrink:0; }
-  .tut-piece-icon svg { width:100%; height:100%; }
+  .tut-piece-icon { width:54px; height:54px; flex-shrink:0; background-size:contain; background-repeat:no-repeat; background-position:center; }
   .tut-piece-name { font-family:'Cinzel',serif; font-size:0.75em; letter-spacing:2px; color:#d4af37; margin-bottom:4px; }
   .tut-piece-replaces { font-family:'Crimson Text',serif; font-size:0.8em; color:#806040; margin-bottom:6px; }
   .tut-piece-desc { font-family:'Crimson Text',serif; font-size:0.9em; color:#c8b080; line-height:1.5; }
@@ -1925,9 +1922,8 @@ function renderBoard() {
     if(p){
       const pd=document.createElement('div');
       pd.className='piece';
-      const svgEl=_SV[getPieceKey(p)];
-      if(svgEl) pd.appendChild(svgEl.cloneNode(true));
-      else pd.innerHTML=_S[getPieceKey(p)]||'';
+      const svgStr=_S[getPieceKey(p)];
+      if(svgStr) pd.style.backgroundImage=`url("data:image/svg+xml,${encodeURIComponent(svgStr)}")`;
       el.appendChild(pd);
     }
   });
@@ -1967,7 +1963,7 @@ function renderBoard() {
     if(gEl && !gEl.querySelector('.piece')) {
       const ghost=document.createElement('div');
       ghost.className='piece-ghost';
-      ghost.innerHTML=window._ghostPiece;
+      if(window._ghostPiece) ghost.style.backgroundImage=`url("data:image/svg+xml,${encodeURIComponent(window._ghostPiece)}")`;
       gEl.appendChild(ghost);
       window._ghostPiece=null;
       setTimeout(()=>ghost.remove(),700);
@@ -2495,9 +2491,8 @@ function renderReview() {
     if(p){
       const pd=document.createElement('div');
       pd.className='piece';
-      const svgEl=_SV[getPieceKey(p)];
-      if(svgEl) pd.appendChild(svgEl.cloneNode(true));
-      else pd.innerHTML=_S[getPieceKey(p)]||'';
+      const svgStr=_S[getPieceKey(p)];
+      if(svgStr) pd.style.backgroundImage=`url("data:image/svg+xml,${encodeURIComponent(svgStr)}")`;
       el.appendChild(pd);
     }
   });
@@ -2568,6 +2563,11 @@ const CUSTOM_PIECE_INFO = [
   { key:'wMi', name:'MIXER',       replaces:'Queen',  desc:'The most powerful piece ever conceived. Slides like a Queen, jumps like a Knight, AND jumps like a Zebra. Cannot be created by promotion.', moves:'Queen + Knight + Zebra' },
 ];
 
+function pieceIconStyle(key) {
+  const s = _S[key];
+  return s ? `style="background-image:url('data:image/svg+xml,${encodeURIComponent(s)}')"` : '';
+}
+
 function showTutorial(startTab) {
   // Populate custom pieces grid
   const grid = document.getElementById('tutPiecesGrid');
@@ -2575,7 +2575,7 @@ function showTutorial(startTab) {
     CUSTOM_PIECE_INFO.forEach(info => {
       const card = document.createElement('div');
       card.className = 'tut-piece-card';
-      card.innerHTML = `<div class="tut-piece-icon">${_S[info.key]||''}</div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-replaces">Replaces: ${info.replaces}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
+      card.innerHTML = `<div class="tut-piece-icon" ${pieceIconStyle(info.key)}></div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-replaces">Replaces: ${info.replaces}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
       grid.appendChild(card);
     });
   }
@@ -2585,7 +2585,7 @@ function showTutorial(startTab) {
     STD_PIECE_INFO.forEach(info => {
       const card = document.createElement('div');
       card.className = 'tut-piece-card';
-      card.innerHTML = `<div class="tut-piece-icon">${_S[info.key]||''}</div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
+      card.innerHTML = `<div class="tut-piece-icon" ${pieceIconStyle(info.key)}></div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
       sgrid.appendChild(card);
     });
   }
