@@ -253,12 +253,13 @@ function stopTitleMusic() {
 function genMap(bpm, duration, barPattern) {
   const eighth=(60/bpm)/2;
   const bars=barPattern.split('|');
+  const CH={'W':'w','A':'a','S':'s','D':'d','<':'ArrowLeft','>':'ArrowRight','^':'ArrowUp','v':'ArrowDown','L':'ArrowLeft','R':'ArrowRight'};
   const notes=[]; let t=2.0, bi=0;
   while (t < duration-1.5) {
     const bar=bars[bi%bars.length];
     for (let i=0;i<bar.length;i++) {
-      const ch=bar[i];
-      if (ch==='L'||ch==='R') notes.push({time:t+i*eighth, side:ch==='L'?0:1, hit:false, missed:false});
+      const key=CH[bar[i]];
+      if (key) notes.push({time:t+i*eighth, key, hit:false, missed:false});
     }
     t+=bar.length*eighth; bi++;
   }
@@ -299,6 +300,39 @@ const SONGS = [
     schedule(t0,bl,bn){const s8=bl/2,s16=bl/4;const ch=BH_CHORDS[bn%4];playKick(t0);playKick(t0+bl*2.5);playSnare(t0+bl);playSnare(t0+bl*3);for(let i=0;i<16;i++)if(i%2===0||i===3||i===7||i===11)playHat(t0+i*s16,false,0.14);[146,146,196,220].forEach((f,i)=>playBass(t0+i*bl,f,bl*0.82,0.35));ch.pad.forEach(f=>playPad(t0,f,bl*3.9,0.04));[3,2,1,0,2,3,1,2].forEach((ci,i)=>playLead(t0+i*s8,ch.arp[ci],s8*0.55,0.14));if(bn%2===1)ARP_PAT.slice(0,8).forEach((ci,i)=>playArp(t0+i*s16,ch.arp[ci],s16*0.68,0.09));}
   }
 ];
+// New song chord arrays
+const MA_CHORDS=[
+  {pad:[220,261,329],arp:[440,523,659,880]},
+  {pad:[174,220,261],arp:[349,440,523,698]},
+  {pad:[130,164,196],arp:[261,329,392,523]},
+  {pad:[196,246,293],arp:[392,493,587,784]},
+];
+const GZ_CHORDS=[
+  {pad:[146,185,220],arp:[293,370,440,587]},
+  {pad:[110,138,165],arp:[220,277,329,440]},
+  {pad:[123,155,185],arp:[247,311,370,494]},
+  {pad:[196,246,293],arp:[392,493,587,784]},
+];
+const CYL_CHORDS=[
+  {pad:[155,196,233],arp:[311,392,466,622]},
+  {pad:[116,146,174],arp:[233,293,349,466]},
+  {pad:[130,155,196],arp:[261,311,392,523]},
+  {pad:[104,130,165],arp:[207,261,329,415]},
+];
+SONGS.push(
+  { name:'MONTEGEM ALQUIMIA', artist:'MYSTIC', bpm:95, colL:'#cc44ff', colR:'#ffdd44', duration:48, desc:'MYSTICAL ALCHEMY',
+    barPattern:'W_S_^_>_|_W_S<_>_|W_S_^v>_|W_D_<_>_|W_S_^_>_|_W_SD<>_|W_S_^_>v|W_S_<_>_',
+    schedule(t0,bl,bn){const s8=bl/2;const ch=MA_CHORDS[bn%4];playKick(t0,0.65);playKick(t0+bl*2.5,0.50);playSnare(t0+bl,0.40);playSnare(t0+bl*3,0.40);for(let i=0;i<8;i++)playHat(t0+i*s8,i===3||i===7,0.13);[220,0,174,0].forEach((f,i)=>{if(f)playBass(t0+i*bl,f,bl*0.88,0.34);});ch.pad.forEach(f=>playPad(t0,f,bl*3.9,0.065));[0,1,2,3,1,2,3,2].forEach((ci,i)=>playArp(t0+i*s8,ch.arp[ci],s8*0.82,0.10));if(bn%4===3)[0,2,1,3].forEach((ci,i)=>playLead(t0+i*bl,ch.arp[ci]*2,bl*0.72,0.07));}
+  },
+  { name:'GOZALO', artist:'LATIN HEAT', bpm:128, colL:'#ff8800', colR:'#ffff00', duration:48, desc:'LATIN GROOVE',
+    barPattern:'WS^>_S^>|WA_D<_>v|W_S_^_>_|WSD^<v>_|WS^>WS^>|_ASD<^>_|WS<>_S<>|W_S_<_>_',
+    schedule(t0,bl,bn){const s8=bl/2,s16=bl/4;const ch=GZ_CHORDS[bn%4];playKick(t0,0.85);playKick(t0+bl*1.5,0.55);playKick(t0+bl*2,0.80);playKick(t0+bl*3.5,0.55);playSnare(t0+bl,0.5);playSnare(t0+bl*3,0.5);for(let i=0;i<16;i++)playHat(t0+i*s16,i===4||i===12,0.18);[146,165,146,185].forEach((f,i)=>playBass(t0+i*bl,f,bl*0.78,0.42));ch.pad.forEach(f=>playPad(t0,f,bl*3.9,0.05));[0,2,1,3,0,2,3,1].forEach((ci,i)=>playArp(t0+i*s8,ch.arp[ci],s8*0.70,0.12));}
+  },
+  { name:'CONFESS YOUR LOVE FUNK', artist:'FUNK', bpm:98, colL:'#ff44aa', colR:'#ff2200', duration:48, desc:'FUNKY CONFESSION',
+    barPattern:'W_<_S_>_|_A<DS_^_|W_<_S_>_|WA__^_>_|W_<_S_v_|_A<DS>^v|W_<_S_>_|_ASD^v<_',
+    schedule(t0,bl,bn){const s8=bl/2,s16=bl/4;const ch=CYL_CHORDS[bn%4];playKick(t0,0.80);playKick(t0+bl*0.75,0.45);playKick(t0+bl*2,0.80);playSnare(t0+bl,0.55);playSnare(t0+bl*3,0.55);playSnare(t0+bl*3.5,0.35);for(let i=0;i<8;i++){const sw=(i%2===1)?s16*0.3:0;playHat(t0+i*s8+sw,i===2||i===6,0.20);}[155,0,155,196,0,116,0,155].forEach((f,i)=>{if(f)playBass(t0+i*s16,f,s16*0.82,0.44);});ch.pad.forEach(f=>playPad(t0,f,bl*3.9,0.055));[0,1,2,1,3,2,1,2].forEach((ci,i)=>playLead(t0+i*s8,ch.arp[ci],s8*0.60,0.12));if(bn%2===0)[0,2,1,3].forEach((ci,i)=>playArp(t0+bl*2+i*s8,ch.arp[ci],s8*0.70,0.09));}
+  }
+);
 SONGS.forEach(s => { s.beatmap = genMap(s.bpm, s.duration, s.barPattern); });
 
 function scheduleSong(song, audioStart, mult) {
@@ -310,6 +344,19 @@ function scheduleSong(song, audioStart, mult) {
     if (t < audioStart + dur + 4) song.schedule(t, bl, b);
   }
 }
+
+// ── Lane Info ─────────────────────────────────────────────────────────────────
+const LANE_INFO = {
+  'a':          { xf:0.13, label:'A',  col:'#ff4488' },
+  'w':          { xf:0.21, label:'W',  col:'#ff8844' },
+  's':          { xf:0.29, label:'S',  col:'#44ff88' },
+  'd':          { xf:0.37, label:'D',  col:'#44ccff' },
+  'ArrowLeft':  { xf:0.63, label:'←',  col:'#cc88ff' },
+  'ArrowUp':    { xf:0.71, label:'↑',  col:'#ffff44' },
+  'ArrowDown':  { xf:0.79, label:'↓',  col:'#ff9944' },
+  'ArrowRight': { xf:0.87, label:'→',  col:'#00aaff' },
+};
+const LANE_KEYS = Object.keys(LANE_INFO);
 
 // ── Difficulties ──────────────────────────────────────────────────────────────
 const DIFFICULTIES = [
@@ -359,8 +406,8 @@ let song = null, menuIdx = 0;
 let notes = [], particles = [];
 let score = 0, combo = 0, maxCombo = 0;
 let judg = { perfect:0, good:0, early:0, late:0, miss:0 };
-let laneFlash = [0,0];
-let lastJudge = { text:'', ts:-9999, side:0, col:'#fff' };
+let laneFlash = {};
+let lastJudge = { text:'', ts:-9999, key:'ArrowLeft', col:'#fff' };
 let cdStart = 0, lastCdNum = -1;
 let songAudioStart = 0, songScheduled = false;
 let resultsFanfareDone = false;
@@ -376,14 +423,14 @@ const WIN_G = 0.100;
 const WIN_B = 0.170;
 const SCROLL  = 1.9;
 const HIT_FRAC = 0.80;
-const LANE_W   = 110;
+const LANE_W   = 54;
 
 const hitY  = () => H * HIT_FRAC;
-const laneX = s => s===0 ? W*0.36 : W*0.64;
+const laneX = k => LANE_INFO[k] ? LANE_INFO[k].xf * W : W/2;
 const gt    = () => AC ? AC.currentTime - songAudioStart : 0;
 
 // ── Note / Skin Drawing ───────────────────────────────────────────────────────
-function drawNote(x, y, r, col, side, t) {
+function drawNote(x, y, r, col, label, t) {
   const sk = equippedSkin;
   ctx.shadowBlur = 0;
 
@@ -459,28 +506,32 @@ function drawNote(x, y, r, col, side, t) {
     ctx.shadowBlur=0;
     ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.beginPath(); ctx.arc(x,y,r*0.5,0,Math.PI*2); ctx.fill();
   }
-  // Arrow indicator on top
-  const arrowCol = (sk==='classic') ? (side===0?'#005577':'#770055') : 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur=0; ctx.fillStyle=arrowCol;
-  arrowShape(x, y, r*0.36, side===0);
+  // Key label
+  ctx.shadowBlur=0;
+  ctx.fillStyle = (sk==='classic') ? 'rgba(0,20,40,0.88)' : 'rgba(0,0,0,0.65)';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=`bold ${Math.round(r*0.72)}px 'Courier New'`;
+  ctx.fillText(label, x, y);
+  ctx.textBaseline='alphabetic';
 }
 
 // Skin preview for shop (static)
 function drawSkinPreview(sk, x, y, r, col) {
   const saved = equippedSkin;
   equippedSkin = sk;
-  drawNote(x, y, r, col, 0, 1.0);
+  drawNote(x, y, r, col, '◆', 1.0);
   equippedSkin = saved;
 }
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
-function pressLane(side) {
+function pressKey(key) {
   if (state !== 'playing') return;
-  laneFlash[side] = 1.0;
+  if (!LANE_INFO[key]) return;
+  laneFlash[key] = 1.0;
   const now = gt();
   let best=null, bestD=Infinity;
   for (const n of notes) {
-    if (n.hit||n.missed||n.side!==side) continue;
+    if (n.hit||n.missed||n.key!==key) continue;
     const d=Math.abs(n.time-now);
     if (d<bestD && d<WIN_B) { bestD=d; best=n; }
   }
@@ -495,12 +546,13 @@ function pressLane(side) {
   else                 { pts=50;          judg.late++;    judgeText='LATE';     judgeCol='#ff9944'; sfxLate(); }
   score+=pts; combo++;
   if (combo>maxCombo) maxCombo=combo;
-  showJudge(judgeText, side, judgeCol);
-  const bcol=abs<=WIN_P?(side===0?song.colL:song.colR):'#aaaaaa';
-  burst(laneX(side), hitY(), bcol, abs<=WIN_P?16:8);
+  showJudge(judgeText, key, judgeCol);
+  const info=LANE_INFO[key];
+  const bcol=abs<=WIN_P ? info.col : '#aaaaaa';
+  burst(laneX(key), hitY(), bcol, abs<=WIN_P?16:8);
 }
 
-function showJudge(text, side, col) { lastJudge={text,ts:performance.now(),side,col}; }
+function showJudge(text, key, col) { lastJudge={text,ts:performance.now(),key,col}; }
 
 function burst(x, y, col, n) {
   for (let i=0;i<n;i++) {
@@ -527,7 +579,7 @@ function startGameWithDiff() {
   effectiveScroll = SCROLL / mult;
   score=combo=maxCombo=0; consecutiveMisses=0; livesRemaining=activeDiff.lives; lifeFlash=0; coinsEarned=0;
   judg={perfect:0,good:0,early:0,late:0,miss:0};
-  particles=[]; laneFlash=[0,0];
+  particles=[]; laneFlash={}; LANE_KEYS.forEach(k=>laneFlash[k]=0);
   songScheduled=false; resultsFanfareDone=false; lastCdNum=-1;
   cdStart=performance.now();
   state='countdown';
@@ -568,8 +620,8 @@ addEventListener('keydown', e => {
   }
   if (state==='results'||state==='gameover') { if (e.key==='Enter'||e.key===' '||e.key==='Escape') goMenu(); return; }
   if (state==='shop') { if (e.key==='Escape') { state='menu'; return; } return; }
-  if (e.key==='ArrowLeft')  pressLane(0);
-  if (e.key==='ArrowRight') pressLane(1);
+  const nk=(['w','a','s','d'].includes(e.key.toLowerCase()))?e.key.toLowerCase():e.key;
+  if (LANE_INFO[nk]) { pressKey(nk); return; }
   if (e.key==='Escape') goMenu();
 });
 
@@ -580,7 +632,7 @@ cvs.addEventListener('mousedown', e => {
   if (state==='difficulty') { diffClick(e.clientX, e.clientY); return; }
   if (state==='results'||state==='gameover') { goMenu(); return; }
   if (state==='shop')       { shopClick(e.clientX, e.clientY); return; }
-  if (state==='playing')    { if (e.button===0) pressLane(0); if (e.button===2) pressLane(1); }
+  if (state==='playing')    { if (e.button===0) pressKey('ArrowLeft'); if (e.button===2) pressKey('ArrowRight'); }
 });
 cvs.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -699,7 +751,7 @@ function drawSplash() {
   ctx.fillStyle='#00ccff'; ctx.fillText('CLICK OR PRESS ANY KEY TO START',W/2,H*0.65);
   ctx.globalAlpha=1;
   ctx.font=`${Math.min(12,W/80)}px 'Courier New'`;
-  ctx.fillStyle='#223344'; ctx.fillText('◄ ARROW KEYS / MOUSE BUTTONS ►  ·  TAP THE BEAT',W/2,H*0.73);
+  ctx.fillStyle='#223344'; ctx.fillText('WASD = BEATS  ·  ARROW KEYS = MELODY  ·  70% TO PASS',W/2,H*0.73);
 }
 
 // ── Draw: Menu ────────────────────────────────────────────────────────────────
@@ -728,7 +780,7 @@ function drawMenu() {
 
   ctx.font=`${Math.min(13,W/75)}px 'Courier New'`;
   ctx.fillStyle='#334466';
-  ctx.fillText('ARROW KEYS or MOUSE BUTTONS  ·  ENTER or CLICK CARD TO PLAY',W/2,H*0.2);
+  ctx.fillText('◄ ► to browse  ·  ENTER to play  ·  BEATS: WASD  ·  MELODY: ARROWS  ·  70% to pass',W/2,H*0.2);
 
   const COLS=3;
   const cw=Math.min(240,(W-60)/COLS-16), ch=Math.min(210,H*0.28);
@@ -764,7 +816,8 @@ function drawMenu() {
     if (sel){ctx.textAlign='center';ctx.font=`bold 10px 'Courier New'`;ctx.fillStyle=sg.colL;ctx.fillText('▶ ENTER / CLICK ◀',cx+cw/2,cy+ch-10);}
   });
 
-  const gridBottom=gridY+2*(ch+vgap)-vgap;
+  const numRows=Math.ceil(SONGS.length/COLS);
+  const gridBottom=gridY+numRows*(ch+vgap)-vgap;
   const pulse=0.65+0.35*Math.sin(nt*4);
   ctx.textAlign='center';
   ctx.font=`bold ${Math.min(13,W/65)}px 'Courier New'`;
@@ -776,10 +829,10 @@ function drawMenu() {
   ctx.strokeStyle='#1a2540'; ctx.lineWidth=1; ctx.stroke();
   ctx.textAlign='center'; ctx.font=`${Math.min(13,W/70)}px 'Courier New'`;
   ctx.fillStyle='#445577';
-  ctx.fillText('LEFT LANE:   Arrow Left  or  Left Mouse Button',W/2,gy+6);
-  ctx.fillText('RIGHT LANE:  Arrow Right or  Right Mouse Button',W/2,gy+26);
+  ctx.fillText('BEATS:   W  A  S  D  keys',W/2,gy+6);
+  ctx.fillText('MELODY:  ←  ↑  ↓  →  Arrow Keys',W/2,gy+26);
   ctx.fillStyle='#2a3848';
-  ctx.fillText('TIMING  ·  PERFECT → GOOD → EARLY/LATE → MISS',W/2,gy+48);
+  ctx.fillText('70% ACCURACY TO PASS  ·  PERFECT → GOOD → EARLY/LATE → MISS',W/2,gy+48);
 }
 
 // ── Draw: Difficulty Select ───────────────────────────────────────────────────
@@ -876,7 +929,7 @@ function drawCountdown() {
   ctx.font=`${Math.min(16,W/55)}px 'Courier New'`; ctx.fillStyle=rgba(song.colR||song.colL,0.5);
   ctx.fillText('GET READY',W/2,H*0.78);
   ctx.font=`${Math.min(12,W/80)}px 'Courier New'`; ctx.fillStyle='#223344';
-  ctx.fillText('◄ LEFT KEY / LEFT CLICK          RIGHT KEY / RIGHT CLICK ►',W/2,H*0.9);
+  ctx.fillText('WASD = BEATS  ·  ARROW KEYS = MELODY  ·  70% TO PASS',W/2,H*0.9);
 }
 
 // ── Draw: Gameplay ────────────────────────────────────────────────────────────
@@ -884,22 +937,38 @@ function drawGame(dt) {
   const now=gt(), hy=hitY();
   ctx.fillStyle='#03030c'; ctx.fillRect(0,0,W,H);
 
-  // Lane glow
-  for (let s=0;s<2;s++){
-    const lx=laneX(s), col=s===0?song.colL:song.colR, fl=laneFlash[s];
-    const lg=ctx.createLinearGradient(lx-LANE_W/2,0,lx+LANE_W/2,0);
-    lg.addColorStop(0,rgba(col,fl*0.22)); lg.addColorStop(0.5,rgba(col,fl*0.10)); lg.addColorStop(1,rgba(col,fl*0.22));
-    ctx.fillStyle=lg; ctx.fillRect(lx-LANE_W/2,0,LANE_W,H);
-    laneFlash[s]=Math.max(0,fl-dt*5.5);
-  }
-  ctx.setLineDash([8,6]);
-  for (let s=0;s<2;s++){
-    const lx=laneX(s), col=s===0?song.colL:song.colR;
-    ctx.strokeStyle=rgba(col,0.28); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(lx-LANE_W/2,0); ctx.lineTo(lx-LANE_W/2,H); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(lx+LANE_W/2,0); ctx.lineTo(lx+LANE_W/2,H); ctx.stroke();
-  }
+  // Zone labels
+  ctx.textAlign='center';
+  ctx.font=`bold ${Math.min(10,W/110)}px 'Courier New'`;
+  ctx.fillStyle='rgba(255,140,60,0.22)';
+  ctx.fillText('BEATS  ( W A S D )',W*0.25,22);
+  ctx.fillStyle='rgba(100,180,255,0.22)';
+  ctx.fillText('MELODY  ( ← ↑ ↓ → )',W*0.75,22);
+
+  // Center divider
+  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+  ctx.setLineDash([5,9]);
+  ctx.beginPath(); ctx.moveTo(W*0.5,0); ctx.lineTo(W*0.5,H); ctx.stroke();
   ctx.setLineDash([]);
+
+  // Lane glows and guide lines
+  for (const k of LANE_KEYS) {
+    const info=LANE_INFO[k], lx=info.xf*W, fl=laneFlash[k]||0;
+    if (fl>0) {
+      const lg=ctx.createLinearGradient(lx-LANE_W,0,lx+LANE_W,0);
+      lg.addColorStop(0,rgba(info.col,0)); lg.addColorStop(0.5,rgba(info.col,fl*0.14)); lg.addColorStop(1,rgba(info.col,0));
+      ctx.fillStyle=lg; ctx.fillRect(lx-LANE_W,0,LANE_W*2,H);
+    }
+    laneFlash[k]=Math.max(0,fl-dt*5.5);
+    ctx.strokeStyle=rgba(info.col,0.12); ctx.lineWidth=1;
+    ctx.setLineDash([5,9]);
+    ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx,H); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Hit line
+  ctx.strokeStyle='rgba(255,255,255,0.09)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,hy); ctx.lineTo(W,hy); ctx.stroke();
 
   // Consecutive miss warning
   const warnAt = activeDiff.deathAt - 2;
@@ -908,8 +977,8 @@ function drawGame(dt) {
     ctx.textAlign='center'; ctx.font=`bold ${Math.min(14,W/62)}px 'Courier New'`;
     ctx.fillStyle=`rgba(255,50,50,${pulse*0.9})`;
     const left = activeDiff.deathAt - consecutiveMisses;
-    const label = activeDiff.lives>1 ? `LIFE LOST` : `GAME OVER`;
-    ctx.fillText(`${left} MORE MISS = ${label}`,W/2,H*0.12);
+    const wlabel = activeDiff.lives>1 ? 'LIFE LOST' : 'GAME OVER';
+    ctx.fillText(`${left} MORE MISS = ${wlabel}`,W/2,H*0.12);
   }
 
   // Life-lost flash overlay
@@ -929,25 +998,24 @@ function drawGame(dt) {
     ctx.fillText('LIVES',18,H*0.5+14);
   }
 
-  ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(0,hy); ctx.lineTo(W,hy); ctx.stroke();
-
-  for (let s=0;s<2;s++){
-    const lx=laneX(s), col=s===0?song.colL:song.colR, fl=laneFlash[s];
-    ctx.strokeStyle=rgba(col,0.45+fl*0.55); ctx.lineWidth=3;
-    ctx.beginPath(); ctx.arc(lx,hy,32,0,Math.PI*2); ctx.stroke();
-    if (fl>0){ctx.fillStyle=rgba(col,fl*0.28);ctx.beginPath();ctx.arc(lx,hy,32,0,Math.PI*2);ctx.fill();}
-    ctx.textAlign='center'; ctx.font=`bold 11px 'Courier New'`;
-    ctx.fillStyle=rgba(col,0.55); ctx.fillText(s===0?'◄ LEFT':'RIGHT ►',lx,hy+54);
+  // Hit targets
+  for (const k of LANE_KEYS) {
+    const info=LANE_INFO[k], lx=info.xf*W, fl=laneFlash[k]||0;
+    ctx.strokeStyle=rgba(info.col, 0.38+fl*0.55); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(lx,hy,22,0,Math.PI*2); ctx.stroke();
+    if (fl>0){ctx.fillStyle=rgba(info.col,fl*0.20);ctx.beginPath();ctx.arc(lx,hy,22,0,Math.PI*2);ctx.fill();}
+    ctx.textAlign='center'; ctx.font=`bold ${Math.min(10,W/110)}px 'Courier New'`;
+    ctx.fillStyle=rgba(info.col, 0.45+fl*0.4); ctx.fillText(info.label,lx,hy+38);
   }
 
   // Notes
   for (const n of notes){
     if (n.hit||n.missed) continue;
+    const info=LANE_INFO[n.key]; if(!info) continue;
+    const lx=info.xf*W;
     const ny=hy-(n.time-now)/effectiveScroll*H*HIT_FRAC;
     if (ny<-60||ny>H+60) continue;
-    const lx=laneX(n.side), col=n.side===0?song.colL:song.colR;
-    drawNote(lx, ny, 22, col, n.side, now);
+    drawNote(lx, ny, 20, info.col, info.label, now);
   }
 
   // Particles
@@ -957,43 +1025,51 @@ function drawGame(dt) {
   // Judge popup
   const ja=(performance.now()-lastJudge.ts)/680;
   if (ja<1){
+    const jinfo=LANE_INFO[lastJudge.key]||LANE_INFO['ArrowLeft'];
     ctx.globalAlpha=1-ja; ctx.textAlign='center';
     ctx.font=`bold ${Math.min(22,W/45)}px 'Courier New'`;
     ctx.shadowColor=lastJudge.col; ctx.shadowBlur=14; ctx.fillStyle=lastJudge.col;
-    ctx.fillText(lastJudge.text,laneX(lastJudge.side),hy-68-ja*38);
+    ctx.fillText(lastJudge.text,jinfo.xf*W,hy-60-ja*35);
     ctx.shadowBlur=0; ctx.globalAlpha=1;
   }
 
   ctx.textAlign='right';
-  ctx.font=`bold ${Math.min(44,W/22)}px 'Courier New'`;
-  ctx.fillStyle='#ffffff'; ctx.fillText(String(score).padStart(8,'0'),W-18,55);
-  ctx.font=`${Math.min(11,W/85)}px 'Courier New'`; ctx.fillStyle='#334455'; ctx.fillText('SCORE',W-18,72);
+  ctx.font=`bold ${Math.min(36,W/26)}px 'Courier New'`;
+  ctx.fillStyle='#ffffff'; ctx.fillText(String(score).padStart(8,'0'),W-18,52);
+  ctx.font=`${Math.min(10,W/92)}px 'Courier New'`; ctx.fillStyle='#334455'; ctx.fillText('SCORE',W-18,66);
 
   if (combo>=2){
     ctx.textAlign='center';
-    ctx.font=`bold ${Math.min(40,W/22)}px 'Courier New'`;
-    ctx.shadowColor=song.colL; ctx.shadowBlur=22;
-    ctx.fillStyle='#ffffff'; ctx.fillText(`×${combo}`,W/2,52);
+    ctx.font=`bold ${Math.min(32,W/26)}px 'Courier New'`;
+    ctx.shadowColor=song.colL; ctx.shadowBlur=18;
+    ctx.fillStyle='#ffffff'; ctx.fillText(`×${combo}`,W/2,48);
     ctx.shadowBlur=0;
-    ctx.font=`${Math.min(11,W/85)}px 'Courier New'`; ctx.fillStyle='#334455'; ctx.fillText('COMBO',W/2,68);
+    ctx.font=`${Math.min(10,W/92)}px 'Courier New'`; ctx.fillStyle='#334455'; ctx.fillText('COMBO',W/2,62);
   }
 
   ctx.textAlign='left';
-  ctx.font=`bold ${Math.min(15,W/65)}px 'Courier New'`; ctx.fillStyle=song.colL; ctx.fillText(song.name,18,28);
-  ctx.font=`${Math.min(11,W/85)}px 'Courier New'`; ctx.fillStyle='#2a3a4a';
-  ctx.fillText(song.artist+' · '+song.bpm+' BPM · '+activeDiff.name,18,44);
+  ctx.font=`bold ${Math.min(13,W/75)}px 'Courier New'`; ctx.fillStyle=song.colL; ctx.fillText(song.name,18,26);
+  ctx.font=`${Math.min(10,W/95)}px 'Courier New'`; ctx.fillStyle='#2a3a4a';
+  ctx.fillText(song.artist+' · '+song.bpm+' BPM · '+activeDiff.name,18,40);
 
   const labels=[['P',judg.perfect,'#ffee22'],['G',judg.good,'#44ffcc'],['E',judg.early,'#55aaff'],['L',judg.late,'#ff9944'],['M',judg.miss,'#ff4444']];
-  ctx.font=`${Math.min(12,W/82)}px 'Courier New'`;
-  labels.forEach(([lbl,val,col],i)=>{ctx.fillStyle=col;ctx.fillText(`${lbl} ${val}`,18,72+i*18);});
+  ctx.font=`${Math.min(10,W/95)}px 'Courier New'`;
+  labels.forEach(([lbl,val,col],i)=>{ctx.fillStyle=col;ctx.fillText(`${lbl}:${val}`,18,58+i*16);});
+
+  // Accuracy live
+  const tot=judg.perfect+judg.good+judg.early+judg.late+judg.miss;
+  const liveAcc=tot>0?Math.round((judg.perfect+judg.good*0.66+(judg.early+judg.late)*0.33)/tot*100):100;
+  ctx.font=`${Math.min(10,W/95)}px 'Courier New'`;
+  ctx.fillStyle=liveAcc>=70?'#44ff88':'#ff4444';
+  ctx.fillText(`ACC ${liveAcc}%  ${liveAcc>=70?'▲PASS':'▼FAIL'}`,18,58+5*16);
 
   const prog=Math.min(1,now/(song.duration/activeDiff.mult));
   ctx.fillStyle='#0d0d1f'; ctx.fillRect(0,H-5,W,5);
   const pg=ctx.createLinearGradient(0,0,W,0);
   pg.addColorStop(0,song.colR||song.colL); pg.addColorStop(1,song.colL);
   ctx.fillStyle=pg; ctx.fillRect(0,H-5,W*prog,5);
-  ctx.textAlign='left'; ctx.font=`${Math.min(11,W/90)}px 'Courier New'`; ctx.fillStyle='#1a2535';
-  ctx.fillText('ESC ← Menu',18,H-12);
+  ctx.textAlign='left'; ctx.font=`${Math.min(10,W/95)}px 'Courier New'`; ctx.fillStyle='#1a2535';
+  ctx.fillText('ESC ← Menu',18,H-10);
 }
 
 // ── Draw: Game Over ───────────────────────────────────────────────────────────
@@ -1033,41 +1109,50 @@ function drawResults() {
 
   const total=judg.perfect+judg.good+judg.early+judg.late+judg.miss;
   const acc=total>0?(judg.perfect+judg.good*0.66+(judg.early+judg.late)*0.33)/total:0;
+  const passed=acc>=0.70;
   let grade='F';
   if(acc>=0.94)grade='S'; else if(acc>=0.84)grade='A'; else if(acc>=0.70)grade='B'; else if(acc>=0.55)grade='C'; else grade='D';
 
   if (!resultsFanfareDone){
     resultsFanfareDone=true;
-    coinsEarned=activeDiff.coins;
-    coins+=coinsEarned; saveSave();
-    if(grade==='S'||grade==='A'||grade==='B') sfxWin(); else sfxLose();
+    coinsEarned=passed?activeDiff.coins:0;
+    if(passed){coins+=coinsEarned; saveSave();}
+    if(passed) sfxWin(); else sfxLose();
     startTitleMusic();
   }
 
   const gc={S:'#ffdd00',A:'#00eeff',B:'#44ff88',C:'#ffaa33',D:'#ff6644',F:'#ff2222'};
-  ctx.font=`bold ${Math.min(120,H*0.21)}px 'Courier New'`;
-  ctx.shadowColor=gc[grade]; ctx.shadowBlur=55;
-  ctx.fillStyle=gc[grade]; ctx.fillText(grade,W/2,H*0.49);
+  ctx.font=`bold ${Math.min(100,H*0.17)}px 'Courier New'`;
+  ctx.shadowColor=gc[grade]; ctx.shadowBlur=50;
+  ctx.fillStyle=gc[grade]; ctx.fillText(grade,W/2,H*0.44);
+  ctx.shadowBlur=0;
+
+  // Pass / Fail banner
+  ctx.font=`bold ${Math.min(22,W/40)}px 'Courier New'`;
+  ctx.shadowColor=passed?'#44ff88':'#ff4444'; ctx.shadowBlur=20;
+  ctx.fillStyle=passed?'#44ff88':'#ff4444';
+  ctx.fillText(passed?'✓  CLEARED!':'✗  FAILED — need 70%',W/2,H*0.54);
   ctx.shadowBlur=0;
 
   const row1=[['PERFECT',judg.perfect,'#ffee22'],['GOOD',judg.good,'#44ffcc'],['EARLY',judg.early,'#55aaff']];
   const row2=[['LATE',judg.late,'#ff9944'],['MISS',judg.miss,'#ff4444'],['MAX COMBO',maxCombo+'×',song.colL]];
   const colW=Math.min(155,W*0.16);
-  [[row1,H*0.62],[row2,H*0.62+50]].forEach(([row,ry])=>{
+  [[row1,H*0.62],[row2,H*0.62+46]].forEach(([row,ry])=>{
     const rx=W/2-(row.length/2-0.5)*colW;
     row.forEach(([lbl,val,col],i)=>{
       const x=rx+i*colW;
-      ctx.font=`${Math.min(11,W/82)}px 'Courier New'`; ctx.fillStyle='#445566'; ctx.fillText(lbl,x,ry);
-      ctx.font=`bold ${Math.min(20,W/40)}px 'Courier New'`; ctx.fillStyle=col; ctx.fillText(String(val),x,ry+24);
+      ctx.font=`${Math.min(10,W/88)}px 'Courier New'`; ctx.fillStyle='#445566'; ctx.fillText(lbl,x,ry);
+      ctx.font=`bold ${Math.min(18,W/44)}px 'Courier New'`; ctx.fillStyle=col; ctx.fillText(String(val),x,ry+21);
     });
   });
 
   ctx.font=`${Math.min(13,W/68)}px 'Courier New'`; ctx.fillStyle='#aaaaff';
-  ctx.fillText(`ACCURACY: ${(acc*100).toFixed(1)}%`,W/2,H*0.78);
+  ctx.fillText(`ACCURACY: ${(acc*100).toFixed(1)}%  (need 70% to pass)`,W/2,H*0.78);
 
   // Coins earned
-  ctx.font=`bold ${Math.min(14,W/65)}px 'Courier New'`; ctx.fillStyle='#ffdd44';
-  ctx.fillText(`+${coinsEarned} COINS  ·  TOTAL: ${coins}`,W/2,H*0.84);
+  ctx.font=`bold ${Math.min(13,W/68)}px 'Courier New'`;
+  ctx.fillStyle=passed?'#ffdd44':'#665533';
+  ctx.fillText(passed?`+${coinsEarned} COINS  ·  TOTAL: ${coins}`:'no coins — clear the song first!',W/2,H*0.84);
 
   const pulse=0.5+0.5*Math.sin(performance.now()/520);
   ctx.globalAlpha=pulse; ctx.font=`${Math.min(15,W/55)}px 'Courier New'`; ctx.fillStyle='#8899cc';
@@ -1158,7 +1243,7 @@ function loop(now) {
       if (!n.hit&&!n.missed&&n.time<gtime-WIN_B){
         n.missed=true; combo=0; judg.miss++;
         consecutiveMisses++;
-        showJudge('MISS',n.side,'#ff4444'); sfxMiss();
+        showJudge('MISS',n.key,'#ff4444'); sfxMiss();
         if (consecutiveMisses >= activeDiff.deathAt) {
           consecutiveMisses = 0;
           livesRemaining--;
@@ -1170,7 +1255,7 @@ function loop(now) {
           }
           // Life lost but still alive — flash and warn, stop processing this frame
           lifeFlash = 1.0;
-          showJudge('LIFE LOST!', n.side, '#ff00ff');
+          showJudge('LIFE LOST!', n.key, '#ff00ff');
           sfxLose();
           break;
         }
