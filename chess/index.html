@@ -284,20 +284,17 @@
     width: 90%; height: 90%;
   }
 
-  /* Piece divs — background-image SVG, always visible */
-  .piece {
+  /* Piece images — base64 img, always visible */
+  img.piece {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 6%; left: 6%;
+    width: 88%; height: 88%;
     z-index: 2;
     pointer-events: none;
-    background-size: 82% 82%;
-    background-repeat: no-repeat;
-    background-position: center;
+    display: block;
     transition: transform 0.12s ease;
   }
-  .piece svg { display: none; }
-  .sq.hoverable:hover .piece { transform: scale(1.08); }
+  .sq.hoverable:hover img.piece { transform: scale(1.08); }
   .sq.hoverable { cursor: pointer; }
   .sq:focus { outline: 3px solid rgba(255,200,50,0.8); outline-offset: -2px; z-index: 5; }
   .sq.kb-cursor::before { background: rgba(255,200,50,0.3) !important; box-shadow: inset 0 0 0 3px rgba(255,200,50,0.9) !important; }
@@ -460,6 +457,7 @@
   /* Move quality badges */
   .badge-forced { background: #1a7a1a; color: #fff; }
   .badge-ok     { background: #2db34e; color: #fff; }
+  .badge-great  { background: #5aad4e; color: #fff; }
   .badge-win    { background: #d4af37; color: #0d0a05; font-size: 15px; }
   .badge-draw   { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
 
@@ -1774,6 +1772,15 @@ const _SV = {};
   }
 })();
 
+// Base64-encode all SVGs once so img.src works on file:// without CSP issues
+const _SB64 = {};
+(function(){
+  for(const [k,v] of Object.entries(_S)){
+    try { _SB64[k] = btoa(v); }
+    catch(e){ try { _SB64[k] = btoa(unescape(encodeURIComponent(v))); } catch(e2){} }
+  }
+})();
+
 const PIECE_KEY = {
   [WHITE|PIECE.KING]:'wK',[WHITE|PIECE.QUEEN]:'wQ',[WHITE|PIECE.ROOK]:'wR',
   [WHITE|PIECE.BISHOP]:'wB',[WHITE|PIECE.KNIGHT]:'wN',[WHITE|PIECE.PAWN]:'wP',
@@ -1900,16 +1907,21 @@ function renderBoard() {
     if(squares[vk]) squares[vk].classList.add('in-check');
   }
 
-  // Render pieces — using pre-parsed SVG clones for reliable visibility
+  // Render pieces — base64 img elements for reliable cross-browser visibility
   squares.forEach((el)=>{
     const s=parseInt(el.dataset.sq);
     const p=state.board[s];
     if(p){
-      const pd=document.createElement('div');
-      pd.className='piece';
-      const svgStr=_S[getPieceKey(p)];
-      if(svgStr) pd.style.backgroundImage=`url("data:image/svg+xml,${encodeURIComponent(svgStr)}")`;
-      el.appendChild(pd);
+      const key=getPieceKey(p);
+      const b64=_SB64[key];
+      if(b64){
+        const img=document.createElement('img');
+        img.src=`data:image/svg+xml;base64,${b64}`;
+        img.className='piece';
+        img.draggable=false;
+        img.alt='';
+        el.appendChild(img);
+      }
     }
   });
 
@@ -2145,6 +2157,7 @@ function assessQuality(st, m, pColor, moveSAN='') {
   if(delta < -280) return 'blunder';
   if(delta < -100) return 'mistake';
   if(delta >  150) return 'brilliant';
+  if(delta >   60) return 'great';
   return 'ok';
 }
 
@@ -2427,7 +2440,7 @@ function showPromotion(from, to, moves) {
     wrap.style.cssText=`cursor:pointer;width:70px;height:70px;display:flex;align-items:center;justify-content:center;
       border:2px solid transparent;border-radius:8px;transition:all 0.2s;padding:4px;background:rgba(255,255,255,0.05);`;
     const img=document.createElement('img');
-    const pk=getPieceKey(playerColor|pt); img.src=`data:image/svg+xml;charset=utf-8,${encodeURIComponent(_S[pk]||'')}`;
+    const pk=getPieceKey(playerColor|pt); img.src=_SB64[pk]?`data:image/svg+xml;base64,${_SB64[pk]}`:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(_S[pk]||'')}`;
     img.style.cssText=`width:60px;height:60px;pointer-events:none;`;
     img.draggable=false;
     wrap.appendChild(img);
@@ -2479,17 +2492,22 @@ function renderReview() {
     if(i===vt) el.classList.add('last-move-to');
     const p = snap.board[s];
     if(p){
-      const pd=document.createElement('div');
-      pd.className='piece';
-      const svgStr=_S[getPieceKey(p)];
-      if(svgStr) pd.style.backgroundImage=`url("data:image/svg+xml,${encodeURIComponent(svgStr)}")`;
-      el.appendChild(pd);
+      const key=getPieceKey(p);
+      const b64=_SB64[key];
+      if(b64){
+        const img=document.createElement('img');
+        img.src=`data:image/svg+xml;base64,${b64}`;
+        img.className='piece';
+        img.draggable=false;
+        img.alt='';
+        el.appendChild(img);
+      }
     }
   });
 
   // Quality badge on destination square (shown for both player and opponent)
-  const qClassMap = { book:'badge-book', ok:'badge-ok', forced:'badge-forced', mistake:'badge-mistake', blunder:'badge-blunder', brilliant:'badge-brilliant' };
-  const qIcons    = { book:'📖', ok:'✓', forced:'→', mistake:'?', blunder:'??', brilliant:'!' };
+  const qClassMap = { book:'badge-book', ok:'badge-ok', great:'badge-great', forced:'badge-forced', mistake:'badge-mistake', blunder:'badge-blunder', brilliant:'badge-brilliant' };
+  const qIcons    = { book:'📖', ok:'✓', great:'!', forced:'→', mistake:'?', blunder:'??', brilliant:'!!' };
   if(vt>=0 && squares[vt]) {
     const badge = document.createElement('div');
     badge.className = 'move-badge ' + (qClassMap[snap.quality]||'badge-ok');
@@ -2519,7 +2537,7 @@ function renderReview() {
 
   const moveNum = Math.floor(snap.moveIdx/2)+1;
   const san = moveHistory[snap.moveIdx]?.san || '';
-  const qNames = { book:'Book', ok:'Ok', forced:'Forced', mistake:'Mistake', blunder:'Blunder', brilliant:'Brilliant!' };
+  const qNames = { book:'Book', ok:'Ok', great:'Great!', forced:'Forced', mistake:'Mistake', blunder:'Blunder', brilliant:'Brilliant!' };
   const qLabel = ` · ${qNames[snap.quality]||'Ok'}`;
   document.getElementById('reviewLabel').textContent = `Move ${moveNum}${san?' — '+san:''}${qLabel}`;
 }
