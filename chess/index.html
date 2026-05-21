@@ -311,10 +311,15 @@
     font-family: sans-serif;
   }
   .badge-book     { background: #6b3f1a; color: #fff; }
-  .badge-good     { background: #2db34e; color: #fff; }
+  .badge-forced   { background: #1a7a1a; color: #fff; }
+  .badge-good, .badge-ok { background: #2db34e; color: #fff; }
+  .badge-great    { background: #5aad4e; color: #fff; }
+  .badge-miss     { background: #c0392b; color: #fff; }
   .badge-mistake  { background: #e07800; color: #fff; }
   .badge-blunder  { background: #d63030; color: #fff; }
   .badge-brilliant{ background: #d4af37; color: #fff; }
+  .badge-win      { background: #d4af37; color: #0d0a05; font-size: 15px; }
+  .badge-draw     { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
 
   /* Promotion modal */
   #promoModal {
@@ -454,12 +459,6 @@
     animation: ghostFade 0.65s ease forwards;
   }
 
-  /* Move quality badges */
-  .badge-forced { background: #1a7a1a; color: #fff; }
-  .badge-ok     { background: #2db34e; color: #fff; }
-  .badge-great  { background: #5aad4e; color: #fff; }
-  .badge-win    { background: #d4af37; color: #0d0a05; font-size: 15px; }
-  .badge-draw   { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
 
   /* Comeback banner */
   #comebackBanner {
@@ -2147,18 +2146,38 @@ function assessQuality(st, m, pColor, moveSAN='') {
     const fullLine = [...moveHistory.map(h=>h.san), moveSAN];
     if(isBookMove(fullLine)) return 'book';
   }
+  const flags = mFlags(m);
+  const isCapture = (flags & (F_CAP|F_EP)) !== 0;
   const before = quickEval(st.board, pColor);
+
+  // Detect missed opportunity: mate-in-1 or free piece available but not taken
+  if(!isCapture) {
+    const allMoves = generateMoves(st);
+    for(const am of allMoves) {
+      if(mFrom(am)===mFrom(m) && mTo(am)===mTo(m)) continue;
+      const ns = applyMove(st, am);
+      if(generateMoves(ns).length===0 && inCheck(ns)) return 'miss'; // missed checkmate
+    }
+    const mycaps = generateMoves(st, true);
+    for(const cap of mycaps) {
+      const stC = applyMove(st, cap);
+      const rsp = generateMoves(stC, true);
+      let capScore = quickEval(stC.board, pColor);
+      for(const rm of rsp){ const ev=quickEval(applyMove(stC,rm).board,pColor); if(ev<capScore) capScore=ev; }
+      if(capScore - before > 280) return 'miss'; // missed winning a piece or more
+    }
+  }
+
   const stA = applyMove(st, m);
   const caps = generateMoves(stA, true);
   let best = quickEval(stA.board, pColor);
-  // Opponent picks the response that minimises pColor's score (always seek minimum)
   for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(ev<best) best=ev; }
   const delta = best - before;
   if(delta < -280) return 'blunder';
   if(delta < -100) return 'mistake';
   if(delta >  150) return 'brilliant';
   if(delta >   60) return 'great';
-  return 'ok';
+  return 'good';
 }
 
 function onPlayerWin() {
@@ -2196,23 +2215,6 @@ function executeMove(m) {
   const isForced = legalMoves.length === 1;
   const quality = isForced ? 'forced' : assessQuality(state, m, wasPlayer ? playerColor : opp(playerColor), san);
 
-  // Best engine move (recapture-aware, so it won't suggest hanging pieces)
-  let snapBestFrom = -1, snapBestTo = -1;
-  {
-    const bMoves = orderMoves([...legalMoves], state.board);
-    const bBefore = quickEval(state.board, state.turn);
-    let bBest = bMoves[0], bBestDelta = -Infinity;
-    for(const bm of bMoves) {
-      const ns = applyMove(state, bm);
-      const rsp = generateMoves(ns, true);
-      let after = quickEval(ns.board, state.turn);
-      for(const rm of rsp){ const ev=quickEval(applyMove(ns,rm).board,state.turn); if(ev<after) after=ev; }
-      const delta = after - bBefore;
-      if(delta > bBestDelta){ bBestDelta = delta; bBest = bm; }
-    }
-    if(bBest){ snapBestFrom = mFrom(bBest); snapBestTo = mTo(bBest); }
-  }
-
   selectedSq=-1; selectedMoves=[];
   drawnArrows=[]; renderArrows();
 
@@ -2231,6 +2233,24 @@ function executeMove(m) {
 
   state = applyMove(state, m);
   legalMoves = generateMoves(state);
+
+  // Best move from the resulting position — highlights are consistent with displayed board in review
+  let snapBestFrom = -1, snapBestTo = -1;
+  if(legalMoves.length > 0) {
+    const bMoves = orderMoves([...legalMoves], state.board);
+    const bBefore = quickEval(state.board, state.turn);
+    let bBest = bMoves[0], bBestDelta = -Infinity;
+    for(const bm of bMoves) {
+      const ns = applyMove(state, bm);
+      const rsp = generateMoves(ns, true);
+      let after = quickEval(ns.board, state.turn);
+      for(const rm of rsp){ const ev=quickEval(applyMove(ns,rm).board,state.turn); if(ev<after) after=ev; }
+      const delta = after - bBefore;
+      if(delta > bBestDelta){ bBestDelta = delta; bBest = bm; }
+    }
+    snapBestFrom = mFrom(bBest); snapBestTo = mTo(bBest);
+  }
+
   moveHistory.push({san, turn: opp(state.turn), quality, wasPlayer});
   snapshots.push({ board: new Int8Array(state.board), kings:[...state.kings], lastFrom, lastTo, moveIdx:moveHistory.length-1, quality, wasPlayer, snapBestFrom, snapBestTo });
 
@@ -2412,15 +2432,26 @@ function updateCaptured() {
 function updateMoveList() {
   const el=document.getElementById('moveList');
   el.innerHTML='';
+  const qIcon  = {good:'✓',great:'!',brilliant:'!!',miss:'✗',mistake:'?',blunder:'??'};
+  const qColor = {good:'#2db34e',great:'#5aad4e',brilliant:'#d4af37',miss:'#c0392b',mistake:'#e07800',blunder:'#d63030'};
   for(let i=0;i<moveHistory.length;i+=2){
     const div=document.createElement('div');
     div.className='move-pair';
     const num=document.createElement('span'); num.className='move-num'; num.textContent=`${Math.floor(i/2)+1}.`;
-    const m1=document.createElement('span'); m1.className='move-san'; m1.textContent=moveHistory[i].san;
-    div.appendChild(num); div.appendChild(m1);
-    if(moveHistory[i+1]){
-      const m2=document.createElement('span'); m2.className='move-san'; m2.textContent=moveHistory[i+1].san;
-      div.appendChild(m2);
+    div.appendChild(num);
+    for(const off of [0,1]){
+      const h=moveHistory[i+off];
+      if(!h) break;
+      const w=document.createElement('span'); w.style.cssText='display:inline-flex;align-items:center;gap:2px;';
+      const ms=document.createElement('span'); ms.className='move-san'; ms.textContent=h.san;
+      w.appendChild(ms);
+      if(qIcon[h.quality]){
+        const qi=document.createElement('span');
+        qi.style.cssText=`font-family:sans-serif;font-size:9px;font-weight:900;color:${qColor[h.quality]};line-height:1;`;
+        qi.textContent=qIcon[h.quality];
+        w.appendChild(qi);
+      }
+      div.appendChild(w);
     }
     el.appendChild(div);
   }
@@ -2506,11 +2537,11 @@ function renderReview() {
   });
 
   // Quality badge on destination square (shown for both player and opponent)
-  const qClassMap = { book:'badge-book', ok:'badge-ok', great:'badge-great', forced:'badge-forced', mistake:'badge-mistake', blunder:'badge-blunder', brilliant:'badge-brilliant' };
-  const qIcons    = { book:'📖', ok:'✓', great:'!', forced:'→', mistake:'?', blunder:'??', brilliant:'!!' };
+  const qClassMap = { book:'badge-book', ok:'badge-good', good:'badge-good', great:'badge-great', forced:'badge-forced', miss:'badge-miss', mistake:'badge-mistake', blunder:'badge-blunder', brilliant:'badge-brilliant' };
+  const qIcons    = { book:'📖', ok:'✓', good:'✓', great:'!', forced:'→', miss:'✗', mistake:'?', blunder:'??', brilliant:'!!' };
   if(vt>=0 && squares[vt]) {
     const badge = document.createElement('div');
-    badge.className = 'move-badge ' + (qClassMap[snap.quality]||'badge-ok');
+    badge.className = 'move-badge ' + (qClassMap[snap.quality]||'badge-good');
     badge.textContent = qIcons[snap.quality] || '✓';
     squares[vt].appendChild(badge);
   }
@@ -2537,8 +2568,8 @@ function renderReview() {
 
   const moveNum = Math.floor(snap.moveIdx/2)+1;
   const san = moveHistory[snap.moveIdx]?.san || '';
-  const qNames = { book:'Book', ok:'Ok', great:'Great!', forced:'Forced', mistake:'Mistake', blunder:'Blunder', brilliant:'Brilliant!' };
-  const qLabel = ` · ${qNames[snap.quality]||'Ok'}`;
+  const qNames = { book:'Book', ok:'Good', good:'Good', great:'Great!', forced:'Forced', miss:'Miss!', mistake:'Mistake', blunder:'Blunder', brilliant:'Brilliant!' };
+  const qLabel = ` · ${qNames[snap.quality]||'Good'}`;
   document.getElementById('reviewLabel').textContent = `Move ${moveNum}${san?' — '+san:''}${qLabel}`;
 }
 
