@@ -676,7 +676,7 @@
     </div>
   </div>
 
-  <div class="setup-section">
+  <div class="setup-section" id="diffSection">
     <label>Difficulty</label>
     <div class="btn-group">
       <button class="opt-btn active" id="diffEasy"   onclick="selectDiff('easy')">Easy<br><small style="font-size:0.7em;opacity:0.7">500 ELO</small></button>
@@ -693,6 +693,14 @@
       <button class="opt-btn" id="time300"  onclick="selectTime(300)">5 Min</button>
       <button class="opt-btn" id="time120"  onclick="selectTime(120)">2 Min</button>
       <button class="opt-btn" id="time30"   onclick="selectTime(30)">30 Sec</button>
+    </div>
+  </div>
+
+  <div class="setup-section" id="vsModeSection">
+    <label>Opponent</label>
+    <div class="btn-group">
+      <button class="opt-btn active" id="vsCompBtn" onclick="selectVs(false)">vs Computer</button>
+      <button class="opt-btn" id="vsSelfBtn" onclick="selectVs(true)">vs Self</button>
     </div>
   </div>
 
@@ -772,6 +780,7 @@
   <div class="result-box">
     <h2 id="resultTitle"></h2>
     <p id="resultMsg"></p>
+    <p id="resultAccuracy" style="font-family:'Crimson Text',serif;font-size:1em;color:#d4af37;margin-top:8px;display:none"></p>
     <button onclick="location.reload()">New Game</button>
     <button onclick="enterReview()">Review Game</button>
   </div>
@@ -926,7 +935,7 @@ function isAttacked(board, s, byColor, castling, ep) {
       if(color(p)===byColor&&type(p)===PIECE.KNIGHT){
         let er,ef;
         if(Math.abs(dr)===2){er=kr+Math.sign(-dr);ef=kf;}else{er=kr;ef=kf+Math.sign(-df);}
-        if(er>=0&&er<8&&ef>=0&&ef<8&&board[sq(er,ef)]) continue;
+        if(er>=0&&er<8&&ef>=0&&ef<8&&board[sq(er,ef)]&&!(er===r&&ef===f)) continue;
         return true;
       }
     }
@@ -1600,6 +1609,17 @@ const ACHIEVEMENTS = [
   { id:'philosopher',      icon:'🧠', name:'Philosopher',       desc:'Reach move 50 in a game — MARBLE BOARD' },
 ];
 
+const BOARD_THEMES = [
+  { id:'default',  name:'Classic', achReq:null,               boardClass:null          },
+  { id:'wooden',   name:'Wooden',  achReq:'classical_scholar', boardClass:'wooden'      },
+  { id:'gold',     name:'Gold',    achReq:'grandmaster',       boardClass:'board-gold'  },
+  { id:'marble',   name:'Marble',  achReq:'philosopher',       boardClass:'board-marble'},
+  { id:'emerald',  name:'Emerald', achReq:'speed_chess',       boardClass:'board-emerald'},
+  { id:'night',    name:'Night',   achReq:'ruthless',          boardClass:'board-night' },
+];
+
+let activeTheme = localStorage.getItem('boardTheme') || 'default';
+
 function loadStats() {
   try {
     const s = JSON.parse(localStorage.getItem('chess_stats')||'{}');
@@ -1644,12 +1664,12 @@ function showAchievementToast(ach) {
 function applyReward(id) {
   const b=document.getElementById('board');
   switch(id){
-    case 'classical_scholar': b.classList.add('wooden'); break;
+    case 'classical_scholar': applyBoardTheme(); break;
     case 'first_win':         b.classList.add('board-glow'); break;
-    case 'grandmaster':       b.classList.add('board-gold'); break;
-    case 'philosopher':       b.classList.add('board-marble'); break;
-    case 'speed_chess':       b.classList.add('board-emerald'); break;
-    case 'ruthless':          b.classList.add('board-night'); break;
+    case 'grandmaster':       applyBoardTheme(); break;
+    case 'philosopher':       applyBoardTheme(); break;
+    case 'speed_chess':       applyBoardTheme(); break;
+    case 'ruthless':          applyBoardTheme(); break;
     case 'castle_k':          b.classList.add('border-silver'); break;
     case 'castle_q':          b.classList.add('border-bronze'); break;
     case 'first_promo':       b.classList.add('border-platinum'); break;
@@ -1666,12 +1686,7 @@ function applyReward(id) {
 
 function applyStoredRewards() {
   const b=document.getElementById('board');
-  if(unlockedAch.has('classical_scholar')) b.classList.add('wooden');
   if(unlockedAch.has('first_win'))         b.classList.add('board-glow');
-  if(unlockedAch.has('grandmaster'))       b.classList.add('board-gold');
-  if(unlockedAch.has('philosopher'))       b.classList.add('board-marble');
-  if(unlockedAch.has('speed_chess'))       b.classList.add('board-emerald');
-  if(unlockedAch.has('ruthless'))          b.classList.add('board-night');
   if(unlockedAch.has('castle_k'))          b.classList.add('border-silver');
   if(unlockedAch.has('castle_q'))          b.classList.add('border-bronze');
   if(unlockedAch.has('first_promo'))       b.classList.add('border-platinum');
@@ -1681,6 +1696,7 @@ function applyStoredRewards() {
   if(unlockedAch.has('en_passant'))        window._ghostTrailUnlocked=true;
   if(unlockedAch.has('hunter'))            window._skullCapturesUnlocked=true;
   updateStatusIcons();
+  applyBoardTheme();
 }
 
 function updateStatusIcons() {
@@ -1693,6 +1709,24 @@ function updateStatusIcons() {
   el.textContent=icons.join(' ');
 }
 
+function selectBoardTheme(id) {
+  activeTheme = id;
+  localStorage.setItem('boardTheme', id);
+  applyBoardTheme();
+  // Re-render achievements to update selected state
+  const grid = document.getElementById('achieveGrid');
+  if(grid) openAchievements();
+}
+
+function applyBoardTheme() {
+  const b = document.getElementById('board');
+  if(!b) return;
+  // Remove all theme classes
+  BOARD_THEMES.forEach(t=>{ if(t.boardClass) b.classList.remove(t.boardClass); });
+  const theme = BOARD_THEMES.find(t=>t.id===activeTheme);
+  if(theme?.boardClass) b.classList.add(theme.boardClass);
+}
+
 function openAchievements() {
   const grid = document.getElementById('achieveGrid');
   grid.innerHTML = '';
@@ -1703,6 +1737,39 @@ function openAchievements() {
     div.innerHTML = `<div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${unlocked ? a.desc : '???'}</div>`;
     grid.appendChild(div);
   });
+
+  // Board theme picker
+  let themeHtml = '<div style="margin-top:24px;border-top:1px solid rgba(212,175,55,0.2);padding-top:20px"><h3 style="font-family:Cinzel,serif;font-size:0.85em;letter-spacing:3px;color:#d4af37;margin-bottom:14px;text-align:center">BOARD THEME</h3><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">';
+  BOARD_THEMES.forEach(t => {
+    const available = !t.achReq || unlockedAch.has(t.achReq);
+    const selected = activeTheme === t.id;
+    const colors = {
+      default:  {l:'#f0d9b5',d:'#b58863'},
+      wooden:   {l:'#D4B483',d:'#8B5C2A'},
+      gold:     {l:'#f5d07a',d:'#c89030'},
+      marble:   {l:'#dedbd4',d:'#8e8880'},
+      emerald:  {l:'#89c490',d:'#2e6b38'},
+      night:    {l:'#575e6e',d:'#252c3e'},
+    }[t.id] || {l:'#f0d9b5',d:'#b58863'};
+    themeHtml += `<div onclick="${available?`selectBoardTheme('${t.id}')`:''}" style="cursor:${available?'pointer':'not-allowed'};text-align:center;opacity:${available?1:0.4}">
+      <div style="width:48px;height:48px;border-radius:8px;overflow:hidden;border:2px solid ${selected?'#d4af37':'rgba(212,175,55,0.2)'};box-shadow:${selected?'0 0 10px rgba(212,175,55,0.5)':'none'};display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr">
+        <div style="background:${colors.l}"></div><div style="background:${colors.d}"></div>
+        <div style="background:${colors.d}"></div><div style="background:${colors.l}"></div>
+      </div>
+      <div style="font-family:Cinzel,serif;font-size:0.55em;letter-spacing:1px;color:${selected?'#d4af37':'#806040'};margin-top:4px">${t.name}</div>
+    </div>`;
+  });
+  themeHtml += '</div></div>';
+
+  const box = document.querySelector('.achieve-box');
+  // Remove old theme picker if exists
+  const oldTheme = box.querySelector('.theme-picker');
+  if(oldTheme) oldTheme.remove();
+  const themePicker = document.createElement('div');
+  themePicker.className = 'theme-picker';
+  themePicker.innerHTML = themeHtml;
+  box.insertBefore(themePicker, box.querySelector('.ctrl-btn'));
+
   document.getElementById('achieveModal').classList.add('show');
 }
 function closeAchievements() {
@@ -1755,6 +1822,7 @@ let legalMoves = [];
 let selectedMoves = [];
 let gameOver = false;
 let thinking = false;
+let vsMode = false;
 let lastFrom=-1, lastTo=-1;
 let capturedByPlayer=[], capturedByComp=[];
 let moveHistory=[];
@@ -1772,6 +1840,14 @@ let gameBrilliant = 0;
 let gameCaptured = 0;
 let lostQueen = false;
 let hadCastle = false;
+
+function selectVs(self) {
+  vsMode = self;
+  document.getElementById('vsCompBtn').classList.toggle('active', !self);
+  document.getElementById('vsSelfBtn').classList.toggle('active', self);
+  const diffEl = document.getElementById('diffSection');
+  if(diffEl) diffEl.style.opacity = self ? '0.35' : '1';
+}
 
 function selectColor(c) {
   playerColor = c==='white'?WHITE:BLACK;
@@ -1792,6 +1868,7 @@ function selectTime(t) {
 
 function startGame() {
   gameSet = null;
+  // vsMode is already set by selectVs() button handler
   if(AC.state==='suspended') AC.resume();
   initAudio();
   initState();
@@ -1825,7 +1902,7 @@ function startGame() {
   renderBoard();
   updateStatus();
 
-  if(state.turn !== playerColor) {
+  if(!vsMode && state.turn !== playerColor) {
     setTimeout(()=>doComputerMove(), 500);
   }
 }
@@ -2013,7 +2090,7 @@ function renderBoard() {
     el.dataset.sq=String(s);
     el.className='sq '+(((row(i)+col(i))%2===0)?'light':'dark');
     el.innerHTML='';
-    el.classList.toggle('hoverable', state.board[s]&&color(state.board[s])===state.turn&&state.turn===playerColor);
+    el.classList.toggle('hoverable', state.board[s]&&color(state.board[s])===state.turn&&(vsMode||state.turn===playerColor));
     const piece = state.board[s];
     const pieceName = piece ? getPieceName(piece) : 'empty';
     el.setAttribute('aria-label', `${FILES[col(s)]}${8-row(s)} ${pieceName}`);
@@ -2193,14 +2270,15 @@ function drawArrow(svg,x1,y1,x2,y2,color,sqSz) {
 }
 
 function onSquareClick(e) {
-  if(gameOver||thinking||state.turn!==playerColor) return;
+  if(gameOver||thinking||(!vsMode&&state.turn!==playerColor)) return;
   if(AC.state==='suspended') AC.resume();
 
   const s=parseInt(this.dataset.sq);
   const p=state.board[s];
+  const activeColor = vsMode ? state.turn : playerColor;
 
   if(selectedSq<0){
-    if(!p||color(p)!==playerColor) return;
+    if(!p||color(p)!==activeColor) return;
     selectedSq=s;
     selectedMoves=legalMoves.filter(m=>mFrom(m)===s);
     if(!selectedMoves.length){ selectedSq=-1; playSFX('illegal'); return; }
@@ -2220,7 +2298,7 @@ function onSquareClick(e) {
     }
 
     // Select new piece
-    if(p&&color(p)===playerColor){
+    if(p&&color(p)===activeColor){
       selectedSq=s;
       selectedMoves=legalMoves.filter(m=>mFrom(m)===s);
     } else {
@@ -2291,19 +2369,20 @@ function isBookMove(sanLine) {
 function assessQuality(st, m, pColor, moveSAN='') {
   if(moveSAN) {
     const fullLine = [...moveHistory.map(h=>h.san), moveSAN];
-    if(isBookMove(fullLine)) return 'book';
+    if(isBookMove(fullLine)) return {quality:'book', delta:0};
   }
   const flags = mFlags(m);
   const isCapture = (flags & (F_CAP|F_EP)) !== 0;
   const before = quickEval(st.board, pColor);
+  const movingVal = PIECE_VAL[type(st.board[mFrom(m)])];
 
-  // Detect missed opportunity: mate-in-1 or free piece available but not taken
+  // Detect missed opportunity
   if(!isCapture) {
     const allMoves = generateMoves(st);
     for(const am of allMoves) {
       if(mFrom(am)===mFrom(m) && mTo(am)===mTo(m)) continue;
       const ns = applyMove(st, am);
-      if(generateMoves(ns).length===0 && inCheck(ns)) return 'miss'; // missed checkmate
+      if(generateMoves(ns).length===0 && inCheck(ns)) return {quality:'miss', delta:-999};
     }
     const mycaps = generateMoves(st, true);
     for(const cap of mycaps) {
@@ -2311,20 +2390,54 @@ function assessQuality(st, m, pColor, moveSAN='') {
       const rsp = generateMoves(stC, true);
       let capScore = quickEval(stC.board, pColor);
       for(const rm of rsp){ const ev=quickEval(applyMove(stC,rm).board,pColor); if(ev<capScore) capScore=ev; }
-      if(capScore - before > 280) return 'miss'; // missed winning a piece or more
+      if(capScore - before > 280) return {quality:'miss', delta:before-capScore};
     }
   }
+
+  const capturedPiece = flags & F_EP
+    ? (st.turn===WHITE ? (BLACK|PIECE.PAWN) : (WHITE|PIECE.PAWN))
+    : st.board[mTo(m)];
+  const capturedVal = isCapture ? PIECE_VAL[type(capturedPiece)] : 0;
 
   const stA = applyMove(st, m);
   const caps = generateMoves(stA, true);
   let best = quickEval(stA.board, pColor);
   for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(ev<best) best=ev; }
   const delta = best - before;
-  if(delta < -280) return 'blunder';
-  if(delta < -100) return 'mistake';
-  if(delta >  150) return 'brilliant';
-  if(delta >   60) return 'great';
-  return 'good';
+
+  if(delta < -280) return {quality:'blunder', delta};
+  if(delta < -100) return {quality:'mistake', delta};
+
+  // Brilliant: sacrifice (give up more than you take immediately) but come out ahead
+  if(isCapture && movingVal > capturedVal + 80 && delta > 60) return {quality:'brilliant', delta};
+  // Brilliant: non-capture that gains significant position
+  if(!isCapture && delta > 150) return {quality:'brilliant', delta};
+
+  // Great: capture a minor piece or better with decent outcome
+  if(isCapture && capturedVal >= 300 && delta >= -80) return {quality:'great', delta};
+  // Great: solid material gain
+  if(delta > 60) return {quality:'great', delta};
+
+  return {quality:'good', delta};
+}
+
+function computeAccuracy(forPlayer) {
+  const moves = moveHistory.filter(m => m.wasPlayer === forPlayer && m.quality !== 'forced');
+  if(!moves.length) return null;
+  const scores = moves.map(m => {
+    const d = m.delta || 0;
+    switch(m.quality){
+      case 'brilliant': return 100;
+      case 'great': return Math.min(100, 90 + Math.max(0, d-60)/15);
+      case 'book': return 82;
+      case 'good': return Math.max(70, Math.min(82, 75 + d/20));
+      case 'miss': return 40;
+      case 'mistake': return Math.max(45, Math.min(60, 55 + (d+100)/10));
+      case 'blunder': return Math.max(0, Math.min(25, 20 + (d+280)/28));
+      default: return 70;
+    }
+  });
+  return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
 }
 
 function onPlayerWin() {
@@ -2360,7 +2473,9 @@ function executeMove(m) {
   lastFrom=mFrom(m); lastTo=mTo(m);
   const wasPlayer = state.turn === playerColor;
   const isForced = legalMoves.length === 1;
-  const quality = isForced ? 'forced' : assessQuality(state, m, wasPlayer ? playerColor : opp(playerColor), san);
+  const _aq = isForced ? {quality:'forced', delta:0} : assessQuality(state, m, wasPlayer ? playerColor : opp(playerColor), san);
+  const quality = _aq.quality;
+  const moveDelta = _aq.delta;
 
   selectedSq=-1; selectedMoves=[];
   drawnArrows=[]; renderArrows();
@@ -2398,7 +2513,7 @@ function executeMove(m) {
     snapBestFrom = mFrom(bBest); snapBestTo = mTo(bBest);
   }
 
-  moveHistory.push({san, turn: opp(state.turn), quality, wasPlayer});
+  moveHistory.push({san, turn: opp(state.turn), quality, delta: moveDelta, wasPlayer});
   snapshots.push({ board: new Int8Array(state.board), kings:[...state.kings], lastFrom, lastTo, moveIdx:moveHistory.length-1, quality, wasPlayer, snapBestFrom, snapBestTo });
 
   const a11y = document.getElementById('a11yAnnounce');
@@ -2455,9 +2570,14 @@ function executeMove(m) {
     const check=inCheck(state);
     setTimeout(()=>{
       if(check){
-        const winner=state.turn===playerColor?'Computer':'You';
-        if(winner==='You') onPlayerWin();
-        showResult(winner==='You'?'VICTORY':'DEFEAT', winner==='You'?'You delivered checkmate!':'The computer delivers checkmate.');
+        if(vsMode){
+          const winColor = state.turn===WHITE?'Black':'White';
+          showResult('CHECKMATE', `${winColor} wins!`);
+        } else {
+          const winner=state.turn===playerColor?'Computer':'You';
+          if(winner==='You') onPlayerWin();
+          showResult(winner==='You'?'VICTORY':'DEFEAT', winner==='You'?'You delivered checkmate!':'The computer delivers checkmate.');
+        }
       } else {
         showResult('DRAW','Stalemate — no legal moves.');
       }
@@ -2488,12 +2608,12 @@ function executeMove(m) {
     setTimeout(()=>{ badge.classList.add('fade-out'); setTimeout(()=>badge.remove(), 500); }, 2000);
   })(lastTo, quality);
 
-  if(state.turn!==playerColor && !gameOver){
+  if(!vsMode && state.turn!==playerColor && !gameOver){
     startComputerTimer();
     thinking=true;
     const delay=getComputerDelay();
     setTimeout(()=>doComputerMove(), delay);
-  } else if(timeControl>0){
+  } else if(timeControl>0 && !vsMode){
     startPlayerTimer();
   }
 }
@@ -2563,6 +2683,11 @@ function doComputerMove() {
 
 function updateStatus() {
   const el=document.getElementById('statusText');
+  if(vsMode && !gameOver && !thinking && !inCheck(state)){
+    el.className='status-text';
+    el.textContent=state.turn===WHITE?"White's turn":"Black's turn";
+    return;
+  }
   if(gameOver){
     el.className='status-text mate';
     el.textContent=legalMoves.length===0&&inCheck(state)?'Checkmate':'Game Over';
@@ -2575,7 +2700,8 @@ function updateStatus() {
   }
   if(inCheck(state)){
     el.className='status-text check';
-    el.textContent=state.turn===playerColor?'You are in check!':'Computer in check';
+    if(vsMode) el.textContent=(state.turn===WHITE?'White':'Black')+' is in check!';
+    else el.textContent=state.turn===playerColor?'You are in check!':'Computer in check';
     return;
   }
   el.className='status-text';
@@ -2647,11 +2773,22 @@ function showPromotion(from, to, moves) {
 }
 
 function showResult(title, msg) {
-  gameResult = title==='VICTORY'?'win':title==='DRAW'?'draw':'loss';
+  gameResult = (title==='VICTORY'||title==='CHECKMATE')?'win':title==='DRAW'?'draw':'loss';
   playSFX('gameover');
   stopTimers();
   document.getElementById('resultTitle').textContent=title;
   document.getElementById('resultMsg').textContent=msg;
+  const accEl = document.getElementById('resultAccuracy');
+  if(accEl){
+    const acc = computeAccuracy(true);
+    const compAcc = vsMode ? computeAccuracy(false) : null;
+    if(acc !== null){
+      accEl.textContent = vsMode
+        ? `White: ${computeAccuracy(true)||'—'}% · Black: ${computeAccuracy(false)||'—'}%`
+        : `Your accuracy: ${acc}%`;
+      accEl.style.display='block';
+    } else accEl.style.display='none';
+  }
   document.getElementById('resultOverlay').classList.add('show');
 }
 function closeResult() {
@@ -2835,6 +2972,7 @@ function closeTutorial() {
 function startCustomGame() {
   closeTutorial();
   gameSet = 'chaos';
+  // vsMode is already set by selectVs() button handler
   // Use same options as already selected in setup
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
@@ -2860,12 +2998,13 @@ function startCustomGame() {
   renderBoard();
   updateStatus();
 
-  if(state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
 }
 
 function startMonarchyGame() {
   closeTutorial();
   gameSet = 'monarchy';
+  // vsMode is already set by selectVs() button handler
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
@@ -2890,7 +3029,7 @@ function startMonarchyGame() {
   renderBoard();
   updateStatus();
 
-  if(state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
 }
 
 function resignGame() {
