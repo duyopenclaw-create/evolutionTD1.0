@@ -321,6 +321,28 @@
   .badge-win      { background: #d4af37; color: #0d0a05; font-size: 15px; }
   .badge-draw     { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
 
+  /* Live quality flash badge (shown briefly after each move) */
+  .badge-flash {
+    position: absolute; bottom: 2px; right: 2px;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900;
+    z-index: 10; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+    border: 2px solid rgba(255,255,255,0.4);
+    font-family: sans-serif;
+    animation: badge-pop 0.25s ease-out forwards;
+  }
+  @keyframes badge-pop {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  .badge-flash.fade-out {
+    transition: opacity 0.5s ease;
+    opacity: 0;
+  }
+
   /* Promotion modal */
   #promoModal {
     display: none;
@@ -1888,8 +1910,9 @@ const _SB64 = {};
 (function(){
   const allSvg = {..._S, ..._SMon};
   for(const [k,v] of Object.entries(allSvg)){
-    try { _SB64[k] = btoa(v); }
-    catch(e){ try { _SB64[k] = btoa(unescape(encodeURIComponent(v))); } catch(e2){} }
+    const s = v.replace('<svg ', '<svg width="100%" height="100%" ');
+    try { _SB64[k] = btoa(s); }
+    catch(e){ try { _SB64[k] = btoa(unescape(encodeURIComponent(s))); } catch(e2){} }
   }
 })();
 
@@ -2450,6 +2473,20 @@ function executeMove(m) {
 
   renderBoard();
   updateStatus();
+
+  // Flash quality badge on destination square
+  (function showQualityFlash(destSq, qual){
+    const flashMap = { brilliant:'badge-brilliant', great:'badge-great', miss:'badge-miss', mistake:'badge-mistake', blunder:'badge-blunder' };
+    const flashIcon = { brilliant:'!!', great:'!', miss:'✗', mistake:'?', blunder:'??' };
+    if(!flashMap[qual]) return;
+    const sqEl = document.querySelector(`#board .sq[data-sq="${destSq}"]`);
+    if(!sqEl) return;
+    const badge = document.createElement('div');
+    badge.className = 'badge-flash ' + flashMap[qual];
+    badge.textContent = flashIcon[qual];
+    sqEl.appendChild(badge);
+    setTimeout(()=>{ badge.classList.add('fade-out'); setTimeout(()=>badge.remove(), 500); }, 2000);
+  })(lastTo, quality);
 
   if(state.turn!==playerColor && !gameOver){
     startComputerTimer();
