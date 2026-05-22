@@ -276,7 +276,7 @@
     border-radius: 50%;
     background: rgba(0,0,0,0.38);
     pointer-events: none;
-    z-index: 3;
+    z-index: 1;
   }
   .sq.can-capture .dot {
     background: transparent;
@@ -682,6 +682,16 @@
       <button class="opt-btn active" id="diffEasy"   onclick="selectDiff('easy')">Easy<br><small style="font-size:0.7em;opacity:0.7">500 ELO</small></button>
       <button class="opt-btn"        id="diffMedium" onclick="selectDiff('medium')">Medium<br><small style="font-size:0.7em;opacity:0.7">1300 ELO</small></button>
       <button class="opt-btn"        id="diffHard"   onclick="selectDiff('hard')">Hard<br><small style="font-size:0.7em;opacity:0.7">1800 ELO</small></button>
+      <button class="opt-btn"        id="diffTeacher" onclick="selectDiff('teacher')">Teacher<br><small style="font-size:0.7em;opacity:0.7">300–2400</small></button>
+    </div>
+    <div id="teacherSection" style="display:none;margin-top:12px;padding:10px;background:rgba(212,175,55,0.07);border-radius:8px;border:1px solid rgba(212,175,55,0.2)">
+      <label style="font-size:0.85em;color:#d4af37;display:flex;justify-content:space-between">
+        <span>ELO Level</span><span id="eloDisplay" style="font-weight:700">1200</span>
+      </label>
+      <input type="range" min="300" max="2400" step="100" value="1200" id="eloSlider"
+        oninput="teacherELO=parseInt(this.value);document.getElementById('eloDisplay').textContent=this.value"
+        style="width:100%;margin-top:8px;accent-color:#d4af37">
+      <div style="display:flex;justify-content:space-between;font-size:0.7em;color:#888;margin-top:2px"><span>300</span><span>2400</span></div>
     </div>
   </div>
 
@@ -760,6 +770,7 @@
       <div class="panel-title">Controls</div>
       <button class="ctrl-btn music-btn" id="musicBtn" onclick="toggleMusic()">♫ Music: On</button>
       <button class="ctrl-btn" style="margin-top:8px" onclick="toggleSFX()">🔊 SFX: On</button>
+      <button class="ctrl-btn" id="undoBtn" style="margin-top:8px;display:none" onclick="undoMove()">↩ Undo Move</button>
       <button class="ctrl-btn" style="margin-top:8px" onclick="resignGame()">Resign</button>
       <button class="ctrl-btn" style="margin-top:8px" onclick="location.reload()">New Game</button>
       <button class="achieve-btn" onclick="openAchievements()">🏆 Achievements</button>
@@ -774,6 +785,9 @@
     <div class="promo-pieces" id="promoPieces"></div>
   </div>
 </div>
+
+<!-- Teacher hint toast -->
+<div id="teacherToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c1a;color:#fff;padding:12px 22px;border-radius:10px;font-family:'Cinzel',serif;font-size:0.9em;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);max-width:340px;text-align:center;pointer-events:none"></div>
 
 <!-- Result overlay -->
 <div id="resultOverlay">
@@ -1412,9 +1426,13 @@ const DIFF_CONFIG = {
   medium: { depth:3, randPct:0.20, blunderPct:0.08 },
   hard:   { depth:4, randPct:0.02, blunderPct:0.01 }
 };
+function getTeacherConfig(elo) {
+  const t = Math.max(0, Math.min(1, (elo-300)/2100));
+  return { depth: Math.round(1+t*4), randPct: 0.92*(1-t), blunderPct: 0.55*(1-t) };
+}
 
 function getBestMove(st, difficulty) {
-  const cfg = DIFF_CONFIG[difficulty];
+  const cfg = teacherMode ? getTeacherConfig(teacherELO) : DIFF_CONFIG[difficulty];
   const moves = generateMoves(st);
   if(!moves.length) return null;
 
@@ -1607,6 +1625,14 @@ const ACHIEVEMENTS = [
   { id:'comeback',         icon:'🔄', name:'Comeback Kid',      desc:'Win after losing your queen — COMEBACK BANNER' },
   { id:'grandmaster',      icon:'🌟', name:'Grandmaster',       desc:'Win 10 games total — GOLD BOARD' },
   { id:'philosopher',      icon:'🧠', name:'Philosopher',       desc:'Reach move 50 in a game — MARBLE BOARD' },
+  { id:'first_check',      icon:'⚡', name:'Check!',            desc:'Give your first check' },
+  { id:'queen_slayer',     icon:'♛', name:'Queen Slayer',       desc:'Capture the opponent\'s queen' },
+  { id:'five_wins',        icon:'🎖️', name:'Veteran',           desc:'Win 5 games total' },
+  { id:'perfect_game',     icon:'⭐', name:'Perfectionist',     desc:'Finish a game with 80%+ accuracy' },
+  { id:'teacher_grad',     icon:'🎓', name:'Graduate',          desc:'Win a game in Teacher mode' },
+  { id:'vs_self_complete', icon:'🤺', name:'Dual Mind',         desc:'Complete a full vs Self game' },
+  { id:'hat_trick',        icon:'🎩', name:'Hat Trick',         desc:'Win 3 games in a row' },
+  { id:'big_material',     icon:'💎', name:'Material Master',   desc:'Be up 15+ points of material in a game' },
 ];
 
 const BOARD_THEMES = [
@@ -1680,6 +1706,8 @@ function applyReward(id) {
     case 'hunter':            window._skullCapturesUnlocked=true; break;
     case 'comeback': break; // banner handled in onPlayerWin
     case 'scholars_mate': case 'blitzkrieg': case 'fork_master':
+    case 'first_check': case 'queen_slayer': case 'five_wins': case 'perfect_game':
+    case 'teacher_grad': case 'vs_self_complete': case 'hat_trick': case 'big_material':
       updateStatusIcons(); break;
   }
 }
@@ -1703,9 +1731,16 @@ function updateStatusIcons() {
   const el=document.getElementById('statusIcons');
   if(!el) return;
   const icons=[];
-  if(unlockedAch.has('scholars_mate')) icons.push('📖');
-  if(unlockedAch.has('blitzkrieg'))    icons.push('⚡');
-  if(unlockedAch.has('fork_master'))   icons.push('🍴');
+  if(unlockedAch.has('scholars_mate'))    icons.push('📖');
+  if(unlockedAch.has('blitzkrieg'))       icons.push('⚡');
+  if(unlockedAch.has('fork_master'))      icons.push('🍴');
+  if(unlockedAch.has('first_check'))      icons.push('✓');
+  if(unlockedAch.has('queen_slayer'))     icons.push('♛');
+  if(unlockedAch.has('perfect_game'))     icons.push('⭐');
+  if(unlockedAch.has('teacher_grad'))     icons.push('🎓');
+  if(unlockedAch.has('vs_self_complete')) icons.push('🤺');
+  if(unlockedAch.has('hat_trick'))        icons.push('🎩');
+  if(unlockedAch.has('big_material'))     icons.push('💎');
   el.textContent=icons.join(' ');
 }
 
@@ -1823,6 +1858,9 @@ let selectedMoves = [];
 let gameOver = false;
 let thinking = false;
 let vsMode = false;
+let teacherMode = false;
+let teacherELO = 1200;
+let stateHistory = []; // undo stack for teacher mode
 let lastFrom=-1, lastTo=-1;
 let capturedByPlayer=[], capturedByComp=[];
 let moveHistory=[];
@@ -1856,7 +1894,46 @@ function selectColor(c) {
 }
 function selectDiff(d) {
   difficulty=d;
-  ['easy','medium','hard'].forEach(x=>document.getElementById('diff'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===d));
+  teacherMode = (d==='teacher');
+  ['easy','medium','hard','teacher'].forEach(x=>{
+    const el=document.getElementById('diff'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(el) el.classList.toggle('active',x===d);
+  });
+  const ts=document.getElementById('teacherSection');
+  if(ts) ts.style.display=teacherMode?'block':'none';
+  // Teacher mode requires vs Computer
+  if(teacherMode) { vsMode=false; selectVs(false); }
+}
+
+function undoMove() {
+  if(!teacherMode || stateHistory.length<1) return;
+  stopTimers(); thinking=false;
+  const prev=stateHistory.pop();
+  state=prev.state; legalMoves=prev.legalMoves;
+  moveHistory=prev.moveHistory.slice(); snapshots=prev.snapshots.slice();
+  lastFrom=prev.lastFrom; lastTo=prev.lastTo;
+  capturedByPlayer=prev.capturedByPlayer.slice(); capturedByComp=prev.capturedByComp.slice();
+  gameOver=false;
+  renderBoard(); updateMoveList(); updateCaptured(); updateStatus();
+}
+
+function showTeacherHint(quality) {
+  if(!teacherMode) return;
+  const hints = {
+    brilliant:'Brilliant! That was exceptional play.',
+    great:'Great move! You won material.',
+    miss:'You missed a winning opportunity — look for captures or checkmates next time.',
+    mistake:'Mistake — your position weakened. Check piece safety.',
+    blunder:'Blunder! You lost significant material. Use the Undo button to try again.'
+  };
+  if(!hints[quality]) return;
+  const t=document.getElementById('teacherToast');
+  if(!t) return;
+  t.textContent=hints[quality];
+  t.style.background=quality==='brilliant'||quality==='great'?'#1a5c1a':'#5c1a1a';
+  t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.style.display='none', 4000);
 }
 function selectTime(t) {
   timeControl=t;
@@ -1895,6 +1972,10 @@ function startGame() {
   gameCaptured = 0;
   lostQueen = false;
   hadCastle = false;
+
+  stateHistory = [];
+  const undoBtn = document.getElementById('undoBtn');
+  if(undoBtn) undoBtn.style.display = teacherMode ? 'block' : 'none';
 
   legalMoves = generateMoves(state);
   buildBoard();
@@ -2376,6 +2457,9 @@ function assessQuality(st, m, pColor, moveSAN='') {
   const before = quickEval(st.board, pColor);
   const movingVal = PIECE_VAL[type(st.board[mFrom(m)])];
 
+  // If this move delivers checkmate, it's always brilliant
+  { const stPost=applyMove(st,m); if(generateMoves(stPost).length===0&&inCheck(stPost)) return {quality:'brilliant',delta:99999}; }
+
   // Detect missed opportunity
   if(!isCapture) {
     const allMoves = generateMoves(st);
@@ -2442,10 +2526,16 @@ function computeAccuracy(forPlayer) {
 
 function onPlayerWin() {
   persistStats.wins++;
+  persistStats.winStreak = (persistStats.winStreak||0)+1;
   saveStats(persistStats);
   unlockAchievement('first_win');
+  if(persistStats.wins >= 5)  unlockAchievement('five_wins');
   if(persistStats.wins >= 10) unlockAchievement('grandmaster');
+  if(persistStats.winStreak >= 3) unlockAchievement('hat_trick');
   if(difficulty === 'hard') unlockAchievement('ruthless');
+  if(teacherMode) unlockAchievement('teacher_grad');
+  const acc = computeAccuracy(true);
+  if(acc !== null && acc >= 80) unlockAchievement('perfect_game');
   if(timeControl===30 || timeControl===120) unlockAchievement('speed_chess');
   const totalMoves = moveHistory.length;
   if(totalMoves <= 4) unlockAchievement('scholars_mate');
@@ -2461,6 +2551,13 @@ function onPlayerWin() {
 }
 
 function executeMove(m) {
+  // Save state for teacher-mode undo (before any move)
+  if(teacherMode) stateHistory.push({
+    state:{board:new Int8Array(state.board),turn:state.turn,castling:state.castling,ep:state.ep,halfmove:state.halfmove,fullmove:state.fullmove,kings:[...state.kings],history:state.history,moveList:state.moveList},
+    legalMoves:[...legalMoves], moveHistory:moveHistory.slice(), snapshots:snapshots.slice(),
+    lastFrom, lastTo, capturedByPlayer:capturedByPlayer.slice(), capturedByComp:capturedByComp.slice()
+  });
+
   const stateBefore = state;
   const movingPiece = state.board[mFrom(m)];
   if(window._ghostTrailUnlocked) window._ghostPiece = _S[getPieceKey(movingPiece)] || null;
@@ -2552,6 +2649,12 @@ function executeMove(m) {
       gameBrilliant++;
       if(gameBrilliant >= 5) unlockAchievement('brilliant_game');
     }
+    // Queen slayer
+    if(isCapture && type(captured)===PIECE.QUEEN) unlockAchievement('queen_slayer');
+    // First check
+    if(inCheck(state)) unlockAchievement('first_check');
+    // Material advantage
+    { let mat=0; for(let i=0;i<64;i++){const p=state.board[i];if(p)mat+=color(p)===playerColor?PIECE_VAL[type(p)]:-PIECE_VAL[type(p)];} if(mat>=1500) unlockAchievement('big_material'); }
     // Fork check
     checkFork(stateBefore, m);
   }
@@ -2608,6 +2711,9 @@ function executeMove(m) {
     setTimeout(()=>{ badge.classList.add('fade-out'); setTimeout(()=>badge.remove(), 500); }, 2000);
   })(lastTo, quality);
 
+  // Teacher mode: hint after player's moves
+  if(wasPlayer) showTeacherHint(quality);
+
   if(!vsMode && state.turn!==playerColor && !gameOver){
     startComputerTimer();
     thinking=true;
@@ -2618,14 +2724,22 @@ function executeMove(m) {
   }
 }
 
+let _lastCompDelay = -1;
 function getComputerDelay() {
-  if(!timeControl) {
-    return {easy:800,medium:1200,hard:1800}[difficulty];
+  let minD, maxD;
+  if(teacherMode) {
+    minD = 500; maxD = Math.min(5000, 800 + (teacherELO/2400)*4200);
+  } else if(timeControl) {
+    const ti = Math.max(0,[30,120,300,600].indexOf(timeControl));
+    const tbl = {easy:[[200,600],[300,800],[500,1200],[700,1500]],medium:[[150,450],[250,600],[400,1000],[600,1200]],hard:[[100,350],[200,500],[300,800],[500,1000]]};
+    [minD,maxD] = (tbl[difficulty]||tbl.easy)[ti];
+  } else {
+    [minD,maxD] = {easy:[500,2500],medium:[800,3500],hard:[1000,5000]}[difficulty]||[500,2500];
   }
-  // Faster for shorter time controls
-  const base = {easy:[300,600,1000,1500],medium:[200,400,800,1200],hard:[150,300,600,1000]};
-  const timeIdx = [30,120,300,600].indexOf(timeControl);
-  return base[difficulty][Math.max(0,timeIdx)] || 800;
+  let d;
+  do { d = Math.floor(Math.random()*(maxD-minD+1))+minD; } while(maxD-minD>800 && Math.abs(d-_lastCompDelay)<400);
+  _lastCompDelay = d;
+  return d;
 }
 
 let playerTimerActive=false, compTimerActive=false;
@@ -2774,6 +2888,8 @@ function showPromotion(from, to, moves) {
 
 function showResult(title, msg) {
   gameResult = (title==='VICTORY'||title==='CHECKMATE')?'win':title==='DRAW'?'draw':'loss';
+  if(gameResult!=='win'){ persistStats.winStreak=0; saveStats(persistStats); }
+  if(vsMode && gameResult!=='loss') unlockAchievement('vs_self_complete');
   playSFX('gameover');
   stopTimers();
   document.getElementById('resultTitle').textContent=title;
@@ -2977,9 +3093,10 @@ function startCustomGame() {
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
-  snapshots=[]; reviewMode=false;
+  snapshots=[]; reviewMode=false; stateHistory=[];
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
+  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
 
   document.getElementById('setup').style.display='none';
   document.getElementById('game').style.display='flex';
@@ -3008,9 +3125,10 @@ function startMonarchyGame() {
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
-  snapshots=[]; reviewMode=false;
+  snapshots=[]; reviewMode=false; stateHistory=[];
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
+  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
 
   document.getElementById('setup').style.display='none';
   document.getElementById('game').style.display='flex';
