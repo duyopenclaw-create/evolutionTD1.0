@@ -764,6 +764,7 @@
       <button class="tut-tab" onclick="showTutTab('pieces')">Pieces</button>
       <button class="tut-tab" onclick="showTutTab('controls')">Controls</button>
       <button class="tut-tab" onclick="showTutTab('custom')">Custom Mode</button>
+      <button class="tut-tab" onclick="showTutTab('monarchy')">Monarchy</button>
     </div>
 
     <!-- Rules tab -->
@@ -805,9 +806,16 @@
       <div class="tut-pieces" id="tutPiecesGrid"></div>
     </div>
 
+    <!-- Monarchy tab -->
+    <div class="tut-section" id="tutTab-monarchy" style="display:none">
+      <p class="tut-sub" style="margin-top:0">Royal warfare — all pieces are Archs with unique movement</p>
+      <div class="tut-pieces" id="tutMonarchyGrid"></div>
+    </div>
+
     <div class="tut-buttons" id="tutButtons">
       <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" id="tutPlayBtn" onclick="startCustomGame()" style="display:none">▶ PLAY CUSTOM</button>
-      <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" onclick="closeTutorial()">✕ Close</button>
+      <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" id="tutMonBtn" onclick="startMonarchyGame()" style="display:none">&#9818; PLAY MONARCHY</button>
+      <button class="ctrl-btn" style="width:auto;padding:12px 28px;font-size:0.8em" onclick="closeTutorial()">&#10005; Close</button>
     </div>
   </div>
 </div>
@@ -882,7 +890,36 @@ function isAttacked(board, s, byColor, castling, ep) {
   const r=row(s), f=col(s);
   const pd = byColor===WHITE?1:-1;
 
-  if(customMode) {
+  if(gameSet==='monarchy') {
+    // Arch Pawn & Arch Rook: attack 1 step forward and diagonally forward
+    for(const df of [-1,0,1]){
+      const rr=r+pd,ff=f+df;
+      if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&(type(p)===PIECE.PAWN||type(p)===PIECE.ROOK))return true;}
+    }
+    // Arch Knight: L-shape, blocked by elbow square
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
+      const kr=r+dr,kf=f+df;
+      if(kr<0||kr>=8||kf<0||kf>=8) continue;
+      const p=board[sq(kr,kf)];
+      if(color(p)===byColor&&type(p)===PIECE.KNIGHT){
+        let er,ef;
+        if(Math.abs(dr)===2){er=kr+Math.sign(-dr);ef=kf;}else{er=kr;ef=kf+Math.sign(-df);}
+        if(er>=0&&er<8&&ef>=0&&ef<8&&board[sq(er,ef)]) continue;
+        return true;
+      }
+    }
+    // Arch Bishop (Archbishop): diagonal slides + knight jumps
+    for(const [dr,df] of [[1,1],[1,-1],[-1,1],[-1,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&type(p)===PIECE.BISHOP)return true; break;} rr+=dr;ff+=df;}}
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.BISHOP)return true;}}
+    // Arch Queen (Chancellor): orthogonal slides + knight jumps
+    for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(p){if(color(p)===byColor&&type(p)===PIECE.QUEEN)return true; break;} rr+=dr;ff+=df;}}
+    for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.QUEEN)return true;}}
+    // Arch King: only diagonal attacks
+    for(const [dr,df] of [[1,1],[1,-1],[-1,1],[-1,-1]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KING)return true;}}
+    return false;
+  }
+
+  if(gameSet==='chaos') {
     // Zebra (KNIGHT type): 2×1 + 3×1 L-jumps
     for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]){
       const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const p=board[sq(rr,ff)]; if(color(p)===byColor&&type(p)===PIECE.KNIGHT)return true;}
@@ -933,7 +970,7 @@ function generateMoves(st, onlyCaptures=false) {
       const nr=r+pawnDir;
       if(nr>=0&&nr<8){
         if(!onlyCaptures){
-          if(customMode){
+          if(gameSet==='chaos'){
             // Cricket: jumps straight forward — leaps over any blocking piece
             if(!board[sq(nr,f)]){
               const isPromo=nr===promoRow;
@@ -948,6 +985,13 @@ function generateMoves(st, onlyCaptures=false) {
                 else moves.push(encMove(s,sq(nr2,f)));
               }
             }
+          } else if(gameSet==='monarchy'){
+            // Arch Pawn: standard 1-2 forward move, captures forward AND diagonally
+            if(!board[sq(nr,f)]){
+              const isPromo=nr===promoRow;
+              if(isPromo){for(const pp of [PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,sq(nr,f),pp));}
+              else{moves.push(encMove(s,sq(nr,f))); if(r===pawnStart&&!board[sq(nr+pawnDir,f)])moves.push(encMove(s,sq(nr+pawnDir,f)));}
+            }
           } else {
             if(!board[sq(nr,f)]){
               const isPromo=nr===promoRow;
@@ -959,30 +1003,52 @@ function generateMoves(st, onlyCaptures=false) {
             }
           }
         }
+        if(gameSet==='monarchy'){
+          // Forward capture
+          const fts=sq(nr,f);
+          if(board[fts]&&color(board[fts])!==turn){const isPromo=nr===promoRow; if(isPromo){for(const pp of [PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,fts,pp,F_CAP));}else moves.push(encMove(s,fts,0,F_CAP));}
+          // Diagonal captures
+          for(const df of [-1,1]){const nf=f+df; if(nf<0||nf>=8)continue; const ts=sq(nr,nf); if(board[ts]&&color(board[ts])!==turn){const isPromo=nr===promoRow; if(isPromo){for(const pp of [PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT])moves.push(encMove(s,ts,pp,F_CAP));}else moves.push(encMove(s,ts,0,F_CAP));}}
+        } else {
         for(const df of [-1,1]){
           const nf=f+df;
           if(nf<0||nf>=8) continue;
           const ts=sq(nr,nf);
           if(board[ts]&&color(board[ts])!==turn){
             const isPromo=nr===promoRow;
-            if(isPromo){const pps=customMode?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];for(const pp of pps)moves.push(encMove(s,ts,pp,F_CAP));}
+            if(isPromo){const pps=gameSet==='chaos'?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];for(const pp of pps)moves.push(encMove(s,ts,pp,F_CAP));}
             else moves.push(encMove(s,ts,0,F_CAP));
-          } else if(ts===ep&&ep!==-1 && !customMode){
+          } else if(ts===ep&&ep!==-1 && gameSet===null){
             moves.push(encMove(s,ts,0,F_EP|F_CAP));
           }
+        }
         }
       }
     }
     else if(t===PIECE.KNIGHT){
-      const knJumps=customMode?
-        [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]:
-        [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
-      for(const [dr,df] of knJumps){
-        const rr=r+dr,ff=f+df;
-        if(rr<0||rr>=8||ff<0||ff>=8) continue;
-        const ts=sq(rr,ff);
-        if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
-        else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+      if(gameSet==='monarchy'){
+        // Arch Knight: standard L-shapes but blocked by elbow square
+        for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){
+          const rr=r+dr,ff=f+df;
+          if(rr<0||rr>=8||ff<0||ff>=8) continue;
+          let er,ef;
+          if(Math.abs(dr)===2){er=r+Math.sign(dr);ef=f;}else{er=r;ef=f+Math.sign(df);}
+          if(er>=0&&er<8&&ef>=0&&ef<8&&board[sq(er,ef)]) continue;
+          const ts=sq(rr,ff);
+          if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+          else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+        }
+      } else {
+        const knJumps=gameSet==='chaos'?
+          [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]]:
+          [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+        for(const [dr,df] of knJumps){
+          const rr=r+dr,ff=f+df;
+          if(rr<0||rr>=8||ff<0||ff>=8) continue;
+          const ts=sq(rr,ff);
+          if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
+          else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+        }
       }
     }
     else if(t===PIECE.KING){
@@ -990,10 +1056,11 @@ function generateMoves(st, onlyCaptures=false) {
         const rr=r+dr,ff=f+df;
         if(rr<0||rr>=8||ff<0||ff>=8) continue;
         const ts=sq(rr,ff);
+        const isDiag = Math.abs(dr)===1 && Math.abs(df)===1;
         if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
-        else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
+        else if((gameSet!=='monarchy'||isDiag) && color(board[ts])!==turn) moves.push(encMove(s,ts,0,F_CAP));
       }
-      if(!onlyCaptures){
+      if(!onlyCaptures && gameSet!=='monarchy'){
         const rank=turn===WHITE?7:0;
         const ksq=sq(rank,4);
         if(s===ksq){
@@ -1019,8 +1086,31 @@ function generateMoves(st, onlyCaptures=false) {
       }
     }
     else {
+      if(gameSet==='monarchy'){
+        if(t===PIECE.ROOK){
+          // Arch Rook: pawn-like movement, captures forward and diagonally
+          const archNr=r+pawnDir;
+          if(archNr>=0&&archNr<8){
+            if(!onlyCaptures&&!board[sq(archNr,f)]){
+              moves.push(encMove(s,sq(archNr,f)));
+              const rkStart=turn===WHITE?7:0;
+              if(r===rkStart){const archNr2=archNr+pawnDir; if(archNr2>=0&&archNr2<8&&!board[sq(archNr2,f)])moves.push(encMove(s,sq(archNr2,f)));}
+            }
+            if(board[sq(archNr,f)]&&color(board[sq(archNr,f)])!==turn)moves.push(encMove(s,sq(archNr,f),0,F_CAP));
+            for(const ddf of [-1,1]){const nff=f+ddf; if(nff>=0&&nff<8){const ts=sq(archNr,nff); if(board[ts]&&color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));}}
+          }
+        } else if(t===PIECE.BISHOP){
+          // Arch Bishop (Archbishop): diagonal slides + knight jumps
+          for(const [dr,df] of [[1,1],[1,-1],[-1,1],[-1,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const ts=sq(rr,ff); if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}else{if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP)); break;} rr+=dr;ff+=df;}}
+          for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const ts=sq(rr,ff); if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));}}
+        } else {
+          // Arch Queen (Chancellor): orthogonal slides + knight jumps
+          for(const [dr,df] of [[1,0],[-1,0],[0,1],[0,-1]]){let rr=r+dr,ff=f+df; while(rr>=0&&rr<8&&ff>=0&&ff<8){const ts=sq(rr,ff); if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}else{if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP)); break;} rr+=dr;ff+=df;}}
+          for(const [dr,df] of [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]]){const rr=r+dr,ff=f+df; if(rr>=0&&rr<8&&ff>=0&&ff<8){const ts=sq(rr,ff); if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));}}
+        }
+      } else {
       let slideDirs, extraJumps=[];
-      if(customMode) {
+      if(gameSet==='chaos') {
         if(t===PIECE.ROOK){slideDirs=[[1,0],[-1,0],[0,1],[0,-1]];extraJumps=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];}
         else if(t===PIECE.BISHOP){slideDirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];}
         else{slideDirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];extraJumps=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[3,1],[3,-1],[-3,1],[-3,-1],[1,3],[1,-3],[-1,3],[-1,-3]];}
@@ -1043,6 +1133,7 @@ function generateMoves(st, onlyCaptures=false) {
         if(!board[ts]){if(!onlyCaptures)moves.push(encMove(s,ts));}
         else if(color(board[ts])!==turn)moves.push(encMove(s,ts,0,F_CAP));
       }
+      } // end else (non-monarchy) slide block
     }
   }
   // Filter illegal moves
@@ -1096,7 +1187,7 @@ function applyMove(st, m) {
 
   if(t===PIECE.PAWN){
     newHalf=0;
-    if(!customMode && Math.abs(row(to)-row(from))===2) newEp=sq((row(from)+row(to))>>1, col(from));
+    if(gameSet===null && Math.abs(row(to)-row(from))===2) newEp=sq((row(from)+row(to))>>1, col(from));
   }
   if(flags&F_CAP) newHalf=0;
 
@@ -1678,7 +1769,7 @@ function selectTime(t) {
 }
 
 function startGame() {
-  customMode = false;
+  gameSet = null;
   if(AC.state==='suspended') AC.resume();
   initAudio();
   initState();
@@ -1771,10 +1862,32 @@ const _SV = {};
   }
 })();
 
+// Monarchy piece art: gold (white) and crimson (black) re-tinted from standard SVGs
+const _SMon = {};
+(function(){
+  for(const [k,v] of Object.entries(_S)){
+    if(k.length!==2) continue;
+    const isW = k[0]==='w';
+    let art;
+    if(isW){
+      art = v
+        .replace(/fill="#fffaf0"/g,'fill="#d4af37"')
+        .replace(/stroke="#333"/g,'stroke="#7a5c00"')
+        .replace(/fill="#333"/g,'fill="#7a5c00"');
+    } else {
+      art = v
+        .replace(/fill="#1a1a1a"/g,'fill="#8b0000"')
+        .replace(/stroke="#1a1a1a"/g,'stroke="#8b0000"');
+    }
+    _SMon['m'+k] = art; // mwP, mbP, mwR, mbR, mwN, mbN, mwB, mbB, mwQ, mbQ, mwK, mbK
+  }
+})();
+
 // Base64-encode all SVGs once so img.src works on file:// without CSP issues
 const _SB64 = {};
 (function(){
-  for(const [k,v] of Object.entries(_S)){
+  const allSvg = {..._S, ..._SMon};
+  for(const [k,v] of Object.entries(allSvg)){
     try { _SB64[k] = btoa(v); }
     catch(e){ try { _SB64[k] = btoa(unescape(encodeURIComponent(v))); } catch(e2){} }
   }
@@ -1787,11 +1900,15 @@ const PIECE_KEY = {
   [BLACK|PIECE.BISHOP]:'bB',[BLACK|PIECE.KNIGHT]:'bN',[BLACK|PIECE.PAWN]:'bP',
 };
 
-let customMode = false;
+let gameSet = null;
 
 function getPieceKey(p) {
-  if(!customMode) return PIECE_KEY[p];
+  if(gameSet===null) return PIECE_KEY[p];
   const c = color(p)===WHITE ? 'w' : 'b';
+  if(gameSet==='monarchy'){
+    const tk = {[PIECE.PAWN]:'P',[PIECE.ROOK]:'R',[PIECE.KNIGHT]:'N',[PIECE.BISHOP]:'B',[PIECE.QUEEN]:'Q',[PIECE.KING]:'K'};
+    return 'm'+c+(tk[type(p)]||'K');
+  }
   switch(type(p)) {
     case PIECE.PAWN:   return c+'Cr';  // Cricket
     case PIECE.ROOK:   return c+'Ch';
@@ -1810,8 +1927,15 @@ function getPieceSrc(p) {
 function getPieceName(p) {
   const c = color(p)===WHITE ? 'white' : 'black';
   const names = {1:'pawn',2:'knight',3:'bishop',4:'rook',5:'queen',6:'king'};
-  const t = customMode ? {1:'cricket',2:'zebra',3:'queen-bishop',4:'chancellor',5:'mixer',6:'king'} : names;
-  return c + ' ' + (t[type(p)] || names[type(p)] || 'piece');
+  if(gameSet==='chaos'){
+    const t = {1:'cricket',2:'zebra',3:'queen-bishop',4:'chancellor',5:'mixer',6:'king'};
+    return c + ' ' + (t[type(p)] || names[type(p)] || 'piece');
+  }
+  if(gameSet==='monarchy'){
+    const t = {1:'arch-pawn',2:'arch-knight',3:'arch-bishop',4:'arch-rook',5:'arch-queen',6:'arch-king'};
+    return c + ' ' + (t[type(p)] || names[type(p)] || 'piece');
+  }
+  return c + ' ' + (names[type(p)] || 'piece');
 }
 
 function buildBoard() {
@@ -2463,7 +2587,7 @@ function showPromotion(from, to, moves) {
   const piecesEl=document.getElementById('promoPieces');
   piecesEl.innerHTML='';
   modal.classList.add('show');
-  const promoTypes=customMode?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];
+  const promoTypes=gameSet!==null?[PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT]:[PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT];
   for(const pt of promoTypes){
     const m=moves.find(mm=>mPromo(mm)===pt);
     if(!m) continue;
@@ -2602,8 +2726,17 @@ const CUSTOM_PIECE_INFO = [
   { key:'wMi', name:'MIXER',       replaces:'Queen',  desc:'The most powerful piece ever conceived. Slides like a Queen, jumps like a Knight, AND jumps like a Zebra. Cannot be created by promotion.', moves:'Queen + Knight + Zebra' },
 ];
 
+const MONARCHY_PIECE_INFO = [
+  { key:'mwP', name:'Arch Pawn',   desc:'Marches forward like a standard pawn but can <em>also capture the square directly in front</em> — no more being blocked by an enemy piece.', moves:'1–2 forward · diagonal or forward capture' },
+  { key:'mwR', name:'Arch Rook',   desc:'Advances like a pawn — 1 square forward, or 2 from its starting rank. Captures both straight ahead and diagonally. No sliding.', moves:'1–2 forward · diagonal or forward capture' },
+  { key:'mwN', name:'Arch Knight', desc:'Moves in the classic L-shape but <em>cannot leap over pieces</em>. If the square at the bend of the L is occupied, the jump is blocked.', moves:'L-shape · no jumping' },
+  { key:'mwB', name:'Arch Bishop', desc:'The Archbishop — slides diagonally any distance <em>and</em> jumps like a Knight. The most mobile piece on the board.', moves:'Diagonal slides + Knight jump' },
+  { key:'mwQ', name:'Arch Queen',  desc:'The Chancellor — slides orthogonally any distance <em>and</em> jumps like a Knight. Commands files and ranks with knight support.', moves:'Orthogonal slides + Knight jump' },
+  { key:'mwK', name:'Arch King',   desc:'Moves one step in any direction but <em>can only capture pieces diagonally</em>. Orthogonally adjacent enemies cannot be taken.', moves:'1 step any direction · diagonal capture only' },
+];
+
 function pieceIconStyle(key) {
-  const s = _S[key];
+  const s = _S[key] || _SMon[key];
   return s ? `style="background-image:url('data:image/svg+xml,${encodeURIComponent(s)}')"` : '';
 }
 
@@ -2628,21 +2761,34 @@ function showTutorial(startTab) {
       sgrid.appendChild(card);
     });
   }
+  // Populate monarchy pieces grid
+  const mgrid = document.getElementById('tutMonarchyGrid');
+  if(mgrid && !mgrid.children.length) {
+    MONARCHY_PIECE_INFO.forEach(info => {
+      const card = document.createElement('div');
+      card.className = 'tut-piece-card';
+      card.innerHTML = `<div class="tut-piece-icon" ${pieceIconStyle(info.key)}></div><div><div class="tut-piece-name">${info.name}</div><div class="tut-piece-desc">${info.desc}</div><span class="tut-piece-moves">${info.moves}</span></div>`;
+      mgrid.appendChild(card);
+    });
+  }
   showTutTab(startTab || 'rules');
   document.getElementById('tutorialModal').classList.add('show');
 }
 
 function showTutTab(tab) {
-  ['rules','pieces','controls','custom'].forEach(t => {
+  ['rules','pieces','controls','custom','monarchy'].forEach(t => {
     const el = document.getElementById('tutTab-'+t);
     if(el) el.style.display = t===tab ? '' : 'none';
   });
   document.querySelectorAll('.tut-tab').forEach((btn,i)=>{
-    btn.classList.toggle('active', ['rules','pieces','controls','custom'][i]===tab);
+    btn.classList.toggle('active', ['rules','pieces','controls','custom','monarchy'][i]===tab);
   });
   const playBtn = document.getElementById('tutPlayBtn');
+  const monBtn  = document.getElementById('tutMonBtn');
   if(playBtn) playBtn.style.display = tab==='custom' ? 'inline-block' : 'none';
-  document.getElementById('tutTitle').textContent = tab==='custom' ? 'CUSTOM GAME' : 'HOW TO PLAY';
+  if(monBtn)  monBtn.style.display  = tab==='monarchy' ? 'inline-block' : 'none';
+  document.getElementById('tutTitle').textContent =
+    tab==='custom' ? 'CUSTOM GAME' : tab==='monarchy' ? 'MONARCHY' : 'HOW TO PLAY';
 }
 
 function closeTutorial() {
@@ -2651,8 +2797,38 @@ function closeTutorial() {
 
 function startCustomGame() {
   closeTutorial();
-  customMode = true;
+  gameSet = 'chaos';
   // Use same options as already selected in setup
+  if(AC.state==='suspended') AC.resume();
+  if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
+  initState();
+  snapshots=[]; reviewMode=false;
+  legalMoves=generateMoves(state);
+  gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
+
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='flex';
+
+  playerTime=timeControl; compTime=timeControl;
+  if(timeControl>0){
+    document.getElementById('playerTimerPanel').style.display='block';
+    document.getElementById('oppTimerPanel').style.display='block';
+    document.getElementById('playerTimerLabel').textContent=playerColor===WHITE?'You (White)':'You (Black)';
+    document.getElementById('oppTimerLabel').textContent=playerColor===WHITE?'Computer (Black)':'Computer (White)';
+    updateTimerDisplay();
+  }
+
+  buildBoard();
+  applyStoredRewards();
+  renderBoard();
+  updateStatus();
+
+  if(state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+}
+
+function startMonarchyGame() {
+  closeTutorial();
+  gameSet = 'monarchy';
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
