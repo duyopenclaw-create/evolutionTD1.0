@@ -1568,10 +1568,12 @@ function alphaBeta(st, depth, alpha, beta, maxDepth) {
   const cached = TT.get(key);
   if(cached && cached.depth>=depth) return cached.score;
 
-  if(depth===0) return qSearch(st, alpha, beta);
-
+  // Check checkmate/stalemate BEFORE the depth=0 qSearch fallback so that
+  // mates are always scored at ±20000 regardless of search depth
   const moves = generateMoves(st);
   if(moves.length===0) return inCheck(st) ? -20000+maxDepth-depth : 0;
+
+  if(depth===0) return qSearch(st, alpha, beta);
 
   const ordered = orderMoves(moves, st.board);
   let best = -Infinity;
@@ -2903,7 +2905,10 @@ function executeMove(m) {
     let bBest = bMoves[0], bBestDelta = -Infinity;
     for(const bm of bMoves) {
       const ns = applyMove(state, bm);
-      const rsp = generateMoves(ns, true);
+      const nsMoves = generateMoves(ns);
+      // Checkmate is always the best possible move — stop searching immediately
+      if(nsMoves.length === 0 && inCheck(ns)) { bBest = bm; break; }
+      const rsp = nsMoves.filter(m2 => mFlags(m2) & (F_CAP|F_EP));
       let after = quickEval(ns.board, state.turn);
       for(const rm of rsp){ const ev=quickEval(applyMove(ns,rm).board,state.turn); if(ev<after) after=ev; }
       const delta = after - bBefore;
