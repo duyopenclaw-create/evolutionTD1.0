@@ -2097,7 +2097,8 @@ let thinking = false;
 let vsMode = false;
 let teacherMode = false;
 let teacherELO = 1200;
-let stateHistory = []; // undo stack for teacher mode
+let stateHistory = [];
+let _compMoveTimeout = null; // tracked so undo can cancel a pending AI move
 let _teacherRedoMove = null;
 let _teacherRedoInterval = null;
 let _teacherRedoInProgress = false;
@@ -2153,7 +2154,8 @@ function selectDiff(d) {
 function undoMove() {
   if(gameOver && !teacherMode) return; // allow teacher to undo even after game ends
   if(stateHistory.length<1) return;
-  // Cancel any pending teacher redo
+  // Cancel any pending AI move callback and teacher redo
+  clearTimeout(_compMoveTimeout); _compMoveTimeout=null;
   clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
   const t=document.getElementById('teacherToast'); if(t) t.style.display='none';
   stopTimers(); thinking=false;
@@ -2283,7 +2285,7 @@ function startGame() {
   updateStatus();
 
   if(!vsMode && state.turn !== playerColor) {
-    setTimeout(()=>doComputerMove(), 500);
+    _compMoveTimeout=setTimeout(()=>doComputerMove(), 500);
   }
 }
 
@@ -2693,7 +2695,7 @@ function onSquareClick(e) {
         moveHistory.push({san:'drop',turn:playerColor,quality:'good',delta:0,wasPlayer:true});
         playSFX('move');
         renderHand(); updateMoveList(); updateStatus();
-        if(!vsMode){thinking=true;updateStatus();const d=getComputerDelay();startComputerTimer(d);setTimeout(doComputerMove,d);}
+        if(!vsMode){thinking=true;updateStatus();const d=getComputerDelay();startComputerTimer(d);_compMoveTimeout=setTimeout(doComputerMove,d);}
       }
     } else {
       playSFX('illegal');
@@ -3124,7 +3126,8 @@ function executeMove(m) {
     startComputerTimer();
     thinking=true;
     const delay=getComputerDelay();
-    setTimeout(()=>doComputerMove(), delay);
+    clearTimeout(_compMoveTimeout);
+    _compMoveTimeout=setTimeout(()=>doComputerMove(), delay);
   } else if(timeControl>0 && !vsMode){
     startPlayerTimer();
   }
@@ -3523,7 +3526,7 @@ function startCustomGame() {
   renderBoard();
   updateStatus();
 
-  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+  if(!vsMode && state.turn!==playerColor) _compMoveTimeout=setTimeout(()=>doComputerMove(),500);
 }
 
 function startMonarchyGame() {
@@ -3557,7 +3560,7 @@ function startMonarchyGame() {
   renderBoard();
   updateStatus();
 
-  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+  if(!vsMode && state.turn!==playerColor) _compMoveTimeout=setTimeout(()=>doComputerMove(),500);
 }
 
 // ── Position Editor ──────────────────────────────────────────
@@ -3726,7 +3729,7 @@ function startFromPosition() {
     setTimeout(()=>showResult('DRAW','Draw — insufficient material.'), 400);
     return;
   }
-  if(!vsMode && state.turn !== playerColor) setTimeout(()=>doComputerMove(), 500);
+  if(!vsMode && state.turn !== playerColor) _compMoveTimeout=setTimeout(()=>doComputerMove(), 500);
 }
 
 // ── Variants ─────────────────────────────────────────────────
@@ -3760,7 +3763,7 @@ function startVariantGame(variant) {
   const vb=document.getElementById('variantBadge');
   if(vb){const names={atomic:'💥 ATOMIC',crazyhouse:'♻ CAPTURE',fogofwar:'🌫 FOG OF WAR'};vb.textContent=names[variant]||'';}
   buildBoard(); applyStoredRewards(); renderBoard(); updateStatus();
-  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+  if(!vsMode && state.turn!==playerColor) _compMoveTimeout=setTimeout(()=>doComputerMove(),500);
 }
 
 // ── Crazyhouse hand ───────────────────────────────────────────
