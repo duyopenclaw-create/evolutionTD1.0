@@ -1369,7 +1369,7 @@ function applyMove(st, m) {
 
   if(t===PIECE.PAWN){
     newHalf=0;
-    if(gameSet===null && Math.abs(row(to)-row(from))===2) newEp=sq((row(from)+row(to))>>1, col(from));
+    if((gameSet===null||gameSet==='atomic'||gameSet==='crazyhouse'||gameSet==='fogofwar') && Math.abs(row(to)-row(from))===2) newEp=sq((row(from)+row(to))>>1, col(from));
   }
   if(flags&F_CAP) newHalf=0;
 
@@ -2249,7 +2249,7 @@ const PIECE_KEY = {
 let gameSet = null;
 
 function getPieceKey(p) {
-  if(gameSet===null) return PIECE_KEY[p];
+  if(gameSet===null||gameSet==='atomic'||gameSet==='crazyhouse'||gameSet==='fogofwar') return PIECE_KEY[p];
   const c = color(p)===WHITE ? 'w' : 'b';
   if(gameSet==='monarchy'){
     const tk = {[PIECE.PAWN]:'P',[PIECE.ROOK]:'R',[PIECE.KNIGHT]:'N',[PIECE.BISHOP]:'B',[PIECE.QUEEN]:'Q',[PIECE.KING]:'K'};
