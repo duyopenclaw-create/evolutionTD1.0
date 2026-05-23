@@ -284,17 +284,19 @@
     width: 90%; height: 90%;
   }
 
-  /* Piece images — base64 img, always visible */
-  img.piece {
+  /* Piece images — inline SVG, always visible */
+  .piece {
     position: absolute;
-    top: 6%; left: 6%;
-    width: 88%; height: 88%;
+    top: 5%; left: 5%;
+    width: 90%; height: 90%;
     z-index: 4;
     pointer-events: none;
     display: block;
     transition: transform 0.12s ease;
+    overflow: hidden;
   }
-  .sq.hoverable:hover img.piece { transform: scale(1.08); }
+  .piece svg { width: 100%; height: 100%; display: block; }
+  .sq.hoverable:hover .piece { transform: scale(1.08); }
   .sq.hoverable { cursor: pointer; }
   .sq:focus { outline: 3px solid rgba(255,200,50,0.8); outline-offset: -2px; z-index: 5; }
   .sq.kb-cursor::before { background: rgba(255,200,50,0.3) !important; box-shadow: inset 0 0 0 3px rgba(255,200,50,0.9) !important; }
@@ -2376,7 +2378,7 @@ function renderBoard() {
     if(squares[vk]) squares[vk].classList.add('in-check');
   }
 
-  // Render pieces — base64 img elements for reliable cross-browser visibility
+  // Render pieces — inline SVG, always visible
   squares.forEach((el)=>{
     const s=parseInt(el.dataset.sq);
     const p=state.board[s];
@@ -2389,14 +2391,12 @@ function renderBoard() {
         return;
       }
       const key=getPieceKey(p);
-      const b64=_SB64[key];
-      if(b64){
-        const img=document.createElement('img');
-        img.src=`data:image/svg+xml;base64,${b64}`;
-        img.className='piece';
-        img.draggable=false;
-        img.alt='';
-        el.appendChild(img);
+      const svgStr=_S[key]||(_SMon&&_SMon[key]);
+      if(svgStr){
+        const div=document.createElement('div');
+        div.className='piece';
+        div.innerHTML=svgStr;
+        el.appendChild(div);
       }
     }
   });
@@ -3076,8 +3076,9 @@ function updateCaptured() {
   const pEl=document.getElementById('capByPlayer');
   const cEl=document.getElementById('capByComp');
   const skull=window._skullCapturesUnlocked?'<span style="margin-right:2px">💀</span>':'';
-  pEl.innerHTML=skull+capturedByPlayer.map(p=>`<img src="${getPieceSrc(p)}" style="width:22px;height:22px;vertical-align:middle">`).join('');
-  cEl.innerHTML=skull+capturedByComp.map(p=>`<img src="${getPieceSrc(p)}" style="width:22px;height:22px;vertical-align:middle">`).join('');
+  const pieceSvg=p=>{const k=PIECE_KEY[p];return`<span style="display:inline-block;width:22px;height:22px;vertical-align:middle">${(_S[k]||'').replace('<svg ','<svg width="22" height="22" ')}</span>`;};
+  pEl.innerHTML=skull+capturedByPlayer.map(pieceSvg).join('');
+  cEl.innerHTML=skull+capturedByComp.map(pieceSvg).join('');
 }
 
 function updateMoveList() {
@@ -3122,11 +3123,11 @@ function showPromotion(from, to, moves) {
     const wrap=document.createElement('div');
     wrap.style.cssText=`cursor:pointer;width:70px;height:70px;display:flex;align-items:center;justify-content:center;
       border:2px solid transparent;border-radius:8px;transition:all 0.2s;padding:4px;background:rgba(255,255,255,0.05);`;
-    const img=document.createElement('img');
-    const pk=getPieceKey(playerColor|pt); img.src=_SB64[pk]?`data:image/svg+xml;base64,${_SB64[pk]}`:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(_S[pk]||'')}`;
-    img.style.cssText=`width:60px;height:60px;pointer-events:none;`;
-    img.draggable=false;
-    wrap.appendChild(img);
+    const pk=getPieceKey(playerColor|pt);
+    const pdiv=document.createElement('div');
+    pdiv.style.cssText='width:60px;height:60px;pointer-events:none;';
+    pdiv.innerHTML=(_S[pk]||'').replace('<svg ','<svg width="60" height="60" ');
+    wrap.appendChild(pdiv);
     wrap.addEventListener('mouseover',()=>{wrap.style.borderColor='#d4af37';wrap.style.transform='scale(1.08)';});
     wrap.addEventListener('mouseout',()=>{wrap.style.borderColor='transparent';wrap.style.transform='scale(1)';});
     wrap.addEventListener('click',()=>{
@@ -3189,14 +3190,12 @@ function renderReview() {
     const p = snap.board[s];
     if(p){
       const key=getPieceKey(p);
-      const b64=_SB64[key];
-      if(b64){
-        const img=document.createElement('img');
-        img.src=`data:image/svg+xml;base64,${b64}`;
-        img.className='piece';
-        img.draggable=false;
-        img.alt='';
-        el.appendChild(img);
+      const svgStr2=_S[key]||(_SMon&&_SMon[key]);
+      if(svgStr2){
+        const div2=document.createElement('div');
+        div2.className='piece';
+        div2.innerHTML=svgStr2;
+        el.appendChild(div2);
       }
     }
   });
@@ -3438,7 +3437,7 @@ function buildPePalette() {
       btn.className   = 'pe-piece-btn';
       btn.dataset.piece = code;
       btn.title = (c===WHITE?'White ':'Black ') + ['','Pawn','Knight','Bishop','Rook','Queen','King'][p];
-      btn.innerHTML = `<img src="data:image/svg+xml;base64,${_SB64[key]||''}" alt="">`;
+      btn.innerHTML = (_S[key]||'').replace('<svg ','<svg width="100%" height="100%" ');
       btn.onclick = () => { posEditorSelected = code; updatePePalette(); };
       cont.appendChild(btn);
     }
@@ -3457,10 +3456,10 @@ function renderPeBoard() {
       const p = posEditorBoard[s];
       if(p) {
         const key = PIECE_KEY[p];
-        const img = document.createElement('img');
-        img.src = `data:image/svg+xml;base64,${_SB64[key]||''}`;
-        img.alt = '';
-        sqEl.appendChild(img);
+        const svgDiv = document.createElement('div');
+        svgDiv.style.cssText='position:absolute;inset:3px;pointer-events:none';
+        svgDiv.innerHTML=(_S[key]||'').replace('<svg ','<svg width="100%" height="100%" ');
+        sqEl.appendChild(svgDiv);
       }
       sqEl.onclick = () => peSquareClick(s);
       board.appendChild(sqEl);
@@ -3609,7 +3608,7 @@ function renderHand() {
     const key=PIECE_KEY[p];
     const btn=document.createElement('button');
     btn.className='hand-piece-btn'+(dropMode&&dropPiece===p?' active':'');
-    btn.innerHTML=`<img src="data:image/svg+xml;base64,${_SB64[key]||''}" alt="">`;
+    btn.innerHTML=(_S[key]||'').replace('<svg ','<svg width="100%" height="100%" ');
     btn.onclick=()=>selectHandPiece(p);
     panel.appendChild(btn);
   });
