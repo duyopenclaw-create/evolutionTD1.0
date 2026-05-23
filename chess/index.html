@@ -320,6 +320,34 @@
   .badge-brilliant{ background: #d4af37; color: #fff; }
   .badge-win      { background: #d4af37; color: #0d0a05; font-size: 15px; }
   .badge-draw     { background: #607d8b; color: #fff; font-size: 10px; letter-spacing: -1px; }
+  /* ── Position Editor ── */
+  #positionEditorModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.88); z-index: 3000;
+    align-items: center; justify-content: center;
+  }
+  #positionEditorBox {
+    background: linear-gradient(135deg,#0d0d1a 0%,#1a1a2e 100%);
+    border: 1px solid #d4af37; border-radius: 14px;
+    padding: 24px; max-width: 680px; width: 96vw;
+    max-height: 92vh; overflow-y: auto;
+  }
+  .pe-title { font-family:'Cinzel',serif; color:#d4af37; font-size:1.3em; letter-spacing:3px; margin-bottom:16px; text-align:center; }
+  #peBoard { display:grid; grid-template-columns:repeat(8,52px); border:2px solid rgba(212,175,55,0.6); cursor:crosshair; }
+  .pe-sq { position:relative; width:52px; height:52px; cursor:pointer; transition:filter 0.1s; }
+  .pe-sq:hover { filter:brightness(1.3); }
+  .pe-sq.light { background:#f0d9b5; }
+  .pe-sq.dark  { background:#b58863; }
+  .pe-sq img { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .pe-piece-btn { width:46px; height:46px; background:rgba(255,255,255,0.04); border:2px solid rgba(212,175,55,0.25); border-radius:7px; cursor:pointer; padding:3px; transition:border-color 0.15s,background 0.15s; }
+  .pe-piece-btn:hover { border-color:rgba(212,175,55,0.6); background:rgba(212,175,55,0.08); }
+  .pe-piece-btn.active { border-color:#d4af37; background:rgba(212,175,55,0.2); box-shadow:0 0 8px rgba(212,175,55,0.4); }
+  .pe-piece-btn img { width:100%; height:100%; }
+  .pe-ctrl-btn { padding:7px 12px; background:rgba(212,175,55,0.06); border:1px solid rgba(212,175,55,0.3); border-radius:7px; color:#d4af37; font-family:'Cinzel',serif; font-size:0.75em; letter-spacing:1px; cursor:pointer; transition:background 0.15s; }
+  .pe-ctrl-btn:hover { background:rgba(212,175,55,0.18); }
+  .pe-ctrl-btn.active { background:rgba(212,175,55,0.28); border-color:#d4af37; }
+  #peStartBtn { padding:11px 30px; background:linear-gradient(135deg,#d4af37,#a08050); border:none; border-radius:9px; color:#0d0d1a; font-family:'Cinzel',serif; font-size:0.95em; font-weight:700; letter-spacing:2px; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
+  #peStartBtn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.4); }
 
   /* Live quality flash badge (shown briefly after each move) */
   .badge-flash {
@@ -716,6 +744,7 @@
 
   <button id="startBtn" onclick="startGame()">BEGIN GAME</button>
   <button id="customGameBtn" onclick="showTutorial('custom')">⚗ CUSTOM GAME</button>
+  <button id="createGameBtn" onclick="openPositionEditor()" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#d4af37;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">✏ CREATE GAME</button>
   <button id="howToPlayBtn" onclick="showTutorial('rules')" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:8px;color:#a08050;font-family:'Cinzel',serif;font-size:0.75em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#a08050'">? HOW TO PLAY</button>
 </div>
 
@@ -788,6 +817,38 @@
 
 <!-- Teacher hint toast -->
 <div id="teacherToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c1a;color:#fff;padding:12px 22px;border-radius:10px;font-family:'Cinzel',serif;font-size:0.9em;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);max-width:340px;text-align:center;pointer-events:none"></div>
+
+<!-- Position Editor Modal -->
+<div id="positionEditorModal">
+  <div id="positionEditorBox">
+    <div class="pe-title">CREATE POSITION</div>
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+      <div style="min-width:110px">
+        <div style="color:#d4af37;font-size:0.75em;letter-spacing:1px;margin-bottom:6px;font-family:'Cinzel',serif">WHITE</div>
+        <div id="pePaletteWhite" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px"></div>
+        <div style="color:#aaa;font-size:0.75em;letter-spacing:1px;margin-bottom:6px;font-family:'Cinzel',serif">BLACK</div>
+        <div id="pePaletteBlack" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px"></div>
+        <button class="pe-ctrl-btn" id="peEraser" onclick="posEditorSelected=null;updatePePalette()" style="width:100%;margin-bottom:6px">✕ Erase</button>
+        <button class="pe-ctrl-btn" onclick="clearPeBoard()" style="width:100%;margin-bottom:12px">Clear Board</button>
+        <div style="color:#888;font-size:0.72em;font-family:'Cinzel',serif;margin-bottom:5px">SIDE TO MOVE</div>
+        <div style="display:flex;gap:4px">
+          <button class="pe-ctrl-btn active" id="peTurnW" onclick="posEditorTurn=WHITE;updatePeTurn()" style="flex:1">White</button>
+          <button class="pe-ctrl-btn" id="peTurnB" onclick="posEditorTurn=BLACK;updatePeTurn()" style="flex:1">Black</button>
+        </div>
+      </div>
+      <div>
+        <div id="peBoard"></div>
+        <div style="display:grid;grid-template-columns:repeat(8,52px);margin-top:3px">
+          <div style="text-align:center;font-size:0.68em;color:#666">a</div><div style="text-align:center;font-size:0.68em;color:#666">b</div><div style="text-align:center;font-size:0.68em;color:#666">c</div><div style="text-align:center;font-size:0.68em;color:#666">d</div><div style="text-align:center;font-size:0.68em;color:#666">e</div><div style="text-align:center;font-size:0.68em;color:#666">f</div><div style="text-align:center;font-size:0.68em;color:#666">g</div><div style="text-align:center;font-size:0.68em;color:#666">h</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button id="peStartBtn" onclick="startFromPosition()">▶ START GAME</button>
+      <button class="pe-ctrl-btn" onclick="closePe()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- Result overlay -->
 <div id="resultOverlay">
@@ -2454,52 +2515,54 @@ function assessQuality(st, m, pColor, moveSAN='') {
   }
   const flags = mFlags(m);
   const isCapture = (flags & (F_CAP|F_EP)) !== 0;
-  const before = quickEval(st.board, pColor);
   const movingVal = PIECE_VAL[type(st.board[mFrom(m)])];
+  const capturedPiece = isCapture
+    ? (flags & F_EP ? (st.turn===WHITE?(BLACK|PIECE.PAWN):(WHITE|PIECE.PAWN)) : st.board[mTo(m)])
+    : 0;
+  const capturedVal = isCapture ? PIECE_VAL[type(capturedPiece)] : 0;
 
-  // If this move delivers checkmate, it's always brilliant
+  // Checkmate delivered = always brilliant
   { const stPost=applyMove(st,m); if(generateMoves(stPost).length===0&&inCheck(stPost)) return {quality:'brilliant',delta:99999}; }
 
-  // Detect missed opportunity
-  if(!isCapture) {
+  // Depth-2 engine comparison: evalBest = best the engine can do from here;
+  // evalPlayed = what we actually get. delta = difference (negative = we played worse).
+  // This properly handles sacrifices: if we give up a piece but the depth-2 search sees
+  // the opponent can't recapture safely, evalPlayed stays high => not a blunder.
+  const evalBest   = alphaBeta(st,  2, -30000, 30000, 2);
+  const stA        = applyMove(st, m);
+  const evalPlayed = -alphaBeta(stA, 2, -30000, 30000, 2);
+  const delta      = evalPlayed - evalBest;
+
+  // Missed checkmate
+  if(delta < -800) {
     const allMoves = generateMoves(st);
     for(const am of allMoves) {
       if(mFrom(am)===mFrom(m) && mTo(am)===mTo(m)) continue;
       const ns = applyMove(st, am);
-      if(generateMoves(ns).length===0 && inCheck(ns)) return {quality:'miss', delta:-999};
-    }
-    const mycaps = generateMoves(st, true);
-    for(const cap of mycaps) {
-      const stC = applyMove(st, cap);
-      const rsp = generateMoves(stC, true);
-      let capScore = quickEval(stC.board, pColor);
-      for(const rm of rsp){ const ev=quickEval(applyMove(stC,rm).board,pColor); if(ev<capScore) capScore=ev; }
-      if(capScore - before > 280) return {quality:'miss', delta:before-capScore};
+      if(generateMoves(ns).length===0 && inCheck(ns)) return {quality:'miss', delta};
     }
   }
 
-  const capturedPiece = flags & F_EP
-    ? (st.turn===WHITE ? (BLACK|PIECE.PAWN) : (WHITE|PIECE.PAWN))
-    : st.board[mTo(m)];
-  const capturedVal = isCapture ? PIECE_VAL[type(capturedPiece)] : 0;
-
-  const stA = applyMove(st, m);
-  const caps = generateMoves(stA, true);
-  let best = quickEval(stA.board, pColor);
-  for(const cm of caps){ const ev=quickEval(applyMove(stA,cm).board,pColor); if(ev<best) best=ev; }
-  const delta = best - before;
-
-  if(delta < -280) return {quality:'blunder', delta};
+  // Missed free capture that was clearly better
+  if(delta < -280) {
+    const mycaps = generateMoves(st, true);
+    for(const cap of mycaps) {
+      if(mFrom(cap)===mFrom(m) && mTo(cap)===mTo(m)) continue;
+      const capEval = -alphaBeta(applyMove(st,cap), 1, -30000, 30000, 1);
+      if(capEval - evalBest > -60) return {quality:'miss', delta};
+    }
+    return {quality:'blunder', delta};
+  }
   if(delta < -100) return {quality:'mistake', delta};
 
-  // Brilliant: sacrifice (give up more than you take immediately) but come out ahead
-  if(isCapture && movingVal > capturedVal + 80 && delta > 60) return {quality:'brilliant', delta};
-  // Brilliant: non-capture that gains significant position
-  if(!isCapture && delta > 150) return {quality:'brilliant', delta};
+  // Brilliant: sacrifice where depth-2 analysis confirms we come out OK
+  const isSacrifice = movingVal > capturedVal + 80;
+  if(isSacrifice && delta >= -200) return {quality:'brilliant', delta};
+  // Brilliant: strong non-capture that's clearly the best move and creates major advantage
+  if(!isCapture && delta >= 0 && evalPlayed > 250) return {quality:'brilliant', delta};
 
-  // Great: capture a minor piece or better with decent outcome
-  if(isCapture && capturedVal >= 300 && delta >= -80) return {quality:'great', delta};
-  // Great: solid material gain
+  // Great: captures a meaningful piece cleanly
+  if(isCapture && capturedVal >= 300 && delta >= -100) return {quality:'great', delta};
   if(delta > 60) return {quality:'great', delta};
 
   return {quality:'good', delta};
@@ -3148,6 +3211,141 @@ function startMonarchyGame() {
   updateStatus();
 
   if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+}
+
+// ── Position Editor ──────────────────────────────────────────
+let posEditorBoard = new Array(64).fill(0);
+let posEditorSelected = null;
+let posEditorTurn = WHITE;
+
+function openPositionEditor() {
+  posEditorBoard = new Array(64).fill(0);
+  posEditorSelected = WHITE | PIECE.QUEEN;
+  posEditorTurn = WHITE;
+  buildPePalette();
+  renderPeBoard();
+  updatePePalette();
+  updatePeTurn();
+  document.getElementById('positionEditorModal').style.display = 'flex';
+}
+
+function closePe() {
+  document.getElementById('positionEditorModal').style.display = 'none';
+}
+
+function buildPePalette() {
+  const pieceOrder = [PIECE.KING, PIECE.QUEEN, PIECE.ROOK, PIECE.BISHOP, PIECE.KNIGHT, PIECE.PAWN];
+  [WHITE, BLACK].forEach((c) => {
+    const cont = document.getElementById(c===WHITE ? 'pePaletteWhite' : 'pePaletteBlack');
+    if(!cont) return;
+    cont.innerHTML = '';
+    for(const p of pieceOrder) {
+      const code = c | p;
+      const key  = PIECE_KEY[code];
+      const btn  = document.createElement('button');
+      btn.className   = 'pe-piece-btn';
+      btn.dataset.piece = code;
+      btn.title = (c===WHITE?'White ':'Black ') + ['','Pawn','Knight','Bishop','Rook','Queen','King'][p];
+      btn.innerHTML = `<img src="data:image/svg+xml;base64,${_SB64[key]||''}" alt="">`;
+      btn.onclick = () => { posEditorSelected = code; updatePePalette(); };
+      cont.appendChild(btn);
+    }
+  });
+}
+
+function renderPeBoard() {
+  const board = document.getElementById('peBoard');
+  if(!board) return;
+  board.innerHTML = '';
+  for(let r=0; r<8; r++) {
+    for(let f=0; f<8; f++) {
+      const s = r*8+f;
+      const sqEl = document.createElement('div');
+      sqEl.className = 'pe-sq ' + (((r+f)%2===0) ? 'light' : 'dark');
+      const p = posEditorBoard[s];
+      if(p) {
+        const key = PIECE_KEY[p];
+        const img = document.createElement('img');
+        img.src = `data:image/svg+xml;base64,${_SB64[key]||''}`;
+        img.alt = '';
+        sqEl.appendChild(img);
+      }
+      sqEl.onclick = () => peSquareClick(s);
+      board.appendChild(sqEl);
+    }
+  }
+}
+
+function peSquareClick(s) {
+  if(posEditorSelected === null) {
+    posEditorBoard[s] = 0;
+  } else if(posEditorBoard[s] === posEditorSelected) {
+    posEditorBoard[s] = 0;
+  } else {
+    posEditorBoard[s] = posEditorSelected;
+  }
+  renderPeBoard();
+}
+
+function updatePePalette() {
+  document.querySelectorAll('.pe-piece-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.piece) === posEditorSelected);
+  });
+  const eraser = document.getElementById('peEraser');
+  if(eraser) eraser.classList.toggle('active', posEditorSelected === null);
+}
+
+function updatePeTurn() {
+  const tw = document.getElementById('peTurnW');
+  const tb = document.getElementById('peTurnB');
+  if(tw) tw.classList.toggle('active', posEditorTurn === WHITE);
+  if(tb) tb.classList.toggle('active', posEditorTurn === BLACK);
+}
+
+function clearPeBoard() {
+  posEditorBoard = new Array(64).fill(0);
+  renderPeBoard();
+}
+
+function startFromPosition() {
+  const wKIdx = posEditorBoard.indexOf(WHITE|PIECE.KING);
+  const bKIdx = posEditorBoard.indexOf(BLACK|PIECE.KING);
+  if(wKIdx === -1 || bKIdx === -1) {
+    alert('Both kings must be placed on the board to start!');
+    return;
+  }
+  closePe();
+  gameSet = null;
+  if(AC.state==='suspended') AC.resume();
+  initAudio();
+  const customBoard = new Int8Array(64);
+  for(let i=0; i<64; i++) customBoard[i] = posEditorBoard[i];
+  state = {
+    board: customBoard, turn: posEditorTurn,
+    castling: 0, ep: -1, halfmove: 0, fullmove: 1,
+    kings: [wKIdx, bKIdx], history: [], moveList: []
+  };
+  vsMode = false;
+  snapshots = []; reviewMode = false; stateHistory = [];
+  legalMoves = generateMoves(state);
+  gamePromos = 0; gameBrilliant = 0; gameCaptured = 0; lostQueen = false; hadCastle = false;
+  playerTime = timeControl; compTime = timeControl;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  if(timeControl > 0) {
+    document.getElementById('playerTimerPanel').style.display='block';
+    document.getElementById('oppTimerPanel').style.display='block';
+    document.getElementById('playerTimerLabel').textContent = playerColor===WHITE?'You (White)':'You (Black)';
+    document.getElementById('oppTimerLabel').textContent = playerColor===WHITE?'Computer (Black)':'Computer (White)';
+    updateTimerDisplay();
+  }
+  const undoBtn = document.getElementById('undoBtn');
+  if(undoBtn) undoBtn.style.display = teacherMode ? 'block' : 'none';
+  buildBoard();
+  applyStoredRewards();
+  renderBoard();
+  updateStatus();
+  if(!vsMode && state.turn !== playerColor) setTimeout(()=>doComputerMove(), 500);
 }
 
 function resignGame() {
