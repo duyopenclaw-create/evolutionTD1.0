@@ -289,7 +289,7 @@
     position: absolute;
     top: 6%; left: 6%;
     width: 88%; height: 88%;
-    z-index: 2;
+    z-index: 4;
     pointer-events: none;
     display: block;
     transition: transform 0.12s ease;
@@ -329,12 +329,12 @@
   #positionEditorBox {
     background: linear-gradient(135deg,#0d0d1a 0%,#1a1a2e 100%);
     border: 1px solid #d4af37; border-radius: 14px;
-    padding: 24px; max-width: 680px; width: 96vw;
-    max-height: 92vh; overflow-y: auto;
+    padding: 24px; width: calc(100vw - 24px); max-width: 960px;
+    max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box;
   }
   .pe-title { font-family:'Cinzel',serif; color:#d4af37; font-size:1.3em; letter-spacing:3px; margin-bottom:16px; text-align:center; }
-  #peBoard { display:grid; grid-template-columns:repeat(8,52px); border:2px solid rgba(212,175,55,0.6); cursor:crosshair; }
-  .pe-sq { position:relative; width:52px; height:52px; cursor:pointer; transition:filter 0.1s; }
+  #peBoard { display:grid; grid-template-columns:repeat(8,65px); border:2px solid rgba(212,175,55,0.6); cursor:crosshair; }
+  .pe-sq { position:relative; width:65px; height:65px; cursor:pointer; transition:filter 0.1s; }
   .pe-sq:hover { filter:brightness(1.3); }
   .pe-sq.light { background:#f0d9b5; }
   .pe-sq.dark  { background:#b58863; }
@@ -348,6 +348,45 @@
   .pe-ctrl-btn.active { background:rgba(212,175,55,0.28); border-color:#d4af37; }
   #peStartBtn { padding:11px 30px; background:linear-gradient(135deg,#d4af37,#a08050); border:none; border-radius:9px; color:#0d0d1a; font-family:'Cinzel',serif; font-size:0.95em; font-weight:700; letter-spacing:2px; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
   #peStartBtn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.4); }
+  /* ── Variants modal ── */
+  #variantsModal {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.9); z-index:3500;
+    align-items:center; justify-content:center;
+  }
+  #variantsBox {
+    background:linear-gradient(135deg,#0d0d1a,#1a1a2e);
+    border:1px solid #d4af37; border-radius:14px;
+    padding:28px 24px; max-width:720px; width:96vw;
+    max-height:92vh; overflow-y:auto;
+  }
+  .variant-cards { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin:18px 0; }
+  .variant-card {
+    background:rgba(255,255,255,0.04); border:2px solid rgba(212,175,55,0.25);
+    border-radius:12px; padding:20px 16px; cursor:pointer; flex:1; min-width:170px; max-width:200px;
+    transition:border-color 0.2s, background 0.2s; text-align:center;
+  }
+  .variant-card:hover { border-color:#d4af37; background:rgba(212,175,55,0.1); }
+  .variant-icon { font-size:2.2em; margin-bottom:8px; }
+  .variant-name { font-family:'Cinzel',serif; color:#d4af37; font-size:0.95em; letter-spacing:2px; margin-bottom:8px; }
+  .variant-desc { font-size:0.78em; color:#a08060; line-height:1.5; }
+  /* Crazyhouse hand panel */
+  #handPieces { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; min-height:34px; }
+  .hand-piece-btn {
+    width:38px; height:38px; background:rgba(255,255,255,0.05);
+    border:2px solid rgba(212,175,55,0.2); border-radius:6px;
+    cursor:pointer; padding:2px; transition:border-color 0.15s;
+  }
+  .hand-piece-btn:hover, .hand-piece-btn.active { border-color:#d4af37; background:rgba(212,175,55,0.15); }
+  .hand-piece-btn img { width:100%; height:100%; }
+  /* Drop mode target squares */
+  .sq.drop-target::after {
+    content:''; position:absolute; inset:4px;
+    background:rgba(0,200,100,0.2); border:2px dashed rgba(0,200,100,0.7);
+    border-radius:4px; z-index:3; pointer-events:none;
+  }
+  /* Variants badge on status */
+  #variantBadge { font-size:0.72em; color:#d4af37; letter-spacing:1px; margin-top:4px; }
 
   /* Live quality flash badge (shown briefly after each move) */
   .badge-flash {
@@ -745,6 +784,7 @@
   <button id="startBtn" onclick="startGame()">BEGIN GAME</button>
   <button id="customGameBtn" onclick="showTutorial('custom')">⚗ CUSTOM GAME</button>
   <button id="createGameBtn" onclick="openPositionEditor()" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#d4af37;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">✏ CREATE GAME</button>
+  <button id="variantsBtn" onclick="openVariants()" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#d4af37;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">🔀 VARIANTS</button>
   <button id="howToPlayBtn" onclick="showTutorial('rules')" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:8px;color:#a08050;font-family:'Cinzel',serif;font-size:0.75em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#a08050'">? HOW TO PLAY</button>
 </div>
 
@@ -763,6 +803,7 @@
       <div class="panel-title">Status</div>
       <div class="status-text" id="statusText">Your turn</div>
       <div id="statusIcons"></div>
+      <div id="variantBadge"></div>
     </div>
 
     <!-- Captured pieces -->
@@ -777,6 +818,12 @@
     <div class="panel" id="playerTimerPanel" style="display:none">
       <div class="panel-title" id="playerTimerLabel">You</div>
       <div class="timer-display" id="playerTimer">10:00</div>
+    </div>
+
+    <!-- Crazyhouse hand -->
+    <div class="panel" id="crazyhousePanel" style="display:none">
+      <div class="panel-title">Your Hand <span style="font-size:0.75em;color:#888">(click to drop)</span></div>
+      <div id="handPieces"></div>
     </div>
   </div>
 
@@ -818,6 +865,34 @@
 <!-- Teacher hint toast -->
 <div id="teacherToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a5c1a;color:#fff;padding:12px 22px;border-radius:10px;font-family:'Cinzel',serif;font-size:0.9em;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);max-width:340px;text-align:center;pointer-events:none"></div>
 
+<!-- Variants Modal -->
+<div id="variantsModal">
+  <div id="variantsBox">
+    <div style="font-family:'Cinzel',serif;color:#d4af37;font-size:1.3em;letter-spacing:3px;text-align:center;margin-bottom:4px">VARIANTS</div>
+    <div style="color:#888;font-size:0.78em;text-align:center;margin-bottom:4px">Choose a special rules mode to spice up your game</div>
+    <div class="variant-cards">
+      <div class="variant-card" onclick="startVariantGame('atomic')">
+        <div class="variant-icon">💥</div>
+        <div class="variant-name">ATOMIC</div>
+        <div class="variant-desc">Captures trigger a 3×3 explosion — the capturing piece also dies. Explode the enemy king to win!</div>
+      </div>
+      <div class="variant-card" onclick="startVariantGame('crazyhouse')">
+        <div class="variant-icon">♻</div>
+        <div class="variant-name">CAPTURE</div>
+        <div class="variant-desc">Pieces you capture go into your hand. Drop them onto your first 4 rows instead of moving!</div>
+      </div>
+      <div class="variant-card" onclick="startVariantGame('fogofwar')">
+        <div class="variant-icon">🌫</div>
+        <div class="variant-name">FOG OF WAR</div>
+        <div class="variant-desc">The opponent's pieces are hidden — just grey squares. The AI is also confused and plays erratically!</div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <button class="pe-ctrl-btn" onclick="closeVariants()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Position Editor Modal -->
 <div id="positionEditorModal">
   <div id="positionEditorBox">
@@ -838,7 +913,7 @@
       </div>
       <div>
         <div id="peBoard"></div>
-        <div style="display:grid;grid-template-columns:repeat(8,52px);margin-top:3px">
+        <div style="display:grid;grid-template-columns:repeat(8,65px);margin-top:3px">
           <div style="text-align:center;font-size:0.68em;color:#666">a</div><div style="text-align:center;font-size:0.68em;color:#666">b</div><div style="text-align:center;font-size:0.68em;color:#666">c</div><div style="text-align:center;font-size:0.68em;color:#666">d</div><div style="text-align:center;font-size:0.68em;color:#666">e</div><div style="text-align:center;font-size:0.68em;color:#666">f</div><div style="text-align:center;font-size:0.68em;color:#666">g</div><div style="text-align:center;font-size:0.68em;color:#666">h</div>
         </div>
       </div>
@@ -1250,6 +1325,7 @@ function isLegal(st, m) {
   const newSt = applyMove(st, m);
   const kingIdx = st.turn===WHITE?0:1;
   const k = newSt.kings[kingIdx];
+  if(k===-1) return false; // own king exploded = illegal
   return !isAttacked(newSt.board, k, opp(st.turn), newSt.castling, newSt.ep);
 }
 
@@ -1300,6 +1376,21 @@ function applyMove(st, m) {
   board[to] = promo ? (c|promo) : p;
   board[from] = 0;
 
+  // Atomic chess: explosion on capture
+  if(gameSet==='atomic' && (flags&(F_CAP|F_EP))) {
+    const er=row(to), ef=col(to);
+    for(let dr=-1;dr<=1;dr++) for(let df=-1;df<=1;df++) {
+      const nr=er+dr, nf=ef+df;
+      if(nr<0||nr>=8||nf<0||nf>=8) continue;
+      const esq=nr*8+nf;
+      const ep2=board[esq];
+      if(!ep2) continue;
+      if((dr!==0||df!==0)&&type(ep2)===PIECE.PAWN) continue; // adjacent pawns survive
+      board[esq]=0;
+      if(type(ep2)===PIECE.KING) kings[color(ep2)===WHITE?0:1]=-1;
+    }
+  }
+
   return {
     board, turn: opp(c), castling: newCastling, ep: newEp,
     halfmove: newHalf, fullmove: st.fullmove+(c===BLACK?1:0),
@@ -1309,6 +1400,7 @@ function applyMove(st, m) {
 
 function inCheck(st) {
   const k = st.kings[st.turn===WHITE?0:1];
+  if(k===-1||k===undefined) return false;
   return isAttacked(st.board, k, opp(st.turn), st.castling, st.ep);
 }
 
@@ -1438,6 +1530,9 @@ function orderMoves(moves, board) {
 
 const TT = new Map();
 function alphaBeta(st, depth, alpha, beta, maxDepth) {
+  // Atomic: if current player's king was exploded, they lose
+  if(gameSet==='atomic' && st.kings[st.turn===WHITE?0:1]===-1) return -20000+maxDepth-depth;
+
   const key = boardKey(st);
   const cached = TT.get(key);
   if(cached && cached.depth>=depth) return cached.score;
@@ -1493,7 +1588,9 @@ function getTeacherConfig(elo) {
 }
 
 function getBestMove(st, difficulty) {
-  const cfg = teacherMode ? getTeacherConfig(teacherELO) : DIFF_CONFIG[difficulty];
+  const cfg = teacherMode ? getTeacherConfig(teacherELO)
+    : gameSet==='fogofwar' ? CONFUSED_CONFIG
+    : DIFF_CONFIG[difficulty];
   const moves = generateMoves(st);
   if(!moves.length) return null;
 
@@ -1922,6 +2019,11 @@ let vsMode = false;
 let teacherMode = false;
 let teacherELO = 1200;
 let stateHistory = []; // undo stack for teacher mode
+// Variant state
+let crazyhouseHand = {};
+let dropMode = false;
+let dropPiece = 0;
+const CONFUSED_CONFIG = { depth:1, randPct:0.72, blunderPct:0.42 };
 let lastFrom=-1, lastTo=-1;
 let capturedByPlayer=[], capturedByComp=[];
 let moveHistory=[];
@@ -2034,9 +2136,11 @@ function startGame() {
   lostQueen = false;
   hadCastle = false;
 
-  stateHistory = [];
+  stateHistory = []; crazyhouseHand = {}; dropMode = false; dropPiece = 0;
   const undoBtn = document.getElementById('undoBtn');
   if(undoBtn) undoBtn.style.display = teacherMode ? 'block' : 'none';
+  const chp=document.getElementById('crazyhousePanel'); if(chp) chp.style.display='none';
+  const vb=document.getElementById('variantBadge'); if(vb) vb.textContent='';
 
   legalMoves = generateMoves(state);
   buildBoard();
@@ -2277,6 +2381,13 @@ function renderBoard() {
     const s=parseInt(el.dataset.sq);
     const p=state.board[s];
     if(p){
+      // Fog of War: hide opponent pieces as grey squares
+      if(gameSet==='fogofwar' && color(p)!==playerColor) {
+        const fog=document.createElement('div');
+        fog.style.cssText='position:absolute;inset:5px;background:rgba(80,80,80,0.72);border-radius:5px;z-index:4;pointer-events:none;border:1px solid rgba(130,130,130,0.35)';
+        el.appendChild(fog);
+        return;
+      }
       const key=getPieceKey(p);
       const b64=_SB64[key];
       if(b64){
@@ -2289,6 +2400,20 @@ function renderBoard() {
       }
     }
   });
+
+  // Crazyhouse: show drop targets when in drop mode
+  if(dropMode && gameSet==='crazyhouse') {
+    const dropRowStart = playerColor===WHITE ? 4 : 0;
+    const dropRowEnd   = playerColor===WHITE ? 7 : 3;
+    squares.forEach((el)=>{
+      const s=parseInt(el.dataset.sq);
+      if(state.board[s]) return;
+      const r=row(s);
+      if(r<dropRowStart||r>dropRowEnd) return;
+      if(type(dropPiece)===PIECE.PAWN && (r===0||r===7)) return;
+      el.classList.add('drop-target');
+    });
+  }
 
   // Fire king on checkmate
   if(gameOver && window._fireKingUnlocked && inCheck(state)){
@@ -2416,6 +2541,36 @@ function onSquareClick(e) {
   if(AC.state==='suspended') AC.resume();
 
   const s=parseInt(this.dataset.sq);
+
+  // Crazyhouse drop mode: place piece from hand
+  if(dropMode && gameSet==='crazyhouse') {
+    const r=row(s);
+    const dropRowStart=playerColor===WHITE?4:0, dropRowEnd=playerColor===WHITE?7:3;
+    if(!state.board[s] && r>=dropRowStart && r<=dropRowEnd && !(type(dropPiece)===PIECE.PAWN&&(r===0||r===7))) {
+      // Validate: drop doesn't leave own king in check
+      state.board[s]=dropPiece;
+      legalMoves=generateMoves({...state,turn:playerColor});
+      const inCk=inCheck({...state,turn:playerColor});
+      if(inCk) { state.board[s]=0; playSFX('illegal'); }
+      else {
+        const hi=crazyhouseHand[playerColor].indexOf(dropPiece);
+        if(hi>=0) crazyhouseHand[playerColor].splice(hi,1);
+        lastFrom=-1; lastTo=s;
+        state.turn=opp(playerColor);
+        legalMoves=generateMoves(state);
+        moveHistory.push({san:'drop',turn:playerColor,quality:'good',delta:0,wasPlayer:true});
+        playSFX('move');
+        renderHand(); updateMoveList(); updateStatus();
+        if(!vsMode){thinking=true;updateStatus();const d=getComputerDelay();startComputerTimer(d);setTimeout(doComputerMove,d);}
+      }
+    } else {
+      playSFX('illegal');
+    }
+    dropMode=false; dropPiece=0;
+    renderBoard(); renderHand();
+    return;
+  }
+
   const p=state.board[s];
   const activeColor = vsMode ? state.turn : playerColor;
 
@@ -2555,11 +2710,13 @@ function assessQuality(st, m, pColor, moveSAN='') {
   }
   if(delta < -100) return {quality:'mistake', delta};
 
-  // Brilliant: sacrifice where depth-2 analysis confirms we come out OK
-  const isSacrifice = movingVal > capturedVal + 80;
-  if(isSacrifice && delta >= -200) return {quality:'brilliant', delta};
-  // Brilliant: strong non-capture that's clearly the best move and creates major advantage
-  if(!isCapture && delta >= 0 && evalPlayed > 250) return {quality:'brilliant', delta};
+  // Brilliant: genuine rook/queen sacrifice (movingVal≥500, worth >2× what captured)
+  // confirmed by engine depth-2 analysis AND game total under 10
+  const isRealSacrifice = isCapture && movingVal >= 500 && movingVal > capturedVal * 2;
+  const brilliantCount = moveHistory.filter(h=>h.quality==='brilliant').length;
+  if(isRealSacrifice && delta >= -100 && brilliantCount < 10) return {quality:'brilliant', delta};
+  // Brilliant: non-capture that is engine's top move and creates a huge (6+ pawn) advantage
+  if(!isCapture && delta >= 0 && evalPlayed > 600 && brilliantCount < 10) return {quality:'brilliant', delta};
 
   // Great: captures a meaningful piece cleanly
   if(isCapture && capturedVal >= 300 && delta >= -100) return {quality:'great', delta};
@@ -2654,6 +2811,36 @@ function executeMove(m) {
   }
 
   state = applyMove(state, m);
+
+  // Atomic: king explosion = immediate game over
+  if(gameSet==='atomic') {
+    const justMoved = opp(state.turn);
+    const oppKIdx = state.turn===WHITE ? 0 : 1;
+    if(state.kings[oppKIdx]===-1) {
+      gameOver=true; legalMoves=[];
+      renderBoard(); updateStatus();
+      setTimeout(()=>{
+        if(vsMode){
+          showResult('CHECKMATE',`${justMoved===WHITE?'White':'Black'} wins by explosion!`);
+        } else {
+          const pw = justMoved===playerColor;
+          if(pw) onPlayerWin();
+          showResult(pw?'VICTORY':'DEFEAT', pw?'You exploded the opponent\'s king!':'Your king was exploded!');
+        }
+      },400);
+      return;
+    }
+  }
+
+  // Crazyhouse: add captured piece to capturing player's hand
+  if(gameSet==='crazyhouse' && isCapture) {
+    const capColor = stateBefore.turn;
+    const cPiece = flags&F_EP ? (stateBefore.turn===WHITE?(BLACK|PIECE.PAWN):(WHITE|PIECE.PAWN)) : captured;
+    if(!crazyhouseHand[capColor]) crazyhouseHand[capColor]=[];
+    crazyhouseHand[capColor].push(capColor | type(cPiece));
+    renderHand();
+  }
+
   legalMoves = generateMoves(state);
 
   // Best move from the resulting position — highlights are consistent with displayed board in review
@@ -2907,7 +3094,8 @@ function updateMoveList() {
       const h=moveHistory[i+off];
       if(!h) break;
       const w=document.createElement('span'); w.style.cssText='display:inline-flex;align-items:center;gap:2px;';
-      const ms=document.createElement('span'); ms.className='move-san'; ms.textContent=h.san;
+      const ms=document.createElement('span'); ms.className='move-san';
+      ms.textContent = (gameSet==='fogofwar' && !h.wasPlayer && h.san!=='drop') ? '???' : h.san;
       w.appendChild(ms);
       if(qIcon[h.quality]){
         const qi=document.createElement('span');
@@ -3156,7 +3344,9 @@ function startCustomGame() {
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
-  snapshots=[]; reviewMode=false; stateHistory=[];
+  snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0;
+  const _chp=document.getElementById('crazyhousePanel'); if(_chp) _chp.style.display='none';
+  const _vb=document.getElementById('variantBadge'); if(_vb) _vb.textContent='';
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
   const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
@@ -3188,7 +3378,9 @@ function startMonarchyGame() {
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying && !canonSched){ canonNext=AC.currentTime+0.1; canonSched=setInterval(scheduleCanon,150); }
   initState();
-  snapshots=[]; reviewMode=false; stateHistory=[];
+  snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0;
+  const _chp2=document.getElementById('crazyhousePanel'); if(_chp2) _chp2.style.display='none';
+  const _vb2=document.getElementById('variantBadge'); if(_vb2) _vb2.textContent='';
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
   const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
@@ -3279,10 +3471,14 @@ function renderPeBoard() {
 function peSquareClick(s) {
   if(posEditorSelected === null) {
     posEditorBoard[s] = 0;
-  } else if(posEditorBoard[s] === posEditorSelected) {
-    posEditorBoard[s] = 0;
   } else {
-    posEditorBoard[s] = posEditorSelected;
+    // Pawns can't go on rank 1 (row 7) or rank 8 (row 0)
+    if(type(posEditorSelected) === PIECE.PAWN && (row(s) === 0 || row(s) === 7)) return;
+    // Only 1 king per side: remove existing king of same color first
+    if(type(posEditorSelected) === PIECE.KING) {
+      for(let i=0;i<64;i++) if(posEditorBoard[i]===posEditorSelected) posEditorBoard[i]=0;
+    }
+    posEditorBoard[s] = (posEditorBoard[s]===posEditorSelected) ? 0 : posEditorSelected;
   }
   renderPeBoard();
 }
@@ -3311,7 +3507,25 @@ function startFromPosition() {
   const wKIdx = posEditorBoard.indexOf(WHITE|PIECE.KING);
   const bKIdx = posEditorBoard.indexOf(BLACK|PIECE.KING);
   if(wKIdx === -1 || bKIdx === -1) {
-    alert('Both kings must be placed on the board to start!');
+    alert('Both kings must be on the board!'); return;
+  }
+  // Build a test state to validate
+  const testBoard = new Int8Array(64);
+  for(let i=0;i<64;i++) testBoard[i] = posEditorBoard[i];
+  const testState = {
+    board: testBoard, turn: posEditorTurn,
+    castling: 0, ep: -1, halfmove: 0, fullmove: 1,
+    kings: [wKIdx, bKIdx], history: [], moveList: []
+  };
+  // Illegal: opponent's king must not be under attack when it's not their turn
+  const oppKSq = testState.kings[posEditorTurn===WHITE?1:0];
+  if(isAttacked(testBoard, oppKSq, posEditorTurn, 0, -1)) {
+    alert("Illegal position: opponent's king is already in check!"); return;
+  }
+  // Can't start in stalemate or checkmate
+  const testMoves = generateMoves(testState);
+  if(testMoves.length === 0) {
+    alert(inCheck(testState) ? 'Cannot start: this is already checkmate!' : 'Cannot start: this is already stalemate!');
     return;
   }
   closePe();
@@ -3326,7 +3540,9 @@ function startFromPosition() {
     kings: [wKIdx, bKIdx], history: [], moveList: []
   };
   vsMode = false;
-  snapshots = []; reviewMode = false; stateHistory = [];
+  snapshots = []; reviewMode = false; stateHistory = []; crazyhouseHand={}; dropMode=false; dropPiece=0;
+  const _chpFP=document.getElementById('crazyhousePanel'); if(_chpFP) _chpFP.style.display='none';
+  const _vbFP=document.getElementById('variantBadge'); if(_vbFP) _vbFP.textContent='';
   legalMoves = generateMoves(state);
   gamePromos = 0; gameBrilliant = 0; gameCaptured = 0; lostQueen = false; hadCastle = false;
   playerTime = timeControl; compTime = timeControl;
@@ -3346,6 +3562,63 @@ function startFromPosition() {
   renderBoard();
   updateStatus();
   if(!vsMode && state.turn !== playerColor) setTimeout(()=>doComputerMove(), 500);
+}
+
+// ── Variants ─────────────────────────────────────────────────
+function openVariants() {
+  document.getElementById('variantsModal').style.display='flex';
+}
+function closeVariants() {
+  document.getElementById('variantsModal').style.display='none';
+}
+function startVariantGame(variant) {
+  closeVariants();
+  gameSet=variant;
+  if(AC.state==='suspended') AC.resume();
+  if(!musicGain) initAudio(); else if(musicPlaying&&!canonSched){canonNext=AC.currentTime+0.1;canonSched=setInterval(scheduleCanon,150);}
+  initState();
+  snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0;
+  legalMoves=generateMoves(state);
+  gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
+  vsMode=false;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='flex';
+  playerTime=timeControl; compTime=timeControl;
+  if(timeControl>0){
+    document.getElementById('playerTimerPanel').style.display='block';
+    document.getElementById('oppTimerPanel').style.display='block';
+    document.getElementById('playerTimerLabel').textContent=playerColor===WHITE?'You (White)':'You (Black)';
+    document.getElementById('oppTimerLabel').textContent=playerColor===WHITE?'Computer (Black)':'Computer (White)';
+    updateTimerDisplay();
+  }
+  const undoBtn=document.getElementById('undoBtn'); if(undoBtn) undoBtn.style.display='none';
+  const chp=document.getElementById('crazyhousePanel'); if(chp) chp.style.display=variant==='crazyhouse'?'block':'none';
+  const vb=document.getElementById('variantBadge');
+  if(vb){const names={atomic:'💥 ATOMIC',crazyhouse:'♻ CAPTURE',fogofwar:'🌫 FOG OF WAR'};vb.textContent=names[variant]||'';}
+  buildBoard(); applyStoredRewards(); renderBoard(); updateStatus();
+  if(!vsMode && state.turn!==playerColor) setTimeout(()=>doComputerMove(),500);
+}
+
+// ── Crazyhouse hand ───────────────────────────────────────────
+function renderHand() {
+  const panel=document.getElementById('handPieces');
+  if(!panel) return;
+  const hand=crazyhouseHand[playerColor]||[];
+  panel.innerHTML='';
+  hand.forEach((p,i)=>{
+    const key=PIECE_KEY[p];
+    const btn=document.createElement('button');
+    btn.className='hand-piece-btn'+(dropMode&&dropPiece===p?' active':'');
+    btn.innerHTML=`<img src="data:image/svg+xml;base64,${_SB64[key]||''}" alt="">`;
+    btn.onclick=()=>selectHandPiece(p);
+    panel.appendChild(btn);
+  });
+  if(hand.length===0){const em=document.createElement('div');em.style.cssText='color:#666;font-size:0.8em;padding:6px 0';em.textContent='No pieces yet';panel.appendChild(em);}
+}
+function selectHandPiece(p) {
+  if(dropMode && dropPiece===p){ dropMode=false; dropPiece=0; }
+  else { dropMode=true; dropPiece=p; selectedSq=-1; selectedMoves=[]; }
+  renderBoard(); renderHand();
 }
 
 function resignGame() {
