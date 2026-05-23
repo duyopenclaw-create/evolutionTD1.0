@@ -1693,9 +1693,11 @@ const AC = new (window.AudioContext||window.webkitAudioContext)();
 let musicGain, sfxGain, musicPlaying=true, sfxOn=true;
 
 function initAudio() {
-  musicGain = AC.createGain(); musicGain.gain.value = 0.42; musicGain.connect(AC.destination);
-  sfxGain   = AC.createGain(); sfxGain.gain.value   = 0.4;  sfxGain.connect(AC.destination);
-  startMusic();
+  if(!musicGain){
+    musicGain = AC.createGain(); musicGain.gain.value = 0.42; musicGain.connect(AC.destination);
+    sfxGain   = AC.createGain(); sfxGain.gain.value   = 0.4;  sfxGain.connect(AC.destination);
+  }
+  if(!canonSched) startMusic();
 }
 
 // ─── Pachelbel Canon in D Major — harpsichord + warm bass ───
@@ -1715,12 +1717,17 @@ let canonBar=0, canonNote=0, canonNext=0, canonSched=null;
 
 function startMusic() {
   if(!musicPlaying) return;
-  canonBar=0; canonNote=0; canonNext=AC.currentTime+0.1;
-  canonSched=setInterval(scheduleCanon, 150);
+  clearInterval(canonSched); canonSched=null;
+  canonBar=0; canonNote=0;
+  const go=()=>{ canonNext=AC.currentTime+0.05; canonSched=setInterval(scheduleCanon,150); };
+  if(AC.state==='running') go(); else AC.resume().then(go);
 }
 
 function scheduleCanon() {
   if(!musicPlaying) return;
+  if(AC.state!=='running'){ AC.resume(); return; }
+  // Catch up if time jumped (e.g. after a delayed resume)
+  if(canonNext < AC.currentTime) canonNext=AC.currentTime+0.05;
   while(canonNext < AC.currentTime + 1.0) {
     const bar = CANON_BARS[canonBar % CANON_BARS.length];
     if(canonNote===0) {
@@ -1773,11 +1780,10 @@ function playCanonNote(freq, t, dur, gain, voice) {
 function toggleMusic() {
   musicPlaying = !musicPlaying;
   if(musicPlaying){
-    canonNext=AC.currentTime+0.1;
-    canonSched=setInterval(scheduleCanon,150);
     document.getElementById('musicBtn').textContent='♫ Music: On';
+    startMusic();
   } else {
-    clearInterval(canonSched);
+    clearInterval(canonSched); canonSched=null;
     document.getElementById('musicBtn').textContent='♫ Music: Off';
   }
 }
