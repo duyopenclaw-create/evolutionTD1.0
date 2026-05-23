@@ -724,6 +724,28 @@
   .tut-rule-icon { font-size:1.6em; flex-shrink:0; margin-top:2px; }
   .tut-rule-card strong { font-family:'Cinzel',serif; font-size:0.7em; letter-spacing:1px; color:#d4af37; display:block; margin-bottom:4px; }
   .tut-rule-card p { font-family:'Crimson Text',serif; font-size:0.88em; color:#c8b080; line-height:1.45; margin:0; }
+
+  /* ── MINIGAME ── */
+  #minigameBtn {
+    margin-top:8px;padding:10px 28px;
+    background:linear-gradient(135deg,rgba(80,160,255,0.18),rgba(40,100,200,0.1));
+    border:1px solid rgba(80,160,255,0.5);border-radius:8px;
+    color:#6ab0ff;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;
+    cursor:pointer;transition:all 0.2s;
+  }
+  #minigameBtn:hover { background:linear-gradient(135deg,rgba(80,160,255,0.32),rgba(40,100,200,0.2)); transform:translateY(-1px); }
+
+  /* King's View 3D perspective */
+  #boardWrap.kings-view { perspective:800px; perspective-origin:50% 150%; }
+  #boardWrap.kings-view #board { transform:rotateX(32deg); transform-origin:bottom center; transition:transform 0.7s ease; box-shadow:0 30px 60px rgba(0,0,0,0.9),0 0 0 1px rgba(212,175,55,0.3); }
+  #boardWrap.kings-view #coords-files { perspective:none; }
+
+  /* View toggle buttons */
+  .mg-view-btn { display:none; }
+  .mg-view-btn.active { border-color:#6ab0ff; color:#6ab0ff; background:rgba(80,160,255,0.12); }
+
+  /* Minigame indicator badge */
+  #mgBadge { font-size:0.72em; color:#6ab0ff; letter-spacing:1px; margin-top:4px; display:none; }
 </style>
 </head>
 <body>
@@ -787,6 +809,7 @@
   <button id="customGameBtn" onclick="showTutorial('custom')">⚗ CUSTOM GAME</button>
   <button id="createGameBtn" onclick="openPositionEditor()" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#d4af37;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">✏ CREATE GAME</button>
   <button id="variantsBtn" onclick="openVariants()" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#d4af37;font-family:'Cinzel',serif;font-size:0.8em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">🔀 VARIANTS</button>
+  <button id="minigameBtn" onclick="startMinigame()">🎮 MINI GAME</button>
   <button id="howToPlayBtn" onclick="showTutorial('rules')" style="margin-top:8px;padding:10px 28px;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:8px;color:#a08050;font-family:'Cinzel',serif;font-size:0.75em;letter-spacing:2px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#a08050'">? HOW TO PLAY</button>
 </div>
 
@@ -849,6 +872,11 @@
       <button class="ctrl-btn music-btn" id="musicBtn" onclick="toggleMusic()">♫ Music: On</button>
       <button class="ctrl-btn" style="margin-top:8px" onclick="toggleSFX()">🔊 SFX: On</button>
       <button class="ctrl-btn" id="undoBtn" style="margin-top:8px;display:none" onclick="undoMove()">↩ Undo Move</button>
+      <div id="mgViewRow" style="display:none;margin-top:8px;gap:4px">
+        <button class="ctrl-btn mg-view-btn active" data-mode="normal" onclick="setMgView('normal')" style="flex:1">↑ Top</button>
+        <button class="ctrl-btn mg-view-btn" data-mode="kings" onclick="setMgView('kings')" style="flex:1">♔ King</button>
+      </div>
+      <div id="mgBadge">🎮 MINI GAME</div>
       <button class="ctrl-btn" style="margin-top:8px" onclick="resignGame()">Resign</button>
       <button class="ctrl-btn" style="margin-top:8px" onclick="location.reload()">New Game</button>
       <button class="achieve-btn" onclick="openAchievements()">🏆 Achievements</button>
@@ -2323,9 +2351,9 @@ function buildBoard() {
   });
 }
 
-function visualSq(sq) {
-  if(playerColor===WHITE) return sq;
-  return (7-row(sq))*8+(7-col(sq));
+function visualSq(s) {
+  const flip = (playerColor===WHITE) !== boardFlipped;
+  return flip ? s : (7-row(s))*8+(7-col(s));
 }
 
 function renderBoard() {
@@ -2334,7 +2362,7 @@ function renderBoard() {
 
   // Reset all squares
   squares.forEach((el,i)=>{
-    const s = playerColor===WHITE ? i : (7-row(i))*8+(7-col(i));
+    const s = visualSq(i);
     el.dataset.sq=String(s);
     el.className='sq '+(((row(i)+col(i))%2===0)?'light':'dark');
     el.innerHTML='';
@@ -2346,20 +2374,20 @@ function renderBoard() {
 
   // Highlights
   if(lastFrom>=0){
-    const vf=playerColor===WHITE?lastFrom:(7-row(lastFrom))*8+(7-col(lastFrom));
-    const vt=playerColor===WHITE?lastTo:(7-row(lastTo))*8+(7-col(lastTo));
+    const vf=visualSq(lastFrom);
+    const vt=visualSq(lastTo);
     if(squares[vf]) squares[vf].classList.add('last-move-from');
     if(squares[vt]) squares[vt].classList.add('last-move-to');
   }
 
   // Selected square
   if(selectedSq>=0){
-    const vs=playerColor===WHITE?selectedSq:(7-row(selectedSq))*8+(7-col(selectedSq));
+    const vs=visualSq(selectedSq);
     if(squares[vs]) squares[vs].classList.add('selected');
     // Show move dots
     for(const m of selectedMoves){
       const ts=mTo(m);
-      const vts=playerColor===WHITE?ts:(7-row(ts))*8+(7-col(ts));
+      const vts=visualSq(ts);
       const sqEl=squares[vts];
       if(sqEl){
         const dot=document.createElement('div');
@@ -2374,7 +2402,7 @@ function renderBoard() {
   // King in check
   if(inCheck(state)){
     const k=state.kings[state.turn===WHITE?0:1];
-    const vk=playerColor===WHITE?k:(7-row(k))*8+(7-col(k));
+    const vk=visualSq(k);
     if(squares[vk]) squares[vk].classList.add('in-check');
   }
 
@@ -2419,7 +2447,7 @@ function renderBoard() {
   if(gameOver && window._fireKingUnlocked && inCheck(state)){
     const kingIdx=state.turn===WHITE?0:1;
     const kSq=state.kings[kingIdx];
-    const vk=playerColor===WHITE?kSq:(7-row(kSq))*8+(7-col(kSq));
+    const vk=visualSq(kSq);
     const kEl=squares[vk];
     if(kEl){
       const piece=kEl.querySelector('.piece');
@@ -2430,7 +2458,7 @@ function renderBoard() {
   if(window._rainbowKingUnlocked) {
     const pKIdx = playerColor===WHITE?0:1;
     const pkSq  = state.kings[pKIdx];
-    const vpkSq = playerColor===WHITE ? pkSq : (7-row(pkSq))*8+(7-col(pkSq));
+    const vpkSq = visualSq(pkSq);
     const kEl2  = squares[vpkSq];
     if(kEl2){const pc=kEl2.querySelector('.piece');if(pc)pc.classList.add('rainbow-king');}
   }
@@ -2445,7 +2473,7 @@ function renderBoard() {
   }
   // Ghost trail
   if(window._ghostTrailUnlocked && lastFrom>=0 && window._ghostPiece) {
-    const vfG = playerColor===WHITE ? lastFrom : (7-row(lastFrom))*8+(7-col(lastFrom));
+    const vfG = visualSq(lastFrom);
     const gEl = squares[vfG];
     if(gEl && !gEl.querySelector('.piece')) {
       const ghost=document.createElement('div');
@@ -2486,7 +2514,7 @@ function onArrowMouseUp(e) {
 
 function sqCenter(logicalSq, sqSz) {
   if(logicalSq<0) return {x:0,y:0};
-  const vi=playerColor===WHITE?logicalSq:(7-row(logicalSq))*8+(7-col(logicalSq));
+  const vi=visualSq(logicalSq);
   return {x:(vi%8+0.5)*sqSz, y:(Math.floor(vi/8)+0.5)*sqSz};
 }
 
@@ -2918,9 +2946,14 @@ function executeMove(m) {
 
   if(legalMoves.length===0){
     gameOver=true;
+    if(mgMode){_mgLastFrom=lastFrom;_mgLastTo=lastTo;_mgLastPiece=movingPiece;_mgLastCap=isCapture;}
     renderBoard();
     updateStatus();
+    if(mgMode) mgAnimateLastMove();
     const check=inCheck(state);
+    if(mgMode&&check) setTimeout(mgCheckmateEffect,220);
+    if(mgMode&&!check) setTimeout(mgStalemateEffect,120);
+    const _endDelay=mgMode?950:500;
     setTimeout(()=>{
       if(check){
         if(vsMode){
@@ -2934,7 +2967,7 @@ function executeMove(m) {
       } else {
         showResult('DRAW','Stalemate — no legal moves.');
       }
-    }, 500);
+    }, _endDelay);
     return;
   }
 
@@ -2944,8 +2977,10 @@ function executeMove(m) {
     return;
   }
 
+  if(mgMode){_mgLastFrom=lastFrom;_mgLastTo=lastTo;_mgLastPiece=movingPiece;_mgLastCap=isCapture;}
   renderBoard();
   updateStatus();
+  if(mgMode) mgAnimateLastMove();
 
   // Flash quality badge on destination square
   (function showQualityFlash(destSq, qual){
@@ -3177,11 +3212,11 @@ function renderReview() {
   const snap = snapshots[reviewIdx];
   const boardEl = document.getElementById('board');
   const squares = boardEl.querySelectorAll('.sq');
-  const vf = snap.lastFrom>=0 ? (playerColor===WHITE?snap.lastFrom:(7-row(snap.lastFrom))*8+(7-col(snap.lastFrom))) : -1;
-  const vt = snap.lastTo>=0   ? (playerColor===WHITE?snap.lastTo  :(7-row(snap.lastTo))*8+(7-col(snap.lastTo)))   : -1;
+  const vf = snap.lastFrom>=0 ? visualSq(snap.lastFrom) : -1;
+  const vt = snap.lastTo>=0   ? visualSq(snap.lastTo)   : -1;
 
   squares.forEach((el, i) => {
-    const s = playerColor===WHITE ? i : (7-row(i))*8+(7-col(i));
+    const s = visualSq(i);
     el.dataset.sq = String(s);
     el.className = 'sq ' + (((row(i)+col(i))%2===0) ? 'light' : 'dark');
     el.innerHTML = '';
@@ -3212,8 +3247,8 @@ function renderReview() {
 
   // Best move highlight (engine suggestion)
   if(snap.snapBestFrom>=0 && snap.snapBestFrom!==snap.lastFrom) {
-    const vbf=playerColor===WHITE?snap.snapBestFrom:(7-row(snap.snapBestFrom))*8+(7-col(snap.snapBestFrom));
-    const vbt=playerColor===WHITE?snap.snapBestTo:(7-row(snap.snapBestTo))*8+(7-col(snap.snapBestTo));
+    const vbf=visualSq(snap.snapBestFrom);
+    const vbt=visualSq(snap.snapBestTo);
     if(squares[vbf]) squares[vbf].classList.add('best-move-from');
     if(squares[vbt]) squares[vbt].classList.add('best-move-to');
   }
@@ -3221,7 +3256,7 @@ function renderReview() {
   // Win / Draw result badge on last snapshot
   if(reviewIdx === snapshots.length-1 && gameResult) {
     const kSq  = snap.kings[playerColor===WHITE?0:1];
-    const vkSq = playerColor===WHITE ? kSq : (7-row(kSq))*8+(7-col(kSq));
+    const vkSq = visualSq(kSq);
     if(squares[vkSq]) {
       const rb=document.createElement('div');
       if(gameResult==='win'){rb.className='move-badge badge-win'; rb.textContent='♛';}
@@ -3654,6 +3689,10 @@ function setKbCursor(logSq) {
 }
 
 document.addEventListener('keydown', e => {
+  // X = flip board in minigame mode
+  if(e.key.toLowerCase()==='x' && !reviewMode && document.getElementById('game')?.style.display!=='none') {
+    e.preventDefault(); flipBoard(); return;
+  }
   // Review navigation
   if(reviewMode) {
     if(e.key==='ArrowLeft')  { e.preventDefault(); reviewStep(-1); return; }
@@ -3682,8 +3721,9 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     let r = row(kbCursorSq < 0 ? 0 : kbCursorSq);
     let f = col(kbCursorSq < 0 ? 0 : kbCursorSq);
-    const dr = playerColor===WHITE ? -1 : 1;
-    const df = playerColor===WHITE ?  1 : -1;
+    const effW = (playerColor===WHITE) !== boardFlipped;
+    const dr = effW ? -1 : 1;
+    const df = effW ?  1 : -1;
     if(e.key==='ArrowUp')    r = Math.max(0, Math.min(7, r + dr));
     if(e.key==='ArrowDown')  r = Math.max(0, Math.min(7, r - dr));
     if(e.key==='ArrowRight') f = Math.max(0, Math.min(7, f + df));
@@ -3702,6 +3742,131 @@ document.addEventListener('keydown', e => {
     renderBoard();
   }
 });
+
+// ═══════════════════════════════════════════════
+//  MINIGAME
+// ═══════════════════════════════════════════════
+let mgMode = false;
+let mgViewMode = 'normal';
+let boardFlipped = false;
+let _mgLastFrom=-1, _mgLastTo=-1, _mgLastPiece=0, _mgLastCap=false;
+
+function startMinigame() {
+  mgMode = true;
+  startGame();
+  // show mg controls after game starts
+  setTimeout(()=>{
+    const mgRow=document.getElementById('mgViewRow');
+    const mgBadge=document.getElementById('mgBadge');
+    if(mgRow){mgRow.style.display='flex';}
+    if(mgBadge){mgBadge.style.display='block';}
+    document.querySelectorAll('.mg-view-btn').forEach(b=>b.style.display='block');
+  }, 200);
+}
+
+function setMgView(mode) {
+  mgViewMode = mode;
+  const bw=document.getElementById('boardWrap');
+  bw.classList.toggle('kings-view', mode==='kings');
+  document.querySelectorAll('.mg-view-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+}
+
+function flipBoard() {
+  boardFlipped = !boardFlipped;
+  renderBoard();
+}
+
+function mgAnimateLastMove() {
+  if(!mgMode || _mgLastFrom<0) return;
+  const from=_mgLastFrom, to=_mgLastTo, piece=_mgLastPiece, isCap=_mgLastCap;
+  _mgLastFrom=-1;
+
+  const squares=document.querySelectorAll('#board .sq');
+  const fromEl=[...squares].find(el=>parseInt(el.dataset.sq)===from);
+  const toEl=[...squares].find(el=>parseInt(el.dataset.sq)===to);
+  if(!fromEl||!toEl) return;
+
+  const fromRect=fromEl.getBoundingClientRect();
+  const toRect=toEl.getBoundingClientRect();
+  const toPc=toEl.querySelector('.piece');
+  if(!toPc) return;
+  toPc.style.opacity='0';
+  toPc.style.transition='none';
+
+  if(isCap) _mgBurst(toRect, fromRect.width);
+
+  const flying=document.createElement('div');
+  flying.style.cssText=`position:fixed;left:${fromRect.left}px;top:${fromRect.top}px;width:${fromRect.width}px;height:${fromRect.height}px;z-index:9999;pointer-events:none;overflow:hidden;`;
+  flying.innerHTML=toPc.innerHTML;
+  const fs=flying.querySelector('svg');
+  if(fs){fs.setAttribute('width','100%');fs.setAttribute('height','100%');}
+  document.body.appendChild(flying);
+
+  const dx=toRect.left-fromRect.left, dy=toRect.top-fromRect.top;
+  const dist=Math.hypot(dx,dy);
+  const dur=Math.max(160,Math.min(400,dist*0.78));
+  const pType=type(piece);
+  let kf;
+  if(pType===PIECE.KNIGHT){
+    const arc=-(Math.max(55,dist*0.40));
+    kf=[{transform:'translate(0px,0px) scale(1)'},{transform:`translate(${dx/2}px,${dy/2+arc}px) scale(1.2)`,offset:.46},{transform:`translate(${dx}px,${dy}px) scale(1)`}];
+  } else if(pType===PIECE.PAWN){
+    kf=[{transform:'translate(0px,0px) scale(1)'},{transform:`translate(${dx/2}px,${dy/2-18}px) scale(1.12)`,offset:.5},{transform:`translate(${dx}px,${dy}px) scale(1)`}];
+  } else if(pType===PIECE.KING){
+    kf=[{transform:'translate(0px,0px) scale(1)'},{transform:`translate(${dx/2}px,${dy/2}px) scale(0.85)`,offset:.42},{transform:`translate(${dx}px,${dy}px) scale(1)`}];
+  } else if(pType===PIECE.QUEEN){
+    kf=[{transform:'translate(0px,0px) scale(0.92)'},{transform:`translate(${dx}px,${dy}px) scale(1.08)`,offset:.8},{transform:`translate(${dx}px,${dy}px) scale(1)`}];
+  } else {
+    kf=[{transform:'translate(0px,0px)'},{transform:`translate(${dx}px,${dy}px)`}];
+  }
+  flying.animate(kf,{duration:dur,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>{
+    flying.remove();
+    toPc.style.opacity='';
+    toPc.style.transition='';
+  };
+}
+
+function _mgBurst(rect, sz) {
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const cols=['#ff6600','#ff9900','#ffcc00','#ff3300','#ffffff','#ff8040'];
+  for(let i=0;i<14;i++){
+    const ang=(i/14)*Math.PI*2+Math.random()*0.5;
+    const d=22+Math.random()*50;
+    const tx=Math.cos(ang)*d, ty=Math.sin(ang)*d;
+    const r=3+Math.random()*5;
+    const p=document.createElement('div');
+    p.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;width:${r*2}px;height:${r*2}px;border-radius:50%;background:${cols[i%cols.length]};pointer-events:none;z-index:9998;transform:translate(-50%,-50%);`;
+    document.body.appendChild(p);
+    p.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) scale(0)`,opacity:0}],{duration:300+Math.random()*220,easing:'ease-out',fill:'forwards'}).onfinish=()=>p.remove();
+  }
+}
+
+function mgCheckmateEffect() {
+  if(!mgMode) return;
+  const losingKIdx=state.turn===WHITE?0:1;
+  const kSq=state.kings[losingKIdx];
+  if(kSq<0) return;
+  const kEl=document.querySelectorAll('#board .sq')[visualSq(kSq)];
+  if(kEl){
+    const pc=kEl.querySelector('.piece');
+    if(pc) pc.animate([{transform:'rotate(0deg) scale(1)',opacity:1},{transform:'rotate(-75deg) scale(0.88)',opacity:0.8,offset:.52},{transform:'rotate(-95deg) translateX(30%) scale(0.6)',opacity:0.5}],{duration:800,fill:'forwards',easing:'ease-in'});
+  }
+  const bw=document.getElementById('boardWrap');
+  bw.animate([{transform:'translate(0,0)'},{transform:'translate(-8px,3px)'},{transform:'translate(8px,-5px)'},{transform:'translate(-5px,5px)'},{transform:'translate(5px,-3px)'},{transform:'translate(-2px,2px)'},{transform:'translate(0,0)'}],{duration:550,easing:'ease-out'});
+  setTimeout(()=>{
+    document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
+      const dx=(Math.random()-.5)*200, dy=(Math.random()-.5)*200;
+      pc.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(0)`,opacity:0}],{duration:650+Math.random()*400,delay:i*25,fill:'forwards',easing:'ease-in'});
+    });
+  },260);
+}
+
+function mgStalemateEffect() {
+  if(!mgMode) return;
+  document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
+    pc.animate([{filter:'grayscale(0) brightness(1)',opacity:1},{filter:'grayscale(1) brightness(0.55)',opacity:0.45}],{duration:1200,delay:i*38,fill:'forwards',easing:'ease-out'});
+  });
+}
 </script>
 <div id="comebackBanner">COMEBACK!</div>
 <div id="a11yAnnounce" aria-live="polite" aria-atomic="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>
