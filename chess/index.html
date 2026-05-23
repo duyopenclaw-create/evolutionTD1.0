@@ -2151,17 +2151,32 @@ function selectDiff(d) {
 }
 
 function undoMove() {
-  if(!teacherMode || stateHistory.length<1) return;
+  if(gameOver && !teacherMode) return; // allow teacher to undo even after game ends
+  if(stateHistory.length<1) return;
   // Cancel any pending teacher redo
   clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
   const t=document.getElementById('teacherToast'); if(t) t.style.display='none';
   stopTimers(); thinking=false;
+  // In vs-computer mode: undo one full round (computer reply + player move)
+  // so the player lands back on their own turn
+  if(!vsMode && stateHistory.length>=2){
+    // peek: if last saved state was player's turn, the computer just moved — pop twice
+    const topState = stateHistory[stateHistory.length-1].state;
+    if(topState.turn === playerColor) stateHistory.pop(); // discard computer's move
+  }
   const prev=stateHistory.pop();
+  if(!prev) return;
   state=prev.state; legalMoves=prev.legalMoves;
   moveHistory=prev.moveHistory.slice(); snapshots=prev.snapshots.slice();
   lastFrom=prev.lastFrom; lastTo=prev.lastTo;
   capturedByPlayer=prev.capturedByPlayer.slice(); capturedByComp=prev.capturedByComp.slice();
   gameOver=false;
+  // Timed games: deduct 3% of remaining time as undo penalty
+  if(timeControl>0){
+    playerTime=Math.max(1, Math.floor(playerTime*0.97));
+    updateTimerDisplay();
+    startPlayerTimer();
+  }
   renderBoard(); updateMoveList(); updateCaptured(); updateStatus();
 }
 
@@ -2256,7 +2271,7 @@ function startGame() {
 
   stateHistory = []; crazyhouseHand = {}; dropMode = false; dropPiece = 0;
   const undoBtn = document.getElementById('undoBtn');
-  if(undoBtn) undoBtn.style.display = teacherMode ? 'block' : 'none';
+  if(undoBtn) undoBtn.style.display = 'block';
   const chp=document.getElementById('crazyhousePanel'); if(chp) chp.style.display='none';
   const vb=document.getElementById('variantBadge'); if(vb) vb.textContent='';
 
@@ -2892,8 +2907,8 @@ function executeMove(m) {
     clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
     const _trt=document.getElementById('teacherToast'); if(_trt) _trt.style.display='none';
   }
-  // Save state for teacher-mode undo (before any move)
-  if(teacherMode) stateHistory.push({
+  // Save state for undo (all modes)
+  stateHistory.push({
     state:{board:new Int8Array(state.board),turn:state.turn,castling:state.castling,ep:state.ep,halfmove:state.halfmove,fullmove:state.fullmove,kings:[...state.kings],history:state.history,moveList:state.moveList},
     legalMoves:[...legalMoves], moveHistory:moveHistory.slice(), snapshots:snapshots.slice(),
     lastFrom, lastTo, capturedByPlayer:capturedByPlayer.slice(), capturedByComp:capturedByComp.slice()
@@ -3488,7 +3503,7 @@ function startCustomGame() {
   const _vb=document.getElementById('variantBadge'); if(_vb) _vb.textContent='';
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
-  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
+  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display='block';
 
   document.getElementById('setup').style.display='none';
   document.getElementById('game').style.display='flex';
@@ -3522,7 +3537,7 @@ function startMonarchyGame() {
   const _vb2=document.getElementById('variantBadge'); if(_vb2) _vb2.textContent='';
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
-  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display=teacherMode?'block':'none';
+  const _ub=document.getElementById('undoBtn'); if(_ub) _ub.style.display='block';
 
   document.getElementById('setup').style.display='none';
   document.getElementById('game').style.display='flex';
@@ -3694,7 +3709,7 @@ function startFromPosition() {
     updateTimerDisplay();
   }
   const undoBtn = document.getElementById('undoBtn');
-  if(undoBtn) undoBtn.style.display = teacherMode ? 'block' : 'none';
+  if(undoBtn) undoBtn.style.display = 'block';
   buildBoard();
   applyStoredRewards();
   renderBoard();
