@@ -1435,6 +1435,31 @@ function inCheck(st) {
   return isAttacked(st.board, k, opp(st.turn), st.castling, st.ep);
 }
 
+function insufficientMaterial(board) {
+  // Collect all pieces except kings
+  const wPieces=[], bPieces=[];
+  for(let i=0;i<64;i++){
+    const p=board[i]; if(!p) continue;
+    const t=type(p), c=color(p);
+    if(t===PIECE.KING) continue;
+    (c===WHITE?wPieces:bPieces).push({t,sq:i});
+  }
+  // Any pawn, rook, or queen = mating material
+  const hasMating=arr=>arr.some(x=>x.t===PIECE.PAWN||x.t===PIECE.ROOK||x.t===PIECE.QUEEN);
+  if(hasMating(wPieces)||hasMating(bPieces)) return false;
+  // K vs K
+  if(wPieces.length===0&&bPieces.length===0) return true;
+  // K+N or K+B vs K
+  if((wPieces.length===1&&bPieces.length===0)||(wPieces.length===0&&bPieces.length===1)) return true;
+  // K+B vs K+B same color squares
+  if(wPieces.length===1&&bPieces.length===1&&wPieces[0].t===PIECE.BISHOP&&bPieces[0].t===PIECE.BISHOP){
+    const wSqColor=(row(wPieces[0].sq)+col(wPieces[0].sq))%2;
+    const bSqColor=(row(bPieces[0].sq)+col(bPieces[0].sq))%2;
+    if(wSqColor===bSqColor) return true;
+  }
+  return false;
+}
+
 // ── Move to SAN notation ──
 function toSAN(st, m, legalMoves) {
   const from=mFrom(m), to=mTo(m), promo=mPromo(m), flags=mFlags(m);
@@ -3006,6 +3031,12 @@ function executeMove(m) {
     return;
   }
 
+  if(insufficientMaterial(state.board)){
+    gameOver=true; renderBoard(); updateStatus();
+    setTimeout(()=>showResult('DRAW','Draw — insufficient material.'), 300);
+    return;
+  }
+
   if(mgMode){_mgLastFrom=lastFrom;_mgLastTo=lastTo;_mgLastPiece=movingPiece;_mgLastCap=isCapture;}
   renderBoard();
   updateStatus();
@@ -3585,11 +3616,10 @@ function startFromPosition() {
   if(isAttacked(testBoard, oppKSq, posEditorTurn, 0, -1)) {
     alert("Illegal position: opponent's king is already in check!"); return;
   }
-  // Can't start in stalemate or checkmate
+  // Block only true checkmate (king already mated before a move is made)
   const testMoves = generateMoves(testState);
-  if(testMoves.length === 0) {
-    alert(inCheck(testState) ? 'Cannot start: this is already checkmate!' : 'Cannot start: this is already stalemate!');
-    return;
+  if(testMoves.length === 0 && inCheck(testState)) {
+    alert('Cannot start: this is already checkmate!'); return;
   }
   closePe();
   gameSet = null;
@@ -3624,6 +3654,17 @@ function startFromPosition() {
   applyStoredRewards();
   renderBoard();
   updateStatus();
+  // Detect immediate draw conditions from custom positions
+  if(legalMoves.length===0 && !inCheck(state)){
+    gameOver=true;
+    setTimeout(()=>showResult('DRAW','Stalemate — no legal moves.'), 400);
+    return;
+  }
+  if(insufficientMaterial(state.board)){
+    gameOver=true;
+    setTimeout(()=>showResult('DRAW','Draw — insufficient material.'), 400);
+    return;
+  }
   if(!vsMode && state.turn !== playerColor) setTimeout(()=>doComputerMove(), 500);
 }
 
