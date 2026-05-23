@@ -2097,6 +2097,8 @@ let vsMode = false;
 let teacherMode = false;
 let teacherELO = 1200;
 let stateHistory = []; // undo stack for teacher mode
+let _teacherRedoMove = null;
+let _teacherRedoInterval = null;
 // Variant state
 let crazyhouseHand = {};
 let dropMode = false;
@@ -2148,6 +2150,9 @@ function selectDiff(d) {
 
 function undoMove() {
   if(!teacherMode || stateHistory.length<1) return;
+  // Cancel any pending teacher redo
+  clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
+  const t=document.getElementById('teacherToast'); if(t){t.style.display='none';t.style.pointerEvents='none';}
   stopTimers(); thinking=false;
   const prev=stateHistory.pop();
   state=prev.state; legalMoves=prev.legalMoves;
@@ -2158,23 +2163,55 @@ function undoMove() {
   renderBoard(); updateMoveList(); updateCaptured(); updateStatus();
 }
 
-function showTeacherHint(quality) {
+function showTeacherHint(quality, move) {
   if(!teacherMode) return;
-  const hints = {
-    brilliant:'Brilliant! That was exceptional play.',
+  const msgs = {
+    brilliant:'Brilliant! Exceptional play.',
     great:'Great move! You won material.',
-    miss:'You missed a winning opportunity — look for captures or checkmates next time.',
+    miss:'You missed a winning opportunity — look for captures or checkmates.',
     mistake:'Mistake — your position weakened. Check piece safety.',
-    blunder:'Blunder! You lost significant material. Use the Undo button to try again.'
+    blunder:'Blunder! You lost significant material.'
   };
-  if(!hints[quality]) return;
+  if(!msgs[quality]) return;
   const t=document.getElementById('teacherToast');
   if(!t) return;
-  t.textContent=hints[quality];
-  t.style.background=quality==='brilliant'||quality==='great'?'#1a5c1a':'#5c1a1a';
-  t.style.display='block';
   clearTimeout(t._timer);
-  t._timer=setTimeout(()=>t.style.display='none', 4000);
+  clearInterval(_teacherRedoInterval);
+  _teacherRedoInterval=null;
+  const isBad = quality==='blunder'||quality==='mistake'||quality==='miss';
+  if(isBad && move!=null) {
+    _teacherRedoMove=move;
+    undoMove();
+    let secsLeft=10;
+    t.innerHTML=`<div>${msgs[quality]}</div><div style="margin-top:8px;display:flex;align-items:center;gap:10px;justify-content:center"><button onclick="redoTeacherMove()" style="padding:5px 14px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.5);border-radius:6px;color:#fff;font-family:inherit;cursor:pointer;font-size:0.9em">↪ Redo (<span id="teacherRedoCt">${secsLeft}</span>s)</button></div>`;
+    t.style.background='#5c1a1a';
+    t.style.display='block';
+    t.style.pointerEvents='auto';
+    _teacherRedoInterval=setInterval(()=>{
+      secsLeft--;
+      const ct=document.getElementById('teacherRedoCt');
+      if(ct) ct.textContent=secsLeft;
+      if(secsLeft<=0){
+        clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
+        t.style.display='none'; t.style.pointerEvents='none';
+      }
+    },1000);
+  } else {
+    _teacherRedoMove=null;
+    t.textContent=msgs[quality];
+    t.style.background='#1a5c1a';
+    t.style.display='block';
+    t.style.pointerEvents='none';
+    t._timer=setTimeout(()=>t.style.display='none',4000);
+  }
+}
+function redoTeacherMove() {
+  if(!_teacherRedoMove) return;
+  clearInterval(_teacherRedoInterval); _teacherRedoInterval=null;
+  const t=document.getElementById('teacherToast');
+  if(t){t.style.display='none';t.style.pointerEvents='none';}
+  const m=_teacherRedoMove; _teacherRedoMove=null;
+  executeMove(m);
 }
 function selectTime(t) {
   timeControl=t;
@@ -2847,6 +2884,11 @@ function onPlayerWin() {
 }
 
 function executeMove(m) {
+  // Cancel any pending teacher redo when a new move arrives
+  if(_teacherRedoMove!==null && _teacherRedoMove!==m){
+    clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
+    const _trt=document.getElementById('teacherToast'); if(_trt){_trt.style.display='none';_trt.style.pointerEvents='none';}
+  }
   // Save state for teacher-mode undo (before any move)
   if(teacherMode) stateHistory.push({
     state:{board:new Int8Array(state.board),turn:state.turn,castling:state.castling,ep:state.ep,halfmove:state.halfmove,fullmove:state.fullmove,kings:[...state.kings],history:state.history,moveList:state.moveList},
@@ -3057,7 +3099,7 @@ function executeMove(m) {
   })(lastTo, quality);
 
   // Teacher mode: hint after player's moves
-  if(wasPlayer) showTeacherHint(quality);
+  if(wasPlayer) showTeacherHint(quality, m);
 
   if(!vsMode && state.turn!==playerColor && !gameOver){
     startComputerTimer();
