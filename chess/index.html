@@ -2100,6 +2100,7 @@ let teacherELO = 1200;
 let stateHistory = []; // undo stack for teacher mode
 let _teacherRedoMove = null;
 let _teacherRedoInterval = null;
+let _teacherRedoInProgress = false;
 // Variant state
 let crazyhouseHand = {};
 let dropMode = false;
@@ -2180,7 +2181,8 @@ function showTeacherHint(quality, move) {
   clearInterval(_teacherRedoInterval);
   _teacherRedoInterval=null;
   const isBad = quality==='blunder'||quality==='mistake'||quality==='miss';
-  if(isBad && move!=null) {
+  // Auto-undo only on first bad move — not when player explicitly chose to redo it
+  if(isBad && move!=null && !_teacherRedoInProgress) {
     _teacherRedoMove=move;
     undoMove();
     let secsLeft=10;
@@ -2199,7 +2201,7 @@ function showTeacherHint(quality, move) {
   } else {
     _teacherRedoMove=null;
     t.textContent=msgs[quality];
-    t.style.background='#1a5c1a';
+    t.style.background=isBad?'#5c1a1a':'#1a5c1a';
     t.style.display='block';
     t._timer=setTimeout(()=>t.style.display='none',4000);
   }
@@ -2210,7 +2212,9 @@ function redoTeacherMove() {
   const t=document.getElementById('teacherToast');
   if(t) t.style.display='none';
   const m=_teacherRedoMove; _teacherRedoMove=null;
+  _teacherRedoInProgress=true;
   executeMove(m);
+  _teacherRedoInProgress=false;
 }
 function selectTime(t) {
   timeControl=t;
