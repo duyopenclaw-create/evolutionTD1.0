@@ -2158,11 +2158,12 @@ function undoMove() {
   const t=document.getElementById('teacherToast'); if(t) t.style.display='none';
   stopTimers(); thinking=false;
   // In vs-computer mode: undo one full round (computer reply + player move)
-  // so the player lands back on their own turn
+  // stateHistory entries store the state BEFORE the move, so:
+  //   top entry turn=opp(playerColor) → AI just moved, pop its entry then pop player's
+  //   top entry turn=playerColor → player moved but AI hasn't replied yet, pop once
   if(!vsMode && stateHistory.length>=2){
-    // peek: if last saved state was player's turn, the computer just moved — pop twice
     const topState = stateHistory[stateHistory.length-1].state;
-    if(topState.turn === playerColor) stateHistory.pop(); // discard computer's move
+    if(topState.turn !== playerColor) stateHistory.pop(); // discard AI's move snapshot
   }
   const prev=stateHistory.pop();
   if(!prev) return;
