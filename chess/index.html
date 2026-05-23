@@ -282,6 +282,7 @@
     background: transparent;
     border: 5px solid rgba(0,0,0,0.35);
     width: 90%; height: 90%;
+    z-index: 5;
   }
 
   /* Piece images — inline SVG, always visible */
@@ -1788,6 +1789,26 @@ function playSFX(type) {
   } catch(e){}
 }
 
+function playWoodSFX(isCapture) {
+  if(!sfxOn) return;
+  try {
+    const now = AC.currentTime;
+    const len = AC.sampleRate * (isCapture ? 0.28 : 0.13);
+    const buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(len*(isCapture?0.18:0.12)));
+    const src=AC.createBufferSource(); src.buffer=buf;
+    const bpf=AC.createBiquadFilter(); bpf.type='bandpass';
+    bpf.frequency.value=isCapture?380:620; bpf.Q.value=isCapture?4:6;
+    const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=isCapture?1200:2000;
+    const g=AC.createGain();
+    g.gain.setValueAtTime(isCapture?1.4:0.75,now);
+    g.gain.exponentialRampToValueAtTime(0.001,now+(isCapture?0.28:0.13));
+    src.connect(bpf); bpf.connect(lp); lp.connect(g); g.connect(sfxGain);
+    src.start(now); src.stop(now+(isCapture?0.3:0.15));
+  } catch(e){}
+}
+
 // ═══════════════════════════════════════════════
 //  ACHIEVEMENTS
 // ═══════════════════════════════════════════════
@@ -2832,10 +2853,13 @@ function executeMove(m) {
     // Track if computer captured player's queen
     if(!wasPlayer && type(capturedPiece)===PIECE.QUEEN && color(capturedPiece)===playerColor) lostQueen=true;
     playSFX('capture');
+    if(mgMode) playWoodSFX(true);
   } else if(isCastle){
     playSFX('castle');
+    if(mgMode) playWoodSFX(false);
   } else {
     playSFX('move');
+    if(mgMode) playWoodSFX(false);
   }
 
   state = applyMove(state, m);
@@ -2946,7 +2970,7 @@ function executeMove(m) {
 
   if(legalMoves.length===0){
     gameOver=true;
-    if(mgMode){_mgLastFrom=lastFrom;_mgLastTo=lastTo;_mgLastPiece=movingPiece;_mgLastCap=isCapture;}
+    if(mgMode){_mgLastFrom=lastFrom;_mgLastTo=lastTo;_mgLastPiece=movingPiece;_mgLastCap=isCapture;_mgLastDestSq=lastTo;}
     renderBoard();
     updateStatus();
     if(mgMode) mgAnimateLastMove();
@@ -3614,7 +3638,6 @@ function startVariantGame(variant) {
   snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0;
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
-  vsMode=false;
   document.getElementById('setup').style.display='none';
   document.getElementById('game').style.display='flex';
   playerTime=timeControl; compTime=timeControl;
@@ -3693,6 +3716,10 @@ document.addEventListener('keydown', e => {
   if(e.key.toLowerCase()==='x' && !reviewMode && document.getElementById('game')?.style.display!=='none') {
     e.preventDefault(); flipBoard(); return;
   }
+  // H = hammer smash effect in minigame mode
+  if(e.key.toLowerCase()==='h' && mgMode && document.getElementById('game')?.style.display!=='none') {
+    e.preventDefault(); mgHammer(); return;
+  }
   // Review navigation
   if(reviewMode) {
     if(e.key==='ArrowLeft')  { e.preventDefault(); reviewStep(-1); return; }
@@ -3750,6 +3777,7 @@ let mgMode = false;
 let mgViewMode = 'normal';
 let boardFlipped = false;
 let _mgLastFrom=-1, _mgLastTo=-1, _mgLastPiece=0, _mgLastCap=false;
+let _mgLastDestSq = -1;
 
 function startMinigame() {
   mgMode = true;
@@ -3790,8 +3818,6 @@ function mgAnimateLastMove() {
   const toRect=toEl.getBoundingClientRect();
   const toPc=toEl.querySelector('.piece');
   if(!toPc) return;
-  toPc.style.opacity='0';
-  toPc.style.transition='none';
 
   if(isCap) _mgBurst(toRect, fromRect.width);
 
@@ -3821,8 +3847,6 @@ function mgAnimateLastMove() {
   }
   flying.animate(kf,{duration:dur,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>{
     flying.remove();
-    toPc.style.opacity='';
-    toPc.style.transition='';
   };
 }
 
@@ -3866,6 +3890,20 @@ function mgStalemateEffect() {
   document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
     pc.animate([{filter:'grayscale(0) brightness(1)',opacity:1},{filter:'grayscale(1) brightness(0.55)',opacity:0.45}],{duration:1200,delay:i*38,fill:'forwards',easing:'ease-out'});
   });
+}
+
+function mgHammer() {
+  const sq = _mgLastDestSq >= 0 ? _mgLastDestSq : (lastTo >= 0 ? lastTo : -1);
+  if(sq < 0) return;
+  const sqEl = document.querySelector(`#board .sq[data-sq="${sq}"]`);
+  if(!sqEl) return;
+  const r = sqEl.getBoundingClientRect();
+  // Visual slam effect on the square
+  sqEl.animate([{transform:'scale(1)'},{transform:'scale(0.88)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:180,easing:'ease-out'});
+  // Extra burst particles
+  _mgBurst(r, r.width);
+  // Play wood knock
+  playWoodSFX(true);
 }
 </script>
 <div id="comebackBanner">COMEBACK!</div>
