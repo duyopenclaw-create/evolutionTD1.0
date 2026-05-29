@@ -2422,7 +2422,7 @@ const PIECE_KEY = {
 let gameSet = null;
 
 function getPieceKey(p) {
-  if(gameSet===null||gameSet==='atomic'||gameSet==='crazyhouse'||gameSet==='fogofwar') return PIECE_KEY[p];
+  if(gameSet===null||gameSet==='atomic'||gameSet==='crazyhouse'||gameSet==='fogofwar'||gameSet==='twomove'||gameSet==='glitch') return PIECE_KEY[p];
   const c = color(p)===WHITE ? 'w' : 'b';
   if(gameSet==='monarchy'){
     const tk = {[PIECE.PAWN]:'P',[PIECE.ROOK]:'R',[PIECE.KNIGHT]:'N',[PIECE.BISHOP]:'B',[PIECE.QUEEN]:'Q',[PIECE.KING]:'K'};
@@ -2564,7 +2564,7 @@ function renderBoard() {
         return;
       }
       const key=getPieceKey(p);
-      const svgStr=_S[key]||(_SMon&&_SMon[key]);
+      const svgStr=_S[key]||(_SMon&&_SMon[key])||_S[PIECE_KEY[p]];
       if(svgStr){
         const div=document.createElement('div');
         div.className='piece';
