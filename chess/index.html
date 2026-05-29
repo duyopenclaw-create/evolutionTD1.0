@@ -316,7 +316,7 @@
   .badge-book     { background: #6b3f1a; color: #fff; }
   .badge-forced   { background: #1a7a1a; color: #fff; }
   .badge-good, .badge-ok { background: #2db34e; color: #fff; }
-  .badge-great    { background: #5aad4e; color: #fff; }
+  .badge-great    { background: #27ae60; color: #fff; }
   .badge-miss     { background: #c0392b; color: #fff; }
   .badge-mistake  { background: #e07800; color: #fff; }
   .badge-blunder  { background: #d63030; color: #fff; }
@@ -927,6 +927,16 @@
         <div class="variant-icon">🌫</div>
         <div class="variant-name">FOG OF WAR</div>
         <div class="variant-desc">The opponent's pieces are hidden — just grey squares. The AI is also confused and plays erratically!</div>
+      </div>
+      <div class="variant-card" onclick="startVariantGame('twomove')">
+        <div class="variant-icon">⚡</div>
+        <div class="variant-name">2-MOVE CHESS</div>
+        <div class="variant-desc">Each player makes 2 moves per turn — double your plan, double the chaos!</div>
+      </div>
+      <div class="variant-card" onclick="startVariantGame('glitch')">
+        <div class="variant-icon">🌀</div>
+        <div class="variant-name">GLITCH CHESS</div>
+        <div class="variant-desc">50% normal, 25% your piece teleports to a random square, 25% a different piece moves instead!</div>
       </div>
     </div>
     <div style="text-align:center">
@@ -2122,6 +2132,7 @@ let _teacherRedoInProgress = false;
 let crazyhouseHand = {};
 let dropMode = false;
 let dropPiece = 0;
+let twoMoveUsed = 0; // 0=first move of turn, 1=used first move (second move pending)
 const CONFUSED_CONFIG = { depth:1, randPct:0.72, blunderPct:0.42 };
 let lastFrom=-1, lastTo=-1;
 let capturedByPlayer=[], capturedByComp=[];
@@ -2174,7 +2185,7 @@ function undoMove() {
   clearTimeout(_compMoveTimeout); _compMoveTimeout=null;
   clearInterval(_teacherRedoInterval); _teacherRedoInterval=null; _teacherRedoMove=null;
   const t=document.getElementById('teacherToast'); if(t) t.style.display='none';
-  stopTimers(); thinking=false;
+  stopTimers(); thinking=false; twoMoveUsed=0;
   // In vs-computer mode: undo one full round (computer reply + player move)
   // stateHistory entries store the state BEFORE the move, so:
   //   top entry turn=opp(playerColor) → AI just moved, pop its entry then pop player's
@@ -2217,8 +2228,8 @@ function showTeacherHint(quality, move) {
   const isBad = quality==='blunder'||quality==='mistake'||quality==='miss';
   // Auto-undo only on first bad move — not when player explicitly chose to redo it
   if(isBad && move!=null && !_teacherRedoInProgress) {
-    _teacherRedoMove=move;
     undoMove();
+    _teacherRedoMove=move; // set AFTER undoMove so it isn't cleared
     let secsLeft=10;
     t.innerHTML=`<div>${msgs[quality]}</div><div style="margin-top:10px"><button onclick="redoTeacherMove()" style="width:100%;padding:7px 0;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.5);border-radius:7px;color:#fff;font-family:inherit;cursor:pointer;font-size:0.9em;letter-spacing:1px">↪ Redo (<span id="teacherRedoCt">${secsLeft}</span>s)</button></div>`;
     t.style.background='#5c1a1a';
@@ -2250,6 +2261,13 @@ function redoTeacherMove() {
   executeMove(m);
   _teacherRedoInProgress=false;
 }
+function _showGlitch(msg) {
+  const el=document.getElementById('statusText');
+  if(!el) return;
+  el.style.color='#cc66ff';
+  el.textContent=msg;
+  setTimeout(()=>{ el.style.color=''; updateStatus(); }, 1400);
+}
 function selectTime(t) {
   timeControl=t;
   ['None','600','300','120','30'].forEach(x=>{
@@ -2260,6 +2278,8 @@ function selectTime(t) {
 
 function startGame() {
   gameSet = null;
+  mgMode = false;
+  twoMoveUsed = 0;
   // vsMode is already set by selectVs() button handler
   if(AC.state==='suspended') AC.resume();
   initAudio();
@@ -3005,6 +3025,18 @@ function executeMove(m) {
     lastFrom, lastTo, capturedByPlayer:capturedByPlayer.slice(), capturedByComp:capturedByComp.slice()
   });
 
+  // Glitch Chess: 25% different piece moves, 25% same piece random square, 50% normal
+  if(gameSet === 'glitch') {
+    const roll = Math.random();
+    if(roll < 0.25) {
+      const diff = legalMoves.filter(om => mFrom(om) !== mFrom(m));
+      if(diff.length > 0){ m = diff[Math.floor(Math.random()*diff.length)]; _showGlitch('🌀 DIFFERENT PIECE!'); }
+    } else if(roll < 0.50) {
+      const same = legalMoves.filter(om => mFrom(om) === mFrom(m) && mTo(om) !== mTo(m));
+      if(same.length > 0){ m = same[Math.floor(Math.random()*same.length)]; _showGlitch('🌀 GLITCH!'); }
+    }
+  }
+
   const stateBefore = state;
   const movingPiece = state.board[mFrom(m)];
   if(window._ghostTrailUnlocked) window._ghostPiece = _S[getPieceKey(movingPiece)] || null;
@@ -3196,7 +3228,7 @@ function executeMove(m) {
   // Flash quality badge on destination square
   (function showQualityFlash(destSq, qual){
     const flashMap = { brilliant:'badge-brilliant', great:'badge-great', miss:'badge-miss', mistake:'badge-mistake', blunder:'badge-blunder' };
-    const flashIcon = { brilliant:'!!', great:'!', miss:'✗', mistake:'?', blunder:'??' };
+    const flashIcon = { brilliant:'!!', great:'★', miss:'✗', mistake:'?', blunder:'??' };
     if(!flashMap[qual]) return;
     const sqEl = document.querySelector(`#board .sq[data-sq="${destSq}"]`);
     if(!sqEl) return;
@@ -3208,7 +3240,37 @@ function executeMove(m) {
   })(lastTo, quality);
 
   // Teacher mode: hint after player's moves
+  const _stateRefBeforeTeacher = state;
   if(wasPlayer) showTeacherHint(quality, m);
+  const _teacherDidUndo = state !== _stateRefBeforeTeacher;
+
+  // Two-move chess: same player gets a second move each turn
+  if(gameSet === 'twomove' && !gameOver && !_teacherDidUndo) {
+    if(twoMoveUsed === 0) {
+      twoMoveUsed = 1;
+      state.turn = opp(state.turn); // flip turn back to whoever just moved
+      legalMoves = generateMoves(state);
+      if(legalMoves.length > 0) {
+        renderBoard(); updateStatus();
+        if(!vsMode && state.turn !== playerColor) {
+          thinking = true; updateStatus();
+          const delay2 = getComputerDelay();
+          startComputerTimer(delay2);
+          clearTimeout(_compMoveTimeout);
+          _compMoveTimeout = setTimeout(() => doComputerMove(), delay2);
+        } else if(timeControl > 0 && !vsMode) {
+          startPlayerTimer();
+        }
+        return;
+      }
+      // No legal second move — restore turn and fall through
+      state.turn = opp(state.turn);
+      legalMoves = generateMoves(state);
+      twoMoveUsed = 0;
+    } else {
+      twoMoveUsed = 0;
+    }
+  }
 
   if(!vsMode && state.turn!==playerColor && !gameOver){
     startComputerTimer();
@@ -3316,6 +3378,10 @@ function updateStatus() {
     return;
   }
   el.className='status-text';
+  if(gameSet==='twomove' && twoMoveUsed===1) {
+    el.textContent=state.turn===playerColor?'Your 2nd move!':'Computer 2nd move...';
+    return;
+  }
   el.textContent=state.turn===playerColor?'Your turn':'Computer thinking...';
 }
 
@@ -3833,10 +3899,11 @@ function closeVariants() {
 function startVariantGame(variant) {
   closeVariants();
   gameSet=variant;
+  mgMode=false;
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying&&!canonSched){canonNext=AC.currentTime+0.1;canonSched=setInterval(scheduleCanon,150);}
   initState();
-  snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0;
+  snapshots=[]; reviewMode=false; stateHistory=[]; crazyhouseHand={}; dropMode=false; dropPiece=0; twoMoveUsed=0;
   legalMoves=generateMoves(state);
   gamePromos=0; gameBrilliant=0; gameCaptured=0; lostQueen=false; hadCastle=false;
   document.getElementById('setup').style.display='none';
@@ -3852,7 +3919,7 @@ function startVariantGame(variant) {
   const undoBtn=document.getElementById('undoBtn'); if(undoBtn) undoBtn.style.display='none';
   const chp=document.getElementById('crazyhousePanel'); if(chp) chp.style.display=variant==='crazyhouse'?'block':'none';
   const vb=document.getElementById('variantBadge');
-  if(vb){const names={atomic:'💥 ATOMIC',crazyhouse:'♻ CAPTURE',fogofwar:'🌫 FOG OF WAR'};vb.textContent=names[variant]||'';}
+  if(vb){const names={atomic:'💥 ATOMIC',crazyhouse:'♻ CAPTURE',fogofwar:'🌫 FOG OF WAR',twomove:'⚡ 2-MOVE',glitch:'🌀 GLITCH'};vb.textContent=names[variant]||'';}
   buildBoard(); applyStoredRewards(); renderBoard(); updateStatus();
   if(!vsMode && state.turn!==playerColor) _compMoveTimeout=setTimeout(()=>doComputerMove(),500);
 }
