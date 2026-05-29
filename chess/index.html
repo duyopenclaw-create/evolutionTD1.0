@@ -2280,6 +2280,7 @@ function startGame() {
   gameSet = null;
   mgMode = false;
   twoMoveUsed = 0;
+  _mgEffectGen++;
   // vsMode is already set by selectVs() button handler
   if(AC.state==='suspended') AC.resume();
   initAudio();
@@ -2502,8 +2503,10 @@ function renderBoard() {
   const boardEl = document.getElementById('board');
   const squares = boardEl.querySelectorAll('.sq');
 
-  // Reset all squares
+  // Reset all squares — cancel any lingering fill:'forwards' animations first
   squares.forEach((el,i)=>{
+    const pc = el.querySelector('.piece');
+    if(pc) pc.getAnimations().forEach(a=>a.cancel());
     const s = visualSq(i);
     el.dataset.sq=String(s);
     el.className='sq '+(((row(i)+col(i))%2===0)?'light':'dark');
@@ -3900,6 +3903,7 @@ function startVariantGame(variant) {
   closeVariants();
   gameSet=variant;
   mgMode=false;
+  _mgEffectGen++;
   if(AC.state==='suspended') AC.resume();
   if(!musicGain) initAudio(); else if(musicPlaying&&!canonSched){canonNext=AC.currentTime+0.1;canonSched=setInterval(scheduleCanon,150);}
   initState();
@@ -4046,6 +4050,7 @@ let mgViewMode = 'normal';
 let boardFlipped = false;
 let _mgLastFrom=-1, _mgLastTo=-1, _mgLastPiece=0, _mgLastCap=false;
 let _mgLastDestSq = -1;
+let _mgEffectGen = 0; // incremented each new game; stale effect timers check this
 
 function startMinigame() {
   mgMode = true;
@@ -4135,6 +4140,7 @@ function _mgBurst(rect, sz) {
 
 function mgCheckmateEffect() {
   if(!mgMode) return;
+  const gen = _mgEffectGen;
   const losingKIdx=state.turn===WHITE?0:1;
   const kSq=state.kings[losingKIdx];
   if(kSq<0) return;
@@ -4146,6 +4152,7 @@ function mgCheckmateEffect() {
   const bw=document.getElementById('boardWrap');
   bw.animate([{transform:'translate(0,0)'},{transform:'translate(-8px,3px)'},{transform:'translate(8px,-5px)'},{transform:'translate(-5px,5px)'},{transform:'translate(5px,-3px)'},{transform:'translate(-2px,2px)'},{transform:'translate(0,0)'}],{duration:550,easing:'ease-out'});
   setTimeout(()=>{
+    if(_mgEffectGen !== gen) return; // new game started; don't animate fresh pieces
     document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
       const dx=(Math.random()-.5)*200, dy=(Math.random()-.5)*200;
       pc.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(0)`,opacity:0}],{duration:650+Math.random()*400,delay:i*25,fill:'forwards',easing:'ease-in'});
@@ -4155,9 +4162,14 @@ function mgCheckmateEffect() {
 
 function mgStalemateEffect() {
   if(!mgMode) return;
-  document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
-    pc.animate([{filter:'grayscale(0) brightness(1)',opacity:1},{filter:'grayscale(1) brightness(0.55)',opacity:0.45}],{duration:1200,delay:i*38,fill:'forwards',easing:'ease-out'});
-  });
+  const gen = _mgEffectGen;
+  // Defer slightly so a fast new-game click can't sneak in before the check
+  setTimeout(()=>{
+    if(_mgEffectGen !== gen) return;
+    document.querySelectorAll('#board .sq .piece').forEach((pc,i)=>{
+      pc.animate([{filter:'grayscale(0) brightness(1)',opacity:1},{filter:'grayscale(1) brightness(0.55)',opacity:0.45}],{duration:1200,delay:i*38,fill:'forwards',easing:'ease-out'});
+    });
+  }, 0);
 }
 
 function mgHammer() {
