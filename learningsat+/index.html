@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LearningSAT+</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Welcome Screen -->
+<div id="screen-welcome" class="screen active">
+  <div class="star-bg" id="star-bg"></div>
+  <div class="welcome-center">
+    <div class="app-logo">Learning<span class="sat-text">SAT</span><span class="plus-text">+</span></div>
+    <p class="tagline">Master every subject. Ace every test.</p>
+    <button class="btn-start" onclick="App.showGradeSelect()">Start Learning 🚀</button>
+    <button class="btn-level-test" onclick="App.showLevelSetup()">🎯 Take Level Test</button>
+    <button class="btn-progress-home" onclick="App.showProgress()">📊 My Progress</button>
+    <button class="btn-api-key" onclick="App.openApiKeySettings()">🔑 AI Writing Key</button>
+  </div>
+</div>
+
+<!-- Grade Select -->
+<div id="screen-grade" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showWelcome()">← Back</button>
+    <h1>Choose Your Grade</h1>
+  </div>
+  <div class="grade-grid" id="grade-grid"></div>
+</div>
+
+<!-- Subject Select -->
+<div id="screen-subject" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showGradeSelect()">← Back</button>
+    <h1>Choose a Subject</h1>
+    <div class="grade-badge" id="grade-badge-sub"></div>
+    <button class="btn-progress-sm" onclick="App.showProgress()">📊 Progress</button>
+  </div>
+  <div class="subject-grid">
+    <div class="subject-card subj-math" onclick="App.selectSubject('math')">
+      <div class="s-icon">➕</div>
+      <div class="s-name">Math</div>
+      <div class="s-info">15 practice · 20 quiz</div>
+    </div>
+    <div class="subject-card subj-reading" onclick="App.selectSubject('reading')">
+      <div class="s-icon">📖</div>
+      <div class="s-name">Reading</div>
+      <div class="s-info">Story + 5 questions</div>
+    </div>
+    <div class="subject-card subj-writing" onclick="App.selectSubject('writing')">
+      <div class="s-icon">✏️</div>
+      <div class="s-name">Writing</div>
+      <div class="s-info">Summary or essay</div>
+    </div>
+    <div class="subject-card subj-spelling" onclick="App.selectSubject('spelling')">
+      <div class="s-icon">🔤</div>
+      <div class="s-name">Spelling</div>
+      <div class="s-info">8 practice · 12 test</div>
+    </div>
+    <div class="subject-card subj-science" onclick="App.selectSubject('science')">
+      <div class="s-icon">🔬</div>
+      <div class="s-name">Science</div>
+      <div class="s-info">8 practice · 12 test</div>
+    </div>
+  </div>
+</div>
+
+<!-- Mode & Time Select -->
+<div id="screen-mode" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showSubjectSelect()">← Back</button>
+    <h1 id="mode-title">Choose Mode</h1>
+    <div class="grade-badge" id="grade-badge-mode"></div>
+  </div>
+  <div class="mode-container">
+    <div class="mode-card" id="practice-card">
+      <div class="mode-head"><span class="mode-icon-lg">📚</span><h2>Practice</h2></div>
+      <div class="mode-desc" id="practice-mode-desc"></div>
+      <div class="time-section">
+        <p class="time-label">Choose time limit:</p>
+        <div class="time-grid">
+          <button class="time-btn" onclick="App.startSession('practice',1800)">30 min</button>
+          <button class="time-btn" onclick="App.startSession('practice',1200)">20 min</button>
+          <button class="time-btn" onclick="App.startSession('practice',720)">12 min</button>
+          <button class="time-btn" onclick="App.startSession('practice',300)">5 min</button>
+        </div>
+      </div>
+    </div>
+    <div class="mode-card" id="test-card">
+      <div class="mode-head"><span class="mode-icon-lg">📝</span><h2>Test</h2></div>
+      <div class="mode-desc" id="test-mode-desc"></div>
+      <div class="time-section" id="test-time-section">
+        <p class="time-label" id="test-time-label">Choose time limit:</p>
+        <div class="time-grid" id="test-time-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Practice/Test Screen -->
+<div id="screen-play" class="screen">
+  <div class="play-header">
+    <button class="back-btn-sm" onclick="App.confirmExit()">✕ Exit</button>
+    <div class="play-progress">
+      <span class="q-label" id="q-label">Question 1 / 15</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div class="timer-box" id="timer-box">
+      <span class="timer-icon-sm">⏱</span>
+      <span class="timer-text" id="timer-text">30:00</span>
+    </div>
+  </div>
+  <div class="play-body" id="play-body"></div>
+</div>
+
+<!-- Spelling Word Screen -->
+<div id="screen-spelling-word" class="screen">
+  <div class="play-header">
+    <button class="back-btn-sm" onclick="App.confirmExit()">✕ Exit</button>
+    <div class="play-progress">
+      <span class="q-label" id="spell-q-label">Word 1 / 8</span>
+      <div class="progress-bar"><div class="progress-fill" id="spell-progress-fill"></div></div>
+    </div>
+    <div class="timer-box" id="spell-timer-box">
+      <span class="timer-icon-sm">⏱</span>
+      <span class="timer-text" id="spell-timer-text">--</span>
+    </div>
+  </div>
+  <div class="spelling-center" id="spelling-center"></div>
+</div>
+
+<!-- Writing Screen -->
+<div id="screen-writing" class="screen">
+  <div class="play-header">
+    <button class="back-btn-sm" onclick="App.confirmExit()">✕ Exit</button>
+    <div class="play-progress">
+      <span class="q-label" id="writing-mode-label">Writing Practice</span>
+    </div>
+    <div class="timer-box">
+      <span class="timer-icon-sm">⏱</span>
+      <span class="timer-text" id="writing-timer-text">30:00</span>
+    </div>
+  </div>
+  <div class="writing-body" id="writing-body"></div>
+</div>
+
+<!-- Results Screen -->
+<div id="screen-results" class="screen">
+  <div class="results-wrap">
+    <div class="results-stars" id="results-stars"></div>
+    <h1 class="results-title" id="results-title">Great Job!</h1>
+    <div class="score-ring">
+      <svg viewBox="0 0 120 120" class="ring-svg">
+        <circle cx="60" cy="60" r="50" class="ring-bg"/>
+        <circle cx="60" cy="60" r="50" class="ring-fill" id="ring-fill"/>
+      </svg>
+      <div class="ring-text">
+        <div class="ring-score" id="ring-score">0/0</div>
+        <div class="ring-pct" id="ring-pct">0%</div>
+      </div>
+    </div>
+    <div class="results-breakdown" id="results-breakdown"></div>
+    <div class="results-btns">
+      <button class="btn-primary" onclick="App.playAgain()">Play Again</button>
+      <button class="btn-secondary" onclick="App.showSubjectSelect()">Change Subject</button>
+      <button class="btn-outline" onclick="App.showGradeSelect()">Change Grade</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level Test Setup Screen -->
+<div id="screen-lt-setup" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showWelcome()">← Back</button>
+    <h1>Level Test</h1>
+  </div>
+  <div class="lt-setup-body">
+    <div class="lt-intro-card">
+      <div class="lt-intro-icon">🎯</div>
+      <h2>Find Your Level</h2>
+      <p>100 adaptive questions — 20 per subject.<br>
+         Get one right → harder. Get one wrong → easier.<br>
+         Your real grade level and IQ score are calculated at the end.</p>
+    </div>
+    <div class="lt-option-card">
+      <label class="lt-opt-label">IQ Score Rounding</label>
+      <div class="lt-radio-group" id="lt-rounding-group">
+        <button class="lt-radio-btn lt-radio-active" data-val="10" onclick="App.setLtRounding(10,this)">Nearest 10</button>
+        <button class="lt-radio-btn" data-val="5" onclick="App.setLtRounding(5,this)">Nearest 5</button>
+        <button class="lt-radio-btn" data-val="1" onclick="App.setLtRounding(1,this)">Exact</button>
+      </div>
+    </div>
+    <div class="lt-option-card">
+      <label class="lt-opt-label">Starting Difficulty</label>
+      <div class="lt-radio-group" id="lt-start-group">
+        <button class="lt-radio-btn lt-radio-active" data-val="auto" onclick="App.setLtStart('auto',this)">Auto (from progress)</button>
+        <button class="lt-radio-btn" data-val="easy" onclick="App.setLtStart('easy',this)">Easy (Grade 3)</button>
+        <button class="lt-radio-btn" data-val="mid" onclick="App.setLtStart('mid',this)">Medium (Grade 6)</button>
+        <button class="lt-radio-btn" data-val="hard" onclick="App.setLtStart('hard',this)">Hard (Grade 10)</button>
+      </div>
+    </div>
+    <button class="btn-start lt-start-btn" onclick="App.beginLevelTest()">Begin Test 🎯</button>
+  </div>
+</div>
+
+<!-- Level Test Play Screen -->
+<div id="screen-lt-play" class="screen">
+  <div class="play-header">
+    <button class="back-btn-sm" onclick="App.confirmLtExit()">✕ Exit</button>
+    <div class="play-progress">
+      <span class="q-label" id="lt-q-label">Math 1/20</span>
+      <div class="progress-bar"><div class="progress-fill" id="lt-progress-fill"></div></div>
+    </div>
+    <div class="lt-diff-badge" id="lt-diff-badge">Grade 5</div>
+  </div>
+  <div class="play-body" id="lt-play-body"></div>
+</div>
+
+<!-- Level Test Results Screen -->
+<div id="screen-lt-results" class="screen">
+  <div class="lt-results-body">
+    <div class="lt-iq-card" id="lt-iq-card">
+      <div class="lt-iq-label">Your IQ Score</div>
+      <div class="lt-iq-number" id="lt-iq-number">—</div>
+      <div class="lt-iq-desc" id="lt-iq-desc"></div>
+    </div>
+    <div class="lt-overall-grade" id="lt-overall-grade"></div>
+    <div class="lt-subject-section">
+      <div class="prog-section-title">Subject Levels</div>
+      <div id="lt-subject-cards" class="lt-subject-grid"></div>
+    </div>
+    <div class="results-btns" style="max-width:440px;width:100%;margin:0 auto">
+      <button class="btn-primary" onclick="App.showWelcome()">Back to Home</button>
+      <button class="btn-secondary" onclick="App.showProgress()">📊 View Full Progress</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Screen -->
+<div id="screen-progress" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showWelcome()">← Back</button>
+    <h1>My Progress</h1>
+  </div>
+  <div class="progress-screen-body">
+    <div id="overall-level-wrap" class="overall-level-wrap"></div>
+    <div id="iq-bar-section" class="iq-bar-section"></div>
+    <div class="prog-section-title">Subject Ratings</div>
+    <div id="progress-cards" class="prog-cards"></div>
+    <button class="btn-outline prog-reset-btn" onclick="App.confirmClearProgress()">🗑 Reset All Progress</button>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 id="modal-title">Exit?</h2>
+    <p id="modal-msg">Your progress will be lost.</p>
+    <div class="modal-btns">
+      <button class="btn-primary" id="modal-ok">Yes, Exit</button>
+      <button class="btn-secondary" id="modal-cancel" onclick="App.closeModal()">Keep Going</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Flash -->
+<div id="feedback-flash" class="feedback-flash hidden">
+  <div class="flash-inner" id="flash-inner"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="audio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
