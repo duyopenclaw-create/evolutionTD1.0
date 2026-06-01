@@ -1279,13 +1279,26 @@ Respond with ONLY a JSON object, no other text:
     prog[subject][grade].correct += score;
     prog[subject][grade].total += total;
     prog[subject][grade].sessions += 1;
-    // Append IQ snapshot to history for the stock chart
+
+    // Overall IQ snapshot for the main stock chart
     if (!prog.history) prog.history = [];
     const iq = computeIQFromProg(prog);
     if (iq) {
       prog.history.push({ ts: Date.now(), iq, subject });
       if (prog.history.length > 200) prog.history = prog.history.slice(-200);
     }
+
+    // Per-subject accuracy snapshot for individual subject charts
+    if (!prog.subjectHistory) prog.subjectHistory = {};
+    if (!prog.subjectHistory[subject]) prog.subjectHistory[subject] = [];
+    let tc = 0, tq = 0;
+    for (const g of GRADE_ORDER) {
+      if (prog[subject][g]) { tc += prog[subject][g].correct; tq += prog[subject][g].total; }
+    }
+    const sacc = tq > 0 ? Math.round(tc / tq * 100) : 0;
+    prog.subjectHistory[subject].push({ ts: Date.now(), acc: sacc });
+    if (prog.subjectHistory[subject].length > 50) prog.subjectHistory[subject] = prog.subjectHistory[subject].slice(-50);
+
     saveProgress(prog);
   }
 
@@ -1347,6 +1360,50 @@ Respond with ONLY a JSON object, no other text:
         <span class="chart-sessions">${pts.length} session${pts.length!==1?'s':''}</span>
         <span class="chart-delta ${isUp?'chart-up':'chart-down'}">${arrow} ${changePct}% ${isUp?'growth':'decline'}</span>
         <span class="chart-range">IQ ${Math.min(...iqs)}–${Math.max(...iqs)}</span>
+      </div>`;
+  }
+
+  // ─── Mini Subject Sparkline ───────────────────────────────
+  const SUBJ_COLORS = { math:'#ff6b6b', reading:'#4ecdc4', writing:'#45b7d1', spelling:'#96ceb4', science:'#f9ca24' };
+
+  function buildMiniChart(history, subject) {
+    if (!history || history.length < 2) return '<div class="mini-empty">Play more sessions to see growth</div>';
+
+    const W = 300, H = 48;
+    const vals = history.map(h => h.acc);
+    const rawMin = Math.min(...vals), rawMax = Math.max(...vals);
+    const spread = Math.max(rawMax - rawMin, 8);
+    const yMin = Math.max(0, rawMin - spread * 0.2);
+    const yMax = Math.min(100, rawMax + spread * 0.2);
+
+    const xS = i => (i / (vals.length - 1)) * W;
+    const yS = v => H - ((v - yMin) / Math.max(yMax - yMin, 1)) * H;
+
+    const coords = vals.map((v,i) => `${xS(i).toFixed(1)},${yS(v).toFixed(1)}`).join(' ');
+    const first = vals[0], last = vals[vals.length - 1];
+    const isUp = last >= first;
+    const c = isUp ? '#4ecdc4' : '#ff6b6b';
+    const changePct = first > 0 ? Math.round(Math.abs((last - first) / first * 100)) : 0;
+    const gid = `mg_${subject}`;
+    const area = `0,${H} ${coords} ${xS(vals.length-1).toFixed(1)},${H}`;
+
+    return `
+      <div class="mini-chart-row">
+        <svg viewBox="0 0 ${W} ${H}" class="mini-svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${c}" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="${c}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon points="${area}" fill="url(#${gid})"/>
+          <polyline points="${coords}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="${xS(vals.length-1).toFixed(1)}" cy="${yS(last).toFixed(1)}" r="3.5" fill="${c}"/>
+        </svg>
+        <div class="mini-stats">
+          <span class="mini-delta ${isUp?'chart-up':'chart-down'}">${isUp?'▲':'▼'} ${changePct}%</span>
+          <span class="mini-range">${Math.min(...vals)}%–${Math.max(...vals)}%</span>
+        </div>
       </div>`;
   }
 
@@ -1537,6 +1594,7 @@ Respond with ONLY a JSON object, no other text:
     }
 
     // ── Subject cards ──
+    const subjectHistory = prog.subjectHistory || {};
     const cardsEl = document.getElementById('progress-cards');
     cardsEl.innerHTML = subjects.map(s => {
       const level = getSubjectLevel(s.key);
@@ -1545,23 +1603,26 @@ Respond with ONLY a JSON object, no other text:
       const starsHtml = [1,2,3,4,5].map(i =>
         `<span class="pstar ${i<=stars?'pstar-lit':'pstar-dim'}">★</span>`).join('');
       const lbl = level ? gradeLabel(level) : (stats.hasData ? 'Keep practicing!' : 'No sessions yet');
-      const accBar = stats.hasData ? `<div class="prog-acc-bar"><div class="prog-acc-fill" style="width:${stats.acc}%"></div></div>` : '';
+      const hist = subjectHistory[s.key] || [];
+      const miniChart = buildMiniChart(hist, s.key);
       return `
-        <div class="prog-card prog-subj-${s.cls}">
-          <div class="prog-left">
-            <span class="prog-icon">${s.icon}</span>
-            <div class="prog-meta">
-              <div class="prog-name">${s.name}</div>
-              <div class="prog-level-lbl ${level?'prog-level-has':''}">${lbl}</div>
+        <div class="prog-card prog-subj-${s.cls} ${hist.length >= 2 ? 'prog-card-has-chart' : ''}">
+          <div class="prog-card-top">
+            <div class="prog-left">
+              <span class="prog-icon">${s.icon}</span>
+              <div class="prog-meta">
+                <div class="prog-name">${s.name}</div>
+                <div class="prog-level-lbl ${level?'prog-level-has':''}">${lbl}</div>
+              </div>
+            </div>
+            <div class="prog-right">
+              <div class="prog-stars">${starsHtml}</div>
+              ${stats.hasData
+                ? `<div class="prog-stat">${stats.acc}% · ${stats.sessions} session${stats.sessions!==1?'s':''}</div>`
+                : '<div class="prog-stat">—</div>'}
             </div>
           </div>
-          <div class="prog-right">
-            <div class="prog-stars">${starsHtml}</div>
-            ${stats.hasData
-              ? `<div class="prog-stat">${stats.acc}% · ${stats.sessions} session${stats.sessions!==1?'s':''}</div>
-                 ${accBar}`
-              : '<div class="prog-stat">—</div>'}
-          </div>
+          ${hist.length >= 2 ? `<div class="prog-chart-section">${miniChart}</div>` : ''}
         </div>`;
     }).join('');
   }
