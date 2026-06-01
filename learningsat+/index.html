@@ -14,8 +14,10 @@
   <div class="welcome-center">
     <div class="app-logo">Learning<span class="sat-text">SAT</span><span class="plus-text">+</span></div>
     <p class="tagline">Master every subject. Ace every test.</p>
+    <div class="welcome-wallet">⭐ <span class="star-wallet-count">0</span> stars</div>
     <button class="btn-start" onclick="App.showGradeSelect()">Start Learning 🚀</button>
     <button class="btn-level-test" onclick="App.showLevelSetup()">🎯 Take Level Test</button>
+    <button class="btn-games" onclick="App.showStore()">🎮 Games Store</button>
     <button class="btn-progress-home" onclick="App.showProgress()">📊 My Progress</button>
     <button class="btn-api-key" onclick="App.openApiKeySettings()">🔑 AI Writing Key</button>
   </div>
@@ -236,6 +238,58 @@
       <button class="btn-secondary" onclick="App.showProgress()">📊 View Full Progress</button>
     </div>
   </div>
+</div>
+
+<!-- Games Store Screen -->
+<div id="screen-store" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" onclick="App.showWelcome()">← Back</button>
+    <h1>🎮 Games Store</h1>
+    <div class="store-wallet">⭐ <span class="star-wallet-count">0</span></div>
+  </div>
+  <div class="store-body">
+    <div class="store-earn-tip">💡 Earn stars by completing practice &amp; tests. Bullseyes in Archery give 5 bonus stars!</div>
+    <div id="store-games"></div>
+  </div>
+</div>
+
+<!-- Match Game Screen -->
+<div id="screen-match" class="screen">
+  <div class="game-header">
+    <button class="back-btn-sm" onclick="App.exitGame()">✕ Exit</button>
+    <span class="game-header-title">🃏 Match</span>
+    <div class="game-header-info">
+      <span class="game-timer" id="match-timer">0:00</span>
+      <span class="game-record" id="match-record">Best: --</span>
+    </div>
+  </div>
+  <div class="match-grid" id="match-grid"></div>
+</div>
+
+<!-- Pizzeria Screen -->
+<div id="screen-pizzeria" class="screen">
+  <div class="game-header">
+    <button class="back-btn-sm" onclick="App.exitGame()">✕ Exit</button>
+    <span class="game-header-title">🍕 Pizzeria</span>
+    <div class="game-header-info">
+      <span class="game-timer" id="pizzeria-timer">1:00</span>
+      <span class="game-record" id="pizzeria-score-hdr">0 🍕</span>
+    </div>
+  </div>
+  <div class="pizzeria-body" id="pizzeria-body"></div>
+</div>
+
+<!-- Archery Screen -->
+<div id="screen-archery" class="screen">
+  <div class="game-header">
+    <button class="back-btn-sm" onclick="App.exitGame()">✕ Exit</button>
+    <span class="game-header-title">🏹 Archery</span>
+    <div class="game-header-info">
+      <span id="archery-pts">0 pts</span>
+      <span id="archery-wallet-gain" class="archery-wallet-gain">⭐ 0 earned</span>
+    </div>
+  </div>
+  <div class="archery-body" id="archery-body"></div>
 </div>
 
 <!-- Progress Screen -->

@@ -489,6 +489,170 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 99px; }
 
+/* ─── Welcome wallet display ──────────────────────────────── */
+.welcome-wallet {
+  font-size: 1.1rem; font-weight: 800; color: #f7d060;
+  margin: 4px 0 10px;
+  text-shadow: 0 0 16px rgba(247,208,96,0.5);
+}
+.btn-games {
+  display: block; margin: 10px auto 0;
+  background: linear-gradient(135deg, #ff9f43, #ee5a24);
+  color: #fff; border: none; border-radius: 50px;
+  font-size: 1.1rem; font-weight: 800;
+  padding: 14px 36px; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(255,159,67,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-games:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(255,159,67,0.6); }
+
+/* ─── Games Store ─────────────────────────────────────────── */
+.store-body { overflow-y: auto; padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 14px; }
+.store-wallet { background: rgba(247,208,96,0.15); color: #f7d060; font-weight: 800; padding: 6px 14px; border-radius: 50px; border: 1px solid rgba(247,208,96,0.3); }
+.store-earn-tip { background: rgba(124,106,247,0.1); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.83rem; color: var(--text-dim); }
+
+.game-card {
+  background: var(--surface2); border-radius: var(--radius);
+  border: 2px solid; overflow: hidden;
+  animation: fadeInUp 0.25s ease;
+}
+.game-card-head {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 16px 18px 12px;
+  background: rgba(255,255,255,0.03);
+}
+.game-big-icon { font-size: 2.6rem; flex-shrink: 0; }
+.game-card-name { font-size: 1.2rem; font-weight: 900; margin-bottom: 4px; }
+.game-card-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
+.game-card-foot { padding: 12px 18px; display: flex; flex-direction: column; gap: 10px; }
+.game-tok-count { font-size: 0.82rem; color: var(--text-dim); font-weight: 600; }
+.tok-active { color: #4ecdc4; }
+.game-buy-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn-play-now {
+  color: #fff; border: none; border-radius: 50px;
+  padding: 10px 20px; font-size: 1rem; font-weight: 800;
+  cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+}
+.btn-play-now:hover { transform: scale(1.05); }
+.btn-buy-one, .btn-buy-bundle {
+  background: var(--surface3); color: var(--text);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
+  padding: 9px 14px; font-size: 0.83rem; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-buy-one:hover, .btn-buy-bundle:hover { border-color: #f7d060; color: #f7d060; }
+.save-tag { background: rgba(78,205,196,0.2); color: var(--green); border-radius: 4px; padding: 1px 5px; font-size: 0.72rem; }
+
+/* ─── Shared game header ──────────────────────────────────── */
+.game-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; background: var(--surface);
+  border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+}
+.game-header-title { font-size: 1.1rem; font-weight: 800; flex: 1; }
+.game-header-info { display: flex; gap: 12px; align-items: center; }
+.game-timer { font-size: 1.1rem; font-weight: 900; font-variant-numeric: tabular-nums; color: #f7d060; }
+.game-record { font-size: 0.8rem; color: var(--text-dim); }
+.archery-wallet-gain { font-size: 0.85rem; font-weight: 800; color: #f7d060; }
+
+/* ─── Game results shared ────────────────────────────────── */
+.game-result-screen {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 40px 24px; text-align: center;
+  animation: fadeInUp 0.35s ease;
+}
+.gr-stars { display: flex; gap: 6px; }
+.gr-stars .star { font-size: 2.5rem; }
+.gr-main { font-size: 1.8rem; font-weight: 900; }
+.gr-record { color: #f7d060; font-size: 1rem; font-weight: 800; }
+.gr-sub { color: var(--text-dim); font-size: 0.9rem; }
+.gr-earned { font-size: 1rem; color: #4ecdc4; font-weight: 700; }
+.gr-bonus-stars { font-size: 1rem; color: #f7d060; font-weight: 700; }
+.gr-btns { display: flex; gap: 10px; }
+
+/* ─── Match Card Game ─────────────────────────────────────── */
+.match-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; padding: 20px; flex: 1; overflow: hidden;
+  align-items: center;
+}
+.match-card {
+  aspect-ratio: 1; cursor: pointer;
+  perspective: 500px;
+}
+.mc-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease;
+}
+.match-card.mc-flipped .mc-inner,
+.match-card.mc-matched .mc-inner { transform: rotateY(180deg); }
+.mc-back, .mc-front {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); backface-visibility: hidden;
+  font-weight: 700;
+}
+.mc-back {
+  background: linear-gradient(135deg, var(--accent), #9b5de5);
+  font-size: 1.4rem; color: rgba(255,255,255,0.6);
+}
+.mc-front {
+  transform: rotateY(180deg);
+  background: var(--surface3);
+  border: 2px solid rgba(255,255,255,0.1);
+  font-size: clamp(0.7rem, 2.5vw, 1rem); color: var(--text);
+  text-align: center; padding: 4px;
+}
+.match-card.mc-matched .mc-front {
+  background: rgba(78,205,196,0.2); border-color: var(--green);
+  color: var(--green);
+}
+
+/* ─── Pizzeria ────────────────────────────────────────────── */
+.pizzeria-body { flex: 1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; padding: 16px; }
+.pizza-scene { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 400px; width: 100%; }
+.pizza-customer-bubble {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 14px 20px; font-size: 1rem; text-align: center;
+  border: 2px solid rgba(255,255,255,0.08); width: 100%;
+}
+.pizza-customer-name { font-weight: 800; color: var(--accent); }
+.pizza-want { font-size: 1.3rem; font-weight: 900; color: #ff6b6b; }
+.pizza-svg-wrap { display: flex; justify-content: center; }
+.pizza-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pizza-btn {
+  background: var(--surface3); color: var(--text);
+  border: 2px solid rgba(255,255,255,0.1); border-radius: 50px;
+  padding: 10px 18px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.pizza-btn:hover { border-color: #ff9f43; color: #ff9f43; transform: scale(1.05); }
+.pizza-btn-target { border-color: rgba(78,205,196,0.3); }
+.pizza-fb { border-radius: var(--radius-sm); padding: 10px 18px; font-weight: 700; font-size: 1rem; text-align: center; }
+.fb-correct { background: rgba(78,205,196,0.15); color: var(--green); border: 1px solid rgba(78,205,196,0.3); }
+.fb-wrong { background: rgba(255,107,107,0.15); color: var(--accent2); border: 1px solid rgba(255,107,107,0.3); }
+
+/* ─── Archery ─────────────────────────────────────────────── */
+.archery-body { flex: 1; overflow-y: auto; padding: 16px; }
+.archery-layout { display: flex; gap: 16px; max-width: 700px; margin: 0 auto; align-items: flex-start; }
+@media (max-width: 580px) { .archery-layout { flex-direction: column; align-items: center; } }
+.archery-left { display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; }
+.archery-right { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.aim-bar-wrap { width: 150px; text-align: center; }
+.aim-bar-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.aim-bar-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+.aim-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.aim-streak { font-size: 0.82rem; color: var(--text-dim); margin-top: 4px; }
+.archery-arrows-left { font-size: 0.82rem; color: var(--text-dim); }
+.arch-q { font-size: 1.3rem !important; }
+.bullseye-alert {
+  background: rgba(247,208,96,0.15); border: 2px solid rgba(247,208,96,0.4);
+  border-radius: var(--radius-sm); padding: 10px 16px;
+  color: #f7d060; font-weight: 800; font-size: 0.9rem; text-align: center;
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
 /* ─── API Key Button ──────────────────────────────────────── */
 .btn-api-key {
   display: block; margin: 8px auto 0;

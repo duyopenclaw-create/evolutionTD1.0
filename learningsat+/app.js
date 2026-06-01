@@ -29,8 +29,9 @@ const App = (() => {
       spellingCorrect: 0,
       pendingMode: null,
       pendingTime: null,
-      autosavedScore: 0,  // how much has already been persisted this session
+      autosavedScore: 0,
       autosavedTotal: 0,
+      starsAwarded: false,
     };
   }
 
@@ -49,6 +50,7 @@ const App = (() => {
     createStars();
     showScreen('screen-welcome');
     Audio.startMusic();
+    updateStarDisplays();
   }
 
   function showGradeSelect() {
@@ -926,6 +928,11 @@ Respond with ONLY a JSON object, no other text:
   function setStars(score, total) {
     const pct = total > 0 ? score / total : 0;
     const stars = pct >= 0.9 ? 3 : pct >= 0.7 ? 2 : pct >= 0.4 ? 1 : 0;
+    // Award wallet stars once per session
+    if (!state.starsAwarded && stars > 0) {
+      state.starsAwarded = true;
+      addStarsToWallet(stars);
+    }
     const starsEl = document.getElementById('results-stars');
     if (starsEl) {
       starsEl.innerHTML = [1,2,3].map(i =>
@@ -1239,6 +1246,435 @@ Respond with ONLY a JSON object, no other text:
     ok.textContent = 'Yes, Exit';
     ok.onclick = () => { closeModal(); showWelcome(); };
     modal.classList.remove('hidden');
+  }
+
+  // ─── STAR WALLET & TOKEN SYSTEM ──────────────────────────
+  const WALLET_KEY  = 'lsp_stars';
+  const TOKENS_KEY  = 'lsp_tokens';
+
+  function getWallet() { return parseInt(localStorage.getItem(WALLET_KEY) || '0', 10); }
+  function addStarsToWallet(n) {
+    if (n <= 0) return;
+    localStorage.setItem(WALLET_KEY, getWallet() + n);
+    updateStarDisplays();
+  }
+  function spendStars(n) {
+    const s = getWallet();
+    if (s < n) return false;
+    localStorage.setItem(WALLET_KEY, s - n);
+    updateStarDisplays();
+    return true;
+  }
+  function getTokens() { try { return JSON.parse(localStorage.getItem(TOKENS_KEY) || '{}'); } catch(e) { return {}; } }
+  function addTokens(game, n) { const t=getTokens(); t[game]=(t[game]||0)+n; localStorage.setItem(TOKENS_KEY,JSON.stringify(t)); }
+  function useToken(game) { const t=getTokens(); if(!(t[game]>0)) return false; t[game]--; localStorage.setItem(TOKENS_KEY,JSON.stringify(t)); return true; }
+  function updateStarDisplays() {
+    const s = getWallet();
+    document.querySelectorAll('.star-wallet-count').forEach(el => el.textContent = s);
+  }
+
+  // ─── GAMES STORE ─────────────────────────────────────────
+  function showStore() {
+    Audio.click();
+    showScreen('screen-store');
+    updateStarDisplays();
+    renderStore();
+  }
+
+  function renderStore() {
+    const tokens = getTokens();
+    const GAMES = [
+      { key:'match',    name:'Match',    icon:'🃏', color:'#7c6af7',
+        desc:'Flip face-down cards and find pairs of equal values. Beat your best time!' },
+      { key:'pizzeria', name:'Pizzeria', icon:'🍕', color:'#ff9f43',
+        desc:'Customers order fractions of pizza — cut it right and serve them fast. Score = pizzas served!' },
+      { key:'archery',  name:'Archery',  icon:'🏹', color:'#4ecdc4',
+        desc:'Solve math equations to aim your arrow. Build a streak for a bullseye — worth 5 real stars!' },
+    ];
+    document.getElementById('store-games').innerHTML = GAMES.map(g => {
+      const tok = tokens[g.key] || 0;
+      return `
+        <div class="game-card" style="border-color:${g.color}50">
+          <div class="game-card-head">
+            <span class="game-big-icon">${g.icon}</span>
+            <div class="game-card-info">
+              <div class="game-card-name">${g.name}</div>
+              <div class="game-card-desc">${g.desc}</div>
+            </div>
+          </div>
+          <div class="game-card-foot">
+            <div class="game-tok-count ${tok>0?'tok-active':''}">
+              ${tok > 0 ? `${tok} play${tok!==1?'s':''} ready` : 'No plays left'}
+            </div>
+            <div class="game-buy-row">
+              ${tok > 0 ? `<button class="btn-play-now" style="background:${g.color}" onclick="App.playGame('${g.key}')">▶ Play</button>` : ''}
+              <button class="btn-buy-one" onclick="App.buyGame('${g.key}',1)">1 play <strong>⭐50</strong></button>
+              <button class="btn-buy-bundle" onclick="App.buyGame('${g.key}',10)">×10 bundle <strong>⭐400</strong> <span class="save-tag">save 100!</span></button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function buyGame(game, qty) {
+    Audio.click();
+    const cost = qty === 1 ? 50 : 400;
+    if (!spendStars(cost)) {
+      showFlash(`Need ⭐${cost} stars!`, 'flash-wrong');
+      Audio.wrong();
+      return;
+    }
+    addTokens(game, qty);
+    Audio.correct();
+    showFlash(`+${qty} play${qty>1?'s':''} unlocked! 🎮`, 'flash-correct');
+    renderStore();
+  }
+
+  function playGame(game) {
+    Audio.click();
+    if (!useToken(game)) { showFlash('No plays left! Buy more.', 'flash-wrong'); return; }
+    switch(game) {
+      case 'match':    startMatch();    break;
+      case 'pizzeria': startPizzeria(); break;
+      case 'archery':  startArchery();  break;
+    }
+  }
+
+  function exitGame() {
+    Audio.click();
+    if (matchState.timer) { clearInterval(matchState.timer); matchState.timer = null; }
+    if (pizzaTimer)       { clearInterval(pizzaTimer); pizzaTimer = null; }
+    showStore();
+  }
+
+  // ─── MATCH CARD GAME ─────────────────────────────────────
+  const MATCH_PAIRS = [
+    {id:0, a:"3 × 4",   b:"12"},
+    {id:1, a:"5 + 8",   b:"13"},
+    {id:2, a:"20 − 6",  b:"14"},
+    {id:3, a:"45 ÷ 5",  b:"9"},
+    {id:4, a:"1/2",     b:"50%"},
+    {id:5, a:"1/4",     b:"25%"},
+    {id:6, a:"√25",     b:"5"},
+    {id:7, a:"2³",      b:"8"},
+  ];
+  const MATCH_RECORD_KEY = 'lsp_match_best';
+  let matchState = { timer: null };
+
+  function startMatch() {
+    showScreen('screen-match');
+    const cards = [];
+    MATCH_PAIRS.forEach(p => {
+      cards.push({id:p.id, val:p.a, flipped:false, matched:false});
+      cards.push({id:p.id, val:p.b, flipped:false, matched:false});
+    });
+    for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
+    matchState = { cards, firstIdx:null, secondIdx:null, matches:0, seconds:0, timer:null, canFlip:true };
+    const rec = localStorage.getItem(MATCH_RECORD_KEY);
+    document.getElementById('match-record').textContent = rec ? `Best: ${formatTime(parseInt(rec))}` : 'Best: --';
+    document.getElementById('match-timer').textContent = '0:00';
+    renderMatchGrid();
+    matchState.timer = setInterval(() => {
+      matchState.seconds++;
+      document.getElementById('match-timer').textContent = formatTime(matchState.seconds);
+    }, 1000);
+  }
+
+  function renderMatchGrid() {
+    document.getElementById('match-grid').innerHTML = matchState.cards.map((c,i) => `
+      <div class="match-card ${c.flipped?'mc-flipped':''} ${c.matched?'mc-matched':''}" onclick="App.flipCard(${i})">
+        <div class="mc-inner">
+          <div class="mc-back">?</div>
+          <div class="mc-front">${c.val}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function flipCard(idx) {
+    if (!matchState.canFlip) return;
+    const c = matchState.cards[idx];
+    if (c.flipped || c.matched) return;
+    Audio.click();
+    c.flipped = true;
+    if (matchState.firstIdx === null) {
+      matchState.firstIdx = idx;
+      renderMatchGrid();
+    } else {
+      matchState.secondIdx = idx;
+      matchState.canFlip = false;
+      renderMatchGrid();
+      const a = matchState.cards[matchState.firstIdx];
+      const b = matchState.cards[matchState.secondIdx];
+      if (a.id === b.id) {
+        Audio.correct();
+        a.matched = b.matched = true;
+        matchState.matches++;
+        matchState.firstIdx = matchState.secondIdx = null;
+        matchState.canFlip = true;
+        renderMatchGrid();
+        if (matchState.matches === MATCH_PAIRS.length) { clearInterval(matchState.timer); setTimeout(showMatchResults, 500); }
+      } else {
+        Audio.wrong();
+        setTimeout(() => {
+          a.flipped = b.flipped = false;
+          matchState.firstIdx = matchState.secondIdx = null;
+          matchState.canFlip = true;
+          renderMatchGrid();
+        }, 900);
+      }
+    }
+  }
+
+  function showMatchResults() {
+    const t = matchState.seconds;
+    const prev = parseInt(localStorage.getItem(MATCH_RECORD_KEY) || '99999', 10);
+    const isRecord = t < prev;
+    if (isRecord) localStorage.setItem(MATCH_RECORD_KEY, t);
+    const stars = t <= 30 ? 3 : t <= 60 ? 2 : 1;
+    addStarsToWallet(stars);
+    if (isRecord) Audio.fanfare(); else Audio.correct();
+    document.getElementById('match-grid').innerHTML = `
+      <div class="game-result-screen">
+        <div class="gr-stars">${[1,2,3].map(i=>`<span class="star ${i<=stars?'star-lit':'star-dim'}">★</span>`).join('')}</div>
+        <div class="gr-main">⏱ ${formatTime(t)}</div>
+        ${isRecord ? '<div class="gr-record">🏆 New Record!</div>' : `<div class="gr-sub">Best: ${formatTime(prev)}</div>`}
+        <div class="gr-earned">+${stars} ⭐ added to wallet</div>
+        <div class="gr-btns">
+          <button class="btn-primary" onclick="App.playGame('match')">Play Again</button>
+          <button class="btn-secondary" onclick="App.showStore()">Store</button>
+        </div>
+      </div>`;
+  }
+
+  // ─── PIZZERIA GAME ────────────────────────────────────────
+  const PIZZA_FRACS = [
+    {n:1,d:2,lbl:"1/2"},{n:1,d:3,lbl:"1/3"},{n:1,d:4,lbl:"1/4"},
+    {n:2,d:3,lbl:"2/3"},{n:3,d:4,lbl:"3/4"},{n:1,d:6,lbl:"1/6"},{n:1,d:8,lbl:"1/8"},
+  ];
+  const CUSTOMER_NAMES = ["Alex","Sam","Jordan","Taylor","Morgan","Casey","Riley","Drew","Chris","Pat"];
+  let pizzaState = {};
+  let pizzaTimer = null;
+
+  function startPizzeria() {
+    showScreen('screen-pizzeria');
+    pizzaState = { score:0, timeLeft:60, current:null, feedback:'', fbType:'' };
+    nextPizzaCustomer();
+    if (pizzaTimer) clearInterval(pizzaTimer);
+    pizzaTimer = setInterval(() => {
+      pizzaState.timeLeft--;
+      const el = document.getElementById('pizzeria-timer');
+      if (el) el.textContent = formatTime(pizzaState.timeLeft);
+      if (pizzaState.timeLeft <= 0) { clearInterval(pizzaTimer); pizzaTimer = null; showPizzeriaResults(); }
+    }, 1000);
+  }
+
+  function nextPizzaCustomer() {
+    pizzaState.current = PIZZA_FRACS[rnd(0, PIZZA_FRACS.length-1)];
+    pizzaState.customerName = CUSTOMER_NAMES[rnd(0, CUSTOMER_NAMES.length-1)];
+    pizzaState.feedback = '';
+    renderPizzeria();
+  }
+
+  function renderPizzeria() {
+    const f = pizzaState.current;
+    document.getElementById('pizzeria-score-hdr').textContent = `${pizzaState.score} 🍕`;
+    document.getElementById('pizzeria-body').innerHTML = `
+      <div class="pizza-scene">
+        <div class="pizza-customer-bubble">
+          <span class="pizza-customer-name">${pizzaState.customerName}</span> wants
+          <span class="pizza-want">${f.lbl}</span> of the pizza!
+        </div>
+        <div class="pizza-svg-wrap">${buildPizzaSVG(f.n, f.d)}</div>
+        <div class="pizza-btns">
+          ${PIZZA_FRACS.map(fr =>
+            `<button class="pizza-btn ${fr.lbl===f.lbl?'pizza-btn-target':''}"
+              onclick="App.servePizza('${fr.lbl}','${f.lbl}')">${fr.lbl}</button>`).join('')}
+        </div>
+        ${pizzaState.feedback ? `<div class="pizza-fb ${pizzaState.fbType}">${pizzaState.feedback}</div>` : ''}
+      </div>`;
+  }
+
+  function buildPizzaSVG(n, d) {
+    const cx=80, cy=80, r=65;
+    const sa = -Math.PI/2;
+    const sweep = (n/d)*2*Math.PI;
+    const ea = sa + sweep;
+    const x1=(cx+r*Math.cos(sa)).toFixed(1), y1=(cy+r*Math.sin(sa)).toFixed(1);
+    const x2=(cx+r*Math.cos(ea)).toFixed(1), y2=(cy+r*Math.sin(ea)).toFixed(1);
+    const la = sweep > Math.PI ? 1 : 0;
+    return `<svg viewBox="0 0 160 160" width="150" height="150">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f9ca24" stroke="#e67e22" stroke-width="3"/>
+      <circle cx="65" cy="70" r="5" fill="#c0392b"/><circle cx="95" cy="72" r="5" fill="#c0392b"/>
+      <circle cx="80" cy="92" r="5" fill="#27ae60"/><circle cx="62" cy="88" r="4" fill="#27ae60"/>
+      <circle cx="100" cy="60" r="4" fill="#c0392b"/>
+      <path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${la},1 ${x2},${y2} Z"
+            fill="rgba(255,107,107,0.72)" stroke="#c0392b" stroke-width="2"/>
+      <text x="${cx}" y="${cy-r-10}" text-anchor="middle" font-size="15" font-weight="900" fill="#333">${n}/${d}</text>
+    </svg>`;
+  }
+
+  function servePizza(chosen, target) {
+    if (chosen === target) {
+      Audio.correct();
+      pizzaState.score++;
+      pizzaState.feedback = '✓ Perfect! Next customer…';
+      pizzaState.fbType = 'fb-correct';
+      renderPizzeria();
+      setTimeout(nextPizzaCustomer, 650);
+    } else {
+      Audio.wrong();
+      pizzaState.feedback = `✗ That's ${chosen} — try again!`;
+      pizzaState.fbType = 'fb-wrong';
+      renderPizzeria();
+    }
+  }
+
+  function showPizzeriaResults() {
+    const score = pizzaState.score;
+    const stars = score >= 8 ? 3 : score >= 4 ? 2 : score >= 1 ? 1 : 0;
+    if (stars > 0) addStarsToWallet(stars);
+    if (stars === 3) Audio.fanfare(); else if (stars > 0) Audio.correct(); else Audio.sadEnd();
+    document.getElementById('pizzeria-body').innerHTML = `
+      <div class="game-result-screen">
+        <div class="gr-stars">${[1,2,3].map(i=>`<span class="star ${i<=stars?'star-lit':'star-dim'}">★</span>`).join('')}</div>
+        <div class="gr-main">${score} pizza${score!==1?'s':''} served!</div>
+        <div class="gr-earned">+${stars} ⭐ added to wallet</div>
+        <div class="gr-btns">
+          <button class="btn-primary" onclick="App.playGame('pizzeria')">Play Again</button>
+          <button class="btn-secondary" onclick="App.showStore()">Store</button>
+        </div>
+      </div>`;
+  }
+
+  // ─── ARCHERY GAME ─────────────────────────────────────────
+  let archeryState = {};
+
+  function startArchery() {
+    showScreen('screen-archery');
+    archeryState = {
+      streak: 0, score: 0, starsEarned: 0,
+      arrowsLeft: 10, arrows: [], currentQ: null,
+      grade: state.grade || '6',
+    };
+    document.getElementById('archery-pts').textContent = '0 pts';
+    document.getElementById('archery-wallet-gain').textContent = '⭐ 0 earned';
+    nextArcheryQ();
+  }
+
+  function nextArcheryQ() {
+    if (archeryState.arrowsLeft <= 0) { showArcheryResults(); return; }
+    archeryState.currentQ = generateMathProblem(archeryState.grade, archeryState.streak > 3);
+    archeryState.arrowsLeft--;
+    renderArchery();
+  }
+
+  function renderArchery() {
+    const streak = archeryState.streak;
+    const aimPct = Math.min(100, streak * 18 + 10);
+    const aimColor = aimPct >= 80 ? '#4ecdc4' : aimPct >= 50 ? '#f7d060' : '#ff6b6b';
+    const q = archeryState.currentQ;
+    document.getElementById('archery-body').innerHTML = `
+      <div class="archery-layout">
+        <div class="archery-left">
+          ${buildTargetSVG(archeryState.arrows)}
+          <div class="aim-bar-wrap">
+            <div class="aim-bar-label">Aim Precision</div>
+            <div class="aim-bar-track">
+              <div class="aim-bar-fill" style="width:${aimPct}%;background:${aimColor}"></div>
+            </div>
+            <div class="aim-streak">🔥 Streak: ${streak}</div>
+          </div>
+        </div>
+        <div class="archery-right">
+          <div class="archery-arrows-left">Arrows left: ${archeryState.arrowsLeft}</div>
+          <div class="question-text arch-q">${q.question}</div>
+          <div class="choices-grid">
+            ${q.choices.map(c =>
+              `<button class="choice-btn" onclick="App.shootArrow('${c.replace(/'/g,"&#39;")}')">${c}</button>`
+            ).join('')}
+          </div>
+          ${streak >= 5 ? '<div class="bullseye-alert">🎯 Next correct = BULLSEYE +5⭐!</div>' : ''}
+        </div>
+      </div>`;
+  }
+
+  function buildTargetSVG(arrows) {
+    const rings = [{r:58,fill:'#fff'},{r:46,fill:'#000'},{r:34,fill:'#2196f3'},{r:22,fill:'#f44336'},{r:10,fill:'#ffeb3b'}];
+    const ringsSvg = rings.map(({r,fill}) =>
+      `<circle cx="60" cy="60" r="${r}" fill="${fill}" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>`).join('');
+    const ringNums = rings.map(({r},i) =>
+      `<text x="${60+r-7}" y="63" font-size="7" fill="${i<2?'#aaa':'#555'}">${i+1}</text>`).join('');
+    const arrowsSvg = arrows.map((a,i) => {
+      if (!a.hit) return '';
+      const ringData = [58,42,30,18,6];
+      const dist = ringData[a.ring-1];
+      const angle = (i/(arrows.length||1))*6.28 + i*0.7;
+      const ax = (60 + dist*Math.cos(angle)).toFixed(1);
+      const ay = (60 + dist*Math.sin(angle)).toFixed(1);
+      return `<circle cx="${ax}" cy="${ay}" r="3.5" fill="#ff4444" stroke="white" stroke-width="1.5"/>
+              <line x1="${ax}" y1="${ay}" x2="${ax}" y2="${parseFloat(ay)-12}" stroke="#8B4513" stroke-width="2"/>`;
+    }).join('');
+    return `<svg viewBox="0 0 120 120" width="150" height="150" style="filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4))">
+      ${ringsSvg}${ringNums}${arrowsSvg}
+    </svg>`;
+  }
+
+  function shootArrow(chosen) {
+    const q = archeryState.currentQ;
+    const correct = chosen === q.answer;
+    document.querySelectorAll('#archery-body .choice-btn').forEach(b => {
+      b.disabled = true;
+      if (b.textContent.trim() === q.answer) b.classList.add('correct');
+      else if (b.textContent.trim() === chosen && !correct) b.classList.add('wrong');
+    });
+
+    let ring, bonus = 0;
+    if (correct) {
+      archeryState.streak++;
+      const s = archeryState.streak;
+      ring = s >= 5 ? 5 : s >= 4 ? 4 : s >= 3 ? 3 : s >= 2 ? 2 : 1;
+      archeryState.score += ring;
+      archeryState.arrows.push({ hit:true, ring });
+      if (ring === 5) {
+        bonus = 5;
+        archeryState.starsEarned += 5;
+        addStarsToWallet(5);
+        Audio.fanfare();
+        showFlash('🎯 BULLSEYE! +5⭐', 'flash-correct');
+      } else {
+        Audio.correct();
+        showFlash(`Ring ${ring}! +${ring} pts`, 'flash-correct');
+      }
+    } else {
+      archeryState.streak = 0;
+      archeryState.arrows.push({ hit:false, ring:0 });
+      Audio.wrong();
+      showFlash('Miss!', 'flash-wrong');
+    }
+
+    document.getElementById('archery-pts').textContent = `${archeryState.score} pts`;
+    document.getElementById('archery-wallet-gain').textContent = `⭐ ${archeryState.starsEarned} earned`;
+    setTimeout(nextArcheryQ, 1000);
+  }
+
+  function showArcheryResults() {
+    const score = archeryState.score;
+    const bullseyes = archeryState.arrows.filter(a => a.ring===5).length;
+    const sessionStars = score >= 40 ? 3 : score >= 20 ? 2 : score >= 5 ? 1 : 0;
+    if (sessionStars > 0) addStarsToWallet(sessionStars);
+    if (score >= 40) Audio.fanfare(); else if (score > 0) Audio.correct(); else Audio.sadEnd();
+    document.getElementById('archery-body').innerHTML = `
+      <div class="game-result-screen">
+        <div class="gr-stars">${[1,2,3].map(i=>`<span class="star ${i<=sessionStars?'star-lit':'star-dim'}">★</span>`).join('')}</div>
+        <div class="gr-main">${score} / 50 pts</div>
+        ${bullseyes > 0 ? `<div class="gr-record">🎯 ${bullseyes} bullseye${bullseyes!==1?'s':''}!</div>` : ''}
+        ${archeryState.starsEarned > 0 ? `<div class="gr-bonus-stars">+${archeryState.starsEarned} ⭐ bullseye bonus!</div>` : ''}
+        <div class="gr-earned">+${sessionStars} ⭐ session stars</div>
+        <div class="gr-btns">
+          <button class="btn-primary" onclick="App.playGame('archery')">Play Again</button>
+          <button class="btn-secondary" onclick="App.showStore()">Store</button>
+        </div>
+      </div>`;
   }
 
   // ─── Progress / Rating System ────────────────────────────
@@ -1700,6 +2136,13 @@ Respond with ONLY a JSON object, no other text:
     showProgress,
     confirmClearProgress,
     openApiKeySettings,
+    showStore,
+    buyGame,
+    playGame,
+    exitGame,
+    flipCard,
+    servePizza,
+    shootArrow,
     showLevelSetup,
     setLtRounding,
     setLtStart,
