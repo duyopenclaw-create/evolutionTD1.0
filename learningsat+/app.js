@@ -52,6 +52,7 @@ const App = (() => {
     Audio.startMusic();
     updateStarDisplays();
     renderGreeting();
+    updateStarterBtn();
     // Prompt for name on very first visit
     if (!getName()) setTimeout(() => promptName(false), 800);
   }
@@ -1269,6 +1270,22 @@ Respond with ONLY a JSON object, no other text:
   const NAME_KEY = 'lsp_name';
 
   function getName() { return localStorage.getItem(NAME_KEY) || ''; }
+
+  // Starter pack — one-time claim
+  function updateStarterBtn() {
+    const btn = document.getElementById('btn-starter');
+    if (!btn) return;
+    btn.style.display = localStorage.getItem('lsp_starter_claimed') ? 'none' : 'block';
+  }
+
+  function claimStarter() {
+    if (localStorage.getItem('lsp_starter_claimed')) return;
+    localStorage.setItem('lsp_starter_claimed', '1');
+    addStarsToWallet(1000);
+    Audio.fanfare();
+    showFlash('🎁 +1000 Stars claimed!', 'flash-correct');
+    updateStarterBtn();
+  }
   function setName(n) { localStorage.setItem(NAME_KEY, n.trim()); }
 
   function renderGreeting() {
@@ -2216,6 +2233,7 @@ Respond with ONLY a JSON object, no other text:
     confirmClearProgress,
     openApiKeySettings,
     promptName,
+    claimStarter,
     showStore,
     buyGame,
     playGame,
