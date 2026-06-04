@@ -51,6 +51,9 @@ const App = (() => {
     showScreen('screen-welcome');
     Audio.startMusic();
     updateStarDisplays();
+    renderGreeting();
+    // Prompt for name on very first visit
+    if (!getName()) setTimeout(() => promptName(false), 800);
   }
 
   function showGradeSelect() {
@@ -1248,6 +1251,50 @@ Respond with ONLY a JSON object, no other text:
     modal.classList.remove('hidden');
   }
 
+  // ─── NAME SYSTEM ─────────────────────────────────────────
+  const NAME_KEY = 'lsp_name';
+
+  function getName() { return localStorage.getItem(NAME_KEY) || ''; }
+  function setName(n) { localStorage.setItem(NAME_KEY, n.trim()); }
+
+  function renderGreeting() {
+    const el = document.getElementById('welcome-greeting');
+    if (!el) return;
+    const name = getName();
+    if (name) {
+      el.innerHTML = `<span class="greeting-hi">Hi, ${name}!</span> <button class="greeting-edit" onclick="App.promptName(true)" title="Change name">✏️</button>`;
+    } else {
+      el.innerHTML = `<button class="greeting-set" onclick="App.promptName(false)">👤 Set your name</button>`;
+    }
+  }
+
+  function promptName(isEdit) {
+    const current = getName();
+    const modal = document.getElementById('modal');
+    document.getElementById('modal-title').textContent = isEdit ? 'Change Your Name' : 'What\'s your name?';
+    document.getElementById('modal-msg').innerHTML =
+      `<input id="name-input" type="text" maxlength="20" placeholder="Enter your name…" style="
+        width:100%;margin-top:10px;padding:11px 14px;border-radius:8px;
+        border:2px solid rgba(255,255,255,0.15);background:#16213e;
+        color:#fff;font-size:1.1rem;text-align:center;font-family:inherit;
+      " value="${current}">`;
+    const ok = document.getElementById('modal-ok');
+    ok.textContent = isEdit ? 'Save' : 'Let\'s go! 🚀';
+    ok.onclick = () => {
+      const val = (document.getElementById('name-input') || {}).value || '';
+      if (val.trim()) { setName(val); closeModal(); renderGreeting(); }
+      else closeModal();
+    };
+    const cancel = document.getElementById('modal-cancel');
+    cancel.textContent = 'Skip';
+    cancel.onclick = () => closeModal();
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+      const inp = document.getElementById('name-input');
+      if (inp) { inp.focus(); inp.select(); }
+    }, 80);
+  }
+
   // ─── STAR WALLET & TOKEN SYSTEM ──────────────────────────
   const WALLET_KEY  = 'lsp_stars';
   const TOKENS_KEY  = 'lsp_tokens';
@@ -2145,6 +2192,7 @@ Respond with ONLY a JSON object, no other text:
     showProgress,
     confirmClearProgress,
     openApiKeySettings,
+    promptName,
     showStore,
     buyGame,
     playGame,
