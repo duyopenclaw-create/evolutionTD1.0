@@ -1284,15 +1284,16 @@ Respond with ONLY a JSON object, no other text:
   function renderStore() {
     const tokens = getTokens();
     const GAMES = [
-      { key:'match',    name:'Match',    icon:'🃏', color:'#7c6af7',
+      { key:'match',    name:'Match',    icon:'🃏', color:'#7c6af7', single:50,  bundle:400,
         desc:'Flip face-down cards and find pairs of equal values. Beat your best time!' },
-      { key:'pizzeria', name:'Pizzeria', icon:'🍕', color:'#ff9f43',
-        desc:'Customers order fractions of pizza — cut it right and serve them fast. Score = pizzas served!' },
-      { key:'archery',  name:'Archery',  icon:'🏹', color:'#4ecdc4',
+      { key:'pizzeria', name:'Pizzeria', icon:'🍕', color:'#ff9f43', single:55,  bundle:450,
+        desc:'Customers order fractions of pizza — cut it right and serve them fast. 1 pizza = 1 ⭐!' },
+      { key:'archery',  name:'Archery',  icon:'🏹', color:'#4ecdc4', single:60,  bundle:500,
         desc:'Solve math equations to aim your arrow. Build a streak for a bullseye — worth 5 real stars!' },
     ];
     document.getElementById('store-games').innerHTML = GAMES.map(g => {
       const tok = tokens[g.key] || 0;
+      const bundleSave = g.single * 10 - g.bundle;
       return `
         <div class="game-card" style="border-color:${g.color}50">
           <div class="game-card-head">
@@ -1308,19 +1309,23 @@ Respond with ONLY a JSON object, no other text:
             </div>
             <div class="game-buy-row">
               ${tok > 0 ? `<button class="btn-play-now" style="background:${g.color}" onclick="App.playGame('${g.key}')">▶ Play</button>` : ''}
-              <button class="btn-buy-one" onclick="App.buyGame('${g.key}',1)">1 play <strong>⭐50</strong></button>
-              <button class="btn-buy-bundle" onclick="App.buyGame('${g.key}',10)">×10 bundle <strong>⭐400</strong> <span class="save-tag">save 100!</span></button>
+              <button class="btn-buy-one" onclick="App.buyGame('${g.key}',1)">1 play <strong>⭐${g.single}</strong></button>
+              <button class="btn-buy-bundle" onclick="App.buyGame('${g.key}',10)">×10 bundle <strong>⭐${g.bundle}</strong> <span class="save-tag">save ${bundleSave}!</span></button>
             </div>
           </div>
         </div>`;
     }).join('');
   }
 
+  // Per-game costs — single play and bundle
+  const GAME_COSTS = { match:{single:50,bundle:400}, pizzeria:{single:55,bundle:450}, archery:{single:60,bundle:500} };
+
   function buyGame(game, qty) {
     Audio.click();
-    const cost = qty === 1 ? 50 : 400;
+    const costs = GAME_COSTS[game] || {single:50,bundle:400};
+    const cost = qty === 1 ? costs.single : costs.bundle;
     if (!spendStars(cost)) {
-      showFlash(`Need ⭐${cost} stars!`, 'flash-wrong');
+      showFlash(`Need ⭐ ${cost} stars — keep studying!`, 'flash-wrong');
       Audio.wrong();
       return;
     }
@@ -1531,14 +1536,18 @@ Respond with ONLY a JSON object, no other text:
 
   function showPizzeriaResults() {
     const score = pizzaState.score;
-    const stars = score >= 8 ? 3 : score >= 4 ? 2 : score >= 1 ? 1 : 0;
+    // 1 pizza served = 1 star earned
+    const stars = score;
     if (stars > 0) addStarsToWallet(stars);
-    if (stars === 3) Audio.fanfare(); else if (stars > 0) Audio.correct(); else Audio.sadEnd();
+    if (score >= 8) Audio.fanfare(); else if (score > 0) Audio.correct(); else Audio.sadEnd();
+    // Show 3-star badge based on performance tier (display only, not currency)
+    const badge = score >= 8 ? 3 : score >= 4 ? 2 : score >= 1 ? 1 : 0;
     document.getElementById('pizzeria-body').innerHTML = `
       <div class="game-result-screen">
-        <div class="gr-stars">${[1,2,3].map(i=>`<span class="star ${i<=stars?'star-lit':'star-dim'}">★</span>`).join('')}</div>
+        <div class="gr-stars">${[1,2,3].map(i=>`<span class="star ${i<=badge?'star-lit':'star-dim'}">★</span>`).join('')}</div>
         <div class="gr-main">${score} pizza${score!==1?'s':''} served!</div>
         <div class="gr-earned">+${stars} ⭐ added to wallet</div>
+        <div class="gr-sub" style="color:var(--text-dim);font-size:0.85rem">1 pizza = 1 star</div>
         <div class="gr-btns">
           <button class="btn-primary" onclick="App.playGame('pizzeria')">Play Again</button>
           <button class="btn-secondary" onclick="App.showStore()">Store</button>
