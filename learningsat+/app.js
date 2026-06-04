@@ -1271,19 +1271,36 @@ Respond with ONLY a JSON object, no other text:
 
   function getName() { return localStorage.getItem(NAME_KEY) || ''; }
 
-  // Starter pack — one-time claim
+  // Starter pack — unlocks after earning 10 stars, gives 250, one-time only
+  const STARTER_THRESHOLD = 10;
+  const STARTER_AMOUNT    = 250;
+
   function updateStarterBtn() {
     const btn = document.getElementById('btn-starter');
     if (!btn) return;
-    btn.style.display = localStorage.getItem('lsp_starter_claimed') ? 'none' : 'block';
+    const claimed  = !!localStorage.getItem('lsp_starter_claimed');
+    const unlocked = getTotalEarned() >= STARTER_THRESHOLD;
+    if (claimed) {
+      btn.style.display = 'none';
+    } else if (unlocked) {
+      btn.style.display = 'block';
+      btn.textContent = `🎁 Claim ${STARTER_AMOUNT} Bonus Stars!`;
+    } else {
+      btn.style.display = 'block';
+      const remaining = STARTER_THRESHOLD - getTotalEarned();
+      btn.textContent = `🔒 Earn ${remaining} more star${remaining!==1?'s':''} to unlock bonus`;
+      btn.disabled = true;
+      btn.classList.add('btn-starter-locked');
+    }
   }
 
   function claimStarter() {
     if (localStorage.getItem('lsp_starter_claimed')) return;
+    if (getTotalEarned() < STARTER_THRESHOLD) return;
     localStorage.setItem('lsp_starter_claimed', '1');
-    addStarsToWallet(1000);
+    addStarsToWallet(STARTER_AMOUNT);
     Audio.fanfare();
-    showFlash('🎁 +1000 Stars claimed!', 'flash-correct');
+    showFlash(`🎁 +${STARTER_AMOUNT} Bonus Stars!`, 'flash-correct');
     updateStarterBtn();
   }
   function setName(n) { localStorage.setItem(NAME_KEY, n.trim()); }
@@ -1338,12 +1355,16 @@ Respond with ONLY a JSON object, no other text:
   // ─── STAR WALLET & TOKEN SYSTEM ──────────────────────────
   const WALLET_KEY  = 'lsp_stars';
   const TOKENS_KEY  = 'lsp_tokens';
+  const EARNED_KEY  = 'lsp_stars_earned'; // total ever earned, never decreases
 
   function getWallet() { return parseInt(localStorage.getItem(WALLET_KEY) || '0', 10); }
+  function getTotalEarned() { return parseInt(localStorage.getItem(EARNED_KEY) || '0', 10); }
   function addStarsToWallet(n) {
     if (n <= 0) return;
     localStorage.setItem(WALLET_KEY, getWallet() + n);
+    localStorage.setItem(EARNED_KEY, getTotalEarned() + n);
     updateStarDisplays();
+    updateStarterBtn(); // re-check unlock condition
   }
   function spendStars(n) {
     const s = getWallet();

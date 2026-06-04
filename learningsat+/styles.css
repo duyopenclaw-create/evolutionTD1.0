@@ -526,6 +526,11 @@ html, body {
   transition: transform 0.15s;
 }
 .btn-starter:hover { transform: scale(1.05); animation: none; }
+.btn-starter-locked {
+  background: rgba(255,255,255,0.07) !important;
+  color: var(--text-dim) !important; box-shadow: none !important;
+  animation: none !important; cursor: default !important;
+}
 
 .btn-games {
   display: block; margin: 10px auto 0;
