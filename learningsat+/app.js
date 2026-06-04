@@ -1251,6 +1251,19 @@ Respond with ONLY a JSON object, no other text:
     modal.classList.remove('hidden');
   }
 
+  // ─── BAD WORD FILTER ─────────────────────────────────────
+  const BAD_WORDS = [
+    'ass','arse','bastard','bitch','bollocks','bullshit','cock','crap','cum',
+    'cunt','damn','dick','dildo','douche','dumbass','fag','faggot','fuck',
+    'fucker','fucking','goddamn','hell','homo','jackass','jerk','moron',
+    'motherfucker','nigga','nigger','penis','piss','porn','prick','pussy',
+    'retard','shit','slut','spaz','twat','vagina','wank','whore'
+  ];
+  function hasBadWord(text) {
+    const clean = text.toLowerCase().replace(/[^a-z]/g,'');
+    return BAD_WORDS.some(w => clean.includes(w));
+  }
+
   // ─── NAME SYSTEM ─────────────────────────────────────────
   const NAME_KEY = 'lsp_name';
 
@@ -1281,9 +1294,18 @@ Respond with ONLY a JSON object, no other text:
     const ok = document.getElementById('modal-ok');
     ok.textContent = isEdit ? 'Save' : 'Let\'s go! 🚀';
     ok.onclick = () => {
-      const val = (document.getElementById('name-input') || {}).value || '';
-      if (val.trim()) { setName(val); closeModal(); renderGreeting(); }
-      else closeModal();
+      const val = ((document.getElementById('name-input') || {}).value || '').trim();
+      if (!val) { closeModal(); return; }
+      if (hasBadWord(val)) {
+        const inp = document.getElementById('name-input');
+        if (inp) {
+          inp.style.borderColor = '#ff6b6b';
+          inp.value = '';
+          inp.placeholder = '⚠️ Keep it kind — try again!';
+        }
+        return; // don't close modal
+      }
+      setName(val); closeModal(); renderGreeting();
     };
     const cancel = document.getElementById('modal-cancel');
     cancel.textContent = 'Skip';
