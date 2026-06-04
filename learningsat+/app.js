@@ -1260,8 +1260,9 @@ Respond with ONLY a JSON object, no other text:
     'retard','shit','slut','spaz','twat','vagina','wank','whore'
   ];
   function hasBadWord(text) {
-    const clean = text.toLowerCase().replace(/[^a-z]/g,'');
-    return BAD_WORDS.some(w => clean.includes(w));
+    // Split into individual words so "assassin" doesn't match "ass"
+    const words = text.toLowerCase().split(/[\s\-_.,!?]+/).map(w => w.replace(/[^a-z]/g,''));
+    return BAD_WORDS.some(bad => words.includes(bad));
   }
 
   // ─── NAME SYSTEM ─────────────────────────────────────────
