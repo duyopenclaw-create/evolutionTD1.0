@@ -19,12 +19,13 @@ canvas{display:block;}
 #musouLbl{color:#ffd700;font-size:10px;margin-bottom:2px;text-shadow:1px 1px 2px #000;}
 #musouBar{width:100%;height:8px;background:#221100;border:1px solid #885500;border-radius:2px;overflow:hidden;}
 #musouFill{height:100%;background:linear-gradient(90deg,#ffd700,#ff5500);transition:width .2s;}
-#swLvl{position:fixed;top:18px;left:18px;color:#e8d080;font-size:11px;text-shadow:1px 1px 2px #000;}
-#lvInfo{position:fixed;top:36px;left:18px;color:#fff;font-size:11px;text-shadow:1px 1px 2px #000;}
-#killInfo{position:fixed;top:52px;left:18px;color:#ffccaa;font-size:10px;text-shadow:1px 1px 2px #000;}
-#allyInfo{position:fixed;top:66px;left:18px;color:#88ccff;font-size:10px;text-shadow:1px 1px 2px #000;}
-#wepInd{position:fixed;top:18px;right:200px;color:#fff;font-size:13px;text-shadow:1px 1px 3px #000;}
-#timerDisp{position:fixed;top:18px;left:50%;transform:translateX(-50%);color:#fff;font-size:17px;font-weight:bold;text-shadow:0 0 8px #000;}
+#hudTopLeft{position:fixed;top:12px;left:12px;background:rgba(0,0,0,.55);border-radius:5px;padding:8px 12px;min-width:160px;}
+#swLvl{color:#e8d080;font-size:12px;margin-bottom:2px;}
+#lvInfo{color:#fff;font-size:11px;margin-bottom:1px;}
+#killInfo{color:#ffccaa;font-size:11px;margin-bottom:1px;}
+#allyInfo{color:#88ccff;font-size:11px;}
+#wepInd{position:fixed;top:12px;right:190px;background:rgba(0,0,0,.55);border-radius:4px;padding:5px 10px;color:#fff;font-size:13px;}
+#timerDisp{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);border-radius:4px;padding:4px 14px;color:#fff;font-size:17px;font-weight:bold;}
 #savedInd{position:fixed;top:42px;left:50%;transform:translateX(-50%);color:#ffd700;font-size:12px;opacity:0;transition:opacity .5s;pointer-events:none;}
 #dumpInd{position:fixed;bottom:74px;left:22px;color:#ffbb44;font-size:10px;display:none;}
 #crosshair{position:fixed;top:50%;left:50%;width:14px;height:14px;transform:translate(-50%,-50%);pointer-events:none;}
@@ -56,8 +57,13 @@ canvas{display:block;}
 #cabinScreen .box{border-color:rgba(200,150,60,.8);}
 /* Cutscene */
 #cutsceneOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:150;display:none;flex-direction:column;align-items:center;justify-content:center;}
-#cutsceneTxt{color:#e8d080;font-size:18px;max-width:680px;text-align:center;line-height:1.9;padding:36px;}
+#cutsceneTxt{color:#e8d080;font-size:20px;max-width:700px;text-align:center;line-height:1.9;padding:36px;min-height:80px;}
 #cutsceneHint{position:fixed;bottom:26px;color:rgba(255,255,255,.42);font-size:12px;}
+#interactPrompt{position:fixed;bottom:28%;left:50%;transform:translateX(-50%);color:#ffd700;font-size:16px;background:rgba(0,0,0,.72);border:1px solid rgba(255,215,0,.5);padding:8px 20px;border-radius:4px;display:none;pointer-events:none;z-index:20;}
+#cabinHUD{position:fixed;top:50%;right:18px;transform:translateY(-50%);background:rgba(6,3,0,.9);border:1px solid rgba(180,130,40,.6);border-radius:5px;padding:14px 18px;display:none;z-index:20;min-width:200px;}
+#cabinHUD h3{color:#e8c060;font-size:14px;margin-bottom:10px;text-align:center;}
+#cabinHUD p{color:#c8a040;font-size:11px;margin-bottom:10px;min-height:28px;}
+#critFlash{position:fixed;top:45%;left:50%;transform:translateX(-50%);color:#ff2200;font-size:42px;font-weight:bold;text-shadow:0 0 20px #ff6600;opacity:0;pointer-events:none;transition:opacity .2s;}
 </style>
 </head>
 <body>
@@ -123,10 +129,12 @@ canvas{display:block;}
     <div id="musouLbl">MUSOU: <span id="musouVal">0</span>/100</div>
     <div id="musouBar"><div id="musouFill" style="width:0%"></div></div>
   </div>
-  <div id="swLvl">⚔ Lv.<span id="swLv">1</span>/100 [<span id="swXP">0</span>/<span id="swNxt">10</span>xp]</div>
-  <div id="lvInfo">Level <span id="lvNum">1</span> · Enemies: <span id="enCnt">0</span></div>
-  <div id="killInfo">Kills: <span id="killNum">0</span></div>
-  <div id="allyInfo">Allies: <span id="allyNum">0</span>/5</div>
+  <div id="hudTopLeft">
+    <div id="swLvl">⚔ Lv.<span id="swLv">1</span>/100 [<span id="swXP">0</span>/<span id="swNxt">10</span>xp]</div>
+    <div id="lvInfo">Level <span id="lvNum">1</span> · Enemies: <span id="enCnt">0</span></div>
+    <div id="killInfo">Kills: <span id="killNum">0</span></div>
+    <div id="allyInfo">Allies: <span id="allyNum">0</span>/5</div>
+  </div>
   <div id="dumpInd">🥟 Dumpling ready (H)</div>
   <div id="wepInd">⚔ <span id="wepName">Katana</span></div>
   <div id="timerDisp">30:00</div>
@@ -145,6 +153,18 @@ canvas{display:block;}
 <div id="cutsceneOverlay">
   <div id="cutsceneTxt"></div>
   <div id="cutsceneHint">Hold S to skip</div>
+</div>
+<div id="interactPrompt"></div>
+<div id="critFlash">⚡ CRITICAL!</div>
+<div id="cabinHUD">
+  <h3>🏮 Cabin</h3>
+  <p id="cabinHUDMsg">Rest and prepare for battle.</p>
+  <button class="btn" onclick="clickSnd();cabinHeal()" style="font-size:11px;padding:6px 10px;margin:3px 0">❤ Heal (Full HP)</button>
+  <button class="btn" onclick="clickSnd();cabinSharpen()" style="font-size:11px;padding:6px 10px;margin:3px 0">🗡 Sharpen Sword</button>
+  <button class="btn" onclick="clickSnd();cabinArmor()" style="font-size:11px;padding:6px 10px;margin:3px 0">🛡 Upgrade Armor</button>
+  <button class="btn" id="btnHorseUp2" onclick="clickSnd();cabinHorse()" style="font-size:11px;padding:6px 10px;margin:3px 0;display:none">🐴 Upgrade Horse</button>
+  <button class="btn" onclick="clickSnd();cabinDumpling()" style="font-size:11px;padding:6px 10px;margin:3px 0">🥟 Pocket Dumpling</button>
+  <button class="btn" onclick="clickSnd();cabinFight()" style="font-size:11px;padding:6px 10px;margin:3px 0;background:rgba(100,30,10,.9);">⚔ FIGHT!</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -299,7 +319,7 @@ const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,500);
 window.addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 
 // Lights
-const ambient=new THREE.AmbientLight(0x403020,.65);scene.add(ambient);
+const ambient=new THREE.AmbientLight(0x806858,1.1);scene.add(ambient);
 const sun=new THREE.DirectionalLight(0xffd0a0,1.2);
 sun.position.set(60,90,40);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
@@ -312,12 +332,12 @@ const skyMat=new THREE.MeshBasicMaterial({color:0x1a3a6a,side:THREE.BackSide});
 const skyDome=new THREE.Mesh(skyGeo,skyMat);scene.add(skyDome);
 
 // ── Day/Night ──────────────────────────────────────────────
-let dayTime=0.35; // 0=midnight 0.25=dawn 0.5=noon 0.75=dusk
+let dayTime=0.52; // start at midday (brightest)
 const DAY_COLORS={
-  sky:[0x0a0a18,0x7a5a30,0x4a88cc,0x6a4a20],// night dawn day dusk
-  amb:[0x101018,0x302010,0x504030,0x302018],
-  sun:[0x2040a0,0xffa060,0xffd0a0,0xff8040],
-  fog:[0x05050e,0x6a4a25,0x1a1410,0x2a1808]
+  sky:[0x0d1020,0xc08040,0x6ab0e8,0xe08040],// night dawn day dusk
+  amb:[0x182030,0x504028,0x807868,0x604030],
+  sun:[0x2040a0,0xffb060,0xffe8c0,0xff9040],
+  fog:[0x080810,0x7a5a30,0x3a3028,0x3a2010]
 };
 function lerpCol(a,b,t){
   const ac=new THREE.Color(a),bc=new THREE.Color(b);
@@ -341,7 +361,7 @@ function updateDayNight(dt){
   if(scene.fog)scene.fog.color.set(fogC);scene.background&&scene.background.set&&scene.background.set(fogC);
   // Sun intensity
   const noon=Math.max(0,Math.sin(dayTime*Math.PI*2));
-  sun.intensity=.3+noon*1.1;
+  sun.intensity=.6+noon*1.6;
   // Sun position
   const angle=dayTime*Math.PI*2;
   sun.position.set(Math.cos(angle)*100,Math.abs(Math.sin(angle))*120,Math.sin(angle*0.5)*80);
@@ -674,6 +694,7 @@ class Player{
     this.blocking=false;
     this.atkCD=0;this.bowCD=0;
     this.swingT=0;this.swinging=false;
+    this.hitStreak=0; // critical hit counter
     this.vy=0;this.airY=0;this.inAir=false;
     this.damageTaken=0;
     this.mesh=mkHuman(ARMOR_MATS[armor.level],M.skin,new THREE.MeshPhongMaterial({color:0x111128,shininess:20}));
@@ -759,7 +780,15 @@ class Player{
     for(const e of enemies){
       if(e.dead)continue;
       if(e.mesh.position.distanceTo(this.mesh.position)<ATK_RANGE+.4){
-        e.takeDamage(this.atkDmg);hit=true;spawnGhost(e.mesh.position.clone());
+        this.hitStreak++;
+        const isCrit=this.hitStreak%10===0;
+        const dmg=this.atkDmg*(isCrit?2.5:1);
+        e.takeDamage(dmg);hit=true;spawnGhost(e.mesh.position.clone());
+        if(isCrit){
+          const cf=document.getElementById('critFlash');
+          cf.style.opacity='1';setTimeout(()=>cf.style.opacity='0',600);
+          sfxMusou(); // dramatic sound for crit
+        }
       }
     }
     if(hit)sfxHit();
@@ -1030,43 +1059,95 @@ function levelClear(){
 
 // ── Cabin ──────────────────────────────────────────────────
 let cabinCabinCount=0;
+let cabinInteractors=[];
+
+function buildCabinInteriorObjects(cx,cz){
+  // Clear previous
+  for(const ci of cabinInteractors){if(ci.mesh)scene.remove(ci.mesh);}
+  cabinInteractors=[];
+  // Bed (heal) — left side
+  const bedG=new THREE.Group();
+  const frame=new THREE.Mesh(bx(1.9,.38,2.9),M.wood);frame.position.y=.19;bedG.add(frame);
+  const mattress=new THREE.Mesh(bx(1.7,.26,2.7),new THREE.MeshPhongMaterial({color:0x4a6a88}));mattress.position.y=.45;bedG.add(mattress);
+  const pillow=new THREE.Mesh(bx(.75,.16,.55),new THREE.MeshPhongMaterial({color:0xe0d8c8}));pillow.position.set(0,.56,-1.0);bedG.add(pillow);
+  bedG.position.set(cx-1.5,0,cz+.6);scene.add(bedG);
+  cabinInteractors.push({pos:new THREE.Vector3(cx-1.5,0,cz+.6),label:'[E] Rest & Heal (Full HP)',action:cabinHeal,mesh:bedG});
+  // Whetstone (sharpen) — right side
+  const wsG=new THREE.Group();
+  const wsBase=new THREE.Mesh(bx(.7,.65,.45),M.wood);wsBase.position.y=.32;wsG.add(wsBase);
+  const wsStone=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.12,16),M.stone);wsStone.rotation.z=Math.PI/2;wsStone.position.y=.72;wsG.add(wsStone);
+  wsG.position.set(cx+1.5,0,cz+.5);scene.add(wsG);
+  cabinInteractors.push({pos:new THREE.Vector3(cx+1.5,0,cz+.5),label:`[E] Sharpen Sword (${sword.level*5} kills)`,action:cabinSharpen,mesh:wsG});
+  // Supply chest (dumpling) — back right
+  const chestG=new THREE.Group();
+  const cBody=new THREE.Mesh(bx(.75,.55,.55),M.wood);cBody.position.y=.27;chestG.add(cBody);
+  const cLid=new THREE.Mesh(bx(.77,.15,.57),new THREE.MeshPhongMaterial({color:0x7a5a28}));cLid.position.y=.62;chestG.add(cLid);
+  chestG.position.set(cx+1.5,0,cz-1.0);scene.add(chestG);
+  cabinInteractors.push({pos:new THREE.Vector3(cx+1.5,0,cz-1.0),label:'[E] Take Pocket Dumpling',action:cabinDumpling,mesh:chestG});
+  // Armor stand — back wall
+  const asG=new THREE.Group();
+  const asPost=new THREE.Mesh(cy(.05,.06,1.8,6),M.wood);asPost.position.y=.9;asG.add(asPost);
+  const asCross=new THREE.Mesh(bx(.9,.1,.12),M.wood);asCross.position.y=1.4;asG.add(asCross);
+  const asArmor=new THREE.Mesh(bx(.7,.8,.14),ARMOR_MATS[armor.level]);asArmor.position.y=1.1;asG.add(asArmor);
+  asG.position.set(cx-.1,0,cz+2.0);scene.add(asG);
+  cabinInteractors.push({pos:new THREE.Vector3(cx-.1,0,cz+2.0),label:`[E] Upgrade Armor (${(armor.level+1)*80} kills)`,action:cabinArmor,mesh:asG});
+  // Horse stable sign — far back
+  cabinInteractors.push({pos:new THREE.Vector3(cx,0,cz-1.5),label:'[E] FIGHT! — Leave Cabin',action:cabinFight,mesh:null});
+}
+
 function enterCabin(){
   gState='cabin';cabinCabinCount++;
-  document.getElementById('cabinScreen').style.display='flex';
-  document.getElementById('cabinMsg').textContent=`Level ${currentLevel-1} conquered. Prepare for level ${currentLevel}.`;
-  document.getElementById('sharpCost').textContent=`(${sword.level*5} kills)`;
-  document.getElementById('armorCost').textContent=armor.level<armor.maxLevel?`(${(armor.level+1)*80} kills)`:'MAX';
-  const horseEl=document.getElementById('btnHorseUp');
-  if(cabinCabinCount%2===0&&horseData.level<horseData.maxLevel){
-    horseEl.style.display='block';
-    document.getElementById('horseCost').textContent=`(${(horseData.level+1)*100} kills)`;
-  }else{horseEl.style.display='none';}
+  // Teleport player inside first cabin at (16,6)
+  const cb=cabinPositions[0]||{x:16,z:6};
+  player.mesh.position.set(cb.x,0,cb.z);
+  player.mesh.visible=false;
+  // Build interactive objects
+  buildCabinInteriorObjects(cb.x,cb.z);
+  // Show side HUD (not full overlay)
+  document.getElementById('cabinScreen').style.display='none';
+  const hud=document.getElementById('cabinHUD');
+  hud.style.display='block';
+  document.getElementById('cabinHUDMsg').textContent=`Level ${currentLevel>1?currentLevel-1:1} cleared. Prepare for level ${currentLevel}.`;
+  if(cabinCabinCount%2===0&&horseData.level<horseData.maxLevel)
+    document.getElementById('btnHorseUp2').style.display='block';
+  else document.getElementById('btnHorseUp2').style.display='none';
   startMusic('cabin');saveGame();
 }
-function cabinHeal(){player.hp=player.maxHp;updateHUD();document.getElementById('cabinMsg').textContent='Fully healed!';}
+
+// Cabin msg unified helper
+function setCabinMsg(txt){
+  document.getElementById('cabinHUDMsg').textContent=txt;
+  document.getElementById('cabinMsg').textContent=txt; // legacy fallback
+}
+function cabinHeal(){player.hp=player.maxHp;updateHUD();setCabinMsg('Fully healed! HP restored.');}
 function cabinSharpen(){
-  const cost=sword.level*5;if(totalKills<cost){document.getElementById('cabinMsg').textContent=`Need ${cost} kills to sharpen.`;return;}
-  sword.bonus=sword.level*2;sword.bonusTime=60;document.getElementById('cabinMsg').textContent=`Sword sharpened! +${sword.bonus} dmg for 60s.`;
+  const cost=sword.level*5;if(totalKills<cost){setCabinMsg(`Need ${cost} kills to sharpen.`);return;}
+  sword.bonus=sword.level*2;sword.bonusTime=60;setCabinMsg(`Sword sharpened! +${sword.bonus} dmg for 60s.`);
 }
 function cabinArmor(){
-  if(armor.level>=armor.maxLevel){document.getElementById('cabinMsg').textContent='Armor is already at max level!';return;}
-  const cost=(armor.level+1)*80;if(totalKills<cost){document.getElementById('cabinMsg').textContent=`Need ${cost} kills to upgrade armor.`;return;}
+  if(armor.level>=armor.maxLevel){setCabinMsg('Armor is already at max!');return;}
+  const cost=(armor.level+1)*80;if(totalKills<cost){setCabinMsg(`Need ${cost} kills to upgrade armor.`);return;}
   armor.level++;player.refreshArmor();
-  document.getElementById('cabinMsg').textContent=`Armor upgraded to level ${armor.level}! -${(armor.level*.08*100).toFixed(0)}% damage taken.`;
-  document.getElementById('armorCost').textContent=armor.level<armor.maxLevel?`(${(armor.level+1)*80} kills)`:'MAX';
+  setCabinMsg(`Armor Lv.${armor.level}! -${(armor.level*.08*100).toFixed(0)}% damage.`);
   document.getElementById('armorLv').textContent=armor.level;
   if(armor.level>=armor.maxLevel)unlock('armor_max');
 }
 function cabinHorse(){
-  if(horseData.level>=horseData.maxLevel){document.getElementById('cabinMsg').textContent='Horse is already at max!';return;}
-  const cost=(horseData.level+1)*100;if(totalKills<cost){document.getElementById('cabinMsg').textContent=`Need ${cost} kills to upgrade horse.`;return;}
+  if(horseData.level>=horseData.maxLevel){setCabinMsg('Horse already at max!');return;}
+  const cost=(horseData.level+1)*100;if(totalKills<cost){setCabinMsg(`Need ${cost} kills to upgrade horse.`);return;}
   horseData.level++;player.spawnHorse();
-  document.getElementById('cabinMsg').textContent=`Horse upgraded to level ${horseData.level}! Faster and tougher.`;
+  setCabinMsg(`Horse Lv.${horseData.level}! Faster & tougher.`);
   if(horseData.level>=horseData.maxLevel)unlock('horse_max');
 }
-function cabinDumpling(){player.hasDumpling=true;document.getElementById('dumpInd').style.display='block';document.getElementById('cabinMsg').textContent='Pocket dumpling ready (H)!';}
+function cabinDumpling(){player.hasDumpling=true;document.getElementById('dumpInd').style.display='block';setCabinMsg('Dumpling ready (H to eat in battle)!');}
 function cabinFight(){
-  document.getElementById('cabinScreen').style.display='none';gState='playing';spawnLevel(currentLevel);startMusic('battle');
+  // Clean up cabin interior objects
+  for(const ci of cabinInteractors){if(ci.mesh)scene.remove(ci.mesh);}
+  cabinInteractors=[];
+  document.getElementById('cabinScreen').style.display='none';
+  document.getElementById('cabinHUD').style.display='none';
+  document.getElementById('interactPrompt').style.display='none';
+  gState='playing';spawnLevel(currentLevel);startMusic('battle');
 }
 
 // ── Cabin select (from menu) ───────────────────────────────
@@ -1118,7 +1199,17 @@ document.addEventListener('keydown',ev=>{
   if(gState!=='playing')return;
   if(k==='q')player.roll();
   if(ev.key===' ')player.jump();
-  if(k==='e'){player.weapon=player.weapon==='sword'?'bow':'sword';document.getElementById('wepName').textContent=L(player.weapon==='bow'?'bow':'sword');}
+  if(k==='e'){
+    if(gState==='cabin'){
+      // Interact with nearest cabin object
+      let near=null,nearDist=2.2;
+      for(const ci of cabinInteractors){const d=player.mesh.position.distanceTo(ci.pos);if(d<nearDist){nearDist=d;near=ci;}}
+      if(near){clickSnd();near.action();}
+    } else {
+      player.weapon=player.weapon==='sword'?'bow':'sword';
+      document.getElementById('wepName').textContent=L(player.weapon==='bow'?'bow':'sword');
+    }
+  }
   if(k==='h')player.eatDumpling();
   if(k==='g'){
     pressG=true;
@@ -1145,23 +1236,61 @@ document.addEventListener('mousemove',ev=>{
 document.addEventListener('contextmenu',ev=>ev.preventDefault());
 
 // ── Camera ─────────────────────────────────────────────────
+// FP weapon arm — attached to camera so it always shows in hand
+let fpArm=null;
+function buildFPArm(){
+  if(fpArm)camera.remove(fpArm);
+  fpArm=new THREE.Group();
+  // Sword in hand
+  fpArm.fpSword=mkSword();
+  fpArm.fpSword.position.set(.28,-.3,-.52);
+  fpArm.fpSword.rotation.set(-.18,.25,.08);
+  fpArm.add(fpArm.fpSword);
+  // Bow in hand
+  fpArm.fpBow=mkBow();
+  fpArm.fpBow.position.set(.22,-.18,-.5);
+  fpArm.fpBow.rotation.set(0,.3,0);
+  fpArm.fpBow.visible=false;
+  fpArm.add(fpArm.fpBow);
+  // Arm (forearm visible in bottom-right)
+  const armGeo=new THREE.Mesh(bx(.18,.62,.18),ARMOR_MATS[armor.level]);
+  armGeo.position.set(.22,-.42,-.38);armGeo.rotation.x=.4;fpArm.add(armGeo);
+  const handGeo=new THREE.Mesh(bx(.14,.16,.14),M.skin);
+  handGeo.position.set(.24,-.32,-.52);fpArm.add(handGeo);
+  camera.add(fpArm);
+  scene.add(camera); // needed for camera children to render
+}
+function updateFPArm(){
+  if(!fpArm||!player)return;
+  fpArm.fpSword.visible=player.weapon==='sword';
+  fpArm.fpBow.visible=player.weapon==='bow';
+  // Swing animation mirrors player swing
+  if(player.swinging){
+    fpArm.rotation.x=Math.sin(player.swingT*14)*.4;
+    fpArm.fpSword.rotation.z=Math.sin(player.swingT*14)*1.0;
+  } else {
+    fpArm.rotation.x*=.85; // dampen back
+    fpArm.fpSword.rotation.z*=.85;
+  }
+}
+
 function updateCamera(){
   if(!player)return;
   const t=player.mesh.position;
-  // First-person: camera sits at head height, looks forward along camYaw/camPitch
-  const headY=t.y+(player.mounted?3.2:1.88);
+  // When mounted, t.y is already airY+1.7, so add only rider's head height above that
+  const headY=player.mounted?(t.y+1.4):t.y+1.88;
   camera.position.set(t.x,headY,t.z);
   const lookX=t.x-Math.sin(camYaw)*Math.cos(camPitch)*10;
   const lookY=headY-Math.sin(camPitch)*10;
   const lookZ=t.z-Math.cos(camYaw)*Math.cos(camPitch)*10;
   camera.lookAt(lookX,lookY,lookZ);
-  // Hide player mesh in first-person so it doesn't block view
-  player.mesh.visible=false;
+  player.mesh.visible=false; // hide 3rd-person body
+  updateFPArm();
 }
 
 // ── Movement ───────────────────────────────────────────────
 function movePlayer(dt){
-  if(!player||gState!=='playing'||player.dead)return;
+  if(!player||(gState!=='playing'&&gState!=='cabin')||player.dead)return;
   const p=player.mesh.position;
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
   const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
@@ -1169,7 +1298,8 @@ function movePlayer(dt){
   if(keys['w']){mx+=fwd.x;mz+=fwd.z;}if(keys['s']){mx-=fwd.x;mz-=fwd.z;}
   if(keys['a']){mx-=right.x;mz-=right.z;}if(keys['d']){mx+=right.x;mz+=right.z;}
   const len=Math.sqrt(mx*mx+mz*mz);
-  if(len>.001){mx/=len;mz/=len;const sp=player.speed;p.x+=mx*sp*dt;p.z+=mz*sp*dt;player.mesh.rotation.y=Math.atan2(mx,mz);camYaw=Math.atan2(mx,mz);}
+  if(len>.001){mx/=len;mz/=len;const sp=player.speed;p.x+=mx*sp*dt;p.z+=mz*sp*dt;player.mesh.rotation.y=Math.atan2(mx,mz);}
+  // camYaw is controlled ONLY by right-mouse drag; don't update it from movement
   player.blocking=!!keys['b'];
   p.x=Math.max(-GND/2+1,Math.min(GND/2-1,p.x));p.z=Math.max(-GND/2+1,Math.min(GND/2-1,p.z));
 }
@@ -1191,6 +1321,23 @@ function drawMinimap(){
 }
 
 // ── HUD ────────────────────────────────────────────────────
+// Blue HP bars for allies and horse
+function updateAlliedHPBars(){
+  // Allies
+  for(const a of allies){
+    if(!a.hpBar){a.hpBar=mkHPBar(.8);a.hpBar.getObjectByName('fg').material=new THREE.MeshBasicMaterial({color:0x2266dd});scene.add(a.hpBar);}
+    a.hpBar.position.copy(a.mesh.position).add(new THREE.Vector3(0,3.2,0));
+    setHPBar(a.hpBar,Math.min(1,1),.8);// allies have no HP system yet, show full
+    a.hpBar.lookAt(camera.position);
+  }
+  // Horse
+  if(player.horseMesh){
+    if(!player.horseHPBar){player.horseHPBar=mkHPBar(1.1);player.horseHPBar.getObjectByName('fg').material=new THREE.MeshBasicMaterial({color:0x4488ff});scene.add(player.horseHPBar);}
+    player.horseHPBar.position.copy(player.horseMesh.position).add(new THREE.Vector3(0,3.6,0));
+    setHPBar(player.horseHPBar,1,.9);
+    player.horseHPBar.lookAt(camera.position);
+  }
+}
 function updateHUD(){
   if(!player)return;
   document.getElementById('hpVal').textContent=Math.max(0,Math.ceil(player.hp));
@@ -1228,14 +1375,27 @@ function loadGame(){
 
 // ── Cutscene ───────────────────────────────────────────────
 let csTimer=0;
+let csFullText='',csCharIdx=0,csTypeTimer=0;
 function showCutscene(txt){
   gState='cutscene';csTimer=0;csSkip=false;csSkipT=0;
+  csFullText=txt;csCharIdx=0;csTypeTimer=0;
   document.getElementById('cutsceneOverlay').style.display='flex';
-  document.getElementById('cutsceneTxt').textContent=txt;
+  document.getElementById('cutsceneTxt').textContent='';
 }
 function updateCutscene(dt){
-  if(gState!=='cutscene')return;csTimer+=dt;if(csSkip)csSkipT+=dt;else csSkipT=0;
-  if(csTimer>6||csSkipT>.7){
+  if(gState!=='cutscene')return;
+  csTimer+=dt;if(csSkip)csSkipT+=dt;else csSkipT=0;
+  // Typewriter: reveal one char every 38ms
+  csTypeTimer+=dt;
+  const charsPerSec=26;
+  const target=Math.min(csFullText.length,Math.floor(csTimer*charsPerSec));
+  if(target>csCharIdx){
+    csCharIdx=target;
+    document.getElementById('cutsceneTxt').textContent=csFullText.slice(0,csCharIdx);
+  }
+  // Auto-advance after full text shown + 2s, or hold S to skip
+  const fullShown=csCharIdx>=csFullText.length;
+  if((fullShown&&csTimer>csFullText.length/charsPerSec+2)||csSkipT>.7){
     document.getElementById('cutsceneOverlay').style.display='none';gState='playing';
   }
 }
@@ -1262,7 +1422,7 @@ function initGame(save,cabinIdx){
     if(save.px)player.mesh.position.x=save.px;if(save.pz)player.mesh.position.z=save.pz;
   }
   for(const a of allies)scene.remove(a.mesh);allies=[];
-  buildWorld();gState='playing';spawnLevel(currentLevel);startMusic('battle');
+  buildWorld();buildFPArm();gState='playing';spawnLevel(currentLevel);startMusic('battle');
   updateHUD();applyLang();
   if(currentLevel===1)showCutscene('Kenji stands at the gate of his enemy\'s first fortress, blade drawn. The road to Yamamoto begins here. Fight well.');
 }
@@ -1292,6 +1452,21 @@ function tick(t){
     if(musouActive){musouTimer-=dt;if(musouTimer<=0)endMusou();}
     updateTimer(dt);saveTimer+=dt;if(saveTimer>=SAVE_INT){saveTimer=0;saveGame();}
     updateDayNight(dt);
+    // Ally & horse HP bars (blue)
+    updateAlliedHPBars();
+  }
+  if(gState==='cabin'){
+    movePlayer(dt);
+    if(player)player.update(dt);
+    // Check for nearby interactors
+    let near=null,nearDist=2.2;
+    for(const ci of cabinInteractors){
+      const d=player.mesh.position.distanceTo(ci.pos);
+      if(d<nearDist){nearDist=d;near=ci;}
+    }
+    const prompt=document.getElementById('interactPrompt');
+    if(near){prompt.textContent=near.label;prompt.style.display='block';}
+    else prompt.style.display='none';
   }
   updateCutscene(dt);updateCamera();drawMinimap();renderer.render(scene,camera);
 }
