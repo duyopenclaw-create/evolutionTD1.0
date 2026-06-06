@@ -531,7 +531,7 @@ function spawnTree(x,z,type='normal'){
   } else {
     for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(1.1-i*.16,1.3,7),new THREE.MeshPhongMaterial({color:0x2a5a1a+i*0x000800,shininess:3}));c.position.y=2.3+i*1.0;c.castShadow=true;g.add(c);}
   }
-  g.position.set(x,0,z);wGrp.add(g);
+  g.position.set(x,0,z);wGrp.add(g);worldObstacles.push({x,z,r:1.1});
 }
 function spawnBamboo(x,z){
   const h=5+Math.random()*3;
@@ -544,6 +544,7 @@ function spawnRock(x,z){
   const s=.5+Math.random()*1.6;
   const r=new THREE.Mesh(new THREE.DodecahedronGeometry(s),M.stone);
   r.position.set(x,s*.35,z);r.castShadow=true;r.rotation.set(Math.random(),Math.random(),Math.random());wGrp.add(r);
+  worldObstacles.push({x,z,r:s*.95});
 }
 function spawnCastle(x,z){
   const g=new THREE.Group();
@@ -560,6 +561,9 @@ function spawnCastle(x,z){
   // Windows
   [[-1.2,7,3.76],[1.2,7,3.76],[0,9,3.76]].forEach(([wx,wy,wz])=>add(bx(.6,.7,.05),new THREE.MeshPhongMaterial({color:0x100a00,shininess:5}),wx,wy,wz));
   g.position.set(x,0,z);wGrp.add(g);
+  // Castle colliders: keep + 4 towers
+  worldObstacles.push({x,z,r:5.5});
+  [{ox:-7.3,oz:0},{ox:7.3,oz:0},{ox:0,oz:-7.3},{ox:0,oz:7.3}].forEach(t=>worldObstacles.push({x:x+t.ox,z:z+t.oz,r:2.2}));
 }
 const cabinPositions=[];
 function registerCabinPos(x,z){cabinPositions.push({x,z,level:cabinPositions.length*3+1,name:`Cabin ${cabinPositions.length+1}`});}
@@ -575,6 +579,8 @@ function spawnCabin(x,z){
     const ptLight=new THREE.PointLight(0xff6600,.6,4);ptLight.position.set(ox,2.1,-2.88);g.add(ptLight);
   });
   g.position.set(x,0,z);wGrp.add(g);
+  // Cabin exterior collider (only matters when gState==='playing')
+  worldObstacles.push({x,z,r:3.4,isCabin:true});
 }
 function spawnShrine(x,z){
   const g=new THREE.Group();
@@ -586,7 +592,7 @@ function spawnShrine(x,z){
   // Shrine box
   const sb=new THREE.Mesh(bx(1.8,2,1.8),M.wood);sb.position.set(0,1,-4);g.add(sb);
   const sr=new THREE.Mesh(new THREE.ConeGeometry(1.5,1.2,4),M.roof);sr.rotation.y=Math.PI/4;sr.position.set(0,2.6,-4);g.add(sr);
-  g.position.set(x,0,z);wGrp.add(g);
+  g.position.set(x,0,z);wGrp.add(g);worldObstacles.push({x,z,r:2.2});
 }
 function spawnBridge(x,z,axis){
   const g=new THREE.Group();const len=15,w=2.8;
@@ -630,6 +636,9 @@ let enemies=[],civilians=[],allies=[],projectiles=[],ghosts=[],pickups=[];
 let player=null;
 let conqueredAreas=[];
 const ENEMY_STRONGHOLDS=[{x:-84,z:22},{x:84,z:-33},{x:4,z:126},{x:-60,z:-90},{x:50,z:70},{x:-30,z:-60}];
+let worldObstacles=[];
+let currentCabinPos=null;
+const WORLD_BOUND=148;
 // Unlocked cabins (by index)
 let unlockedCabins=[0];
 let cabinVisitCount=0; // for horse upgrade every 2 cabins
@@ -849,7 +858,7 @@ class Enemy{
       const d=new THREE.Vector3(pp.x-ep.x,0,pp.z-ep.z).normalize();
       ep.x+=d.x*this.speed*dt;ep.z+=d.z*this.speed*dt;this.mesh.lookAt(pp.x,ep.y,pp.z);
     }else if(dist>=42){ep.x+=Math.sin(this.animT*.5)*.5*dt;ep.z+=Math.cos(this.animT*.42)*.5*dt;}
-    ep.x=Math.max(-GND/2+2,Math.min(GND/2-2,ep.x));ep.z=Math.max(-GND/2+2,Math.min(GND/2-2,ep.z));
+    ep.x=Math.max(-WORLD_BOUND,Math.min(WORLD_BOUND,ep.x));ep.z=Math.max(-WORLD_BOUND,Math.min(WORLD_BOUND,ep.z));
     if(dist<atkR+.6){this.atkTimer+=dt;if(this.atkTimer>=this.atkCD){this.atkTimer=0;this.doAttack();}}
     const lL=this.mesh.getObjectByName('legL'),lR=this.mesh.getObjectByName('legR');
     if(lL)lL.rotation.x=Math.sin(this.animT*8)*.5;if(lR)lR.rotation.x=Math.sin(this.animT*8+Math.PI)*.5;
@@ -1082,9 +1091,23 @@ let cabinCabinCount=0;
 let cabinInteractors=[];
 
 function buildCabinInteriorObjects(cx,cz){
-  // Clear previous
   for(const ci of cabinInteractors){if(ci.mesh)scene.remove(ci.mesh);}
   cabinInteractors=[];
+  // Interior wall/ceiling panels so cabin looks enclosed from first-person
+  const intMat=new THREE.MeshPhongMaterial({color:0x5a3a1a,side:THREE.BackSide,shininess:4});
+  const wallBox=new THREE.Mesh(new THREE.BoxGeometry(5.4,3.2,5.4),intMat);
+  wallBox.position.set(cx,1.6,cz);scene.add(wallBox);
+  cabinInteractors.push({pos:new THREE.Vector3(cx,99,cz),label:'',action:()=>{},mesh:wallBox});
+  // Floor (dark wood planks)
+  const floorMat=new THREE.MeshPhongMaterial({color:0x3a2208,shininess:8});
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(5.3,5.3),floorMat);
+  floor.rotation.x=-Math.PI/2;floor.position.set(cx,.01,cz);scene.add(floor);
+  cabinInteractors.push({pos:new THREE.Vector3(cx,99,cz),label:'',action:()=>{},mesh:floor});
+  // Ceiling lantern glow
+  const ceilingLight=new THREE.PointLight(0xff9944,1.4,8);ceilingLight.position.set(cx,2.8,cz);scene.add(ceilingLight);
+  const lanternMesh=new THREE.Mesh(new THREE.BoxGeometry(.3,.4,.3),new THREE.MeshPhongMaterial({color:0xff8822,emissive:0xff6600,emissiveIntensity:.8}));lanternMesh.position.set(cx,2.75,cz);scene.add(lanternMesh);
+  cabinInteractors.push({pos:new THREE.Vector3(cx,99,cz),label:'',action:()=>{},mesh:ceilingLight});
+  cabinInteractors.push({pos:new THREE.Vector3(cx,99,cz),label:'',action:()=>{},mesh:lanternMesh});
   // Bed (heal) — left side
   const bedG=new THREE.Group();
   const frame=new THREE.Mesh(bx(1.9,.38,2.9),M.wood);frame.position.y=.19;bedG.add(frame);
@@ -1117,8 +1140,8 @@ function buildCabinInteriorObjects(cx,cz){
 
 function enterCabin(){
   gState='cabin';cabinCabinCount++;
-  // Teleport player inside first cabin at (16,6)
   const cb=cabinPositions[0]||{x:16,z:6};
+  currentCabinPos=cb;
   player.mesh.position.set(cb.x,0,cb.z);
   player.mesh.visible=false;
   // Build interactive objects
@@ -1313,6 +1336,18 @@ function updateCamera(){
   updateFPArm();
 }
 
+// ── Collision ──────────────────────────────────────────────
+function resolveObstacles(px,pz,er){
+  for(const ob of worldObstacles){
+    if(ob.isCabin&&gState==='cabin')continue; // skip own cabin wall when inside
+    const dx=px-ob.x,dz=pz-ob.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    const minD=er+ob.r;
+    if(dist<minD&&dist>0.001){const push=(minD-dist)/dist;px+=dx*push;pz+=dz*push;}
+  }
+  return[px,pz];
+}
+
 // ── Movement ───────────────────────────────────────────────
 function movePlayer(dt){
   if(!player||(gState!=='playing'&&gState!=='cabin')||player.dead)return;
@@ -1325,9 +1360,16 @@ function movePlayer(dt){
   if(keys['a']){mx-=right.x;mz-=right.z;}if(keys['d']){mx+=right.x;mz+=right.z;}
   const len=Math.sqrt(mx*mx+mz*mz);
   if(len>.001){mx/=len;mz/=len;const sp=player.speed;p.x+=mx*sp*dt;p.z+=mz*sp*dt;player.mesh.rotation.y=Math.atan2(mx,mz);}
-  // camYaw is controlled ONLY by right-mouse drag; don't update it from movement
   player.blocking=!!keys['b'];
-  p.x=Math.max(-GND/2+1,Math.min(GND/2-1,p.x));p.z=Math.max(-GND/2+1,Math.min(GND/2-1,p.z));
+  if(gState==='cabin'&&currentCabinPos){
+    // Clamp inside cabin interior walls
+    const hw=2.1;
+    p.x=Math.max(currentCabinPos.x-hw,Math.min(currentCabinPos.x+hw,p.x));
+    p.z=Math.max(currentCabinPos.z-hw,Math.min(currentCabinPos.z+hw,p.z));
+  } else {
+    const[rx,rz]=resolveObstacles(p.x,p.z,0.55);p.x=rx;p.z=rz;
+    p.x=Math.max(-WORLD_BOUND,Math.min(WORLD_BOUND,p.x));p.z=Math.max(-WORLD_BOUND,Math.min(WORLD_BOUND,p.z));
+  }
 }
 
 // ── Minimap ────────────────────────────────────────────────
