@@ -153,7 +153,7 @@ canvas{display:block;}
 
 <div id="cutsceneOverlay">
   <div id="cutsceneTxt"></div>
-  <div id="cutsceneHint">Hold S to skip</div>
+  <div id="cutsceneHint">Press S / Space / Enter or click to skip</div>
 </div>
 <div id="interactPrompt"></div>
 <div id="critFlash">⚡ CRITICAL!</div>
@@ -1229,7 +1229,7 @@ function playerDied(){
 
 // ── Input ──────────────────────────────────────────────────
 const keys={};let pressG=false;
-let lmx=0,lmy=0,camYaw=0,camPitch=.32,ptrLocked=false;
+let lmx=0,lmy=0,camYaw=0,camPitch=.32,ptrLocked=false,rmb=false;
 let csSkip=false,csSkipT=0;
 
 // Auto-pause on tab hide
@@ -1259,26 +1259,35 @@ document.addEventListener('keydown',ev=>{
     for(const c of civilians){if(!c.rescued&&c.mesh.position.distanceTo(player.mesh.position)<3.4){c.rescue();break;}}
   }
   if(k==='f')player.mounted=!player.mounted;
-  if(k==='s'&&gState==='cutscene')csSkip=true;
+  if((k==='s'||k===' '||k==='enter')&&gState==='cutscene')skipCutscene();
 });
 document.addEventListener('keyup',ev=>{
   const k=ev.key.toLowerCase();keys[k]=false;
   if(ev.key===' ')keys[' ']=false;
-  if(k==='g')pressG=false;if(k==='s')csSkip=false;
+  if(k==='g')pressG=false;
 });
 document.addEventListener('mousedown',ev=>{
   if(ev.button===0){
+    if(gState==='cutscene'){skipCutscene();return;}
     if((gState==='playing'||gState==='cabin')&&!ptrLocked){
       renderer.domElement.requestPointerLock();
     } else if(ptrLocked&&gState==='playing'&&player&&!player.dead){
       player.attack();
     }
   }
+  if(ev.button===2){rmb=true;lmx=ev.clientX;lmy=ev.clientY;}
   ev.preventDefault();
 });
+document.addEventListener('mouseup',ev=>{if(ev.button===2)rmb=false;});
 document.addEventListener('pointerlockchange',()=>{ptrLocked=!!document.pointerLockElement;});
 document.addEventListener('mousemove',ev=>{
-  if(ptrLocked){camYaw-=ev.movementX*.003;camPitch=Math.max(-.9,Math.min(1.14,camPitch+ev.movementY*.003));}
+  if(ptrLocked){
+    camYaw-=ev.movementX*.006;
+    camPitch=Math.max(-.9,Math.min(1.14,camPitch+ev.movementY*.005));
+  } else if(rmb){
+    camYaw-=(ev.clientX-lmx)*.007;
+    camPitch=Math.max(-.9,Math.min(1.14,camPitch+(ev.clientY-lmy)*.006));
+  }
   lmx=ev.clientX;lmy=ev.clientY;
 });
 document.addEventListener('contextmenu',ev=>ev.preventDefault());
@@ -1465,22 +1474,19 @@ function showCutscene(txt){
   document.getElementById('cutsceneOverlay').style.display='flex';
   document.getElementById('cutsceneTxt').textContent='';
 }
+function skipCutscene(){
+  if(gState!=='cutscene')return;
+  document.getElementById('cutsceneOverlay').style.display='none';
+  gState='playing';
+}
 function updateCutscene(dt){
   if(gState!=='cutscene')return;
-  csTimer+=dt;if(csSkip)csSkipT+=dt;else csSkipT=0;
-  // Typewriter: reveal one char every 38ms
-  csTypeTimer+=dt;
+  csTimer+=dt;
   const charsPerSec=26;
   const target=Math.min(csFullText.length,Math.floor(csTimer*charsPerSec));
-  if(target>csCharIdx){
-    csCharIdx=target;
-    document.getElementById('cutsceneTxt').textContent=csFullText.slice(0,csCharIdx);
-  }
-  // Auto-advance after full text shown + 2s, or hold S to skip
-  const fullShown=csCharIdx>=csFullText.length;
-  if((fullShown&&csTimer>csFullText.length/charsPerSec+2)||csSkipT>.7){
-    document.getElementById('cutsceneOverlay').style.display='none';gState='playing';
-  }
+  if(target>csCharIdx){csCharIdx=target;document.getElementById('cutsceneTxt').textContent=csFullText.slice(0,csCharIdx);}
+  // Auto-advance 2s after text finishes
+  if(csCharIdx>=csFullText.length&&csTimer>csFullText.length/charsPerSec+2)skipCutscene();
 }
 
 // ── Menus ──────────────────────────────────────────────────
