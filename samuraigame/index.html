@@ -1140,9 +1140,17 @@ document.addEventListener('contextmenu',ev=>ev.preventDefault());
 
 // ── Camera ─────────────────────────────────────────────────
 function updateCamera(){
-  if(!player)return;const t=player.mesh.position;
-  camera.position.set(t.x+Math.sin(camYaw)*Math.cos(camPitch)*CAM_DIST,t.y+Math.sin(camPitch)*CAM_DIST+CAM_H*.28,t.z+Math.cos(camYaw)*Math.cos(camPitch)*CAM_DIST);
-  camera.lookAt(t.x,t.y+1.6,t.z);
+  if(!player)return;
+  const t=player.mesh.position;
+  // First-person: camera sits at head height, looks forward along camYaw/camPitch
+  const headY=t.y+(player.mounted?3.2:1.88);
+  camera.position.set(t.x,headY,t.z);
+  const lookX=t.x-Math.sin(camYaw)*Math.cos(camPitch)*10;
+  const lookY=headY-Math.sin(camPitch)*10;
+  const lookZ=t.z-Math.cos(camYaw)*Math.cos(camPitch)*10;
+  camera.lookAt(lookX,lookY,lookZ);
+  // Hide player mesh in first-person so it doesn't block view
+  player.mesh.visible=false;
 }
 
 // ── Movement ───────────────────────────────────────────────
@@ -1155,7 +1163,7 @@ function movePlayer(dt){
   if(keys['w']){mx+=fwd.x;mz+=fwd.z;}if(keys['s']){mx-=fwd.x;mz-=fwd.z;}
   if(keys['a']){mx-=right.x;mz-=right.z;}if(keys['d']){mx+=right.x;mz+=right.z;}
   const len=Math.sqrt(mx*mx+mz*mz);
-  if(len>.001){mx/=len;mz/=len;const sp=player.speed;p.x+=mx*sp*dt;p.z+=mz*sp*dt;player.mesh.rotation.y=Math.atan2(mx,mz);}
+  if(len>.001){mx/=len;mz/=len;const sp=player.speed;p.x+=mx*sp*dt;p.z+=mz*sp*dt;player.mesh.rotation.y=Math.atan2(mx,mz);camYaw=Math.atan2(mx,mz);}
   player.blocking=!!keys['b'];
   p.x=Math.max(-GND/2+1,Math.min(GND/2-1,p.x));p.z=Math.max(-GND/2+1,Math.min(GND/2-1,p.z));
 }
