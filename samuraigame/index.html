@@ -708,7 +708,13 @@ class Player{
       if(this.swingT>.32){this.swinging=false;if(this.swordMesh)this.swordMesh.rotation.z=0;}
     }
     // Jump
-    if(this.inAir||this.airY>0){this.vy-=GRAVITY*dt;this.airY+=this.vy*dt;if(this.airY<=0){this.airY=0;this.vy=0;this.inAir=false;}}
+    if(this.inAir||this.airY>0){
+      this.vy-=GRAVITY*dt;this.airY+=this.vy*dt;
+      if(this.airY<=0){this.airY=0;this.vy=0;this.inAir=false;}
+    } else {
+      // Always snap to ground — prevents floating
+      this.airY=0;
+    }
     this.mesh.position.y=this.airY;
     this.swordMesh.visible=this.weapon==='sword';this.bowMesh.visible=this.weapon==='bow';
     // Walk anim
