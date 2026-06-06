@@ -98,6 +98,7 @@ canvas{display:block;}
     <h2 id="t-paused">⏸ Paused</h2>
     <button class="btn" onclick="clickSnd();togglePause()">▶ <span id="t-resume">Resume</span></button>
     <button class="btn" onclick="clickSnd();enterCabin()">🏠 <span id="t-cabin2">Go to Cabin</span></button>
+    <button class="btn" onclick="clickSnd();showStory()">📜 Story</button>
     <button class="btn red" onclick="clickSnd();returnToMenu()">↩ <span id="t-menu">Main Menu</span></button>
   </div>
 </div>
@@ -146,7 +147,7 @@ canvas{display:block;}
   <div id="musouFlash">無双!</div>
 </div>
 
-<div id="ctrlHint">WASD · RMB Camera · LClick Attack · E Weapon · Space Jump · Q Roll · B Block · F Mount · G Rescue · H Eat</div>
+<div id="ctrlHint">WASD Move · Click to look (Esc unlock) · LClick Attack · E Weapon · Space Jump · Q Roll · B Block · F Mount · G Rescue · H Eat</div>
 <button id="langBtn" onclick="clickSnd();cycleLang()">EN</button>
 <canvas id="minimap"></canvas>
 
@@ -627,6 +628,8 @@ let currentLevel=1,totalKills=0,sessionKills=0;
 let musouActive=false,musouTimer=0,saveTimer=0,levelTimer=LVL_TIME;
 let enemies=[],civilians=[],allies=[],projectiles=[],ghosts=[],pickups=[];
 let player=null;
+let conqueredAreas=[];
+const ENEMY_STRONGHOLDS=[{x:-84,z:22},{x:84,z:-33},{x:4,z:126},{x:-60,z:-90},{x:50,z:70},{x:-30,z:-60}];
 // Unlocked cabins (by index)
 let unlockedCabins=[0];
 let cabinVisitCount=0; // for horse upgrade every 2 cabins
@@ -694,9 +697,10 @@ class Player{
     this.blocking=false;
     this.atkCD=0;this.bowCD=0;
     this.swingT=0;this.swinging=false;
-    this.hitStreak=0; // critical hit counter
+    this.hitStreak=0;
     this.vy=0;this.airY=0;this.inAir=false;
     this.damageTaken=0;
+    this.kbVx=0;this.kbVz=0;
     this.mesh=mkHuman(ARMOR_MATS[armor.level],M.skin,new THREE.MeshPhongMaterial({color:0x111128,shininess:20}));
     const helm=new THREE.Mesh(bx(.62,.3,.58),ARMOR_MATS[armor.level]);helm.position.y=2.17;this.mesh.add(helm);
     const crest=new THREE.Mesh(bx(.08,.46,.1),M.red);crest.position.y=2.44;this.mesh.add(crest);
@@ -795,10 +799,11 @@ class Player{
   }
   roll(){if(this.rollCD>0||this.rolling)return;this.rolling=true;this.rollT=.48;this.rollCD=1.9;}
   jump(){if(!this.inAir&&this.airY<.05){this.vy=9.5;this.inAir=true;}}
-  takeDamage(dmg){
+  takeDamage(dmg,srcX,srcZ){
     if(this.rolling)return;if(this.blocking)dmg*=.16;
     dmg*=(1-this.dmgReduce);
     this.hp-=dmg;this.damageTaken+=dmg;
+    if(srcX!==undefined){const dx=this.mesh.position.x-srcX,dz=this.mesh.position.z-srcZ,l=Math.sqrt(dx*dx+dz*dz)||1;this.kbVx=dx/l*6;this.kbVz=dz/l*6;}
     if(this.hp<0)this.hp=0;updateHUD();if(this.hp<=0)playerDied();
   }
   eatDumpling(){
@@ -831,13 +836,16 @@ class Enemy{
     this.mesh.position.set(x,0,z);scene.add(this.mesh);
     if(this.isMounted){const hm=[M.horse,M.horseW,M.horseD][Math.floor(Math.random()*3)];this.horse=mkHorse(hm);this.horse.position.set(x,0,z);scene.add(this.horse);}
     this.hpBar=mkHPBar(.88);scene.add(this.hpBar);
+    this.kbVx=0;this.kbVz=0;this.lungeT=0;
   }
   update(dt){
     if(this.dead)return;this.animT+=dt;
     const pp=player.mesh.position,ep=this.mesh.position;
     const dist=ep.distanceTo(pp);
     const atkR=EN_ATK_RANGE+(this.isMounted?.5:0)+(this.type==='boss'?.6:0);
-    if(dist<42&&dist>atkR){
+    if(this.kbVx||this.kbVz){ep.x+=this.kbVx*dt;ep.z+=this.kbVz*dt;this.kbVx*=.78;this.kbVz*=.78;if(Math.abs(this.kbVx)<.05)this.kbVx=0;if(Math.abs(this.kbVz)<.05)this.kbVz=0;}
+    if(this.lungeT>0){this.lungeT-=dt;const ld=new THREE.Vector3(pp.x-ep.x,0,pp.z-ep.z).normalize();ep.x+=ld.x*12*dt;ep.z+=ld.z*12*dt;}
+    else if(dist<42&&dist>atkR){
       const d=new THREE.Vector3(pp.x-ep.x,0,pp.z-ep.z).normalize();
       ep.x+=d.x*this.speed*dt;ep.z+=d.z*this.speed*dt;this.mesh.lookAt(pp.x,ep.y,pp.z);
     }else if(dist>=42){ep.x+=Math.sin(this.animT*.5)*.5*dt;ep.z+=Math.cos(this.animT*.42)*.5*dt;}
@@ -856,9 +864,20 @@ class Enemy{
     if(player.dead)return;
     const dist=this.mesh.position.distanceTo(player.mesh.position);
     const atkR=EN_ATK_RANGE+(this.isMounted?.5:0)+(this.type==='boss'?.6:0);
-    if(dist<atkR+.8){const dmg=(8+Math.random()*14)*(this.type==='boss'?2.2:1);player.takeDamage(dmg);}
+    if(dist<atkR+.8){
+      const dmg=(8+Math.random()*14)*(this.type==='boss'?2.2:1);
+      player.takeDamage(dmg,this.mesh.position.x,this.mesh.position.z);
+      this.lungeT=.12; // attack lunge toward player
+    }
   }
-  takeDamage(dmg){this.hp-=dmg;if(this.hp<=0)this.die();}
+  takeDamage(dmg){
+    this.hp-=dmg;
+    // knock back away from player
+    const dx=this.mesh.position.x-player.mesh.position.x,dz=this.mesh.position.z-player.mesh.position.z;
+    const l=Math.sqrt(dx*dx+dz*dz)||1;
+    this.kbVx=dx/l*9*(this.type==='boss'?.4:1);this.kbVz=dz/l*9*(this.type==='boss'?.4:1);
+    if(this.hp<=0)this.die();
+  }
   die(){
     if(this.dead)return;this.dead=true;totalKills++;sessionKills++;
     gainSwordXP(1);
@@ -1048,6 +1067,7 @@ function levelClear(){
   if(currentLevel>=50){
     unlock('level_50');setTimeout(()=>showCutscene('VICTORY! Yamamoto Kuro is defeated. The cherry blossoms fall in peace. Your honor is restored, Kenji.'),2800);return;
   }
+  conqueredAreas.push({x:player.mesh.position.x,z:player.mesh.position.z,lv:currentLevel});
   currentLevel++;saveGame();
   // Unlock next cabin
   cabinPositions.forEach((cb,i)=>{if(currentLevel>=cb.level&&!unlockedCabins.includes(i))unlockedCabins.push(i);});
@@ -1186,7 +1206,7 @@ function playerDied(){
 
 // ── Input ──────────────────────────────────────────────────
 const keys={};let pressG=false;
-let rmb=false,lmx=0,lmy=0,camYaw=0,camPitch=.32;
+let lmx=0,lmy=0,camYaw=0,camPitch=.32,ptrLocked=false;
 let csSkip=false,csSkipT=0;
 
 // Auto-pause on tab hide
@@ -1224,13 +1244,18 @@ document.addEventListener('keyup',ev=>{
   if(k==='g')pressG=false;if(k==='s')csSkip=false;
 });
 document.addEventListener('mousedown',ev=>{
-  if(ev.button===2){rmb=true;lmx=ev.clientX;lmy=ev.clientY;}
-  if(ev.button===0&&gState==='playing'&&!player.dead)player.attack();
+  if(ev.button===0){
+    if((gState==='playing'||gState==='cabin')&&!ptrLocked){
+      renderer.domElement.requestPointerLock();
+    } else if(ptrLocked&&gState==='playing'&&player&&!player.dead){
+      player.attack();
+    }
+  }
   ev.preventDefault();
 });
-document.addEventListener('mouseup',ev=>{if(ev.button===2)rmb=false;});
+document.addEventListener('pointerlockchange',()=>{ptrLocked=!!document.pointerLockElement;});
 document.addEventListener('mousemove',ev=>{
-  if(rmb){camYaw-=(ev.clientX-lmx)*.005;camPitch=Math.max(.08,Math.min(1.14,camPitch+(ev.clientY-lmy)*.004));}
+  if(ptrLocked){camYaw-=ev.movementX*.003;camPitch=Math.max(-.9,Math.min(1.14,camPitch+ev.movementY*.003));}
   lmx=ev.clientX;lmy=ev.clientY;
 });
 document.addEventListener('contextmenu',ev=>ev.preventDefault());
@@ -1292,6 +1317,7 @@ function updateCamera(){
 function movePlayer(dt){
   if(!player||(gState!=='playing'&&gState!=='cabin')||player.dead)return;
   const p=player.mesh.position;
+  if(player.kbVx||player.kbVz){p.x+=player.kbVx*dt;p.z+=player.kbVz*dt;player.kbVx*=.82;player.kbVz*=.82;if(Math.abs(player.kbVx)<.05)player.kbVx=0;if(Math.abs(player.kbVz)<.05)player.kbVz=0;}
   const fwd=new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
   const right=new THREE.Vector3(Math.cos(camYaw),0,-Math.sin(camYaw));
   let mx=0,mz=0;
@@ -1312,6 +1338,20 @@ function drawMinimap(){
   if(!player)return;
   const px=player.mesh.position.x,pz=player.mesh.position.z;
   const tp=(x,z)=>[80+(x-px)*MM,80+(z-pz)*MM];
+  // Conquered areas — blue glow
+  mmCtx.fillStyle='rgba(40,90,220,.28)';
+  for(const ca of conqueredAreas){const[cx,cz]=tp(ca.x,ca.z);mmCtx.beginPath();mmCtx.arc(cx,cz,24,0,Math.PI*2);mmCtx.fill();}
+  // Enemy strongholds — red (unconquered) or blue (conquered)
+  for(const sh of ENEMY_STRONGHOLDS){
+    const[sx,sz]=tp(sh.x,sh.z);if(sx<-12||sx>172||sz<-12||sz>172)continue;
+    const conq=conqueredAreas.some(ca=>Math.hypot(ca.x-sh.x,ca.z-sh.z)<35);
+    mmCtx.fillStyle=conq?'rgba(60,110,240,.7)':'rgba(180,30,30,.7)';
+    mmCtx.fillRect(sx-5,sz-5,10,10);
+    mmCtx.strokeStyle=conq?'#66aaff':'#ff6666';mmCtx.lineWidth=1.2;mmCtx.strokeRect(sx-5,sz-5,10,10);
+    // small roof triangle
+    mmCtx.fillStyle=conq?'#4488ff':'#ff4444';
+    mmCtx.beginPath();mmCtx.moveTo(sx-6,sz-5);mmCtx.lineTo(sx+6,sz-5);mmCtx.lineTo(sx,sz-10);mmCtx.closePath();mmCtx.fill();
+  }
   mmCtx.fillStyle='#ff4444';for(const e of enemies){if(e.dead)continue;const[ex,ez]=tp(e.mesh.position.x,e.mesh.position.z);if(ex>=0&&ex<=160&&ez>=0&&ez<=160)mmCtx.fillRect(ex-2,ez-2,4,4);}
   mmCtx.fillStyle='#44ff88';for(const c of civilians){if(c.rescued)continue;const[cx,cz]=tp(c.mesh.position.x,c.mesh.position.z);if(cx>=0&&cx<=160&&cz>=0&&cz<=160)mmCtx.fillRect(cx-2,cz-2,4,4);}
   mmCtx.fillStyle='#88ccff';for(const a of allies){const[ax,az]=tp(a.mesh.position.x,a.mesh.position.z);if(ax>=0&&ax<=160&&az>=0&&az<=160)mmCtx.fillRect(ax-2,az-2,3,3);}
@@ -1360,7 +1400,7 @@ function saveGame(){
   const d={lv:currentLevel,kills:totalKills,sw:{...sword},armorLv:armor.level,horseLv:horseData.level,
     php:player?player.hp:100,pmhp:player?player.maxHp:100,pwep:player?player.weapon:'sword',
     px:player?player.mesh.position.x:0,pz:player?player.mesh.position.z:0,
-    ach:[...earned],lang,unlockedCabins:[...unlockedCabins]};
+    ach:[...earned],lang,unlockedCabins:[...unlockedCabins],conquered:[...conqueredAreas]};
   localStorage.setItem('samurai3d',JSON.stringify(d));
   const si=document.getElementById('savedInd');si.style.opacity='1';setTimeout(()=>si.style.opacity='0',2000);
 }
@@ -1370,6 +1410,7 @@ function loadGame(){
   if(d.sw)Object.assign(sword,d.sw);if(d.lang)lang=d.lang;if(d.ach)d.ach.forEach(id=>earned.add(id));
   if(d.unlockedCabins)unlockedCabins=[...d.unlockedCabins];
   if(d.armorLv)armor.level=d.armorLv;if(d.horseLv)horseData.level=d.horseLv;
+  if(d.conquered)conqueredAreas=[...d.conquered];
   initGame(d,null);
 }
 
@@ -1404,7 +1445,7 @@ function updateCutscene(dt){
 function startNewGame(){
   currentLevel=1;totalKills=0;sessionKills=0;musouActive=false;cabinCabinCount=0;unlockedCabins=[0];
   Object.assign(sword,{level:1,xp:0,next:10,bonus:0,bonusTime:0});
-  armor.level=0;horseData.level=0;earned.clear();initGame({},null);
+  armor.level=0;horseData.level=0;earned.clear();conqueredAreas=[];initGame({},null);
 }
 function initGame(save,cabinIdx){
   document.getElementById('menuScreen').style.display='none';
@@ -1428,12 +1469,25 @@ function initGame(save,cabinIdx){
 }
 function togglePause(){
   if(gState==='paused'){gState='playing';document.getElementById('pauseScreen').style.display='none';startMusic('battle');}
-  else if(gState==='playing'){gState='paused';document.getElementById('pauseScreen').style.display='flex';stopMusic();}
+  else if(gState==='playing'){gState='paused';document.getElementById('pauseScreen').style.display='flex';stopMusic();if(document.pointerLockElement)document.exitPointerLock();}
+}
+const STORY_CHAPTERS=[
+  'Chapter 1: Kenji stands at the gate of his enemy\'s first fortress, blade drawn. The road to Yamamoto begins here.',
+  'Chapter 2: Word spreads of a lone samurai cutting through the warlord\'s ranks. The villages dare to hope again.',
+  'Chapter 3: Yamamoto sends his elite cavalry. The fields run red. Kenji fights on.',
+  'Chapter 4: They say Yamamoto has never left his mountain fortress. They say no blade can reach him. They have not met Kenji.',
+  'Chapter 5: FINAL — Yamamoto Kuro stands at the peak. One sword arm. One chance. End it.',
+];
+function showStory(){
+  const chap=Math.min(Math.floor((currentLevel-1)/10),STORY_CHAPTERS.length-1);
+  document.getElementById('pauseScreen').style.display='none';
+  showCutscene(STORY_CHAPTERS[chap]);
 }
 function returnToMenu(){
   gState='menu';document.getElementById('menuScreen').style.display='flex';
   ['pauseScreen','cabinScreen','cabinSelectScreen'].forEach(id=>document.getElementById(id).style.display='none');
   stopMusic();stopMusouDrums();setTimeout(()=>startMusic('menu'),80);
+  if(document.pointerLockElement)document.exitPointerLock();
 }
 
 // ── Main loop ──────────────────────────────────────────────
