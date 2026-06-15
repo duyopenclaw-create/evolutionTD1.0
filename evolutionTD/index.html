@@ -117,24 +117,55 @@
 
   /* Tower info popup (appears on map) */
   #tower-popup {
-    position:absolute; background:rgba(10,10,20,0.95); border:2px solid #3a3a5a;
-    border-radius:8px; padding:10px 12px; font-size:0.78em; pointer-events:all;
-    min-width:160px; z-index:20; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.7);
+    position:absolute; background:rgba(8,8,18,0.97); border:2px solid #3a3a6a;
+    border-radius:10px; padding:10px 12px; font-size:0.76em; pointer-events:all;
+    width:min(300px,90vw); z-index:20; display:none; box-shadow:0 6px 28px rgba(0,0,0,0.8);
   }
-  #tower-popup .tp-head { font-weight:bold; color:#fff; margin-bottom:4px; font-size:1em; }
-  #tower-popup .tp-owner { margin-bottom:6px; }
-  #tower-popup .tp-stat { margin-bottom:2px; color:#aaa; }
-  #tower-popup .tp-stat span { color:#88ccff; }
-  #tower-popup .tp-btns { display:flex; gap:6px; margin-top:8px; }
-  #tower-popup .tp-btns button {
-    flex:1; padding:7px 4px; border-radius:5px; cursor:pointer;
+  #tower-popup .tp-head { font-weight:bold; color:#fff; font-size:1.05em; margin-bottom:2px; }
+  #tower-popup .tp-owner { margin-bottom:6px; font-size:0.9em; }
+  #tower-popup .tp-stats { display:flex; gap:10px; margin-bottom:8px; color:#88ccff; font-size:0.88em; flex-wrap:wrap; }
+  #tower-popup .up-paths { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
+  #tower-popup .up-row {
+    display:flex; align-items:center; gap:6px;
+    background:#131324; border:1px solid #2a2a4a; border-radius:5px; padding:4px 6px;
+  }
+  #tower-popup .up-label { width:70px; color:#ccc; font-size:0.9em; }
+  #tower-popup .up-pips { flex:1; display:flex; gap:2px; }
+  #tower-popup .pip { width:7px; height:7px; border-radius:50%; background:#222; border:1px solid #444; flex-shrink:0; }
+  #tower-popup .pip.filled { background:#ffd700; border-color:#ffa500; box-shadow:0 0 4px #ffd700; }
+  #tower-popup .pip.maxed { background:#fff; border-color:#fff; }
+  #tower-popup .up-btn {
+    padding:3px 8px; border-radius:4px; cursor:pointer; border:1px solid;
+    font-family:'Courier New',monospace; font-size:0.85em; touch-action:manipulation;
+    white-space:nowrap;
+  }
+  .up-buy { background:#1a2a3a; border-color:#3a7abf; color:#88ccff; }
+  .up-buy:disabled { opacity:0.35; }
+  .up-maxed { background:#2a2a1a; border-color:#666; color:#666; font-size:0.8em; }
+  #tower-popup .abil-row {
+    background:#1a1a2e; border:1px solid #5a3a8a; border-radius:5px;
+    padding:5px 8px; margin-bottom:6px;
+  }
+  #tower-popup .abil-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:3px; }
+  #tower-popup .abil-name { color:#cc88ff; font-weight:bold; }
+  #tower-popup .abil-charge-bar { height:4px; background:#222; border-radius:2px; margin-bottom:3px; }
+  #tower-popup .abil-charge-fill { height:100%; border-radius:2px; background:#cc88ff; transition:width 0.1s; }
+  #tower-popup .abil-desc { color:#aaa; font-size:0.88em; }
+  #tower-popup .abil-use-btn {
+    width:100%; padding:6px; border-radius:5px; cursor:pointer; border:2px solid #cc88ff;
+    background:#2a1a4a; color:#cc88ff; font-family:'Courier New',monospace;
+    font-size:0.9em; font-weight:bold; touch-action:manipulation; margin-bottom:6px;
+  }
+  #tower-popup .abil-use-btn:disabled { opacity:0.4; }
+  #tower-popup .abil-use-btn.ready { background:#4a1a8a; box-shadow:0 0 12px #cc88ff; }
+  #tower-popup .bot-row { display:flex; gap:6px; }
+  #tower-popup .bot-row button {
+    flex:1; padding:6px; border-radius:5px; cursor:pointer;
     font-family:'Courier New',monospace; font-size:0.82em; border:1px solid;
     touch-action:manipulation;
   }
-  .evo-btn { background:#1a3a1a; border-color:#3f9f3f; color:#7fff7f; }
-  .evo-btn:disabled { opacity:0.35; }
   .sell-btn { background:#2a1a1a; border-color:#9f3f3f; color:#ff8888; }
-  .close-btn { background:#1a1a2a; border-color:#3a3a5a; color:#aaa; max-width:40px; }
+  .close-btn { background:#1a1a2a; border-color:#3a3a5a; color:#aaa; }
 
   /* Message toast */
   #toast {
@@ -197,24 +228,13 @@
     <h2>⚗ EVOTD</h2>
     <div class="top-stat lives">❤️ <span class="val" id="lives-v">20</span></div>
     <div class="top-stat wave">🌊 <span class="val" id="wave-v">0</span>/20</div>
+    <div class="top-stat" style="color:#ffd700;font-weight:bold;font-size:0.95em">💰<span id="gold-v" style="margin-left:3px">400</span></div>
     <div class="spacer"></div>
     <button id="speed-btn">⚡ 1×</button>
   </div>
   <div id="canvas-area">
     <canvas id="gameCanvas"></canvas>
-    <div id="tower-popup">
-      <div class="tp-head" id="tp-head"></div>
-      <div class="tp-owner" id="tp-owner"></div>
-      <div class="tp-stat" id="tp-dmg"></div>
-      <div class="tp-stat" id="tp-range"></div>
-      <div class="tp-stat" id="tp-rate"></div>
-      <div class="tp-stat" id="tp-extra"></div>
-      <div class="tp-btns">
-        <button class="evo-btn" id="tp-evo-btn">Evolve</button>
-        <button class="sell-btn" id="tp-sell-btn">Sell</button>
-        <button class="close-btn" id="tp-close-btn">✕</button>
-      </div>
-    </div>
+    <div id="tower-popup"></div>
     <div id="toast"></div>
     <div id="end-overlay">
       <h2 id="end-title"></h2>
@@ -242,6 +262,7 @@ const TOWER_DEFS = {
     icons:['🌿','🌱','🌳','🌲','🌴'],
     baseRange:2.2,baseDmg:5,baseRate:1.0,slowFactor:0.55,splashRadius:0.7,
     evo:{cost:1.6,range:1.15,dmg:2.0,rate:1.2,splash:1.3},
+    ability:{name:'Overgrowth',icon:'🌿',desc:'8s: Splash ×4 + double fire rate',dur:8000},
   },
   aquatic:{
     label:'Aquatic', icon:'🐟', baseCost:40,
@@ -249,6 +270,7 @@ const TOWER_DEFS = {
     icons:['🐟','🦈','🐋','🦑','🌊'],
     baseRange:2.8,baseDmg:20,baseRate:0.5,slowFactor:1.0,splashRadius:0,
     evo:{cost:2.0,range:1.2,dmg:2.5,rate:1.1},
+    ability:{name:'Tidal Wave',icon:'🌊',desc:'5s: Slow all enemies 90%',dur:5000},
   },
   insect:{
     label:'Insect', icon:'🦟', baseCost:25,
@@ -256,6 +278,7 @@ const TOWER_DEFS = {
     icons:['🦟','🐜','🐝','🦂','👑'],
     baseRange:1.8,baseDmg:4,baseRate:2.5,slowFactor:1.0,splashRadius:0,chainCount:2,
     evo:{cost:1.5,range:1.1,dmg:1.8,rate:1.3,chain:1},
+    ability:{name:'Swarm Frenzy',icon:'🐝',desc:'5s: Fire rate ×6',dur:5000},
   },
   reptile:{
     label:'Reptile', icon:'🦎', baseCost:50,
@@ -263,6 +286,7 @@ const TOWER_DEFS = {
     icons:['🦎','🦖','🐉','🐲','🔥'],
     baseRange:3.5,baseDmg:14,baseRate:0.7,slowFactor:1.0,splashRadius:0,piercing:true,
     evo:{cost:2.2,range:1.25,dmg:2.2,rate:1.15},
+    ability:{name:'Dragon Fire',icon:'🔥',desc:'6s: Hits ALL enemies in range',dur:6000},
   },
   mammal:{
     label:'Mammal', icon:'🐺', baseCost:45,
@@ -270,6 +294,7 @@ const TOWER_DEFS = {
     icons:['🐭','🦊','🐺','🐻','🦁'],
     baseRange:2.5,baseDmg:12,baseRate:1.2,slowFactor:1.0,splashRadius:0,chainCount:3,
     evo:{cost:1.9,range:1.15,dmg:1.9,rate:1.2,chain:1},
+    ability:{name:'Pack Hunt',icon:'🐾',desc:'5s: Chain jumps to ALL enemies',dur:5000},
   },
   electric:{
     label:'Electric', icon:'⚡', baseCost:55,
@@ -277,6 +302,7 @@ const TOWER_DEFS = {
     icons:['⚡','🌩','🌪','💥','🌟'],
     baseRange:2.0,baseDmg:8,baseRate:3.0,slowFactor:0.5,splashRadius:1.2,
     evo:{cost:2.0,range:1.1,dmg:2.0,rate:1.15,splash:1.2},
+    ability:{name:'Superstorm',icon:'⚡',desc:'Zaps every enemy on screen for 3× dmg',dur:500},
   },
   fungus:{
     label:'Fungus', icon:'🍄', baseCost:35,
@@ -284,6 +310,7 @@ const TOWER_DEFS = {
     icons:['🍄','🌫','🟣','💜','🧫'],
     baseRange:1.6,baseDmg:3,baseRate:0.8,slowFactor:0.4,splashRadius:1.5,
     evo:{cost:1.5,range:1.1,dmg:1.7,rate:1.1,splash:1.35},
+    ability:{name:'Poison Cloud',icon:'☠',desc:'7s: Poisons all enemies (5% HP/s)',dur:7000},
   },
   crystal:{
     label:'Crystal', icon:'💎', baseCost:70,
@@ -291,6 +318,7 @@ const TOWER_DEFS = {
     icons:['🔹','💙','💎','🔷','✨'],
     baseRange:4.0,baseDmg:30,baseRate:0.3,slowFactor:1.0,splashRadius:0,piercing:true,
     evo:{cost:2.5,range:1.3,dmg:3.0,rate:1.2},
+    ability:{name:'Prism Burst',icon:'💎',desc:'Fires beams in 8 directions',dur:300},
   },
 };
 const TOWER_TYPES = ['plant','aquatic','insect','reptile','mammal','electric','fungus','crystal'];
@@ -385,11 +413,12 @@ function range(a,b,step=1) {
 // ─── GAME STATE ──────────────────────────────────────────────────────
 let G = {
   lives:20, wave:0,
+  gold: 400,  // shared pool for all 4 players
   players:[
-    {name:'P1',dna:100,kills:0,towerCount:0,selectedType:null},
-    {name:'P2',dna:100,kills:0,towerCount:0,selectedType:null},
-    {name:'P3',dna:100,kills:0,towerCount:0,selectedType:null},
-    {name:'P4',dna:100,kills:0,towerCount:0,selectedType:null},
+    {name:'P1',kills:0,towerCount:0,selectedType:null},
+    {name:'P2',kills:0,towerCount:0,selectedType:null},
+    {name:'P3',kills:0,towerCount:0,selectedType:null},
+    {name:'P4',kills:0,towerCount:0,selectedType:null},
   ],
   activePlayer:0,
   towers:[],enemies:[],projectiles:[],particles:[],floaters:[],rings:[],
@@ -402,26 +431,37 @@ let G = {
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const tc=t=>({x:(t.col+0.5)*CW,y:(t.row+0.5)*CH});
 
-function getTowerStats(tower) {
-  const d=TOWER_DEFS[tower.type], e=d.evo, n=tower.tier;
+// 5 upgrade paths: [0]Power [1]Range [2]Speed [3]Special [4]Mastery
+const UP_NAMES=['⚔ Power','📡 Range','⚡ Speed','🎯 Special','🌟 Mastery'];
+const UP_BASE_COSTS=[20,15,18,25,30];
+
+function upCost(tower,path){
+  const cur=(tower.ups||[0,0,0,0,0])[path];
+  if(cur>=10) return Infinity;
+  return Math.round(UP_BASE_COSTS[path]*Math.pow(1.55,cur));
+}
+function abilMax(tower){ return Math.max(150,450-(tower.ups||[0,0,0,0,0])[4]*30); }
+function sellVal(t){ return Math.floor(t.totalSpent*0.6); }
+
+function getTowerStats(tower){
+  const d=TOWER_DEFS[tower.type];
+  const u=tower.ups||[0,0,0,0,0];
+  const [pw,rng,spd,bst,mst]=u;
+  const visT=Math.min(4,Math.floor(mst/2));
   return {
-    range: d.baseRange*Math.pow(e.range||1,n)*CW,
-    dmg:   d.baseDmg*Math.pow(e.dmg,n),
-    rate:  d.baseRate*Math.pow(e.rate,n),
-    slow:  d.slowFactor,
-    splash:d.splashRadius*(e.splash?Math.pow(e.splash,n):1)*CW,
-    chain: d.chainCount?d.chainCount+(e.chain||0)*n:0,
-    pierce:d.piercing||false,
-    icon:  d.icons[Math.min(n,d.icons.length-1)],
-    tierName:d.tiers[Math.min(n,d.tiers.length-1)],
+    range:  d.baseRange*CW*Math.pow(1.16,rng),
+    dmg:    d.baseDmg*Math.pow(1.28,pw)*Math.pow(1.1,mst),
+    rate:   d.baseRate*Math.pow(1.2,spd)*Math.pow(1.06,mst),
+    slow:   Math.max(0.08,d.slowFactor-bst*0.04),
+    splash: d.splashRadius*CW*Math.pow(1.22,bst),
+    chain:  (d.chainCount||0)+Math.floor(bst/2),
+    pierce: d.piercing||false,
+    icon:   d.icons[visT],
+    tierName:d.tiers[visT],
+    visT,
+    abilReady: (tower.abilChg||0)>=abilMax(tower),
   };
 }
-function evolveCost(t){
-  if(t.tier>=4)return Infinity;
-  const d=TOWER_DEFS[t.type];
-  return Math.round(d.baseCost*Math.pow(d.evo.cost,t.tier+1)*0.55);
-}
-function sellVal(t){ return Math.floor(t.totalSpent*0.6); }
 
 // ─── UI ──────────────────────────────────────────────────────────────
 function buildBottomUI() {
@@ -436,7 +476,6 @@ function buildBottomUI() {
     tab.innerHTML = `
       <div class="turn-dot"></div>
       <div class="tab-name" id="tab-name-${i}">${G.players[i].name}</div>
-      <div class="tab-dna">🧬<span id="tab-dna-${i}">100</span></div>
       <div class="tab-kills">⚔<span id="tab-kills-${i}">0</span></div>
     `;
     tab.addEventListener('pointerdown', () => setActivePlayer(i));
@@ -462,7 +501,7 @@ function buildActionBar() {
       <span class="tp-icon">${def.icon}</span>
       <span class="tp-info">
         <div class="tp-name">${def.label}</div>
-        <div class="tp-cost">🧬${def.baseCost}</div>
+        <div class="tp-cost">💰${def.baseCost}</div>
       </span>
     `;
     btn.addEventListener('pointerdown', () => {
@@ -492,10 +531,9 @@ function setActivePlayer(pid) {
   buildActionBar();
 }
 
+function updateGold(){ const el=document.getElementById('gold-v'); if(el) el.textContent=Math.floor(G.gold); }
 function updatePlayerTab(pid) {
   const p=G.players[pid];
-  const el=document.getElementById(`tab-dna-${pid}`);
-  if(el) el.textContent=Math.floor(p.dna);
   const kl=document.getElementById(`tab-kills-${pid}`);
   if(kl) kl.textContent=p.kills;
 }
@@ -527,13 +565,13 @@ function startGame() {
     resizeCanvas();
     buildBottomUI();
     updateAllPlayersUI();
-    updateLives(); updateWaveNum();
+    updateLives(); updateWaveNum(); updateGold();
     toast('Place towers then tap ▶ Wave 1!');
     requestAnimationFrame(loop);
   }, 50);
 }
 
-function updateAllPlayersUI(){ for(let i=0;i<4;i++) updatePlayerTab(i); }
+function updateAllPlayersUI(){ for(let i=0;i<4;i++) updatePlayerTab(i); updateGold(); }
 
 // ─── CANVAS TOUCH ────────────────────────────────────────────────────
 canvas.addEventListener('pointerdown', e=>{
@@ -559,14 +597,14 @@ canvas.addEventListener('pointerdown', e=>{
 
   if(p.selectedType && !PATH_SET.has(`${col},${row}`)) {
     const cost=TOWER_DEFS[p.selectedType].baseCost;
-    if(p.dna>=cost){
-      p.dna-=cost;
-      G.towers.push({type:p.selectedType,col,row,tier:0,totalSpent:cost,owner:pid,lastShot:0});
+    if(G.gold>=cost){
+      G.gold-=cost;
+      G.towers.push({type:p.selectedType,col,row,ups:[0,0,0,0,0],totalSpent:cost,owner:pid,lastShot:0,angle:0,_flash:0,abilChg:0,abilActive:false,abilUntil:0});
       p.towerCount++;
-      updatePlayerTab(pid);
+      updatePlayerTab(pid); updateGold();
       toast(`${p.name} placed ${TOWER_DEFS[p.selectedType].label}!`);
     } else {
-      toast(`${p.name} needs ${cost-Math.floor(p.dna)} more 🧬`);
+      toast(`Need ${cost-Math.floor(G.gold)} more 💰 (shared pool)`);
     }
   }
 });
@@ -574,77 +612,130 @@ canvas.addEventListener('pointerdown', e=>{
 // ─── TOWER POPUP ─────────────────────────────────────────────────────
 function openPopup(tower, mx, my) {
   G.popupTower = tower;
+  renderPopup(tower, mx, my);
+}
+
+function renderPopup(tower, mx, my) {
+  const popup=document.getElementById('tower-popup');
   const stats=getTowerStats(tower);
   const pid=tower.owner;
-  const ec=evolveCost(tower);
   const sv=sellVal(tower);
-  const ownerDNA=G.players[pid].dna;
   const def=TOWER_DEFS[tower.type];
+  const ups=tower.ups||[0,0,0,0,0];
+  const pc=PLAYER_COLORS[pid];
+  const charge=tower.abilChg||0;
+  const chMax=abilMax(tower);
+  const abilRdy=charge>=chMax;
+  const pct=Math.min(1,charge/chMax);
 
-  document.getElementById('tp-head').textContent=`${stats.icon} ${stats.tierName}`;
-  document.getElementById('tp-head').style.color=PLAYER_COLORS[pid];
-  document.getElementById('tp-owner').textContent=`T${tower.tier+1}/5 · ${G.players[pid].name}`;
-  document.getElementById('tp-owner').style.color=PLAYER_COLORS[pid];
-  document.getElementById('tp-dmg').innerHTML=`⚔ Dmg: <span>${stats.dmg.toFixed(0)}</span>`;
-  document.getElementById('tp-range').innerHTML=`📡 Range: <span>${(stats.range/CW).toFixed(1)}c</span>`;
-  document.getElementById('tp-rate').innerHTML=`⚡ Rate: <span>${stats.rate.toFixed(2)}/s</span>`;
-  const extra=stats.splash>0?`💥 Splash: <span>${(stats.splash/CW).toFixed(1)}c</span>`:
-    stats.chain>0?`⛓ Chain: <span>${stats.chain}</span>`:
-    stats.pierce?`🔱 Piercing`:'';
-  document.getElementById('tp-extra').innerHTML=extra;
-
-  const evoBtn=document.getElementById('tp-evo-btn');
-  if(tower.tier<4){
-    evoBtn.textContent=`Evolve (${ec}🧬)`;
-    evoBtn.disabled=ownerDNA<ec;
-    evoBtn.style.display='';
-  } else {
-    evoBtn.textContent='★ MAX';
-    evoBtn.disabled=true;
+  // Build 5 upgrade path rows
+  let pathsHtml='';
+  for(let i=0;i<5;i++){
+    const cur=ups[i];
+    const cost=upCost(tower,i);
+    const canBuy=G.gold>=cost&&cur<10;
+    let pips='';
+    for(let p=0;p<10;p++){
+      const cls=p<cur?(cur>=10?'pip maxed':'pip filled'):'pip';
+      pips+=`<div class="${cls}"></div>`;
+    }
+    const btnHtml=cur>=10
+      ?`<button class="up-btn up-maxed" disabled>MAX</button>`
+      :`<button class="up-btn up-buy" data-path="${i}" ${canBuy?'':'disabled'}>💰${cost}</button>`;
+    pathsHtml+=`<div class="up-row"><span class="up-label">${UP_NAMES[i]}</span><div class="up-pips">${pips}</div>${btnHtml}</div>`;
   }
-  document.getElementById('tp-sell-btn').textContent=`Sell +${sv}🧬`;
 
-  // Position popup near tap
-  const popup=document.getElementById('tower-popup');
+  // Ability section
+  const ab=def.ability;
+  const abilHtml=`
+    <div class="abil-row">
+      <div class="abil-head">
+        <span class="abil-name">${ab.icon} ${ab.name}</span>
+        <span style="color:#aaa;font-size:0.85em">${Math.min(100,Math.round(pct*100))}%</span>
+      </div>
+      <div class="abil-charge-bar"><div class="abil-charge-fill" style="width:${pct*100}%"></div></div>
+      <div class="abil-desc">${ab.desc}</div>
+    </div>
+    <button class="abil-use-btn ${abilRdy?'ready':''}" id="abil-use-btn" ${abilRdy?'':'disabled'}>
+      ${abilRdy?'⚡ USE ABILITY — READY!':'⚡ Ability charging...'}
+    </button>`;
+
+  popup.innerHTML=`
+    <div class="tp-head" style="color:${pc}">${stats.icon} ${stats.tierName} <span style="color:#aaa;font-size:0.85em">· ${G.players[pid].name}</span></div>
+    <div class="tp-owner" style="color:#888">Mastery T${ups[4]}/10 · Tiers unlock every 2 Mastery</div>
+    <div class="tp-stats">
+      <span>⚔${stats.dmg.toFixed(0)}</span>
+      <span>📡${(stats.range/CW).toFixed(1)}</span>
+      <span>⚡${stats.rate.toFixed(2)}/s</span>
+      ${stats.splash>0?`<span>💥${(stats.splash/CW).toFixed(1)}</span>`:''}
+      ${stats.chain>0?`<span>⛓${stats.chain}</span>`:''}
+      ${stats.pierce?`<span>🔱Pierce</span>`:''}
+    </div>
+    <div class="up-paths">${pathsHtml}</div>
+    ${abilHtml}
+    <div class="bot-row">
+      <button class="sell-btn" id="tp-sell-btn">Sell +💰${sv}</button>
+      <button class="close-btn" id="tp-close-btn">✕ Close</button>
+    </div>`;
+
+  // Position popup
   popup.style.display='block';
-  const pw=180, ph=160;
+  const pw=300, ph=400;
   let px=mx+10, py=my-ph/2;
   if(px+pw>W) px=mx-pw-10;
   if(py<0) py=0;
-  if(py+ph>H) py=H-ph;
+  if(py+ph>H) py=H-ph-5;
   popup.style.left=px+'px';
   popup.style.top=py+'px';
-}
 
-document.getElementById('tp-evo-btn').addEventListener('pointerdown', ()=>{
-  const tower=G.popupTower;
-  if(!tower||tower.tier>=4) return;
-  const ec=evolveCost(tower);
-  const pid=tower.owner;
-  if(G.players[pid].dna>=ec){
-    G.players[pid].dna-=ec;
-    tower.tier++; tower.totalSpent+=ec;
-    updatePlayerTab(pid);
-    const ns=getTowerStats(tower);
-    spawnParticles(tc(tower).x,tc(tower).y,PLAYER_COLORS[pid],15);
-    spawnFloater(tc(tower).x,tc(tower).y-20,`EVOLVED! ${ns.tierName}`,'#ffd700');
-    toast(`${G.players[pid].name} evolved to ${ns.tierName}!`);
+  // Bind upgrade buttons
+  popup.querySelectorAll('.up-buy').forEach(btn=>{
+    btn.addEventListener('pointerdown', e=>{
+      e.stopPropagation();
+      const path=parseInt(btn.dataset.path);
+      const cost=upCost(tower,path);
+      if(G.gold>=cost&&tower.ups[path]<10){
+        G.gold-=cost;
+        tower.ups[path]++;
+        tower.totalSpent+=cost;
+        updateGold();
+        const ns=getTowerStats(tower);
+        spawnParticles(tc(tower).x,tc(tower).y,'#ffd700',12);
+        if(path===4&&tower.ups[4]%2===0){
+          spawnFloater(tc(tower).x,tc(tower).y-25,`EVOLVED! ${ns.tierName}`,'#ffd700');
+        }
+        renderPopup(tower,mx,my);
+      }
+    });
+  });
+
+  // Ability use button
+  document.getElementById('abil-use-btn')?.addEventListener('pointerdown', e=>{
+    e.stopPropagation();
+    if((tower.abilChg||0)<abilMax(tower)) return;
+    tower.abilChg=0;
+    tower.abilActive=true;
+    tower.abilUntil=Date.now()+def.ability.dur;
+    spawnParticles(tc(tower).x,tc(tower).y,'#cc88ff',20);
+    spawnFloater(tc(tower).x,tc(tower).y-30,`⚡ ${def.ability.name}!`,'#cc88ff');
+    toast(`${G.players[pid].name}: ${def.ability.name} activated!`);
     closePopup();
-  }
-});
-document.getElementById('tp-sell-btn').addEventListener('pointerdown', ()=>{
-  const tower=G.popupTower;
-  if(!tower) return;
-  const sv=sellVal(tower);
-  const pid=tower.owner;
-  G.players[pid].dna+=sv;
-  G.players[pid].towerCount=Math.max(0,G.players[pid].towerCount-1);
-  G.towers=G.towers.filter(t=>t!==tower);
-  updatePlayerTab(pid);
-  toast(`Sold for ${sv}🧬 → ${G.players[pid].name}`);
-  closePopup();
-});
-document.getElementById('tp-close-btn').addEventListener('pointerdown', closePopup);
+  });
+
+  document.getElementById('tp-sell-btn')?.addEventListener('pointerdown', e=>{
+    e.stopPropagation();
+    G.gold+=sv;
+    G.players[pid].towerCount=Math.max(0,G.players[pid].towerCount-1);
+    G.towers=G.towers.filter(t=>t!==tower);
+    updateGold();
+    toast(`Sold for 💰${sv}`);
+    closePopup();
+  });
+  document.getElementById('tp-close-btn')?.addEventListener('pointerdown', e=>{
+    e.stopPropagation();
+    closePopup();
+  });
+}
 
 function closePopup(){
   G.popupTower=null;
@@ -687,7 +778,7 @@ function makeEnemy(tier,hps,sps,delay,isBoss){
     tier,isBoss,
     hp:Math.round(tier.hp*hps), maxHp:Math.round(tier.hp*hps),
     armor:Math.min(tier.armor+G.wave*0.012,0.88),
-    speed:tier.speed*sps*CW*1.5,
+    speed:tier.speed*sps*CW*4.5,
     reward:tier.reward*(isBoss?8:1),
     pathIdx:0, x:pathPoints[0].x, y:pathPoints[0].y,
     spawnDelay:delay, spawned:false,
@@ -700,24 +791,71 @@ function makeEnemy(tier,hps,sps,delay,isBoss){
 // ─── GAME LOGIC ──────────────────────────────────────────────────────
 function towerShoot(tower){
   const stats=getTowerStats(tower);
-  const cd=60/(stats.rate*G.speed);
+  const abilOn=tower.abilActive&&Date.now()<tower.abilUntil;
+  if(tower.abilActive&&Date.now()>=tower.abilUntil) tower.abilActive=false;
+
+  // Charge ability over time
+  if(!abilOn) tower.abilChg=Math.min(abilMax(tower),(tower.abilChg||0)+0.3);
+
+  let rateMulti=1;
+  if(abilOn){
+    const t=tower.type;
+    if(t==='insect') rateMulti=6;
+    else if(t==='plant') rateMulti=2;
+    else if(t==='reptile') rateMulti=1; // handled below: hits all
+  }
+
+  const cd=60/(stats.rate*rateMulti*G.speed);
   if(G.frame-(tower.lastShot||0)<cd) return;
   const c=tc(tower);
-  const inRange=G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(c,e)<=stats.range);
+  let inRange=G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(c,e)<=stats.range);
   if(!inRange.length) return;
   inRange.sort((a,b)=>b.pathIdx-a.pathIdx);
   tower.lastShot=G.frame;
-  tower.angle=Math.atan2(inRange[0].y-c.y, inRange[0].x-c.x);
   tower._flash=4;
-  G.projectiles.push({
-    x:c.x,y:c.y,tx:inRange[0].x,ty:inRange[0].y,targetId:inRange[0].id,
-    dmg:stats.dmg,spd:CW*14*G.speed,
-    splash:stats.splash,slow:stats.slow,
-    pierce:stats.pierce,chain:stats.chain,chainUsed:0,
-    color:PLAYER_COLORS[tower.owner],owner:tower.owner,
-    size:3+tower.tier*0.8,
-    trail:[],
-  });
+
+  const abilSplash=(abilOn&&tower.type==='plant')?stats.splash*4:stats.splash;
+  const abilPierce=stats.pierce||(abilOn&&tower.type==='reptile');
+  const abilChain=(abilOn&&tower.type==='mammal')?999:stats.chain;
+  const targets=(abilOn&&tower.type==='reptile')?inRange:[inRange[0]];
+
+  for(const tgt of targets){
+    tower.angle=Math.atan2(tgt.y-c.y, tgt.x-c.x);
+    G.projectiles.push({
+      x:c.x,y:c.y,tx:tgt.x,ty:tgt.y,targetId:tgt.id,
+      dmg:stats.dmg,spd:CW*14*G.speed,
+      splash:abilSplash,slow:stats.slow,
+      pierce:abilPierce,chain:abilChain,chainUsed:0,
+      color:PLAYER_COLORS[tower.owner],owner:tower.owner,
+      size:3+Math.floor(Math.min(tower.ups[4],4)*0.8),
+      trail:[],
+    });
+  }
+
+  // Electric Superstorm: instant zap everything
+  if(abilOn&&tower.type==='electric'){
+    G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached).forEach(e=>{
+      dealDamage(e,stats.dmg*3,1.0,tower.owner);
+      spawnParticles(e.x,e.y,'#88ccff',5);
+    });
+    tower.abilActive=false;
+  }
+
+  // Crystal Prism Burst: 8 directions
+  if(abilOn&&tower.type==='crystal'){
+    for(let i=0;i<8;i++){
+      const ang=i*Math.PI/4;
+      const tx=c.x+Math.cos(ang)*stats.range;
+      const ty=c.y+Math.sin(ang)*stats.range;
+      G.projectiles.push({
+        x:c.x,y:c.y,tx,ty,targetId:null,
+        dmg:stats.dmg*2,spd:CW*18*G.speed,
+        splash:0,slow:1,pierce:true,chain:0,chainUsed:0,
+        color:'#88ccff',owner:tower.owner,size:4,trail:[],prism:true,
+      });
+    }
+    tower.abilActive=false;
+  }
 }
 
 function updateEnemies(dt){
@@ -743,12 +881,11 @@ function updateEnemies(dt){
   }
   if(allDone&&G.waveActive&&!G.gameOver){
     G.waveActive=false;
-    const bonus=20+G.wave*6;
-    const share=Math.floor(bonus/4);
-    for(let i=0;i<4;i++) G.players[i].dna+=share;
+    const bonus=80+G.wave*20;
+    G.gold+=bonus;
     updateAllPlayersUI();
     if(G.wave>=20){triggerWin();return;}
-    toast(`Wave ${G.wave} cleared! +${share}🧬 each!`);
+    toast(`Wave ${G.wave} cleared! +💰${bonus} bonus!`);
     saveState();
     buildActionBar();
   }
@@ -757,6 +894,14 @@ function updateEnemies(dt){
 function updateProjectiles(){
   for(let i=G.projectiles.length-1;i>=0;i--){
     const p=G.projectiles[i];
+    // Prism beams travel in straight line, hit anything in path
+    if(p.prism){
+      const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy);
+      if(d<4||p.x<0||p.x>W||p.y<0||p.y>H){G.projectiles.splice(i,1);continue;}
+      const spd=p.spd/60; p.x+=dx/d*spd; p.y+=dy/d*spd;
+      G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(e,p)<CW*0.5).forEach(e=>dealDamage(e,p.dmg,1,p.owner));
+      continue;
+    }
     let tgt=G.enemies.find(e=>e.id===p.targetId&&!e.dead&&!e.reached);
     if(!tgt){
       const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy);
@@ -794,16 +939,34 @@ function dealDamage(e,dmg,slow,ownerId){
   e.hp-=dmg*(1-e.armor);
   if(e.hp<=0){
     e.dead=true;
-    G.players[ownerId].dna+=e.reward;
+    G.gold+=e.reward;
     G.players[ownerId].kills++;
-    updatePlayerTab(ownerId);
+    // Charge all towers by kill reward
+    G.towers.forEach(t=>{ t.abilChg=Math.min(abilMax(t),(t.abilChg||0)+e.reward*0.4); });
+    updatePlayerTab(ownerId); updateGold();
     spawnParticles(e.x,e.y,e.tier.color,e.isBoss?24:14);
     spawnParticles(e.x,e.y,'#fff',6);
     G.rings.push({x:e.x,y:e.y,r:0,maxR:CW*(e.isBoss?3:1.8),life:1,color:e.tier.color});
-    spawnFloater(e.x,e.y-15,`+${e.reward}🧬`,PLAYER_COLORS[ownerId]);
+    spawnFloater(e.x,e.y-15,`+💰${e.reward}`,PLAYER_COLORS[ownerId]);
   } else if(slow<1){
     e.slowFactor=slow; e.slowUntil=Date.now()+1500;
   }
+}
+
+function applyPoison(dt){
+  // Fungus poison cloud
+  G.towers.filter(t=>t.abilActive&&t.type==='fungus'&&Date.now()<t.abilUntil).forEach(tower=>{
+    const stats=getTowerStats(tower);
+    G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(tc(tower),e)<=stats.range).forEach(e=>{
+      dealDamage(e,e.maxHp*0.05*dt*G.speed,1,tower.owner);
+    });
+  });
+  // Tidal wave
+  G.towers.filter(t=>t.abilActive&&t.type==='aquatic'&&Date.now()<t.abilUntil).forEach(()=>{
+    G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached).forEach(e=>{
+      e.slowFactor=0.1; e.slowUntil=Date.now()+500;
+    });
+  });
 }
 
 function spawnParticles(x,y,color,n){
@@ -839,9 +1002,9 @@ function updateRings(){
 function saveState(){
   try{
     localStorage.setItem('evoTD4_save',JSON.stringify({
-      lives:G.lives,wave:G.wave,
-      players:G.players.map(p=>({name:p.name,dna:p.dna,kills:p.kills,towerCount:p.towerCount})),
-      towers:G.towers.map(t=>({type:t.type,col:t.col,row:t.row,tier:t.tier,totalSpent:t.totalSpent,owner:t.owner})),
+      lives:G.lives,wave:G.wave,gold:G.gold,
+      players:G.players.map(p=>({name:p.name,kills:p.kills,towerCount:p.towerCount})),
+      towers:G.towers.map(t=>({type:t.type,col:t.col,row:t.row,ups:t.ups,totalSpent:t.totalSpent,owner:t.owner,abilChg:t.abilChg||0})),
     }));
     const el=document.getElementById('saved-flash');
     el.classList.add('show');
@@ -852,9 +1015,9 @@ function loadState(){
   try{
     const s=JSON.parse(localStorage.getItem('evoTD4_save'));
     if(!s)return false;
-    G.lives=s.lives; G.wave=s.wave;
+    G.lives=s.lives; G.wave=s.wave; G.gold=s.gold||400;
     s.players.forEach((p,i)=>Object.assign(G.players[i],p));
-    G.towers=s.towers.map(t=>({...t,lastShot:0}));
+    G.towers=s.towers.map(t=>({...t,ups:t.ups||[0,0,0,0,0],lastShot:0,angle:0,_flash:0,abilChg:t.abilChg||0,abilActive:false,abilUntil:0}));
     return true;
   }catch(e){return false;}
 }
@@ -873,7 +1036,7 @@ function triggerGameOver(){
   document.getElementById('end-btn').className='big-btn red';
   document.getElementById('end-body').innerHTML=
     `Colony overrun on wave ${G.wave}.<br><br>`+
-    G.players.map((p,i)=>`<span class="score-row" style="color:${PLAYER_COLORS[i]}">${p.name}: ${p.kills} kills, ${Math.floor(p.dna)}🧬</span>`).join('<br>');
+    G.players.map((p,i)=>`<span class="score-row" style="color:${PLAYER_COLORS[i]}">${p.name}: ${p.kills} kills</span>`).join('<br>');
 }
 function triggerWin(){
   G.gameWon=true;
@@ -1001,10 +1164,11 @@ function drawTowers(){
     ctx.shadowBlur=0;
 
     // Evolution glow aura
-    if(tower.tier>0){
-      ctx.strokeStyle=`rgba(255,215,0,${tower.tier*0.15})`;
-      ctx.lineWidth=tower.tier*2;
-      ctx.shadowColor='#ffd700'; ctx.shadowBlur=tower.tier*5;
+    const _mst=(tower.ups||[0,0,0,0,0])[4];
+    if(_mst>0){
+      ctx.strokeStyle=`rgba(255,215,0,${Math.min(0.9,_mst*0.1)})`;
+      ctx.lineWidth=Math.min(8,_mst);
+      ctx.shadowColor='#ffd700'; ctx.shadowBlur=Math.min(20,_mst*2);
       ctx.beginPath(); ctx.arc(cx,cy,r+2,0,Math.PI*2); ctx.stroke();
       ctx.shadowBlur=0;
     }
@@ -1024,11 +1188,32 @@ function drawTowers(){
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(stats.icon,cx,cy);
 
-    // Tier gold pips
+    // Ability charge arc (purple glow ring)
+    const chg=tower.abilChg||0;
+    const chMax=abilMax(tower);
+    const abilOn=tower.abilActive&&Date.now()<tower.abilUntil;
+    if(abilOn){
+      ctx.strokeStyle='#cc88ff'; ctx.lineWidth=3;
+      ctx.shadowColor='#cc88ff'; ctx.shadowBlur=16;
+      ctx.beginPath(); ctx.arc(cx,cy,r+5,0,Math.PI*2); ctx.stroke();
+      ctx.shadowBlur=0;
+    } else if(chg>0){
+      const pct=Math.min(1,chg/chMax);
+      ctx.strokeStyle=pct>=1?'#cc88ff':'rgba(160,80,220,0.7)';
+      ctx.lineWidth=pct>=1?3:2;
+      if(pct>=1){ctx.shadowColor='#cc88ff';ctx.shadowBlur=10;}
+      ctx.beginPath();
+      ctx.arc(cx,cy,r+5,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
+      ctx.stroke();
+      ctx.shadowBlur=0;
+    }
+
+    // Mastery pips (show mastery tier as gold dots)
+    const mst=(tower.ups||[0,0,0,0,0])[4];
     ctx.shadowColor='#ffd700'; ctx.shadowBlur=4;
-    for(let i=0;i<tower.tier;i++){
-      ctx.fillStyle='#ffd700';
-      ctx.beginPath(); ctx.arc(cx-(tower.tier-1)*3.5+i*7,cy+r+6,2.5,0,Math.PI*2); ctx.fill();
+    for(let i=0;i<Math.min(mst,10);i++){
+      ctx.fillStyle=i>=5?'#fff':'#ffd700';
+      ctx.beginPath(); ctx.arc(cx-(Math.min(mst,10)-1)*3.5+i*7,cy+r+7,2.5,0,Math.PI*2); ctx.fill();
     }
     ctx.shadowBlur=0;
   }
@@ -1163,6 +1348,7 @@ function loop(ts){
 
   if(!G.gameOver&&!G.gameWon){
     G.towers.forEach(t=>towerShoot(t));
+    applyPoison(dt);
     updateEnemies(dt);
     updateProjectiles();
     updateParticles();
