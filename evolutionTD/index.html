@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Evolution TD — 4 Player</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#08080f; font-family:'Courier New',monospace; color:#e0e0e0; touch-action:none; }
+
+  /* ── SCREENS ── */
+  .screen { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#08080f; z-index:10; }
+  .screen.hidden { display:none; }
+
+  /* Setup screen */
+  #setup { padding:24px; gap:16px; }
+  #setup h1 { font-size:2em; color:#7fff7f; text-shadow:0 0 16px #3f3; letter-spacing:3px; }
+  #setup .sub { color:#888; font-size:0.85em; max-width:340px; text-align:center; line-height:1.6; }
+  .name-rows { display:flex; flex-direction:column; gap:10px; width:min(340px,90vw); }
+  .name-row { display:flex; align-items:center; gap:10px; }
+  .p-color-swatch { width:18px; height:18px; border-radius:50%; flex-shrink:0; }
+  .name-row input {
+    flex:1; background:#1a1a28; border:2px solid #3a3a5a; border-radius:6px;
+    color:#fff; padding:10px 14px; font-family:'Courier New',monospace; font-size:1em;
+  }
+  .name-row input:focus { outline:none; border-color:var(--pc); }
+  .big-btn {
+    padding:14px 36px; border-radius:8px; font-family:'Courier New',monospace;
+    font-size:1.05em; font-weight:bold; letter-spacing:1px; cursor:pointer;
+    border:2px solid; transition:all 0.12s; touch-action:manipulation;
+  }
+  .big-btn.green { background:#1a3a1a; border-color:#3f9f3f; color:#7fff7f; }
+  .big-btn.green:active { background:#2a5a2a; }
+  .big-btn.blue { background:#0a2a3a; border-color:#2a7abf; color:#88ccff; }
+  .big-btn.blue:active { background:#0a3a5a; }
+  .big-btn.red { background:#3a1a1a; border-color:#9f3f3f; color:#ff8888; }
+  .big-btn.red:active { background:#5a2a2a; }
+  .big-btn:disabled { opacity:0.35; pointer-events:none; }
+
+  /* Game screen */
+  #game { position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  /* Top bar */
+  #top-bar {
+    display:flex; align-items:center; padding:6px 10px; gap:10px;
+    background:#0d0d18; border-bottom:2px solid #1a1a2a; flex-shrink:0; z-index:5;
+  }
+  #top-bar h2 { font-size:0.9em; color:#7fff7f; letter-spacing:1px; flex-shrink:0; }
+  .top-stat { display:flex; align-items:center; gap:4px; font-size:0.85em; flex-shrink:0; }
+  .top-stat .val { font-weight:bold; }
+  .top-stat.lives .val { color:#ff8888; }
+  .top-stat.wave .val { color:#88ccff; }
+  #top-bar .spacer { flex:1; }
+  #speed-btn {
+    padding:5px 10px; background:#1a1a28; border:1px solid #3a3a5a; border-radius:4px;
+    color:#aaa; cursor:pointer; font-family:'Courier New',monospace; font-size:0.78em;
+    touch-action:manipulation;
+  }
+  #speed-btn.fast { border-color:#ffd700; color:#ffd700; }
+
+  /* Canvas area */
+  #canvas-area { flex:1; position:relative; overflow:hidden; min-height:0; }
+  #gameCanvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+
+  /* Bottom panel */
+  #bottom-panel {
+    background:#0d0d18; border-top:2px solid #1a1a2a; flex-shrink:0;
+    display:flex; flex-direction:column; z-index:5;
+  }
+
+  /* Player tabs */
+  #player-tabs { display:flex; border-bottom:1px solid #1a1a2a; }
+  .p-tab {
+    flex:1; padding:8px 4px; text-align:center; cursor:pointer;
+    border-right:1px solid #1a1a2a; font-size:0.75em; line-height:1.3;
+    transition:all 0.12s; touch-action:manipulation; position:relative;
+  }
+  .p-tab:last-child { border-right:none; }
+  .p-tab .tab-name { font-weight:bold; color:#888; }
+  .p-tab .tab-dna { color:#7fff7f; font-size:0.9em; }
+  .p-tab .tab-kills { color:#aaa; font-size:0.82em; }
+  .p-tab.active { background:#111120; }
+  .p-tab.active .tab-name { color:var(--pc); }
+  .p-tab .turn-dot {
+    position:absolute; top:4px; right:4px;
+    width:8px; height:8px; border-radius:50%; background:var(--pc);
+    display:none; box-shadow:0 0 6px var(--pc);
+  }
+  .p-tab.active .turn-dot { display:block; }
+
+  /* Action bar */
+  #action-bar {
+    display:flex; align-items:center; padding:6px 8px; gap:6px; flex-wrap:wrap;
+  }
+  .tower-pick {
+    display:flex; align-items:center; gap:4px;
+    padding:8px 10px; border-radius:6px; cursor:pointer;
+    border:2px solid #3a3a5a; background:#1a1a28;
+    font-family:'Courier New',monospace; font-size:0.8em; touch-action:manipulation;
+    transition:all 0.12s;
+  }
+  .tower-pick .tp-icon { font-size:1.4em; }
+  .tower-pick .tp-info { line-height:1.3; }
+  .tower-pick .tp-name { color:#fff; font-weight:bold; font-size:0.9em; }
+  .tower-pick .tp-cost { color:#7fff7f; }
+  .tower-pick.selected { border-color:var(--active-pc); background:#111122; box-shadow:0 0 8px var(--active-pc-dim); }
+  .action-spacer { flex:1; }
+  #send-wave-btn {
+    padding:10px 16px; border-radius:6px; background:#0a2a3a; border:2px solid #2a7abf;
+    color:#88ccff; cursor:pointer; font-family:'Courier New',monospace;
+    font-size:0.9em; font-weight:bold; letter-spacing:1px; touch-action:manipulation;
+    transition:all 0.12s; flex-shrink:0;
+  }
+  #send-wave-btn:active { background:#0a3a5a; }
+  #send-wave-btn:disabled { opacity:0.3; pointer-events:none; }
+
+  /* Tower info popup (appears on map) */
+  #tower-popup {
+    position:absolute; background:rgba(10,10,20,0.95); border:2px solid #3a3a5a;
+    border-radius:8px; padding:10px 12px; font-size:0.78em; pointer-events:all;
+    min-width:160px; z-index:20; display:none; box-shadow:0 4px 20px rgba(0,0,0,0.7);
+  }
+  #tower-popup .tp-head { font-weight:bold; color:#fff; margin-bottom:4px; font-size:1em; }
+  #tower-popup .tp-owner { margin-bottom:6px; }
+  #tower-popup .tp-stat { margin-bottom:2px; color:#aaa; }
+  #tower-popup .tp-stat span { color:#88ccff; }
+  #tower-popup .tp-btns { display:flex; gap:6px; margin-top:8px; }
+  #tower-popup .tp-btns button {
+    flex:1; padding:7px 4px; border-radius:5px; cursor:pointer;
+    font-family:'Courier New',monospace; font-size:0.82em; border:1px solid;
+    touch-action:manipulation;
+  }
+  .evo-btn { background:#1a3a1a; border-color:#3f9f3f; color:#7fff7f; }
+  .evo-btn:disabled { opacity:0.35; }
+  .sell-btn { background:#2a1a1a; border-color:#9f3f3f; color:#ff8888; }
+  .close-btn { background:#1a1a2a; border-color:#3a3a5a; color:#aaa; max-width:40px; }
+
+  /* Message toast */
+  #toast {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.88); border:1px solid #3a3a5a; border-radius:6px;
+    padding:6px 16px; font-size:0.82em; color:#7fff7f; pointer-events:none;
+    opacity:0; transition:opacity 0.3s; white-space:nowrap; z-index:30;
+  }
+  #toast.show { opacity:1; }
+  #saved-flash {
+    position:fixed; top:60px; right:12px; background:rgba(0,60,0,0.92);
+    border:1px solid #3f9f3f; border-radius:4px; padding:5px 12px;
+    font-size:0.8em; color:#7fff7f; pointer-events:none; opacity:0;
+    transition:opacity 0.4s; z-index:50;
+  }
+  #saved-flash.show { opacity:1; }
+
+  /* Endgame overlay */
+  #end-overlay {
+    position:absolute; inset:0; background:rgba(0,0,0,0.88);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px; z-index:40; display:none;
+  }
+  #end-overlay h2 { font-size:1.8em; margin-bottom:10px; }
+  #end-overlay p { color:#aaa; line-height:1.7; margin-bottom:18px; font-size:0.9em; }
+  #end-overlay .score-row { margin-bottom:4px; font-size:0.9em; }
+</style>
+</head>
+<body>
+
+<!-- Setup Screen -->
+<div class="screen" id="setup">
+  <h1>⚗ EVOLUTION TD</h1>
+  <p class="sub">4-player co-op tower defense. Pass the tablet around — each player protects the path from evolving creatures!</p>
+  <div class="name-rows">
+    <div class="name-row" style="--pc:#ff6666">
+      <div class="p-color-swatch" style="background:#ff6666"></div>
+      <input id="ni-0" value="Player 1" maxlength="12" placeholder="Player 1">
+    </div>
+    <div class="name-row" style="--pc:#66aaff">
+      <div class="p-color-swatch" style="background:#66aaff"></div>
+      <input id="ni-1" value="Player 2" maxlength="12" placeholder="Player 2">
+    </div>
+    <div class="name-row" style="--pc:#66dd88">
+      <div class="p-color-swatch" style="background:#66dd88"></div>
+      <input id="ni-2" value="Player 3" maxlength="12" placeholder="Player 3">
+    </div>
+    <div class="name-row" style="--pc:#ffcc44">
+      <div class="p-color-swatch" style="background:#ffcc44"></div>
+      <input id="ni-3" value="Player 4" maxlength="12" placeholder="Player 4">
+    </div>
+  </div>
+  <button class="big-btn green" id="start-btn">▶ START GAME</button>
+  <button class="big-btn blue" id="load-btn" style="display:none;margin-top:-8px">📂 Load Save</button>
+</div>
+
+<!-- Game Screen -->
+<div id="game" class="screen hidden">
+  <div id="top-bar">
+    <h2>⚗ EVOTD</h2>
+    <div class="top-stat lives">❤️ <span class="val" id="lives-v">20</span></div>
+    <div class="top-stat wave">🌊 <span class="val" id="wave-v">0</span>/20</div>
+    <div class="spacer"></div>
+    <button id="speed-btn">⚡ 1×</button>
+  </div>
+  <div id="canvas-area">
+    <canvas id="gameCanvas"></canvas>
+    <div id="tower-popup">
+      <div class="tp-head" id="tp-head"></div>
+      <div class="tp-owner" id="tp-owner"></div>
+      <div class="tp-stat" id="tp-dmg"></div>
+      <div class="tp-stat" id="tp-range"></div>
+      <div class="tp-stat" id="tp-rate"></div>
+      <div class="tp-stat" id="tp-extra"></div>
+      <div class="tp-btns">
+        <button class="evo-btn" id="tp-evo-btn">Evolve</button>
+        <button class="sell-btn" id="tp-sell-btn">Sell</button>
+        <button class="close-btn" id="tp-close-btn">✕</button>
+      </div>
+    </div>
+    <div id="toast"></div>
+    <div id="end-overlay">
+      <h2 id="end-title"></h2>
+      <p id="end-body"></p>
+      <button class="big-btn" id="end-btn" onclick="location.reload()">🔄 Play Again</button>
+    </div>
+  </div>
+  <div id="bottom-panel">
+    <div id="player-tabs"></div>
+    <div id="action-bar"></div>
+  </div>
+</div>
+
+<div id="saved-flash">SAVED ✓</div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────────────
+const PLAYER_COLORS = ['#ff6666','#66aaff','#66dd88','#ffcc44'];
+const PLAYER_COLORS_DIM = ['rgba(255,80,80,0.3)','rgba(80,140,255,0.3)','rgba(80,220,120,0.3)','rgba(255,200,50,0.3)'];
+
+const TOWER_DEFS = {
+  plant:{
+    label:'Plant', icon:'🌿', baseCost:30,
+    tiers:['Moss','Fern','Bush','Tree','Ancient'],
+    icons:['🌿','🌱','🌳','🌲','🌴'],
+    baseRange:2.2,baseDmg:5,baseRate:1.0,slowFactor:0.55,splashRadius:0.7,
+    evo:{cost:1.6,range:1.15,dmg:2.0,rate:1.2,splash:1.3},
+  },
+  aquatic:{
+    label:'Aquatic', icon:'🐟', baseCost:40,
+    tiers:['Fish','Shark','Leviathan','Kraken','Sea Titan'],
+    icons:['🐟','🦈','🐋','🦑','🌊'],
+    baseRange:2.8,baseDmg:20,baseRate:0.5,slowFactor:1.0,splashRadius:0,
+    evo:{cost:2.0,range:1.2,dmg:2.5,rate:1.1},
+  },
+  insect:{
+    label:'Insect', icon:'🦟', baseCost:25,
+    tiers:['Gnat','Ant','Wasp','Hornet','Queen'],
+    icons:['🦟','🐜','🐝','🦂','👑'],
+    baseRange:1.8,baseDmg:4,baseRate:2.5,slowFactor:1.0,splashRadius:0,chainCount:2,
+    evo:{cost:1.5,range:1.1,dmg:1.8,rate:1.3,chain:1},
+  },
+  reptile:{
+    label:'Reptile', icon:'🦎', baseCost:50,
+    tiers:['Gecko','Iguana','Dragon','Wyvern','Elder'],
+    icons:['🦎','🦖','🐉','🐲','🔥'],
+    baseRange:3.5,baseDmg:14,baseRate:0.7,slowFactor:1.0,splashRadius:0,piercing:true,
+    evo:{cost:2.2,range:1.25,dmg:2.2,rate:1.15},
+  }
+};
+const TOWER_TYPES = ['plant','aquatic','insect','reptile'];
+
+const ENEMY_TIERS = [
+  {name:'Cell',    icon:'🔵',hp:35,  speed:0.9,reward:4, armor:0,    color:'#4a9aff'},
+  {name:'Amoeba',  icon:'🟢',hp:55,  speed:1.0,reward:6, armor:0,    color:'#4aff9a'},
+  {name:'Worm',    icon:'🟡',hp:90,  speed:0.9,reward:9, armor:0.05, color:'#ffaa4a'},
+  {name:'Snail',   icon:'🟠',hp:150, speed:0.65,reward:14,armor:0.1, color:'#ff7a4a'},
+  {name:'Fish',    icon:'🐡',hp:220, speed:1.2,reward:17, armor:0.1, color:'#4acaff'},
+  {name:'Frog',    icon:'🐸',hp:330, speed:1.0,reward:22, armor:0.15,color:'#5adf5a'},
+  {name:'Lizard',  icon:'🦎',hp:500, speed:1.1,reward:28, armor:0.2, color:'#9aaf4a'},
+  {name:'Wolf',    icon:'🐺',hp:700, speed:1.4,reward:36, armor:0.2, color:'#8a8aaa'},
+  {name:'Ape',     icon:'🦍',hp:1000,speed:1.0,reward:48, armor:0.25,color:'#7a5a4a'},
+  {name:'Mammoth', icon:'🦣',hp:1600,speed:0.85,reward:65,armor:0.3, color:'#aaaaaa'},
+  {name:'Human',   icon:'🧑',hp:2400,speed:1.2,reward:90, armor:0.25,color:'#ffcc88'},
+  {name:'Cyborg',  icon:'🤖',hp:3500,speed:1.3,reward:130,armor:0.4, color:'#88ccff'},
+  {name:'Mutant',  icon:'👾',hp:5500,speed:1.1,reward:220,armor:0.5, color:'#cc44ff'},
+  {name:'Titan',   icon:'👹',hp:9000,speed:0.95,reward:380,armor:0.6,color:'#ff4444'},
+  {name:'Omega',   icon:'🌟',hp:16000,speed:1.0,reward:700,armor:0.7,color:'#ffd700'},
+];
+
+// ─── CANVAS SETUP ────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, COLS, ROWS, CW, CH, pathPoints, PATH_SET;
+
+function resizeCanvas() {
+  const area = document.getElementById('canvas-area');
+  W = area.clientWidth;
+  H = area.clientHeight;
+  canvas.width = W;
+  canvas.height = H;
+  COLS = Math.floor(W / 22);
+  ROWS = Math.floor(H / 22);
+  CW = W / COLS;
+  CH = H / ROWS;
+  buildPath();
+}
+
+function buildPath() {
+  // Build path dynamically based on grid size
+  const coords = [];
+  const r1 = Math.max(1, Math.floor(ROWS * 0.15));
+  const r2 = Math.max(3, Math.floor(ROWS * 0.4));
+  const r3 = Math.max(5, Math.floor(ROWS * 0.62));
+  const r4 = Math.max(7, Math.floor(ROWS * 0.84));
+  const segments = [
+    // row r1: left→right (col 0 → col COLS*0.55)
+    ...range(0, Math.floor(COLS*0.55)).map(c=>[c,r1]),
+    // go down to r2
+    ...range(r1+1, r2).map(r=>[Math.floor(COLS*0.55),r]),
+    // go left to col COLS*0.22
+    ...range(Math.floor(COLS*0.55)-1, Math.floor(COLS*0.22), -1).map(c=>[c,r2]),
+    // go down to r3
+    ...range(r2+1, r3).map(r=>[Math.floor(COLS*0.22),r]),
+    // go right to COLS*0.78
+    ...range(Math.floor(COLS*0.22)+1, Math.floor(COLS*0.78)).map(c=>[c,r3]),
+    // go down to r4
+    ...range(r3+1, r4).map(r=>[Math.floor(COLS*0.78),r]),
+    // go right to end
+    ...range(Math.floor(COLS*0.78)+1, COLS).map(c=>[c,r4]),
+  ];
+  // deduplicate consecutive same coords
+  const deduped = [];
+  for (const p of segments) {
+    const last = deduped[deduped.length-1];
+    if (!last || last[0]!==p[0] || last[1]!==p[1]) deduped.push(p);
+  }
+  PATH_SET = new Set(deduped.map(([c,r])=>`${c},${r}`));
+  pathPoints = deduped.map(([c,r])=>({x:(c+0.5)*CW,y:(r+0.5)*CH}));
+  return deduped;
+}
+
+function range(a,b,step=1) {
+  const res=[];
+  if(step>0) for(let i=a;i<=b;i+=step) res.push(i);
+  else for(let i=a;i>=b;i+=step) res.push(i);
+  return res;
+}
+
+// ─── GAME STATE ──────────────────────────────────────────────────────
+let G = {
+  lives:20, wave:0,
+  players:[
+    {name:'P1',dna:100,kills:0,towerCount:0,selectedType:null},
+    {name:'P2',dna:100,kills:0,towerCount:0,selectedType:null},
+    {name:'P3',dna:100,kills:0,towerCount:0,selectedType:null},
+    {name:'P4',dna:100,kills:0,towerCount:0,selectedType:null},
+  ],
+  activePlayer:0,
+  towers:[],enemies:[],projectiles:[],particles:[],floaters:[],
+  waveActive:false,gameOver:false,gameWon:false,
+  speed:1, frame:0,
+  popupTower:null,
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const tc=t=>({x:(t.col+0.5)*CW,y:(t.row+0.5)*CH});
+
+function getTowerStats(tower) {
+  const d=TOWER_DEFS[tower.type], e=d.evo, n=tower.tier;
+  return {
+    range: d.baseRange*Math.pow(e.range||1,n)*CW,
+    dmg:   d.baseDmg*Math.pow(e.dmg,n),
+    rate:  d.baseRate*Math.pow(e.rate,n),
+    slow:  d.slowFactor,
+    splash:d.splashRadius*(e.splash?Math.pow(e.splash,n):1)*CW,
+    chain: d.chainCount?d.chainCount+(e.chain||0)*n:0,
+    pierce:d.piercing||false,
+    icon:  d.icons[Math.min(n,d.icons.length-1)],
+    tierName:d.tiers[Math.min(n,d.tiers.length-1)],
+  };
+}
+function evolveCost(t){
+  if(t.tier>=4)return Infinity;
+  const d=TOWER_DEFS[t.type];
+  return Math.round(d.baseCost*Math.pow(d.evo.cost,t.tier+1)*0.55);
+}
+function sellVal(t){ return Math.floor(t.totalSpent*0.6); }
+
+// ─── UI ──────────────────────────────────────────────────────────────
+function buildBottomUI() {
+  // Player tabs
+  const tabs = document.getElementById('player-tabs');
+  tabs.innerHTML = '';
+  for (let i=0;i<4;i++) {
+    const tab = document.createElement('div');
+    tab.className = 'p-tab' + (i===0?' active':'');
+    tab.dataset.pid = i;
+    tab.style.setProperty('--pc', PLAYER_COLORS[i]);
+    tab.innerHTML = `
+      <div class="turn-dot"></div>
+      <div class="tab-name" id="tab-name-${i}">${G.players[i].name}</div>
+      <div class="tab-dna">🧬<span id="tab-dna-${i}">100</span></div>
+      <div class="tab-kills">⚔<span id="tab-kills-${i}">0</span></div>
+    `;
+    tab.addEventListener('pointerdown', () => setActivePlayer(i));
+    tabs.appendChild(tab);
+  }
+  buildActionBar();
+}
+
+function buildActionBar() {
+  const bar = document.getElementById('action-bar');
+  const pid = G.activePlayer;
+  const pc = PLAYER_COLORS[pid];
+  const pcd = PLAYER_COLORS_DIM[pid];
+  bar.style.setProperty('--active-pc', pc);
+  bar.style.setProperty('--active-pc-dim', pcd);
+  bar.innerHTML = '';
+  for (const type of TOWER_TYPES) {
+    const def = TOWER_DEFS[type];
+    const btn = document.createElement('div');
+    btn.className = 'tower-pick' + (G.players[pid].selectedType===type?' selected':'');
+    btn.dataset.type = type;
+    btn.innerHTML = `
+      <span class="tp-icon">${def.icon}</span>
+      <span class="tp-info">
+        <div class="tp-name">${def.label}</div>
+        <div class="tp-cost">🧬${def.baseCost}</div>
+      </span>
+    `;
+    btn.addEventListener('pointerdown', () => {
+      const t = type, p = pid;
+      G.players[p].selectedType = G.players[p].selectedType===t ? null : t;
+      // Deselect other players
+      G.players.forEach((pl,i)=>{ if(i!==p) pl.selectedType=null; });
+      closePopup();
+      buildActionBar();
+    });
+    bar.appendChild(btn);
+  }
+  const spacer = document.createElement('div');
+  spacer.className = 'action-spacer';
+  bar.appendChild(spacer);
+  const waveBtn = document.createElement('button');
+  waveBtn.id = 'send-wave-btn';
+  waveBtn.disabled = G.waveActive;
+  waveBtn.textContent = G.waveActive ? `Wave ${G.wave}` : `▶ Wave ${G.wave+1}`;
+  waveBtn.addEventListener('pointerdown', sendWave);
+  bar.appendChild(waveBtn);
+}
+
+function setActivePlayer(pid) {
+  G.activePlayer = pid;
+  document.querySelectorAll('.p-tab').forEach((t,i)=>t.classList.toggle('active',i===pid));
+  buildActionBar();
+}
+
+function updatePlayerTab(pid) {
+  const p=G.players[pid];
+  const el=document.getElementById(`tab-dna-${pid}`);
+  if(el) el.textContent=Math.floor(p.dna);
+  const kl=document.getElementById(`tab-kills-${pid}`);
+  if(kl) kl.textContent=p.kills;
+}
+
+function updateLives(){ document.getElementById('lives-v').textContent=G.lives; }
+function updateWaveNum(){ document.getElementById('wave-v').textContent=G.wave; }
+
+// ─── SETUP SCREEN ────────────────────────────────────────────────────
+function checkSave(){
+  try{ if(localStorage.getItem('evoTD4_save')) document.getElementById('load-btn').style.display=''; }catch(e){}
+}
+checkSave();
+
+document.getElementById('start-btn').addEventListener('pointerdown', ()=>{
+  for(let i=0;i<4;i++){
+    const v=document.getElementById(`ni-${i}`).value.trim();
+    G.players[i].name = v||`Player ${i+1}`;
+  }
+  startGame();
+});
+document.getElementById('load-btn').addEventListener('pointerdown', ()=>{
+  if(loadState()) startGame();
+});
+
+function startGame() {
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  setTimeout(()=>{
+    resizeCanvas();
+    buildBottomUI();
+    updateAllPlayersUI();
+    updateLives(); updateWaveNum();
+    toast('Place towers then tap ▶ Wave 1!');
+    requestAnimationFrame(loop);
+  }, 50);
+}
+
+function updateAllPlayersUI(){ for(let i=0;i<4;i++) updatePlayerTab(i); }
+
+// ─── CANVAS TOUCH ────────────────────────────────────────────────────
+canvas.addEventListener('pointerdown', e=>{
+  if(G.gameOver||G.gameWon) return;
+  if(G.popupTower) { closePopup(); return; }
+  const r=canvas.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(W/r.width);
+  const my=(e.clientY-r.top)*(H/r.height);
+  const col=Math.floor(mx/CW), row=Math.floor(my/CH);
+  if(col<0||col>=COLS||row<0||row>=ROWS) return;
+  e.preventDefault();
+
+  const pid=G.activePlayer, p=G.players[pid];
+  const existing=G.towers.find(t=>t.col===col&&t.row===row);
+
+  if(existing) {
+    // Show popup regardless of selection mode
+    G.players.forEach(pl=>pl.selectedType=null);
+    buildActionBar();
+    openPopup(existing, mx, my);
+    return;
+  }
+
+  if(p.selectedType && !PATH_SET.has(`${col},${row}`)) {
+    const cost=TOWER_DEFS[p.selectedType].baseCost;
+    if(p.dna>=cost){
+      p.dna-=cost;
+      G.towers.push({type:p.selectedType,col,row,tier:0,totalSpent:cost,owner:pid,lastShot:0});
+      p.towerCount++;
+      updatePlayerTab(pid);
+      toast(`${p.name} placed ${TOWER_DEFS[p.selectedType].label}!`);
+    } else {
+      toast(`${p.name} needs ${cost-Math.floor(p.dna)} more 🧬`);
+    }
+  }
+});
+
+// ─── TOWER POPUP ─────────────────────────────────────────────────────
+function openPopup(tower, mx, my) {
+  G.popupTower = tower;
+  const stats=getTowerStats(tower);
+  const pid=tower.owner;
+  const ec=evolveCost(tower);
+  const sv=sellVal(tower);
+  const ownerDNA=G.players[pid].dna;
+  const def=TOWER_DEFS[tower.type];
+
+  document.getElementById('tp-head').textContent=`${stats.icon} ${stats.tierName}`;
+  document.getElementById('tp-head').style.color=PLAYER_COLORS[pid];
+  document.getElementById('tp-owner').textContent=`T${tower.tier+1}/5 · ${G.players[pid].name}`;
+  document.getElementById('tp-owner').style.color=PLAYER_COLORS[pid];
+  document.getElementById('tp-dmg').innerHTML=`⚔ Dmg: <span>${stats.dmg.toFixed(0)}</span>`;
+  document.getElementById('tp-range').innerHTML=`📡 Range: <span>${(stats.range/CW).toFixed(1)}c</span>`;
+  document.getElementById('tp-rate').innerHTML=`⚡ Rate: <span>${stats.rate.toFixed(2)}/s</span>`;
+  const extra=stats.splash>0?`💥 Splash: <span>${(stats.splash/CW).toFixed(1)}c</span>`:
+    stats.chain>0?`⛓ Chain: <span>${stats.chain}</span>`:
+    stats.pierce?`🔱 Piercing`:'';
+  document.getElementById('tp-extra').innerHTML=extra;
+
+  const evoBtn=document.getElementById('tp-evo-btn');
+  if(tower.tier<4){
+    evoBtn.textContent=`Evolve (${ec}🧬)`;
+    evoBtn.disabled=ownerDNA<ec;
+    evoBtn.style.display='';
+  } else {
+    evoBtn.textContent='★ MAX';
+    evoBtn.disabled=true;
+  }
+  document.getElementById('tp-sell-btn').textContent=`Sell +${sv}🧬`;
+
+  // Position popup near tap
+  const popup=document.getElementById('tower-popup');
+  popup.style.display='block';
+  const pw=180, ph=160;
+  let px=mx+10, py=my-ph/2;
+  if(px+pw>W) px=mx-pw-10;
+  if(py<0) py=0;
+  if(py+ph>H) py=H-ph;
+  popup.style.left=px+'px';
+  popup.style.top=py+'px';
+}
+
+document.getElementById('tp-evo-btn').addEventListener('pointerdown', ()=>{
+  const tower=G.popupTower;
+  if(!tower||tower.tier>=4) return;
+  const ec=evolveCost(tower);
+  const pid=tower.owner;
+  if(G.players[pid].dna>=ec){
+    G.players[pid].dna-=ec;
+    tower.tier++; tower.totalSpent+=ec;
+    updatePlayerTab(pid);
+    const ns=getTowerStats(tower);
+    spawnParticles(tc(tower).x,tc(tower).y,PLAYER_COLORS[pid],15);
+    spawnFloater(tc(tower).x,tc(tower).y-20,`EVOLVED! ${ns.tierName}`,'#ffd700');
+    toast(`${G.players[pid].name} evolved to ${ns.tierName}!`);
+    closePopup();
+  }
+});
+document.getElementById('tp-sell-btn').addEventListener('pointerdown', ()=>{
+  const tower=G.popupTower;
+  if(!tower) return;
+  const sv=sellVal(tower);
+  const pid=tower.owner;
+  G.players[pid].dna+=sv;
+  G.players[pid].towerCount=Math.max(0,G.players[pid].towerCount-1);
+  G.towers=G.towers.filter(t=>t!==tower);
+  updatePlayerTab(pid);
+  toast(`Sold for ${sv}🧬 → ${G.players[pid].name}`);
+  closePopup();
+});
+document.getElementById('tp-close-btn').addEventListener('pointerdown', closePopup);
+
+function closePopup(){
+  G.popupTower=null;
+  document.getElementById('tower-popup').style.display='none';
+}
+
+// ─── WAVE ────────────────────────────────────────────────────────────
+function sendWave(){
+  if(G.waveActive||G.gameOver||G.gameWon) return;
+  G.wave++;
+  G.enemies=buildWave(G.wave);
+  G.waveActive=true;
+  updateWaveNum();
+  buildActionBar();
+  toast(`Wave ${G.wave} incoming! All players defend!`);
+}
+document.getElementById('speed-btn').addEventListener('pointerdown', ()=>{
+  const btn=document.getElementById('speed-btn');
+  G.speed=G.speed===1?2:1;
+  btn.textContent=G.speed===2?'⚡ 2×':'⚡ 1×';
+  btn.classList.toggle('fast',G.speed===2);
+});
+
+function buildWave(wn) {
+  const enemies=[];
+  const ti=Math.min(Math.floor(wn/1.5),ENEMY_TIERS.length-1);
+  const tier=ENEMY_TIERS[ti];
+  const count=8+wn*3;
+  const hps=1+wn*0.2, sps=1+wn*0.02;
+  for(let i=0;i<count;i++) enemies.push(makeEnemy(tier,hps,sps,i*(55/G.speed),false));
+  if(wn%5===0){
+    const bt=ENEMY_TIERS[Math.min(ti+1,ENEMY_TIERS.length-1)];
+    enemies.push(makeEnemy(bt,hps*5,sps*0.7,count*(55/G.speed)+30,true));
+  }
+  return enemies;
+}
+
+function makeEnemy(tier,hps,sps,delay,isBoss){
+  return {
+    tier,isBoss,
+    hp:Math.round(tier.hp*hps), maxHp:Math.round(tier.hp*hps),
+    armor:Math.min(tier.armor+G.wave*0.012,0.88),
+    speed:tier.speed*sps*CW*0.82,
+    reward:tier.reward*(isBoss?8:1),
+    pathIdx:0, x:pathPoints[0].x, y:pathPoints[0].y,
+    spawnDelay:delay, spawned:false,
+    slowUntil:0, slowFactor:1.0,
+    dead:false, reached:false,
+    id:Math.random()+Math.random(),
+  };
+}
+
+// ─── GAME LOGIC ──────────────────────────────────────────────────────
+function towerShoot(tower){
+  const stats=getTowerStats(tower);
+  const cd=60/(stats.rate*G.speed);
+  if(G.frame-(tower.lastShot||0)<cd) return;
+  const c=tc(tower);
+  const inRange=G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(c,e)<=stats.range);
+  if(!inRange.length) return;
+  inRange.sort((a,b)=>b.pathIdx-a.pathIdx);
+  tower.lastShot=G.frame;
+  G.projectiles.push({
+    x:c.x,y:c.y,tx:inRange[0].x,ty:inRange[0].y,targetId:inRange[0].id,
+    dmg:stats.dmg,spd:CW*9*G.speed,
+    splash:stats.splash,slow:stats.slow,
+    pierce:stats.pierce,chain:stats.chain,chainUsed:0,
+    color:PLAYER_COLORS[tower.owner],owner:tower.owner,
+    size:3+tower.tier*0.8,
+  });
+}
+
+function updateEnemies(dt){
+  let allDone=true;
+  for(const e of G.enemies){
+    if(e.dead||e.reached) continue;
+    if(!e.spawned){e.spawnDelay-=1;if(e.spawnDelay<=0)e.spawned=true;allDone=false;continue;}
+    allDone=false;
+    const sm=Date.now()<e.slowUntil?e.slowFactor:1.0;
+    let rem=e.speed*sm*dt*G.speed;
+    while(rem>0&&e.pathIdx<pathPoints.length-1){
+      const t=pathPoints[e.pathIdx+1];
+      const dx=t.x-e.x,dy=t.y-e.y,d=Math.hypot(dx,dy);
+      if(d<=rem){e.x=t.x;e.y=t.y;e.pathIdx++;rem-=d;}
+      else{e.x+=dx/d*rem;e.y+=dy/d*rem;rem=0;}
+    }
+    if(e.pathIdx>=pathPoints.length-1){
+      e.reached=true;
+      G.lives=Math.max(0,G.lives-(e.isBoss?3:1));
+      updateLives();
+      if(G.lives<=0&&!G.gameOver) triggerGameOver();
+    }
+  }
+  if(allDone&&G.waveActive&&!G.gameOver){
+    G.waveActive=false;
+    const bonus=20+G.wave*6;
+    const share=Math.floor(bonus/4);
+    for(let i=0;i<4;i++) G.players[i].dna+=share;
+    updateAllPlayersUI();
+    if(G.wave>=20){triggerWin();return;}
+    toast(`Wave ${G.wave} cleared! +${share}🧬 each!`);
+    saveState();
+    buildActionBar();
+  }
+}
+
+function updateProjectiles(){
+  for(let i=G.projectiles.length-1;i>=0;i--){
+    const p=G.projectiles[i];
+    let tgt=G.enemies.find(e=>e.id===p.targetId&&!e.dead&&!e.reached);
+    if(!tgt){
+      const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy);
+      if(d<6){G.projectiles.splice(i,1);continue;}
+      const spd=p.spd/60; p.x+=dx/d*spd; p.y+=dy/d*spd; continue;
+    }
+    p.tx=tgt.x;p.ty=tgt.y;
+    const dx=tgt.x-p.x,dy=tgt.y-p.y,d=Math.hypot(dx,dy);
+    const spd=p.spd/60;
+    if(d<=spd+4){
+      if(p.splash>0){
+        G.enemies.filter(e=>e.spawned&&!e.dead&&!e.reached&&dist(e,tgt)<=p.splash)
+          .forEach(e=>dealDamage(e,p.dmg,p.slow,p.owner));
+        spawnParticles(tgt.x,tgt.y,p.color,8);
+        G.projectiles.splice(i,1);
+      } else if(p.chain>0&&p.chainUsed<p.chain){
+        dealDamage(tgt,p.dmg,p.slow,p.owner);
+        const nxt=G.enemies.find(e=>e!==tgt&&!e.dead&&!e.reached&&e.spawned&&dist(e,tgt)<CW*2.5);
+        if(nxt){p.targetId=nxt.id;p.chainUsed++;continue;}
+        G.projectiles.splice(i,1);
+      } else {
+        dealDamage(tgt,p.dmg,p.slow,p.owner);
+        if(p.pierce){
+          const nxt=G.enemies.find(e=>e!==tgt&&!e.dead&&!e.reached&&e.spawned&&dist(e,{x:p.x,y:p.y})<p.spd*0.5);
+          if(nxt){p.targetId=nxt.id;continue;}
+        }
+        G.projectiles.splice(i,1);
+      }
+    } else { p.x+=dx/d*spd; p.y+=dy/d*spd; }
+  }
+}
+
+function dealDamage(e,dmg,slow,ownerId){
+  e.hp-=dmg*(1-e.armor);
+  if(e.hp<=0){
+    e.dead=true;
+    G.players[ownerId].dna+=e.reward;
+    G.players[ownerId].kills++;
+    updatePlayerTab(ownerId);
+    spawnParticles(e.x,e.y,e.tier.color,12);
+    spawnFloater(e.x,e.y-15,`+${e.reward}🧬`,PLAYER_COLORS[ownerId]);
+  } else if(slow<1){
+    e.slowFactor=slow; e.slowUntil=Date.now()+1500;
+  }
+}
+
+function spawnParticles(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,s=1+Math.random()*3;
+    G.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color,size:2+Math.random()*2});
+  }
+}
+function spawnFloater(x,y,text,color){
+  G.floaters.push({x,y,text,color,life:1,vy:-1.5});
+}
+function updateParticles(){
+  for(let i=G.particles.length-1;i>=0;i--){
+    const p=G.particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life-=0.04;
+    if(p.life<=0)G.particles.splice(i,1);
+  }
+}
+function updateFloaters(){
+  for(let i=G.floaters.length-1;i>=0;i--){
+    const f=G.floaters[i];f.y+=f.vy;f.life-=0.025;
+    if(f.life<=0)G.floaters.splice(i,1);
+  }
+}
+
+// ─── SAVE/LOAD ───────────────────────────────────────────────────────
+function saveState(){
+  try{
+    localStorage.setItem('evoTD4_save',JSON.stringify({
+      lives:G.lives,wave:G.wave,
+      players:G.players.map(p=>({name:p.name,dna:p.dna,kills:p.kills,towerCount:p.towerCount})),
+      towers:G.towers.map(t=>({type:t.type,col:t.col,row:t.row,tier:t.tier,totalSpent:t.totalSpent,owner:t.owner})),
+    }));
+    const el=document.getElementById('saved-flash');
+    el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'),1500);
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem('evoTD4_save'));
+    if(!s)return false;
+    G.lives=s.lives; G.wave=s.wave;
+    s.players.forEach((p,i)=>Object.assign(G.players[i],p));
+    G.towers=s.towers.map(t=>({...t,lastShot:0}));
+    return true;
+  }catch(e){return false;}
+}
+setInterval(()=>{
+  if(!G.waveActive&&!G.gameOver&&!G.gameWon&&G.wave>0) saveState();
+},30000);
+
+// ─── END STATES ──────────────────────────────────────────────────────
+function triggerGameOver(){
+  G.gameOver=true;
+  localStorage.removeItem('evoTD4_save');
+  const ov=document.getElementById('end-overlay');
+  ov.style.display='flex';
+  document.getElementById('end-title').textContent='💀 EXTINCTION';
+  document.getElementById('end-title').style.color='#ff7f7f';
+  document.getElementById('end-btn').className='big-btn red';
+  document.getElementById('end-body').innerHTML=
+    `Colony overrun on wave ${G.wave}.<br><br>`+
+    G.players.map((p,i)=>`<span class="score-row" style="color:${PLAYER_COLORS[i]}">${p.name}: ${p.kills} kills, ${Math.floor(p.dna)}🧬</span>`).join('<br>');
+}
+function triggerWin(){
+  G.gameWon=true;
+  localStorage.removeItem('evoTD4_save');
+  const top=G.players.reduce((a,b)=>b.kills>a.kills?b:a);
+  const ov=document.getElementById('end-overlay');
+  ov.style.display='flex';
+  document.getElementById('end-title').textContent='🌟 EVOLUTION COMPLETE!';
+  document.getElementById('end-title').style.color='#ffd700';
+  document.getElementById('end-btn').className='big-btn green';
+  document.getElementById('end-body').innerHTML=
+    `All 20 waves survived! Life conquers all.<br>Top survivor: <strong style="color:#ffd700">${top.name}</strong> (${top.kills} kills)<br><br>`+
+    G.players.map((p,i)=>`<span style="color:${PLAYER_COLORS[i]}">${p.name}: ${p.kills} kills, ${Math.floor(p.dna)}🧬</span>`).join('<br>');
+}
+
+// ─── DRAWING ─────────────────────────────────────────────────────────
+function drawGrid(){
+  ctx.strokeStyle='#12121c'; ctx.lineWidth=0.5;
+  for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CW,0);ctx.lineTo(c*CW,H);ctx.stroke();}
+  for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CH);ctx.lineTo(W,r*CH);ctx.stroke();}
+}
+
+function drawPath(){
+  if(!pathPoints||!pathPoints.length) return;
+  for(const [c,r] of (G._pathCoords||[])){
+    ctx.fillStyle='#17140a'; ctx.fillRect(c*CW+.5,r*CH+.5,CW-1,CH-1);
+  }
+  ctx.strokeStyle='#2a2008'; ctx.lineWidth=CW*0.28;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();
+  pathPoints.forEach((p,i)=>{if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+  ctx.stroke();
+  ctx.font=`${Math.round(CH*0.75)}px serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#3f3'; ctx.fillText('▶',pathPoints[0].x,pathPoints[0].y);
+  ctx.fillStyle='#f33'; ctx.fillText('✕',pathPoints[pathPoints.length-1].x,pathPoints[pathPoints.length-1].y);
+}
+
+function drawPlacementHighlight(){
+  // Show active player placing mode
+  const pid=G.activePlayer;
+  if(!G.players[pid].selectedType) return;
+  ctx.fillStyle=PLAYER_COLORS_DIM[pid];
+  ctx.fillRect(0,0,W,20);
+  ctx.fillStyle=PLAYER_COLORS[pid];
+  ctx.font='bold 12px Courier New'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(`${G.players[pid].name} — tap to place ${TOWER_DEFS[G.players[pid].selectedType].label}`,8,10);
+}
+
+function drawTowers(){
+  for(const tower of G.towers){
+    const stats=getTowerStats(tower);
+    const cx=(tower.col+0.5)*CW, cy=(tower.row+0.5)*CH, r=CW*0.42;
+    const pc=PLAYER_COLORS[tower.owner];
+    if(G.popupTower===tower){
+      ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
+      ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.arc(cx,cy,stats.range,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle=pc; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(cx,cy,r+2,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='#1a1a28';
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    if(tower.tier>0){
+      const g=ctx.createRadialGradient(cx,cy,r*.2,cx,cy,r);
+      g.addColorStop(0,'rgba(255,220,80,0.35)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.font=`${Math.round(r*1.3)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(stats.icon,cx,cy);
+    for(let i=0;i<tower.tier;i++){
+      ctx.fillStyle='#ffd700';
+      ctx.beginPath(); ctx.arc(cx-(tower.tier-1)*3.5+i*7,cy+r+5,2.5,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function drawEnemies(){
+  for(const e of G.enemies){
+    if(!e.spawned||e.dead||e.reached) continue;
+    const r=e.isBoss?CW*0.5:CW*0.34;
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(e.x,e.y+r*.8,r*.7,r*.25,0,0,Math.PI*2); ctx.fill();
+    if(e.slowFactor<1&&Date.now()<e.slowUntil){
+      ctx.strokeStyle='#4acaff'; ctx.lineWidth=2; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.arc(e.x,e.y,r+3,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.fillStyle=e.tier.color;
+    ctx.beginPath(); ctx.arc(e.x,e.y,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font=`${Math.round(r*1.2)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(e.tier.icon,e.x,e.y);
+    const bw=r*2.1,bh=4,bx=e.x-bw/2,by=e.y-r-8;
+    ctx.fillStyle='#200'; ctx.fillRect(bx,by,bw,bh);
+    const hpf=e.hp/e.maxHp,hc=hpf>.6?'#3f3':hpf>.3?'#ff3':'#f33';
+    ctx.fillStyle=hc; ctx.fillRect(bx,by,bw*hpf,bh);
+    ctx.strokeStyle='#333'; ctx.lineWidth=.5; ctx.strokeRect(bx,by,bw,bh);
+  }
+}
+
+function drawProjectiles(){
+  for(const p of G.projectiles){
+    ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+}
+
+function drawParticles(){
+  for(const p of G.particles){
+    ctx.globalAlpha=p.life; ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawFloaters(){
+  for(const f of G.floaters){
+    ctx.globalAlpha=f.life; ctx.fillStyle=f.color;
+    ctx.font='bold 12px Courier New'; ctx.textAlign='center';
+    ctx.fillText(f.text,f.x,f.y);
+  }
+  ctx.globalAlpha=1;
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────
+function toast(text){
+  const el=document.getElementById('toast');
+  el.textContent=text; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ─── MAIN LOOP ───────────────────────────────────────────────────────
+let lastT=0, pathCoordsCache=null;
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.05); lastT=ts; G.frame++;
+
+  ctx.fillStyle='#0d0d14'; ctx.fillRect(0,0,W,H);
+
+  // Cache path coords extraction for drawing
+  if(!G._pathCoords&&PATH_SET){
+    G._pathCoords=[];
+    PATH_SET.forEach(k=>{const[c,r]=k.split(',').map(Number);G._pathCoords.push([c,r]);});
+  }
+
+  drawGrid(); drawPath();
+
+  if(!G.gameOver&&!G.gameWon){
+    G.towers.forEach(t=>towerShoot(t));
+    updateEnemies(dt);
+    updateProjectiles();
+    updateParticles();
+    updateFloaters();
+  }
+
+  drawTowers(); drawEnemies(); drawProjectiles(); drawParticles(); drawFloaters();
+  drawPlacementHighlight();
+
+  requestAnimationFrame(loop);
+}
+
+// Resize handler
+window.addEventListener('resize',()=>{
+  if(document.getElementById('game')&&!document.getElementById('game').classList.contains('hidden')){
+    resizeCanvas();
+    G._pathCoords=null; // rebuild
+    buildActionBar();
+  }
+});
+</script>
+</body>
+</html>
