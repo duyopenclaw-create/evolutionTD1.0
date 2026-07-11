@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PRISON ESCAPE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  background:#060608;
+  color:#ddd;
+  font-family:'Courier New',monospace;
+  height:100%;
+  overflow:hidden;
+  touch-action:none;
+}
+.screen{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  transition:opacity .4s;
+}
+.screen.hidden{display:none;}
+
+/* ========= TITLE ========= */
+#s-title{background:#060608;}
+.bars-wrap{position:absolute;inset:0;display:flex;gap:0;pointer-events:none;overflow:hidden;}
+.bar{
+  flex:1;background:#111;
+  transform:scaleY(0);transform-origin:top;
+  animation:dropBar .6s cubic-bezier(.2,1.4,.4,1) forwards;
+}
+@keyframes dropBar{to{transform:scaleY(1);}}
+.title-center{position:relative;z-index:2;text-align:center;padding:20px;}
+.t-main{
+  font-size:clamp(28px,8vw,80px);
+  color:#f33;letter-spacing:10px;
+  text-shadow:0 0 20px #f00,0 0 60px #900;
+  animation:flicker 4s infinite;
+  margin-bottom:6px;
+}
+@keyframes flicker{0%,90%,100%{opacity:1;}91%{opacity:.7;}93%{opacity:1;}95%{opacity:.5;}97%{opacity:1;}}
+.t-sub{font-size:clamp(10px,2.5vw,16px);color:#555;letter-spacing:6px;margin-bottom:50px;}
+.t-credit{position:absolute;bottom:20px;font-size:10px;color:#333;letter-spacing:2px;}
+
+/* ========= BUTTONS ========= */
+.btn{
+  padding:13px 38px;background:transparent;
+  border:2px solid #c33;color:#f44;
+  font-family:inherit;font-size:clamp(12px,3vw,16px);
+  letter-spacing:4px;cursor:pointer;text-transform:uppercase;
+  transition:all .2s;user-select:none;
+}
+.btn:hover,.btn:active{background:#c33;color:#000;box-shadow:0 0 25px #f33;}
+.btn.green{border-color:#3a3;color:#4c4;}
+.btn.green:hover,.btn.green:active{background:#3a3;color:#000;box-shadow:0 0 25px #4f4;}
+
+/* ========= CHAR SELECT ========= */
+#s-charsel{background:#080810;padding:16px;overflow-y:auto;align-items:flex-start;}
+.cs-header{text-align:center;width:100%;padding:10px 0 14px;}
+.cs-title{font-size:clamp(16px,4vw,26px);color:#f44;letter-spacing:5px;margin-bottom:4px;}
+.cs-sub{font-size:11px;color:#555;letter-spacing:3px;}
+.char-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:10px;width:100%;max-width:920px;margin:0 auto 14px;
+}
+.ccard{
+  background:#0d0d15;border:2px solid #222;
+  padding:14px;cursor:pointer;transition:all .2s;text-align:center;
+}
+.ccard:hover,.ccard.sel{border-color:#f44;background:#150a0a;box-shadow:inset 0 0 20px rgba(255,40,40,.06);}
+.cavatar{
+  width:72px;height:72px;border-radius:50%;margin:0 auto 10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;border:2px solid;background:#0a0a12;
+}
+.cname{font-size:12px;color:#fff;letter-spacing:2px;margin-bottom:4px;}
+.ccrime{font-size:9px;color:#666;line-height:1.5;margin-bottom:8px;min-height:32px;}
+.cstats{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+.spill{background:#111;border:1px solid #2a2a2a;padding:2px 7px;font-size:8px;color:#999;}
+.cability{font-size:8px;color:#4af;line-height:1.4;min-height:24px;}
+.cs-bottom{text-align:center;width:100%;padding:6px 0 10px;}
+
+/* ========= INTRO ========= */
+#s-intro{background:#000;padding:40px 30px;}
+.intro-box{max-width:560px;text-align:left;}
+.intro-label{font-size:10px;color:#444;letter-spacing:4px;margin-bottom:14px;}
+#intro-text{
+  font-size:clamp(12px,2.5vw,15px);
+  line-height:1.9;color:#bbb;margin-bottom:30px;min-height:120px;
+}
+.intro-name{color:#f44;font-weight:bold;}
+
+/* ========= GAME ========= */
+#s-game{padding:0;background:#000;justify-content:flex-start;align-items:center;}
+#hud{
+  width:100%;max-width:800px;
+  display:flex;align-items:center;gap:12px;padding:6px 10px;
+  background:#0d0d0d;border-bottom:1px solid #1a1a1a;
+  flex-wrap:wrap;flex-shrink:0;
+}
+.hud-block{display:flex;align-items:center;gap:5px;}
+.hl{font-size:9px;color:#444;letter-spacing:1px;}
+.hv{font-size:13px;color:#aaa;}
+#hud-time{color:#ffd;font-size:14px;font-weight:bold;min-width:48px;}
+#hud-time.urgent{color:#f44;animation:pulse .6s infinite;}
+@keyframes pulse{50%{opacity:.4;}}
+.sbar{width:80px;height:7px;background:#1a1a1a;border-radius:4px;overflow:hidden;}
+.sfill{height:100%;border-radius:4px;transition:width .4s,background .4s;background:#3f3;}
+#hud-money{color:#ffd700;}
+#hud-ability{color:#4af;cursor:pointer;font-size:11px;letter-spacing:1px;}
+#hud-ability.used{color:#333;cursor:default;}
+#hud-inv{display:flex;gap:4px;flex-wrap:wrap;}
+.inv-chip{background:#111;border:1px solid #2a2a2a;padding:2px 6px;font-size:9px;color:#777;}
+#hud-msg{
+  margin-left:auto;font-size:10px;color:#ff4;letter-spacing:1px;
+  white-space:nowrap;overflow:hidden;max-width:200px;
+}
+#gameCanvas{display:block;max-width:100%;height:auto;cursor:crosshair;}
+
+/* ========= MOBILE CONTROLS ========= */
+#mctl{position:absolute;inset:0;pointer-events:none;z-index:10;}
+.dpad{
+  position:absolute;bottom:16px;left:16px;
+  width:110px;height:110px;pointer-events:all;
+}
+.db{
+  position:absolute;width:34px;height:34px;
+  background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);
+  border-radius:5px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:rgba(255,255,255,.4);
+  cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;
+}
+.db:active{background:rgba(255,255,255,.25);}
+#db-u{top:0;left:38px;}
+#db-d{bottom:0;left:38px;}
+#db-l{top:38px;left:0;}
+#db-r{top:38px;right:0;}
+#db-c{
+  top:38px;left:38px;font-size:9px;color:rgba(255,100,100,.5);
+  background:rgba(255,80,80,.06);border-color:rgba(255,80,80,.2);
+}
+.abtns{
+  position:absolute;bottom:16px;right:16px;
+  display:flex;flex-direction:column;gap:10px;pointer-events:all;
+}
+.abtn{
+  width:52px;height:52px;border-radius:50%;
+  background:rgba(255,80,80,.1);border:2px solid rgba(255,80,80,.35);
+  color:rgba(255,120,120,.8);font-size:10px;font-family:inherit;
+  cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;
+  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;
+}
+.abtn:active{background:rgba(255,80,80,.3);}
+
+/* ========= SHOP ========= */
+#s-shop{background:rgba(0,0,0,.97);padding:20px;z-index:50;}
+.shop-box{max-width:480px;width:100%;}
+.shop-h{font-size:20px;color:#ffd700;letter-spacing:4px;text-align:center;margin-bottom:4px;}
+.shop-gold{text-align:center;color:#ffd700;font-size:12px;margin-bottom:14px;}
+.shop-list{display:flex;flex-direction:column;gap:7px;max-height:55vh;overflow-y:auto;margin-bottom:14px;}
+.sitem{
+  display:flex;align-items:center;gap:10px;
+  padding:10px;background:#0d0d0d;border:1px solid #222;cursor:pointer;transition:all .2s;
+}
+.sitem:hover{border-color:#ffd700;background:#100f00;}
+.sitem.owned{border-color:#3a3;opacity:.5;cursor:default;}
+.sitem.poor{opacity:.35;cursor:default;}
+.si-ico{font-size:22px;width:28px;text-align:center;}
+.si-inf{flex:1;}
+.si-name{font-size:12px;color:#eee;}
+.si-desc{font-size:9px;color:#666;line-height:1.4;}
+.si-price{color:#ffd700;font-size:13px;white-space:nowrap;}
+.shop-bottom{text-align:center;}
+
+/* ========= WIN / LOSE ========= */
+#s-win{background:radial-gradient(circle,#002200,#000);}
+#s-lose{background:radial-gradient(circle,#220000,#000);}
+.oi{font-size:70px;margin-bottom:16px;}
+.ot{font-size:clamp(24px,6vw,42px);letter-spacing:6px;margin-bottom:12px;}
+.om{font-size:13px;color:#888;max-width:420px;line-height:1.7;margin-bottom:28px;text-align:center;padding:0 16px;}
+.ostats{font-size:11px;color:#555;margin-bottom:20px;letter-spacing:2px;}
+
+/* ========= OVERLAYS ========= */
+#notif{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.95);border:1px solid #f44;
+  padding:8px 18px;font-size:12px;color:#ff4;
+  z-index:200;pointer-events:none;opacity:0;transition:opacity .3s;
+  letter-spacing:1px;white-space:nowrap;
+}
+#notif.show{opacity:1;}
+#al-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:5;
+  background:rgba(255,0,0,.12);opacity:0;transition:opacity .2s;
+  animation:alPulse .5s infinite;
+}
+@keyframes alPulse{50%{background:rgba(255,0,0,.22);}}
+#lockdown-banner{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:clamp(20px,6vw,36px);color:#f44;letter-spacing:6px;
+  text-shadow:0 0 30px #f00;z-index:300;pointer-events:none;
+  display:none;animation:ldblink .4s infinite;
+}
+@keyframes ldblink{50%{opacity:0;}}
+</style>
+</head>
+<body>
+<div id="al-overlay"></div>
+<div id="notif"></div>
+<div id="lockdown-banner">⚠ LOCKDOWN ⚠</div>
+
+<!-- TITLE -->
+<div id="s-title" class="screen">
+  <div class="bars-wrap" id="bars-wrap"></div>
+  <div class="title-center">
+    <div class="t-main">PRISON ESCAPE</div>
+    <div class="t-sub">NO ONE STAYS FOREVER</div>
+    <button class="btn" id="btn-begin">▶ BEGIN</button>
+  </div>
+  <div class="t-credit">TOUCH OR CLICK TO INTERACT</div>
+</div>
+
+<!-- CHAR SELECT -->
+<div id="s-charsel" class="screen hidden">
+  <div class="cs-header">
+    <div class="cs-title">CHOOSE YOUR CRIMINAL</div>
+    <div class="cs-sub">YOUR PAST DETERMINES YOUR SKILLS</div>
+  </div>
+  <div class="char-grid" id="char-grid"></div>
+  <div class="cs-bottom">
+    <button class="btn" id="btn-conf-char">ENTER PRISON →</button>
+  </div>
+</div>
+
+<!-- INTRO -->
+<div id="s-intro" class="screen hidden">
+  <div class="intro-box">
+    <div class="intro-label">YOUR STORY</div>
+    <div id="intro-text"></div>
+    <button class="btn" id="btn-start-game">BEGIN ESCAPE →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="s-game" class="screen hidden">
+  <div id="hud">
+    <div class="hud-block"><span class="hl">TIME</span><span id="hud-time" class="hv">5:00</span></div>
+    <div class="hud-block"><span class="hl">HEAT</span><div class="sbar"><div class="sfill" id="sfill" style="width:0%"></div></div></div>
+    <div class="hud-block"><span class="hl">$</span><span id="hud-money" class="hv">0</span></div>
+    <div class="hud-block"><span class="hl">ABILITY</span><span id="hud-ability">READY</span></div>
+    <div id="hud-inv"></div>
+    <div id="hud-msg"></div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="mctl">
+    <div class="dpad">
+      <div class="db" id="db-u">▲</div>
+      <div class="db" id="db-d">▼</div>
+      <div class="db" id="db-l">◀</div>
+      <div class="db" id="db-r">▶</div>
+      <div class="db" id="db-c">ACT</div>
+    </div>
+    <div class="abtns">
+      <button class="abtn" id="abtn-ab">USE<br>ABILITY</button>
+      <button class="abtn" id="abtn-map">MAP</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP -->
+<div id="s-shop" class="screen hidden">
+  <div class="shop-box">
+    <div class="shop-h">⚫ BLACK MARKET</div>
+    <div class="shop-gold">JAILBUCKS: $<span id="shop-money">0</span></div>
+    <div class="shop-list" id="shop-list"></div>
+    <div class="shop-bottom"><button class="btn" id="btn-close-shop">LEAVE</button></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="s-win" class="screen hidden">
+  <div class="oi">🏃</div>
+  <div class="ot" style="color:#4f4">ESCAPED!</div>
+  <div class="om" id="win-msg">You made it out.</div>
+  <div class="ostats" id="win-stats"></div>
+  <button class="btn green" id="btn-win-r">PLAY AGAIN</button>
+</div>
+
+<!-- LOSE -->
+<div id="s-lose" class="screen hidden">
+  <div class="oi">🔒</div>
+  <div class="ot" style="color:#f44">CAUGHT</div>
+  <div class="om" id="lose-msg">Back to your cell, criminal.</div>
+  <div class="ostats" id="lose-stats"></div>
+  <button class="btn" id="btn-lose-r">TRY AGAIN</button>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+//  AUDIO ENGINE
+// ============================================================
+const SFX = (() => {
+  let ctx, mst;
+  const init = () => {
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      mst = ctx.createGain(); mst.gain.value = .55; mst.connect(ctx.destination);
+    } catch(e) {}
+  };
+  const unlock = () => { try{ if(ctx?.state==='suspended') ctx.resume(); }catch(e){} };
+
+  const tone = (f, dur, type='sine', vol=.25, when=0) => {
+    if(!ctx) return;
+    try {
+      const t = ctx.currentTime + when;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(mst);
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(.001, t+dur);
+      o.start(t); o.stop(t+dur+.05);
+    } catch(e) {}
+  };
+
+  const burst = (dur, vol=.18, lpf=2000) => {
+    if(!ctx) return;
+    try {
+      const len = Math.ceil(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*(1-i/len);
+      const src = ctx.createBufferSource();
+      const f = ctx.createBiquadFilter(); f.frequency.value = lpf;
+      const g = ctx.createGain(); g.gain.value = vol;
+      src.buffer = buf; src.connect(f); f.connect(g); g.connect(mst);
+      src.start();
+    } catch(e) {}
+  };
+
+  const sfx = {
+    step:   ()=>{ burst(.04,.12,600); },
+    door:   ()=>{ tone(280,.12,'sawtooth',.18); setTimeout(()=>tone(150,.1,'sawtooth',.12),100); burst(.06,.2,400); },
+    pickup: ()=>{ tone(880,.07,'sine',.2); setTimeout(()=>tone(1100,.08,'sine',.18),70); },
+    money:  ()=>{ tone(660,.06,'sine',.22); setTimeout(()=>tone(830,.06,'sine',.2),60); setTimeout(()=>tone(1050,.1,'sine',.22),130); },
+    alert:  ()=>{ for(let i=0;i<4;i++){ tone(880,.1,'square',.3,i*.2); tone(440,.1,'square',.2,i*.2+.1); }},
+    spotted:()=>{ tone(1200,.05,'square',.4); tone(900,.12,'square',.3,.06); burst(.08,.35,3000); },
+    lockpick:()=>{ for(let i=0;i<6;i++) tone(180+Math.random()*120,.04,'sawtooth',.1,i*.07); },
+    buy:    ()=>{ tone(440,.06,'sine',.2); tone(554,.06,'sine',.18,.08); tone(659,.12,'sine',.28,.17); },
+    win:    ()=>{ [523,659,784,1047,1319].forEach((n,i)=>tone(n,.3,'sine',.3,i*.13)); },
+    lose:   ()=>{ [440,392,330,220].forEach((n,i)=>tone(n,.4,'sawtooth',.25,i*.16)); },
+    ability:()=>{ tone(200,.04,'square',.28); tone(400,.25,'sine',.18,.05); burst(.06,.3,5000); },
+    radio:  ()=>{ burst(.12,.3,3000); tone(1000,.08,'sawtooth',.18,.14); },
+    punch:  ()=>{ burst(.08,.4,800); tone(120,.12,'sine',.3,.04); },
+    vent:   ()=>{ burst(.2,.15,1500); tone(300,.1,'sawtooth',.1,.2); },
+    unlock: ()=>{ tone(440,.06,'square',.25); setTimeout(()=>{ tone(660,.12,'sine',.2); },70); },
+  };
+
+  // ---- MUSIC ENGINE ----
+  let mTimer=null, tension=0, mBeat=0;
+  const SCALE = [220,247,262,294,330,370,392,440,494,524];
+
+  const startMusic = () => {
+    if(mTimer||!ctx) return;
+    const tick = () => {
+      const b = mBeat%16, t = tension;
+      if(b%4===0){
+        tone(SCALE[0]*(b>7?.5:1),.42,'triangle',.1+t*.06);
+        if(t>.5) tone(SCALE[2]*.5,.42,'triangle',.06+t*.04);
+      }
+      if(b%2===0 && t>.4) tone(SCALE[4],.08,'square',.03+t*.04);
+      if(Math.random()<.18+t*.22){
+        const n=SCALE[Math.floor(Math.random()*SCALE.length)];
+        tone(n*(t>.6?3:2),.14,'sine',.03+t*.025);
+      }
+      if(t>.7&&b%4<2){ burst(.04,.07+t*.08,500); }
+      if(t>.85&&b%8===0){ tone(55,.4,'sine',.12); }
+      mBeat++;
+      mTimer=setTimeout(tick,230-t*50);
+    };
+    tick();
+  };
+  const stopMusic=()=>{ clearTimeout(mTimer); mTimer=null; };
+  const setTension=(v)=>{ tension=Math.max(0,Math.min(1,v)); };
+
+  return {init,unlock,sfx,startMusic,stopMusic,setTension};
+})();
+
+// ============================================================
+//  CHARACTER DATA
+// ============================================================
+const CHARS = [
+  {
+    id:'brute', name:'MARCUS "IRONHAND"', icon:'💪', clr:'#cc3333',
+    crime:'Convicted: 1st-degree murder × 5.\nBare-handed. Jury deliberated 11 minutes.',
+    sentence:'LIFE WITHOUT PAROLE',
+    stats:{spd:2,stl:1,str:5},
+    ability:'KNOCKOUT — Silently KO a nearby guard',
+    abilityDesc:'Walk up to a guard and use ability to knock them out for 30 seconds',
+    intro:`You are Marcus "Ironhand" Reeves.\n\nFive bodies. Zero remorse. The lawyers called it "explosive stress disorder." You called it Tuesday.\n\nYou've spent 18 months memorizing guard rotations, shift changes, and the 4-second window when the east corridor camera flickers. Your hands are your tools.\n\nThe only question is: how fast can you move?`,
+    escapeBonus:'Can break certain weakened walls'
+  },
+  {
+    id:'miner', name:'REX "DEMOLISHER"', icon:'⛏️', clr:'#cc7733',
+    crime:'Industrial sabotage — explosion killed 12 miners.\nAdditional 6 counts of assault with an axe.',
+    sentence:'40 YEARS',
+    stats:{spd:2,stl:2,str:4},
+    ability:'BLAST — Detonate a distraction charge',
+    abilityDesc:'Creates a loud explosion elsewhere, drawing all guards to investigate',
+    intro:`You are Rex "Demolisher" Stonehart.\n\nThe coroner called it an accident. The prosecution called it murder. You called it a controlled detonation gone slightly off-plan.\n\nThe axe handles you crafted in the prison workshop over 14 months? Those weren't for display. You know where every pipe runs. You know exactly where to dig.\n\nTime to put those mining skills to proper use.`,
+    escapeBonus:'Digging is 2× faster'
+  },
+  {
+    id:'spy', name:'KIRA "GHOST"', icon:'🕵️', clr:'#3377cc',
+    crime:'Espionage — sold classified intelligence to 3 foreign governments.\nDeemed: "Extreme national security threat."',
+    sentence:'25 YEARS',
+    stats:{spd:4,stl:5,str:2},
+    ability:'PICKPOCKET — Steal a guard\'s keycard',
+    abilityDesc:'Get within 1 tile of a guard and use ability to lift their keycard',
+    intro:`You are Kira "Ghost" Tanaka.\n\nYou sold secrets for 11 years before a single mistake — one encrypted email sent from a hotel WiFi network. The counter-intelligence agent who caught you was good. You were better. You were just tired.\n\nThis maximum-security facility has 47 structural weaknesses. You've catalogued all of them. Guards are predictable. Systems fail. People look away.\n\nYou've been waiting for the right moment. It's tonight.`,
+    escapeBonus:'Guards\' vision range reduced by 30%'
+  },
+  {
+    id:'hacker', name:'ZERO "PHANTOM"', icon:'💻', clr:'#33cc88',
+    crime:'Digital infrastructure attack — $340M stolen.\nIdentity unknown for 6 years prior to capture.',
+    sentence:'20 YEARS',
+    stats:{spd:3,stl:4,str:1},
+    ability:'SYSTEM HACK — Disable cameras & door locks (8s)',
+    abilityDesc:'Disables all electronic locks and cameras for 8 seconds',
+    intro:`You are Zero. Real name: classified.\n\nThe FBI called it "the most sophisticated financial hack in history." You called it a Wednesday afternoon. Getting caught was a 0.0001% probability event — bad luck, pure statistics.\n\nYou've already quietly accessed this prison's management software three times. You know the guard schedule is stored in a CSV file with no encryption. You know the electronic door system has a 9-second override vulnerability.\n\nYou've been patient. Now it's time to log out.`,
+    escapeBonus:'Can disable cameras silently'
+  },
+  {
+    id:'arson', name:'ASH "INFERNO"', icon:'🔥', clr:'#cc5522',
+    crime:'Arson × 14 buildings. 8 indirect civilian fatalities.\nBurned an entire city district.',
+    sentence:'35 YEARS',
+    stats:{spd:4,stl:3,str:3},
+    ability:'INFERNO — Set a massive fire distraction',
+    abilityDesc:'Creates a large fire that draws every guard in the prison to respond',
+    intro:`You are Ash "Inferno" Malone.\n\nYou don't hate people. You just love fire. The way it cleanses. Purifies. The way old things must burn for new things to grow.\n\nThis facility is old concrete over dry wood framing. You've been collecting accelerant materials in the workshop for six weeks — hidden in a false bottom under the utility sink. One well-placed fire and the entire east wing becomes a chaos machine.\n\nChaos is your friend. Always has been.`,
+    escapeBonus:'Fire distractions last 2× longer'
+  },
+];
+
+// ============================================================
+//  SHOP ITEMS
+// ============================================================
+const SHOP_ITEMS = [
+  {id:'lockpick', name:'Lockpick Set',     icon:'🔑', price:60,  desc:'Opens any locked door. 2 uses. Essential for restricted areas.'},
+  {id:'rope',     name:'Knotted Rope',     icon:'🪢', price:80,  desc:'Scale the outer prison wall. Required for WALL EXIT.'},
+  {id:'uniform',  name:'Guard Uniform',    icon:'👮', price:120, desc:'Disguise yourself as a guard. Walk past checkpoints. Required for GATE ESCAPE.'},
+  {id:'shovel',   name:'Sharpened Shovel', icon:'🪣', price:90,  desc:'Dig into the hidden tunnel. Required for TUNNEL ESCAPE.'},
+  {id:'pills',    name:'Sleeping Pills',   icon:'💊', price:70,  desc:'Drug one guard\'s coffee. They sleep for 30 seconds.'},
+  {id:'bribe',    name:'Bribe Cash',       icon:'💰', price:160, desc:'Pay the front gate guard to "look away." Alternative to uniform.'},
+  {id:'tunnelmap',name:'Tunnel Map',       icon:'🗺️', price:100, desc:'Shows the hidden tunnel under the east wall. Required for TUNNEL ESCAPE.'},
+  {id:'shiv',     name:'Shiv',             icon:'🔪', price:45,  desc:'Threaten a guard. Makes them freeze for 10 seconds.'},
+];
+
+// ============================================================
+//  MAP DEFINITION  (20 wide × 14 tall → 800×560 canvas)
+// ============================================================
+// Tile constants
+const T_WALL=0, T_FLOOR=1, T_LDOOR=2, T_ODOOR=3, T_VENT=4,
+      T_SHOP=5, T_WEXIT=6, T_GATE=7, T_TUNN=8, T_BARS=9, T_CELL=10;
+
+// Map rows as strings: #=wall .=floor D=locked-door d=open-door
+// V=vent S=shop E=wall-exit G=gate T=tunnel |=bars
+const MAP_DEF = [
+// 0         1         2
+// 01234567890123456789
+  "####################", // 0  outer top wall
+  "#...#.........#....#", // 1  cells L | corridor upper | cells R
+  "#...#.........#....#", // 2  player starts x=2,y=2
+  "#...#.........#....#", // 3  cells
+  "##D####D#####D######", // 4  locked doors to main corridor
+  "#..................#", // 5  main corridor (all floor)
+  "#####D######D#######", // 6  barrier to lower prison (locked doors)
+  "#........#.......VV#", // 7  guard station L | courtyard R | vents
+  "#........#.......VV#", // 8
+  "##########D#########", // 9  barrier with one door
+  "#.......##.........#", // 10 kitchen L | workshop R
+  "#.......##..S......#", // 11 kitchen | workshop | black market (S)
+  "##D###############D#", // 12 locked doors to exit zone
+  "#E.....F..........T#", // 13 exits: E=wall, F=gate, T=tunnel
+  "####################", // 14 outer bottom wall
+];
+
+// Clean up map — replace TEXT labels with floor
+function parseMap() {
+  const grid = [];
+  const defs = MAP_DEF.map(r => r.padEnd(20,'#').slice(0,20));
+  for(let y=0;y<14;y++){
+    grid[y]=[];
+    for(let x=0;x<20;x++){
+      const c = defs[y][x];
+      if(c==='#') grid[y][x]=T_WALL;
+      else if(c==='D') grid[y][x]=T_LDOOR;
+      else if(c==='d') grid[y][x]=T_ODOOR;
+      else if(c==='V') grid[y][x]=T_VENT;
+      else if(c==='S') grid[y][x]=T_SHOP;
+      else if(c==='E') grid[y][x]=T_WEXIT;
+      else if(c==='F') grid[y][x]=T_GATE;
+      else if(c==='T') grid[y][x]=T_TUNN;
+      else if(c==='|') grid[y][x]=T_BARS;
+      else grid[y][x]=T_FLOOR;
+    }
+  }
+  return grid;
+}
+
+// Guard patrol definitions
+const GUARD_DEFS = [
+  // Corridor guard — patrols row 5 left-right
+  { px:18, py:5, waypoints:[[18,5],[1,5]], spd:0.02, color:'#4466cc', vision:5 },
+  // Guard station left — patrols rows 7-8
+  { px:1,  py:7, waypoints:[[1,7],[6,7],[6,8],[1,8]], spd:0.018, color:'#4466cc', vision:4 },
+  // Courtyard guard — patrols right side
+  { px:10, py:8, waypoints:[[10,7],[17,7],[17,8],[10,8]], spd:0.02, color:'#4466cc', vision:4 },
+  // Kitchen guard
+  { px:3,  py:11, waypoints:[[1,10],[7,10],[7,11],[1,11]], spd:0.016, color:'#4466cc', vision:4 },
+  // Exit guard — patrols exit corridor
+  { px:9,  py:13, waypoints:[[2,13],[17,13]], spd:0.015, color:'#cc4422', vision:5 },
+];
+
+// Items on map (money and one freebie)
+const MAP_ITEMS = [
+  {x:7,  y:1,  type:'money', val:20},
+  {x:12, y:1,  type:'money', val:15},
+  {x:2,  y:3,  type:'money', val:25},
+  {x:15, y:2,  type:'money', val:20},
+  {x:6,  y:5,  type:'money', val:30},
+  {x:13, y:7,  type:'money', val:25},
+  {x:5,  y:8,  type:'money', val:20},
+  {x:3,  y:10, type:'money', val:30},
+  {x:14, y:10, type:'money', val:25},
+  {x:16, y:11, type:'money', val:20},
+  {x:6,  y:11, type:'money', val:15},
+  {x:5,  y:13, type:'money', val:25},
+  // Bonus: a free lockpick hidden in workshop
+  {x:16, y:10, type:'item',  itemId:'lockpick', label:'LOCKPICK'},
+];
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let gs = {};      // game state — reset on new game
+let gMap = [];    // tile grid
+let selectedChar = null;
+let msgTimer = null;
+let notifTimer = null;
+let rafId = null;
+let lastTime = 0;
+let lockdownTimer = 0;
+let showMap = false;
+let extraGuardAdded = false;
+
+function resetState(ch) {
+  gMap = parseMap();
+  gs = {
+    char: ch,
+    // Player
+    px: 2, py: 2,         // grid position
+    pxf: 2, pyf: 2,       // float (for smooth rendering)
+    pdir: 0,              // 0=right 1=left 2=down 3=up
+    pmoving: false,
+    ptx: 2, pty: 2,       // target tile
+    pmoveT: 0,            // move progress 0-1
+    // Stats from character
+    stealth: ch.stats.stl,
+    speed: ch.stats.spd,
+    // Resources
+    money: 0,
+    inventory: [],
+    // Status
+    suspicion: 0,         // 0-100
+    timeLeft: 300,        // seconds
+    timeSpent: 0,
+    // Guards
+    guards: GUARD_DEFS.map(d=>({
+      ...d,
+      px:d.px, py:d.py,
+      pxf:d.px, pyf:d.py,
+      wpIdx:0,
+      progress:0,
+      dir:0,
+      alerting:false,
+      alertT:0,
+      koT:0,    // knocked out timer
+      frozen:0, // frozen timer
+      searching:false,
+      searchT:0,
+      lastSeenX:-1, lastSeenY:-1,
+    })),
+    // Items
+    items: MAP_ITEMS.map(it=>({...it, collected:false})),
+    // Lockpick uses
+    lockpickUses: 0,
+    // Ability
+    abilityUsed: false,
+    // Escape
+    escaped: false,
+    caught: false,
+    escapeRoute: '',
+    // Flags
+    inShop: false,
+    alertLevel: 0, // 0=normal 1=suspicious 2=alert 3=lockdown
+    lockdownT: 0,
+    uniformActive: false,
+    uniformT: 0,
+    hackedT: 0,   // system hack timer
+    distT: 0,     // distraction timer (blast/fire)
+    distX: -1, distY: -1, // distraction location
+    shivUses: 0,
+    pillsUsed: false,
+    // Stats for end screen
+    guardsKOed: 0,
+    doorsOpened: 0,
+  };
+  extraGuardAdded = false;
+  lockdownTimer = 0;
+  showMap = false;
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx2 = canvas.getContext('2d');
+const CW = 800, CH = 600;
+const TS = 40; // tile size
+const MW = 20, MH = 15;
+
+const TILE_COLORS = {
+  [T_WALL]:  '#1c1c22',
+  [T_FLOOR]: '#141418',
+  [T_LDOOR]: '#3a1f08',
+  [T_ODOOR]: '#1a3520',
+  [T_VENT]:  '#0d1a2a',
+  [T_SHOP]:  '#1a1500',
+  [T_WEXIT]: '#0a1a0a',
+  [T_GATE]:  '#1a1600',
+  [T_TUNN]:  '#150d00',
+  [T_BARS]:  '#111118',
+  [T_CELL]:  '#111116',
+};
+
+const TILE_ACCENT = {
+  [T_LDOOR]: '#5a3010',
+  [T_ODOOR]: '#2a5530',
+  [T_VENT]:  '#1a3040',
+  [T_SHOP]:  '#3a3000',
+  [T_WEXIT]: '#1a4020',
+  [T_GATE]:  '#4a4000',
+  [T_TUNN]:  '#3a2a00',
+};
+
+function drawTile(x, y, t) {
+  const px = x*TS, py = y*TS;
+  ctx2.fillStyle = TILE_COLORS[t] || '#111';
+  ctx2.fillRect(px, py, TS, TS);
+  // Accent borders / details
+  if(t === T_WALL) {
+    ctx2.fillStyle = '#232328';
+    ctx2.fillRect(px+1, py+1, TS-2, 2);
+    ctx2.fillRect(px+1, py+1, 2, TS-2);
+    // Brickwork pattern
+    const bx = Math.floor(x/2)*2, by = Math.floor(y/2)*2;
+    if((bx+by)%4===0) {
+      ctx2.fillStyle = '#1a1a20';
+      ctx2.fillRect(px+3, py+TS-4, TS-6, 2);
+    }
+  } else if(TILE_ACCENT[t]) {
+    ctx2.strokeStyle = TILE_ACCENT[t];
+    ctx2.lineWidth = 1.5;
+    ctx2.strokeRect(px+1.75, py+1.75, TS-3.5, TS-3.5);
+    // Label text
+    ctx2.fillStyle = TILE_ACCENT[t];
+    ctx2.font = '7px Courier New';
+    ctx2.textAlign = 'center';
+    if(t===T_LDOOR)  ctx2.fillText('LOCKED', px+TS/2, py+TS/2+3);
+    if(t===T_SHOP)   ctx2.fillText('MARKET', px+TS/2, py+TS/2+3);
+    if(t===T_WEXIT)  { ctx2.fillStyle='#44cc44'; ctx2.fillText('WALL', px+TS/2, py+TS/2-2); ctx2.fillText('EXIT', px+TS/2, py+TS/2+7); }
+    if(t===T_GATE)   { ctx2.fillStyle='#cccc44'; ctx2.fillText('GATE', px+TS/2, py+TS/2+3); }
+    if(t===T_TUNN)   { ctx2.fillStyle='#cc8844'; ctx2.fillText('TUNNEL', px+TS/2, py+TS/2+3); }
+    if(t===T_VENT)   { ctx2.fillStyle='#4488cc'; ctx2.fillText('VENT', px+TS/2, py+TS/2+3); }
+  }
+}
+
+function drawMap() {
+  for(let y=0;y<MH;y++) for(let x=0;x<MW;x++) drawTile(x,y,gMap[y][x]);
+  // Room labels
+  ctx2.font = '8px Courier New';
+  ctx2.textAlign = 'center';
+  ctx2.fillStyle = '#2a2a2a';
+  ctx2.fillText('CELL BLOCK', 2.5*TS, 1.3*TS);
+  ctx2.fillText('MAIN CORRIDOR', 10*TS, 5.3*TS);
+  ctx2.fillText('GUARD STATION', 4*TS, 8.3*TS);
+  ctx2.fillText('COURTYARD', 14*TS, 8.3*TS);
+  ctx2.fillText('KITCHEN', 3.5*TS, 10.8*TS);
+  ctx2.fillText('WORKSHOP', 14*TS, 10.8*TS);
+}
+
+function drawItems() {
+  gs.items.forEach(it => {
+    if(it.collected) return;
+    const px = (it.x+.5)*TS, py = (it.y+.5)*TS;
+    const glow = (Math.sin(Date.now()*.003)+1)*.5;
+    if(it.type==='money') {
+      const r = ctx2.createRadialGradient(px,py,0,px,py,9);
+      r.addColorStop(0, `rgba(255,215,0,${.7+glow*.2})`);
+      r.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx2.fillStyle = r;
+      ctx2.beginPath(); ctx2.arc(px, py, 9, 0, Math.PI*2); ctx2.fill();
+      ctx2.fillStyle = '#ffd700';
+      ctx2.font = 'bold 10px Courier New';
+      ctx2.textAlign = 'center';
+      ctx2.fillText('$', px, py+4);
+    } else {
+      const r = ctx2.createRadialGradient(px,py,0,px,py,10);
+      r.addColorStop(0, `rgba(100,200,255,${.8+glow*.15})`);
+      r.addColorStop(1, 'rgba(100,200,255,0)');
+      ctx2.fillStyle = r;
+      ctx2.beginPath(); ctx2.arc(px, py, 10, 0, Math.PI*2); ctx2.fill();
+      ctx2.fillStyle = '#4af';
+      ctx2.font = '7px Courier New';
+      ctx2.textAlign = 'center';
+      ctx2.fillText(it.label||'ITEM', px, py+3);
+    }
+  });
+}
+
+function drawGuardVision(g) {
+  if(g.koT > 0) return;
+  const gx = (g.pxf+.5)*TS, gy = (g.pyf+.5)*TS;
+  // Vision cone direction
+  const dirs = [0, Math.PI, Math.PI/2, -Math.PI/2]; // R L D U
+  const baseAngle = dirs[g.dir] || 0;
+  const spread = g.alerting ? Math.PI*1.2 : Math.PI*.6;
+  const range = (g.vision + (g.alerting?2:0)) * TS;
+  const alpha = g.alerting ? .18 : .1;
+  const col = g.alerting ? `rgba(255,100,0,${alpha})` : `rgba(255,220,0,${alpha})`;
+  ctx2.fillStyle = col;
+  ctx2.beginPath();
+  ctx2.moveTo(gx, gy);
+  ctx2.arc(gx, gy, range, baseAngle - spread/2, baseAngle + spread/2);
+  ctx2.closePath();
+  ctx2.fill();
+}
+
+const DIR_ANGLES = [0, Math.PI, Math.PI/2, -Math.PI/2];
+
+function drawGuard(g) {
+  const gx = (g.pxf+.5)*TS, gy = (g.pyf+.5)*TS;
+  const ko = g.koT > 0;
+  const frz = g.frozen > 0;
+  // KO'd guard: lying down X
+  if(ko) {
+    ctx2.fillStyle = '#446';
+    ctx2.font = '20px sans-serif';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('💤', gx, gy+7);
+    return;
+  }
+  // Body
+  const angle = DIR_ANGLES[g.dir] || 0;
+  ctx2.save();
+  ctx2.translate(gx, gy);
+  ctx2.rotate(angle);
+  // Guard body (triangle pointing right)
+  ctx2.fillStyle = frz ? '#666' : g.color;
+  ctx2.beginPath();
+  ctx2.moveTo(14, 0);
+  ctx2.lineTo(-10, 9);
+  ctx2.lineTo(-6, 0);
+  ctx2.lineTo(-10, -9);
+  ctx2.closePath();
+  ctx2.fill();
+  // Eyes
+  ctx2.fillStyle = '#fff';
+  ctx2.beginPath();
+  ctx2.arc(6, -4, 3, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.fillStyle = '#000';
+  ctx2.beginPath();
+  ctx2.arc(7, -4, 1.5, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.restore();
+  // Alert indicator
+  if(g.alerting) {
+    ctx2.fillStyle = '#f84';
+    ctx2.font = 'bold 12px sans-serif';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('!', gx, gy-18);
+  }
+  if(g.searching) {
+    ctx2.fillStyle = '#fc0';
+    ctx2.font = '11px sans-serif';
+    ctx2.textAlign = 'center';
+    ctx2.fillText('?', gx, gy-18);
+  }
+}
+
+function drawPlayer() {
+  const px = (gs.pxf+.5)*TS, py = (gs.pyf+.5)*TS;
+  const clr = gs.char.clr;
+  const angle = DIR_ANGLES[gs.pdir] || 0;
+  const unifOn = gs.uniformActive;
+  ctx2.save();
+  ctx2.translate(px, py);
+  ctx2.rotate(angle);
+  // Body circle
+  ctx2.fillStyle = unifOn ? '#4466cc' : clr;
+  ctx2.beginPath();
+  ctx2.arc(0, 0, 13, 0, Math.PI*2);
+  ctx2.fill();
+  // Outline
+  ctx2.strokeStyle = unifOn ? '#6688ee' : 'rgba(255,255,255,.3)';
+  ctx2.lineWidth = 1.5;
+  ctx2.stroke();
+  // Direction dot
+  ctx2.fillStyle = '#fff';
+  ctx2.beginPath();
+  ctx2.arc(8, -4, 3.5, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.fillStyle = '#000';
+  ctx2.beginPath();
+  ctx2.arc(9, -4, 2, 0, Math.PI*2);
+  ctx2.fill();
+  ctx2.restore();
+  // Character icon above
+  ctx2.font = '14px sans-serif';
+  ctx2.textAlign = 'center';
+  ctx2.fillText(gs.char.icon, px, py-18);
+}
+
+function drawHUD_canvas() {
+  // Minimap (top-right corner of canvas)
+  if(showMap) {
+    const mX = CW - 108, mY = 4, mW = 104, mH = 78;
+    ctx2.fillStyle = 'rgba(0,0,0,.85)';
+    ctx2.fillRect(mX-2, mY-2, mW+4, mH+4);
+    const tW = mW/MW, tH = mH/MH;
+    for(let y=0;y<MH;y++) for(let x=0;x<MW;x++) {
+      const t = gMap[y][x];
+      if(t===T_WALL) ctx2.fillStyle='#333';
+      else if(t===T_LDOOR) ctx2.fillStyle='#642';
+      else if(t===T_WEXIT||t===T_GATE||t===T_TUNN) ctx2.fillStyle='#484';
+      else if(t===T_SHOP) ctx2.fillStyle='#440';
+      else ctx2.fillStyle='#1a1a1a';
+      ctx2.fillRect(mX+x*tW, mY+y*tH, tW-0.5, tH-0.5);
+    }
+    // Player dot
+    ctx2.fillStyle = gs.char.clr;
+    ctx2.fillRect(mX+gs.px*tW, mY+gs.py*tH, tW+1, tH+1);
+    // Guard dots
+    gs.guards.forEach(g => {
+      if(g.koT>0) return;
+      ctx2.fillStyle = '#44f';
+      ctx2.fillRect(mX+g.px*tW, mY+g.py*tH, tW, tH);
+    });
+    ctx2.strokeStyle='#444'; ctx2.lineWidth=1; ctx2.strokeRect(mX-1,mY-1,mW+2,mH+2);
+    ctx2.fillStyle='#666'; ctx2.font='7px Courier New'; ctx2.textAlign='center';
+    ctx2.fillText('MAP (M)', mX+mW/2, mY+mH+8);
+  }
+  // Distraction marker
+  if(gs.distT>0 && gs.distX>=0) {
+    const dx=(gs.distX+.5)*TS, dy=(gs.distY+.5)*TS;
+    ctx2.fillStyle='rgba(255,120,0,.4)';
+    ctx2.beginPath();
+    ctx2.arc(dx,dy,20+Math.sin(Date.now()*.01)*5,0,Math.PI*2);
+    ctx2.fill();
+    ctx2.font='20px sans-serif';
+    ctx2.textAlign='center';
+    ctx2.fillText('💥',dx,dy+7);
+  }
+  // Hacked effect
+  if(gs.hackedT>0) {
+    ctx2.strokeStyle=`rgba(50,255,150,${.3*(gs.hackedT%1>0.5?1:0.5)})`;
+    ctx2.lineWidth=2;
+    ctx2.strokeRect(2,2,CW-4,CH-4);
+  }
+}
+
+function render() {
+  ctx2.clearRect(0,0,CW,CH);
+  drawMap();
+  drawItems();
+  gs.guards.forEach(g => drawGuardVision(g));
+  gs.guards.forEach(g => drawGuard(g));
+  drawPlayer();
+  drawHUD_canvas();
+}
+
+// ============================================================
+//  GUARD AI
+// ============================================================
+function updateGuards(dt) {
+  gs.guards.forEach(g => {
+    // Timers
+    if(g.koT>0) { g.koT -= dt; return; }
+    if(g.frozen>0) { g.frozen -= dt; return; }
+    // Distraction: if distT active and guard is not already at distraction
+    if(gs.distT>0 && !g.searching && gs.distX>=0) {
+      // Head toward distraction
+      g.alerting = false;
+      g.searching = true;
+      g.searchT = 8;
+      g.waypoints = [[gs.distX, gs.distY]];
+      g.wpIdx = 0;
+    }
+    if(g.searchT>0) {
+      g.searchT -= dt;
+      if(g.searchT<=0) {
+        g.searching = false;
+        // Return to original patrol
+        const orig = GUARD_DEFS[gs.guards.indexOf(g)];
+        g.waypoints = [...orig.waypoints];
+        g.wpIdx = 0;
+      }
+    }
+    // Alert state
+    if(g.alerting) {
+      g.alertT -= dt;
+      if(g.alertT<=0) {
+        g.alerting = false;
+        if(g.lastSeenX>=0) {
+          g.waypoints = [[g.lastSeenX, g.lastSeenY]];
+          g.searching = true;
+          g.searchT = 4;
+        }
+      }
+    }
+    // Movement
+    const wp = g.waypoints[g.wpIdx % g.waypoints.length];
+    if(!wp) return;
+    const tx = wp[0], ty = wp[1];
+    const dx = tx-g.px, dy = ty-g.py;
+    if(dx!==0 || dy!==0) {
+      const spd = g.spd * (g.alerting ? 1.6 : (gs.alertLevel>=2 ? 1.3 : 1));
+      g.progress += spd;
+      if(Math.abs(dx) >= Math.abs(dy)) {
+        g.dir = dx>0 ? 0 : 1;
+        g.pxf = g.px + (dx>0 ? g.progress : -g.progress);
+        g.pyf = g.py;
+      } else {
+        g.dir = dy>0 ? 2 : 3;
+        g.pxf = g.px;
+        g.pyf = g.py + (dy>0 ? g.progress : -g.progress);
+      }
+      if(g.progress>=1) {
+        g.progress=0;
+        g.px += Math.sign(dx);
+        g.py += Math.sign(dy);
+        g.pxf=g.px; g.pyf=g.py;
+      }
+    } else {
+      g.wpIdx = (g.wpIdx+1) % g.waypoints.length;
+      g.progress=0;
+    }
+  });
+}
+
+function isWall(x, y) {
+  if(x<0||x>=MW||y<0||y>=MH) return true;
+  const t = gMap[y][x];
+  return t===T_WALL || (t===T_LDOOR && gs.hackedT<=0);
+}
+
+function hasLineOfSight(x1, y1, x2, y2) {
+  const dx = x2-x1, dy = y2-y1;
+  const steps = Math.max(Math.abs(dx), Math.abs(dy)) * 4;
+  for(let i=1; i<=steps; i++) {
+    const fx = x1 + dx*(i/steps);
+    const fy = y1 + dy*(i/steps);
+    if(isWall(Math.round(fx), Math.round(fy))) return false;
+  }
+  return true;
+}
+
+function checkGuardSight() {
+  if(gs.uniformActive) return; // disguised
+  let totalSuspicion = 0;
+  gs.guards.forEach(g => {
+    if(g.koT>0 || g.frozen>0) return;
+    const ddx = gs.pxf-g.pxf, ddy = gs.pyf-g.pyf;
+    const dist = Math.sqrt(ddx*ddx+ddy*ddy);
+    const visionRange = g.vision * (gs.char.id==='spy' ? 0.7 : 1) * (gs.alertLevel>=2 ? 1.3 : 1);
+    if(dist > visionRange) return;
+    // Check if in vision cone
+    const dirs = [0, Math.PI, Math.PI/2, -Math.PI/2];
+    const gAngle = dirs[g.dir];
+    const toPlayer = Math.atan2(ddy, ddx);
+    let angleDiff = Math.abs(toPlayer-gAngle);
+    if(angleDiff>Math.PI) angleDiff=Math.PI*2-angleDiff;
+    const spread = g.alerting ? Math.PI*.6 : Math.PI*.3;
+    if(angleDiff > spread) return;
+    // Line of sight
+    if(!hasLineOfSight(Math.round(g.pxf), Math.round(g.pyf), gs.px, gs.py)) return;
+    // Player spotted!
+    const proximity = 1 - dist/visionRange;
+    totalSuspicion += proximity * 3;
+    g.alerting = true;
+    g.alertT = 3;
+    g.lastSeenX = gs.px;
+    g.lastSeenY = gs.py;
+  });
+  if(totalSuspicion>0) {
+    gs.suspicion += totalSuspicion;
+    if(gs.suspicion > 0 && gs.suspicion < 30 && Math.random()<.05) SFX.sfx.spotted();
+  }
+}
+
+// ============================================================
+//  PLAYER MOVEMENT
+// ============================================================
+function canMoveTo(x, y) {
+  if(x<0||x>=MW||y<0||y>=MH) return false;
+  const t = gMap[y][x];
+  if(t===T_WALL||t===T_BARS) return false;
+  if(t===T_LDOOR) {
+    // Try to use lockpick
+    if(gs.lockpickUses>0 || gs.char.id==='spy') {
+      gs.lockpickUses = Math.max(0, gs.lockpickUses-1);
+      gMap[y][x] = T_ODOOR;
+      gs.doorsOpened++;
+      SFX.sfx.lockpick();
+      showMsg('DOOR UNLOCKED');
+      return true;
+    }
+    if(gs.inventory.includes('lockpick')) {
+      gs.lockpickUses = Math.max(0,gs.lockpickUses-1);
+      gMap[y][x] = T_ODOOR;
+      gs.doorsOpened++;
+      SFX.sfx.lockpick();
+      showMsg('LOCKPICK USED');
+      if(gs.lockpickUses<=0) removeFromInventory('lockpick');
+      return true;
+    }
+    if(gs.hackedT>0) { gMap[y][x]=T_ODOOR; return true; }
+    showNotif('LOCKED — need lockpick');
+    return false;
+  }
+  return true;
+}
+
+function movePlayer(dx, dy) {
+  if(gs.pmoving) return;
+  const nx = gs.px+dx, ny = gs.py+dy;
+  if(!canMoveTo(nx,ny)) return;
+  // Direction
+  if(dx>0) gs.pdir=0; else if(dx<0) gs.pdir=1;
+  else if(dy>0) gs.pdir=2; else gs.pdir=3;
+  gs.ptx=nx; gs.pty=ny;
+  gs.pmoving=true;
+  gs.pmoveT=0;
+  // Check for exit
+  onMoveStart(nx, ny);
+}
+
+function updatePlayer(dt) {
+  if(gs.pmoving) {
+    const spd = 0.1 * gs.speed * 0.5;
+    gs.pmoveT += spd;
+    if(gs.pmoveT>=1) {
+      gs.pmoveT=1;
+      gs.px=gs.ptx; gs.py=gs.pty;
+      gs.pxf=gs.px; gs.pyf=gs.py;
+      gs.pmoving=false;
+      SFX.sfx.step();
+      onArrived(gs.px, gs.py);
+      return;
+    }
+    gs.pxf = gs.px + (gs.ptx-gs.px)*gs.pmoveT;
+    gs.pyf = gs.py + (gs.pty-gs.py)*gs.pmoveT;
+  }
+  // Uniform timer
+  if(gs.uniformActive) {
+    gs.uniformT -= dt;
+    if(gs.uniformT<=0) {
+      gs.uniformActive=false;
+      showMsg('DISGUISE WORN OUT');
+    }
+  }
+  // Hacked timer
+  if(gs.hackedT>0) {
+    gs.hackedT -= dt;
+    if(gs.hackedT<=0) showMsg('SYSTEM RESTORED');
+  }
+  // Distraction timer
+  if(gs.distT>0) {
+    gs.distT -= dt;
+    if(gs.distT<=0) {
+      gs.distX=-1; gs.distY=-1;
+      // Guards return to patrol
+      gs.guards.forEach(g => {
+        g.searching=false; g.searchT=0;
+        const orig = GUARD_DEFS[gs.guards.indexOf(g)];
+        if(orig) g.waypoints=[...orig.waypoints];
+      });
+    }
+  }
+}
+
+function onMoveStart(nx, ny) {
+  // Check exits immediately on targeting
+}
+
+function onArrived(x, y) {
+  const t = gMap[y][x];
+  // Collect items
+  gs.items.forEach(it => {
+    if(it.collected || it.x!==x || it.y!==y) return;
+    it.collected=true;
+    if(it.type==='money') {
+      gs.money += it.val;
+      SFX.sfx.money();
+      showMsg(`+$${it.val} JAILBUCKS`);
+    } else if(it.type==='item') {
+      addToInventory(it.itemId);
+      SFX.sfx.pickup();
+      showMsg(`FOUND: ${it.label}`);
+      if(it.itemId==='lockpick') gs.lockpickUses=2;
+    }
+    updateHUD();
+  });
+  // Trigger tiles
+  if(t===T_SHOP) { openShop(); return; }
+  if(t===T_WEXIT) { tryEscape('wall'); return; }
+  if(t===T_GATE)  { tryEscape('gate'); return; }
+  if(t===T_TUNN)  { tryEscape('tunnel'); return; }
+  if(t===T_VENT)  { tryEscape('vent'); return; }
+}
+
+function tryEscape(route) {
+  if(route==='wall') {
+    if(!gs.inventory.includes('rope')) {
+      showNotif('NEED: Knotted Rope to scale the wall!');
+      return;
+    }
+    triggerEscape('wall', 'You scaled the outer wall with the knotted rope and dropped into the darkness beyond. No alarms. No pursuit. You vanished into the night.');
+  } else if(route==='gate') {
+    if(gs.inventory.includes('uniform')) {
+      triggerEscape('gate', 'You blended in with the guard rotation, walked straight through the front gate, and disappeared before the shift change. Invisible. Perfect.');
+    } else if(gs.inventory.includes('bribe')) {
+      triggerEscape('gate', 'The gate guard pocketed the cash without a word. Looked the other way. The gate swung open. Some things are universal.');
+    } else {
+      showNotif('NEED: Guard Uniform or Bribe Cash for the gate!');
+    }
+  } else if(route==='tunnel') {
+    if(!gs.inventory.includes('tunnelmap')) {
+      showNotif('NEED: Tunnel Map to find the entrance!');
+      return;
+    }
+    if(!gs.inventory.includes('shovel')) {
+      showNotif('NEED: Shovel to dig through!');
+      return;
+    }
+    const dur = gs.char.id==='miner' ? 1500 : 3000;
+    showMsg('DIGGING...');
+    SFX.sfx.vent();
+    setTimeout(()=>{
+      triggerEscape('tunnel', 'The shovel bit into old concrete. The tunnel map was right — the drainage channel runs straight under the east wall. You crawled 40 meters through darkness and emerged free.');
+    }, dur);
+  } else if(route==='vent') {
+    if(!gs.inventory.includes('lockpick') && gs.lockpickUses<=0) {
+      showNotif('NEED: Lockpick or tool to open vent!');
+      return;
+    }
+    triggerEscape('vent', 'You pried open the ventilation cover and crawled through the duct network. The tight shafts took you above the guard stations, above the walls, and out through an exterior intake above the facility grounds.');
+  }
+}
+
+function triggerEscape(route, msg) {
+  gs.escaped=true;
+  gs.escapeRoute=route;
+  SFX.sfx.win();
+  SFX.stopMusic();
+  document.getElementById('al-overlay').style.display='none';
+  document.getElementById('lockdown-banner').style.display='none';
+  setTimeout(()=>{
+    const mins = Math.floor(gs.timeSpent/60), secs = Math.floor(gs.timeSpent%60);
+    document.getElementById('win-msg').textContent=msg;
+    document.getElementById('win-stats').textContent=
+      `TIME: ${mins}:${secs.toString().padStart(2,'0')} | MONEY EARNED: $${gs.money} | GUARDS KO'ED: ${gs.guardsKOed} | DOORS CRACKED: ${gs.doorsOpened}`;
+    showScreen('s-win');
+  },800);
+}
+
+// ============================================================
+//  SUSPICION SYSTEM
+// ============================================================
+function updateSuspicion(dt) {
+  if(gs.uniformActive) {
+    gs.suspicion = Math.max(0, gs.suspicion - 5*dt);
+    return;
+  }
+  // Natural decay
+  const inCell = gs.px<=3 && gs.py<=3;
+  const decay = inCell ? 6 : 1.5;
+  gs.suspicion = Math.max(0, gs.suspicion - decay*dt);
+  // Check guard sight
+  checkGuardSight();
+  // Alert level changes
+  if(gs.suspicion>=100 && gs.alertLevel<3) {
+    gs.alertLevel=3;
+    gs.lockdownT=8;
+    document.getElementById('al-overlay').style.display='block';
+    document.getElementById('lockdown-banner').style.display='block';
+    SFX.sfx.alert();
+  } else if(gs.suspicion>=70 && gs.alertLevel<2) {
+    gs.alertLevel=2;
+    SFX.sfx.radio();
+    showMsg('GUARDS ALERTED!');
+    if(!extraGuardAdded) {
+      extraGuardAdded=true;
+      gs.guards.push({
+        px:10,py:5,pxf:10,pyf:5,
+        wpIdx:0, progress:0, dir:0,
+        waypoints:[[10,5],[10,11],[1,11],[1,5]],
+        spd:0.025, color:'#cc3322', vision:5,
+        alerting:false,alertT:0,koT:0,frozen:0,
+        searching:false,searchT:0,lastSeenX:-1,lastSeenY:-1,
+      });
+    }
+  } else if(gs.suspicion>=40 && gs.alertLevel<1) {
+    gs.alertLevel=1;
+    SFX.sfx.radio();
+    showMsg('GUARDS SUSPICIOUS');
+  } else if(gs.suspicion<35 && gs.alertLevel>0) {
+    gs.alertLevel=0;
+    document.getElementById('al-overlay').style.display='none';
+    document.getElementById('lockdown-banner').style.display='none';
+  }
+  // Lockdown timer
+  if(gs.alertLevel===3) {
+    gs.lockdownT -= dt;
+    if(gs.lockdownT<=0) triggerCaught('Lockdown reached. Guards swarmed your position.');
+  }
+  // Update tension music
+  SFX.setTension(gs.suspicion/100);
+  // Update HUD
+  const fill=document.getElementById('sfill');
+  if(fill) {
+    fill.style.width=Math.min(100,gs.suspicion)+'%';
+    fill.style.background = gs.suspicion>70?'#f33':gs.suspicion>40?'#f84':'#3f3';
+  }
+}
+
+function triggerCaught(reason) {
+  if(gs.caught) return;
+  gs.caught=true;
+  SFX.sfx.lose();
+  SFX.stopMusic();
+  document.getElementById('al-overlay').style.display='none';
+  document.getElementById('lockdown-banner').style.display='none';
+  setTimeout(()=>{
+    const mins=Math.floor(gs.timeSpent/60), secs=Math.floor(gs.timeSpent%60);
+    document.getElementById('lose-msg').textContent=reason||'You were captured. Back to maximum security.';
+    document.getElementById('lose-stats').textContent=
+      `SURVIVED: ${mins}:${secs.toString().padStart(2,'0')} | PROGRESS: ${Math.round(gs.suspicion)}% HEAT`;
+    showScreen('s-lose');
+  },1000);
+}
+
+// ============================================================
+//  ABILITY
+// ============================================================
+function useAbility() {
+  if(gs.abilityUsed) { showNotif('ABILITY ALREADY USED'); return; }
+  const ch = gs.char;
+  SFX.sfx.ability();
+  gs.abilityUsed = true;
+  document.getElementById('hud-ability').classList.add('used');
+  document.getElementById('hud-ability').textContent = 'USED';
+
+  if(ch.id==='brute') {
+    // Knockout nearest guard
+    let nearest=null, nearDist=Infinity;
+    gs.guards.forEach(g=>{
+      if(g.koT>0) return;
+      const d=Math.abs(g.px-gs.px)+Math.abs(g.py-gs.py);
+      if(d<nearDist){nearDist=d;nearest=g;}
+    });
+    if(nearest && nearDist<=2) {
+      nearest.koT=30; gs.guardsKOed++;
+      SFX.sfx.punch();
+      showMsg('GUARD KNOCKED OUT! 30s');
+    } else {
+      showMsg('NO GUARD IN RANGE (need 2 tiles)');
+      gs.abilityUsed=false;
+      document.getElementById('hud-ability').classList.remove('used');
+      document.getElementById('hud-ability').textContent='READY';
+    }
+  } else if(ch.id==='miner') {
+    // Blast distraction
+    const tx = gs.px > MW/2 ? 2 : MW-3;
+    const ty = 5;
+    gs.distT = 20; gs.distX=tx; gs.distY=ty;
+    showMsg('EXPLOSION! GUARDS DISTRACTED');
+    SFX.sfx.alert();
+  } else if(ch.id==='spy') {
+    // Pickpocket nearest guard
+    let nearest=null, nearDist=Infinity;
+    gs.guards.forEach(g=>{
+      if(g.koT>0) return;
+      const d=Math.abs(g.px-gs.px)+Math.abs(g.py-gs.py);
+      if(d<nearDist){nearDist=d;nearest=g;}
+    });
+    if(nearest && nearDist<=1) {
+      addToInventory('lockpick'); gs.lockpickUses=3;
+      showMsg('KEYCARD LIFTED — 3 DOORS');
+      SFX.sfx.pickup();
+    } else {
+      showMsg('NO GUARD IN RANGE (need 1 tile)');
+      gs.abilityUsed=false;
+      document.getElementById('hud-ability').classList.remove('used');
+      document.getElementById('hud-ability').textContent='READY';
+    }
+  } else if(ch.id==='hacker') {
+    gs.hackedT=8;
+    showMsg('SYSTEM HACKED — 8 SECONDS!');
+    // Open all locked doors temporarily (handled in hackedT check)
+    for(let y=0;y<MH;y++) for(let x=0;x<MW;x++)
+      if(gMap[y][x]===T_LDOOR) gMap[y][x]=T_ODOOR;
+  } else if(ch.id==='arson') {
+    // Inferno — massive distraction
+    const dur = 40;
+    gs.distT=dur; gs.distX=3; gs.distY=11; // kitchen fire
+    showMsg('FIRE! ALL GUARDS RESPONDING!');
+    SFX.sfx.alert();
+    setTimeout(()=>SFX.sfx.alert(), 500);
+  }
+}
+
+// ============================================================
+//  SHOP
+// ============================================================
+function openShop() {
+  if(gs.inShop) return;
+  gs.inShop=true;
+  SFX.sfx.unlock();
+  renderShop();
+  showScreen('s-shop');
+}
+
+function renderShop() {
+  const list=document.getElementById('shop-list');
+  document.getElementById('shop-money').textContent=gs.money;
+  list.innerHTML='';
+  SHOP_ITEMS.forEach(item=>{
+    const owned=gs.inventory.includes(item.id);
+    const poor=!owned && gs.money<item.price;
+    const div=document.createElement('div');
+    div.className='sitem'+(owned?' owned':poor?' poor':'');
+    div.innerHTML=`<div class="si-ico">${item.icon}</div>
+      <div class="si-inf">
+        <div class="si-name">${item.name}</div>
+        <div class="si-desc">${item.desc}</div>
+      </div>
+      <div class="si-price">$${item.price}${owned?' ✓':''}</div>`;
+    if(!owned && !poor) {
+      div.addEventListener('click', ()=>buyItem(item));
+      div.addEventListener('touchend', (e)=>{e.preventDefault();buyItem(item);});
+    }
+    list.appendChild(div);
+  });
+}
+
+function buyItem(item) {
+  if(gs.inventory.includes(item.id)) return;
+  if(gs.money<item.price) { showNotif('NOT ENOUGH JAILBUCKS!'); return; }
+  gs.money-=item.price;
+  addToInventory(item.id);
+  SFX.sfx.buy();
+  if(item.id==='lockpick') gs.lockpickUses=2;
+  if(item.id==='shiv') gs.shivUses=1;
+  document.getElementById('shop-money').textContent=gs.money;
+  renderShop();
+  updateHUD();
+  showNotif(`BOUGHT: ${item.name}`);
+}
+
+function closeShop() {
+  gs.inShop=false;
+  showScreen('s-game');
+}
+
+// ============================================================
+//  INVENTORY
+// ============================================================
+function addToInventory(id) {
+  if(!gs.inventory.includes(id)) gs.inventory.push(id);
+  updateHUD();
+}
+function removeFromInventory(id) {
+  gs.inventory=gs.inventory.filter(i=>i!==id);
+  updateHUD();
+}
+
+// ============================================================
+//  HUD UPDATE
+// ============================================================
+function updateHUD() {
+  // Time
+  const t=document.getElementById('hud-time');
+  const m=Math.floor(gs.timeLeft/60), s=Math.floor(gs.timeLeft%60);
+  t.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  if(gs.timeLeft<60) t.classList.add('urgent');
+  else t.classList.remove('urgent');
+  // Money
+  document.getElementById('hud-money').textContent=gs.money;
+  // Inventory chips
+  const inv=document.getElementById('hud-inv');
+  const ICONS={rope:'🪢',uniform:'👮',shovel:'🪣',tunnelmap:'🗺️',pills:'💊',bribe:'💰',shiv:'🔪',lockpick:'🔑'};
+  inv.innerHTML=gs.inventory.map(id=>`<span class="inv-chip">${ICONS[id]||'?'}</span>`).join('');
+}
+
+function showMsg(msg) {
+  const el=document.getElementById('hud-msg');
+  el.textContent=msg;
+  clearTimeout(msgTimer);
+  msgTimer=setTimeout(()=>{if(el)el.textContent='';},2500);
+}
+
+function showNotif(msg) {
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ============================================================
+//  SCREEN MANAGEMENT
+// ============================================================
+const SCREENS=['s-title','s-charsel','s-intro','s-game','s-shop','s-win','s-lose'];
+function showScreen(id) {
+  SCREENS.forEach(s=>{
+    const el=document.getElementById(s);
+    if(el) { if(s===id) el.classList.remove('hidden'); else el.classList.add('hidden'); }
+  });
+}
+
+// ============================================================
+//  INPUT HANDLING
+// ============================================================
+const keys={};
+document.addEventListener('keydown', e=>{
+  keys[e.key]=true;
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d',' '].includes(e.key)) e.preventDefault();
+  if(e.key==='m'||e.key==='M') { showMap=!showMap; }
+  if(e.key===' '||e.key==='e'||e.key==='E') {
+    SFX.unlock();
+    if(!document.getElementById('s-game').classList.contains('hidden')) useAbility();
+  }
+});
+document.addEventListener('keyup', e=>{ keys[e.key]=false; });
+
+let inputCooldown=0;
+function handleKeys() {
+  if(inputCooldown>0) { inputCooldown--; return; }
+  if(gs.pmoving||gs.escaped||gs.caught||gs.inShop) return;
+  let dx=0,dy=0;
+  if(keys['ArrowUp']||keys['w']) dy=-1;
+  else if(keys['ArrowDown']||keys['s']) dy=1;
+  else if(keys['ArrowLeft']||keys['a']) dx=-1;
+  else if(keys['ArrowRight']||keys['d']) dx=1;
+  if(dx||dy) {
+    SFX.unlock();
+    movePlayer(dx,dy);
+    inputCooldown=8;
+  }
+}
+
+// Touch / click controls
+function bindDpad() {
+  const dirs = {
+    'db-u':[0,-1],'db-d':[0,1],'db-l':[-1,0],'db-r':[1,0],
+    'db-c':[0,0], // action
+  };
+  Object.entries(dirs).forEach(([id,[dx,dy]])=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const handler=(e)=>{
+      e.preventDefault();
+      SFX.unlock();
+      if(dx||dy) { if(!gs.pmoving&&!gs.escaped&&!gs.caught&&!gs.inShop) movePlayer(dx,dy); }
+      else useAbility();
+    };
+    el.addEventListener('touchstart', handler, {passive:false});
+    el.addEventListener('mousedown', handler);
+  });
+  document.getElementById('abtn-ab')?.addEventListener('click',()=>{ SFX.unlock(); useAbility(); });
+  document.getElementById('abtn-map')?.addEventListener('click',()=>{ showMap=!showMap; });
+}
+
+// Canvas click-to-move
+canvas.addEventListener('click', e=>{
+  SFX.unlock();
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=CW/rect.width, scaleY=CH/rect.height;
+  const cx=Math.floor((e.clientX-rect.left)*scaleX/TS);
+  const cy=Math.floor((e.clientY-rect.top)*scaleY/TS);
+  if(cx===gs.px && cy===gs.py) { useAbility(); return; }
+  // Simple 1-step toward target
+  const dx=Math.sign(cx-gs.px), dy=Math.sign(cy-gs.py);
+  if(Math.abs(cx-gs.px)>=Math.abs(cy-gs.py)) {
+    if(dx) movePlayer(dx,0);
+  } else {
+    if(dy) movePlayer(0,dy);
+  }
+});
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+function gameLoop(ts) {
+  if(gs.escaped || gs.caught) return;
+  rafId=requestAnimationFrame(gameLoop);
+  const dt = Math.min(0.05, (ts-lastTime)/1000);
+  lastTime=ts;
+  // Update timers
+  gs.timeLeft -= dt;
+  gs.timeSpent += dt;
+  if(gs.timeLeft<=0) {
+    triggerCaught('Time ran out. The prison went into full lockdown.');
+    return;
+  }
+  // Input
+  handleKeys();
+  // Physics
+  updatePlayer(dt);
+  updateGuards(dt);
+  updateSuspicion(dt);
+  // HUD time update every 0.5s
+  if(Math.floor(gs.timeLeft*2) !== Math.floor((gs.timeLeft+dt)*2)) updateHUD();
+  // Render
+  render();
+}
+
+// ============================================================
+//  TITLE SCREEN INIT
+// ============================================================
+function initTitle() {
+  const wrap=document.getElementById('bars-wrap');
+  wrap.innerHTML='';
+  for(let i=0;i<12;i++){
+    const b=document.createElement('div');
+    b.className='bar';
+    b.style.animationDelay=`${i*0.04}s`;
+    wrap.appendChild(b);
+  }
+}
+
+// ============================================================
+//  CHARACTER SELECT SCREEN
+// ============================================================
+function initCharSelect() {
+  const grid=document.getElementById('char-grid');
+  grid.innerHTML='';
+  CHARS.forEach((ch,i)=>{
+    const div=document.createElement('div');
+    div.className='ccard'+(selectedChar===ch?' sel':'');
+    div.innerHTML=`
+      <div class="cavatar" style="border-color:${ch.clr};color:${ch.clr};box-shadow:0 0 12px ${ch.clr}44">${ch.icon}</div>
+      <div class="cname">${ch.name}</div>
+      <div class="ccrime">${ch.crime.replace(/\n/g,'<br>')}</div>
+      <div class="cstats">
+        <span class="spill">SPD ${ch.stats.spd}</span>
+        <span class="spill">STL ${ch.stats.stl}</span>
+        <span class="spill">STR ${ch.stats.str}</span>
+      </div>
+      <div class="cability" style="color:${ch.clr}">${ch.ability}</div>
+    `;
+    div.addEventListener('click', ()=>{
+      SFX.unlock();
+      selectedChar=ch;
+      document.querySelectorAll('.ccard').forEach(c=>c.classList.remove('sel'));
+      div.classList.add('sel');
+    });
+    div.addEventListener('touchend', e=>{ e.preventDefault(); div.click(); });
+    grid.appendChild(div);
+  });
+}
+
+// ============================================================
+//  INTRO SCREEN
+// ============================================================
+function initIntro(ch) {
+  const el=document.getElementById('intro-text');
+  el.innerHTML='';
+  const text = ch.intro;
+  let i=0;
+  const type=()=>{
+    if(i<text.length){
+      const c=text[i++];
+      el.innerHTML += c==='\n' ? '<br>' : c;
+      setTimeout(type, c==='\n'?60:18);
+    }
+  };
+  type();
+}
+
+// ============================================================
+//  START GAME
+// ============================================================
+function startGame() {
+  if(!selectedChar) selectedChar=CHARS[0];
+  resetState(selectedChar);
+  showScreen('s-game');
+  updateHUD();
+  document.getElementById('hud-ability').textContent=selectedChar.ability.split('—')[0].trim();
+  document.getElementById('hud-ability').classList.remove('used');
+  document.getElementById('al-overlay').style.display='none';
+  document.getElementById('lockdown-banner').style.display='none';
+  SFX.init();
+  SFX.startMusic();
+  lastTime=performance.now();
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId=requestAnimationFrame(gameLoop);
+  showNotif('FIND ITEMS, BUY TOOLS, ESCAPE BEFORE TIME RUNS OUT!');
+}
+
+// ============================================================
+//  BUTTON WIRING
+// ============================================================
+function wireButtons() {
+  document.getElementById('btn-begin').addEventListener('click', ()=>{
+    SFX.init(); SFX.unlock();
+    initCharSelect();
+    showScreen('s-charsel');
+  });
+  document.getElementById('btn-conf-char').addEventListener('click', ()=>{
+    if(!selectedChar) { showNotif('SELECT A CHARACTER!'); return; }
+    SFX.unlock();
+    initIntro(selectedChar);
+    showScreen('s-intro');
+  });
+  document.getElementById('btn-start-game').addEventListener('click', ()=>{
+    SFX.unlock();
+    startGame();
+  });
+  document.getElementById('btn-close-shop').addEventListener('click', ()=>{
+    SFX.unlock(); closeShop();
+  });
+  document.getElementById('btn-win-r').addEventListener('click', ()=>{
+    SFX.unlock(); selectedChar=null;
+    initCharSelect(); showScreen('s-charsel');
+  });
+  document.getElementById('btn-lose-r').addEventListener('click', ()=>{
+    SFX.unlock();
+    if(selectedChar) { resetState(selectedChar); showScreen('s-game'); updateHUD();
+      document.getElementById('al-overlay').style.display='none';
+      document.getElementById('lockdown-banner').style.display='none';
+      SFX.startMusic();
+      lastTime=performance.now();
+      if(rafId) cancelAnimationFrame(rafId);
+      rafId=requestAnimationFrame(gameLoop);
+    } else { showScreen('s-charsel'); }
+  });
+}
+
+// ============================================================
+//  BOOT
+// ============================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  initTitle();
+  wireButtons();
+  bindDpad();
+  // Touch begin anywhere to unlock audio
+  document.addEventListener('touchstart', ()=>SFX.unlock(), {once:true, passive:true});
+});
+</script>
+</body>
+</html>
