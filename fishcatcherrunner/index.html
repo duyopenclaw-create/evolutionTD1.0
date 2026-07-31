@@ -375,6 +375,37 @@ function beep(kind){
     o2.connect(g); o2.start(now+0.08); o2.stop(now+0.4);
   }
 }
+let ambient=null;
+function startAmbient(){
+  ensureAudio();
+  if(!actx || ambient) return;
+  const bufSize=2*actx.sampleRate;
+  const buf=actx.createBuffer(1,bufSize,actx.sampleRate);
+  const data=buf.getChannelData(0);
+  let last=0;
+  for(let i=0;i<bufSize;i++){
+    const white=Math.random()*2-1;
+    last=(last+0.02*white)/1.02;
+    data[i]=last*3.2;
+  }
+  const noise=actx.createBufferSource(); noise.buffer=buf; noise.loop=true;
+  const filter=actx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=450;
+  const gain=actx.createGain(); gain.gain.value=G.muted?0:0.05;
+  const lfo=actx.createOscillator(); lfo.frequency.value=0.09;
+  const lfoGain=actx.createGain(); lfoGain.gain.value=0.02;
+  lfo.connect(lfoGain); lfoGain.connect(gain.gain);
+  noise.connect(filter); filter.connect(gain); gain.connect(actx.destination);
+  noise.start(); lfo.start();
+  ambient={noise,filter,gain,lfo};
+}
+function stopAmbient(){
+  if(!ambient) return;
+  try{ ambient.noise.stop(); ambient.lfo.stop(); }catch(e){}
+  ambient=null;
+}
+function updateAmbientVolume(){
+  if(ambient) ambient.gain.gain.value = G.muted? 0 : 0.05;
+}
 
 // ───────────────────────── UPGRADES ─────────────────────────
 const UPGRADE_DEFS = {
@@ -471,6 +502,7 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   if(name==='collection') renderCollection();
+  if(name==='fisher' || name==='fish') startAmbient(); else stopAmbient();
   updateHud();
 }
 document.getElementById('homeBtn').addEventListener('click', ()=>{
@@ -483,6 +515,7 @@ document.getElementById('pickFisher').addEventListener('click', ()=>{ showScreen
 document.getElementById('pickFish').addEventListener('click', ()=>{ showScreen('fish'); document.getElementById('fishIntro').style.display='flex'; });
 document.getElementById('muteBtn').addEventListener('click', (e)=>{
   G.muted=!G.muted; e.target.textContent=G.muted?'🔇':'🔊'; saveGame();
+  updateAmbientVolume();
 });
 document.getElementById('resetSave').addEventListener('click', ()=>{
   if(confirm('Reset ALL progress (coins, upgrades, stats)? This cannot be undone.')){
@@ -819,6 +852,21 @@ function drawWaterBG(ctx,w,h,t,dark){
     }
     ctx.stroke();
   }
+}
+function drawLightRays(ctx,w,h,t,topY){
+  topY = topY||0;
+  ctx.save();
+  for(let i=0;i<4;i++){
+    const bx = ((i*230 + t*10)%(w+300))-150;
+    const grad = ctx.createLinearGradient(bx,topY,bx+70,h);
+    grad.addColorStop(0,'rgba(255,255,240,0.10)');
+    grad.addColorStop(1,'rgba(255,255,240,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.moveTo(bx,topY); ctx.lineTo(bx+50,topY); ctx.lineTo(bx+120,h); ctx.lineTo(bx-40,h);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1272,6 +1320,10 @@ function renderFisher(){
   const waterGrad=fctx.createLinearGradient(0,WATERLINE,0,FISHER_H);
   waterGrad.addColorStop(0,'#1e7fae'); waterGrad.addColorStop(1,'#03263e');
   fctx.fillStyle=waterGrad; fctx.fillRect(0,WATERLINE,FISHER_W,FISHER_H-WATERLINE);
+  fctx.save();
+  fctx.beginPath(); fctx.rect(0,WATERLINE,FISHER_W,FISHER_H-WATERLINE); fctx.clip();
+  drawLightRays(fctx,FISHER_W,FISHER_H,fisher.t,WATERLINE);
+  fctx.restore();
   fctx.strokeStyle='rgba(255,255,255,0.5)'; fctx.lineWidth=2;
   fctx.beginPath();
   for(let x=0;x<=FISHER_W;x+=14){
@@ -1349,13 +1401,13 @@ const fishCanvas = document.getElementById('fishCanvas');
 const xctx = fishCanvas.getContext('2d');
 const fish = {
   tier:0, xp:0, y:FISH_H/2, targetY:FISH_H/2, distance:0,
-  obstacles:[], particles:[],
+  obstacles:[], particles:[], bubbles:[], bubbleTimer:0,
   spawnTimer:0, running:false, invuln:0, shieldCharges:0, t:0,
 };
 function xpNeeded(tier){ return 60+tier*35; }
 function startFishRun(){
   fish.tier=0; fish.xp=0; fish.y=FISH_H/2; fish.targetY=FISH_H/2; fish.distance=0;
-  fish.obstacles=[]; fish.particles=[]; fish.spawnTimer=0.6; fish.invuln=1.2;
+  fish.obstacles=[]; fish.particles=[]; fish.bubbles=[]; fish.bubbleTimer=0; fish.spawnTimer=0.6; fish.invuln=1.2;
   fish.shieldCharges=G.upgrades.shield||0;
   fish.running=true;
   discover(0);
@@ -1505,6 +1557,15 @@ function updateFish(dt){
     const p=fish.particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*1.6;
     if(p.life<=0) fish.particles.splice(i,1);
   }
+  fish.bubbleTimer-=dt;
+  if(fish.bubbleTimer<=0){
+    fish.bubbleTimer=0.25+Math.random()*0.35;
+    fish.bubbles.push({x:FISH_W+10, y:40+Math.random()*(FISH_H-60), vx:-(fishSpeed()*0.4), vy:-(10+Math.random()*10), r:1.5+Math.random()*2.5, wob:Math.random()*10});
+  }
+  for(let i=fish.bubbles.length-1;i>=0;i--){
+    const b=fish.bubbles[i]; b.x+=b.vx*dt; b.y+=b.vy*dt;
+    if(b.x<-20||b.y<-20) fish.bubbles.splice(i,1);
+  }
 }
 function spawnEatParticles(x,y){
   for(let k=0;k<6;k++){
@@ -1513,6 +1574,12 @@ function spawnEatParticles(x,y){
 }
 function renderFish(){
   drawWaterBG(xctx,FISH_W,FISH_H,fish.t,true);
+  drawLightRays(xctx,FISH_W,FISH_H,fish.t,0);
+  for(const b of fish.bubbles){
+    const bx=b.x+Math.sin(fish.t*3+b.wob)*3;
+    xctx.beginPath(); xctx.arc(bx,b.y,b.r,0,Math.PI*2);
+    xctx.strokeStyle='rgba(255,255,255,0.3)'; xctx.lineWidth=1; xctx.stroke();
+  }
   for(const o of fish.obstacles){
     if(o.kind==='hazard'){
       xctx.save(); xctx.translate(o.x,o.y);
@@ -1522,7 +1589,8 @@ function renderFish(){
     } else {
       const tier=TIERS[o.tier];
       const wobble=Math.sin(fish.t*2.6+o.phase)*4;
-      drawCreature(xctx, tier, o.x, o.y+wobble, tierFontSize(o.tier,20), o.vx<0, o.golden, fish.t, o.phase);
+      const depthDark=Math.max(0,Math.min(0.4,(o.y/FISH_H)*0.4));
+      drawCreature(xctx, tier, o.x, o.y+wobble, tierFontSize(o.tier,20), o.vx<0, o.golden, fish.t, o.phase, depthDark);
     }
   }
   for(const p of fish.particles){
