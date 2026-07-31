@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>EMOTIONAL DAMAGE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;background:#1a1024;}
+html.inverted{filter:invert(1) hue-rotate(180deg);}
+#app{position:fixed;inset:0;overflow:hidden;}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.hidden{display:none!important;}
+
+/* ---------- START SCREEN ---------- */
+#start-screen{background:radial-gradient(ellipse at 50% 20%,#3a1f52,#160b22 70%);color:#fff;text-align:center;padding:20px;
+  justify-content:flex-start;overflow-y:auto;}
+#start-screen h1{font-size:clamp(38px,9vw,74px);font-weight:900;letter-spacing:2px;margin-top:120px;
+  background:linear-gradient(180deg,#ff5c5c,#c81e4f 60%,#7a0e2e);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 40px rgba(255,60,80,.5);margin-bottom:6px;}
+#start-screen .sub{color:#e0b3ff;font-size:clamp(13px,3vw,16px);margin-bottom:26px;max-width:480px;line-height:1.5;}
+#start-screen label{font-size:13px;color:#c9a8e8;margin-bottom:6px;display:block;}
+#name-input{padding:12px 16px;font-size:18px;border-radius:10px;border:2px solid #7a3a9e;background:#241433;color:#fff;text-align:center;width:min(80vw,280px);margin-bottom:18px;}
+#name-input:focus{outline:none;border-color:#ff5c8a;}
+.big-btn{padding:16px 46px;font-size:20px;font-weight:800;border:none;border-radius:12px;cursor:pointer;
+  background:linear-gradient(135deg,#ff5c8a,#c81e4f);color:#fff;letter-spacing:1px;box-shadow:0 6px 20px rgba(200,30,79,.5);transition:transform .12s;}
+.big-btn:hover{transform:scale(1.05);}
+.big-btn:active{transform:scale(.97);}
+.big-btn.secondary{background:rgba(255,255,255,.08);color:#fff;box-shadow:none;border:2px solid rgba(255,255,255,.3);
+  padding:14px 44px;font-size:16px;}
+#go-actions{display:flex;flex-direction:column;gap:12px;align-items:center;}
+#best-line{margin-top:20px;font-size:14px;color:#ffd76a;}
+.mode-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:6px;}
+.section-label{font-size:11px;font-weight:800;color:#c9a8ff;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;}
+.mode-btn{padding:10px 14px;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);
+  color:#fff;font-weight:800;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+  gap:2px;min-width:76px;transition:all .12s;}
+.mode-btn span{font-size:10px;font-weight:600;color:#ddc7ef;}
+.mode-btn:hover{background:rgba(255,255,255,.14);}
+.mode-btn.selected{border-color:#ff5c8a;background:rgba(255,92,138,.22);}
+.mode-btn.locked{opacity:.45;cursor:not-allowed;border-color:rgba(255,255,255,.15);}
+.mode-btn.locked:hover{background:rgba(255,255,255,.06);}
+.mode-btn.unlocked-ed{border-color:#ff3b3b;background:rgba(255,59,59,.15);opacity:1;}
+.mode-btn.unlocked-ed span{color:#ff9a9a;}
+.rules{margin-top:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px 20px;font-size:12.5px;color:#ddc7ef;max-width:420px;line-height:1.7;text-align:left;}
+.rules b{color:#ffb3c6;}
+#mute-toggle{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:8px;padding:8px 12px;font-size:16px;cursor:pointer;z-index:50;}
+#shop-toggle{position:absolute;top:16px;left:16px;background:rgba(255,215,90,.14);border:1px solid rgba(255,215,90,.4);
+  color:#ffd76a;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer;z-index:50;}
+#settings-toggle{position:absolute;top:60px;left:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer;z-index:50;}
+#coin-display{position:absolute;top:104px;left:16px;background:rgba(0,0,0,.3);color:#ffd76a;font-weight:800;font-size:13px;
+  padding:5px 12px;border-radius:14px;z-index:50;}
+#achievements-toggle{position:absolute;top:60px;right:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:800;cursor:pointer;z-index:50;}
+#invert-toggle{position:absolute;top:104px;right:16px;background:rgba(150,120,255,.16);border:1px solid rgba(150,120,255,.4);
+  color:#c9a8ff;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:800;cursor:pointer;z-index:50;}
+#game-title{cursor:pointer;}
+
+/* ---------- SETTINGS SCREEN ---------- */
+#settings-screen{background:radial-gradient(ellipse at 50% 15%,#33304a,#0e0e18 70%);color:#fff;text-align:center;padding:20px;overflow-y:auto;}
+#settings-screen h2{font-size:clamp(26px,7vw,40px);font-weight:900;color:#c9a8ff;margin-bottom:22px;}
+.setting-row{max-width:380px;width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:14px 18px;margin-bottom:14px;text-align:left;}
+.setting-row .lbl{font-weight:800;font-size:14px;margin-bottom:8px;}
+.setting-row .sub{font-size:11.5px;color:#b8c4d8;margin-bottom:10px;line-height:1.4;}
+.toggle-pair{display:flex;gap:8px;}
+.toggle-opt{flex:1;padding:9px 8px;border-radius:9px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);
+  color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;}
+.toggle-opt.selected{border-color:#c9a8ff;background:rgba(201,168,255,.22);}
+#reset-save-btn{padding:10px 20px;border-radius:9px;border:none;background:#a11c33;color:#fff;font-weight:800;cursor:pointer;font-size:13px;}
+#settings-back{margin-top:6px;}
+
+/* ---------- ACHIEVEMENTS SCREEN ---------- */
+#achievements-screen{background:radial-gradient(ellipse at 50% 15%,#3a3020,#14100a 70%);color:#fff;text-align:center;padding:20px;overflow-y:auto;}
+#achievements-screen h2{font-size:clamp(26px,7vw,40px);font-weight:900;color:#ffd76a;margin-bottom:4px;}
+#ach-progress{font-size:13px;color:#ddc7ef;margin-bottom:18px;}
+#ach-list{max-width:420px;width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.ach-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:10px 14px;text-align:left;}
+.ach-row.unlocked{background:rgba(255,215,90,.1);border-color:rgba(255,215,90,.35);}
+.ach-row .ach-icon{font-size:22px;width:26px;text-align:center;flex-shrink:0;}
+.ach-row .ach-info{flex:1;}
+.ach-row .ach-name{font-weight:800;font-size:13px;}
+.ach-row.unlocked .ach-name{color:#ffd76a;}
+.ach-row .ach-desc{font-size:11px;color:#b8c4d8;margin-top:2px;}
+.ach-row.secret{border-style:dashed;}
+
+/* ---------- SHOP SCREEN ---------- */
+#shop-screen{background:radial-gradient(ellipse at 50% 15%,#2a3a52,#0e1420 70%);color:#fff;text-align:center;padding:20px;overflow-y:auto;}
+#shop-screen h2{font-size:clamp(26px,7vw,40px);font-weight:900;color:#ffd76a;margin-bottom:4px;}
+#shop-coin-line{color:#ffd76a;font-weight:800;font-size:16px;margin-bottom:22px;}
+.shop-item{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:14px 18px;max-width:380px;width:100%;margin-bottom:14px;text-align:left;}
+.shop-item .icon{font-size:36px;}
+.shop-item .info{flex:1;}
+.shop-item .info .nm{font-weight:800;font-size:15px;}
+.shop-item .info .desc{font-size:11.5px;color:#b8c4d8;margin-top:2px;line-height:1.4;}
+.shop-item .info .owned{font-size:11px;color:#ffd76a;margin-top:3px;font-weight:700;}
+.shop-buy-btn{padding:9px 16px;border-radius:8px;border:none;background:#4CAF50;color:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;}
+.shop-buy-btn:disabled{background:#555;opacity:.6;cursor:not-allowed;}
+#wheel-box{max-width:380px;width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,215,90,.3);border-radius:14px;
+  padding:16px 18px;margin-top:8px;margin-bottom:20px;}
+#wheel-box h3{color:#ffd76a;font-size:15px;margin-bottom:6px;}
+#wheel-status{font-size:12px;color:#b8c4d8;margin-bottom:10px;}
+#wheel-result{font-size:20px;font-weight:900;color:#ffd76a;min-height:26px;margin-top:8px;}
+#spin-btn{padding:10px 24px;border-radius:9px;border:none;background:linear-gradient(135deg,#ffd76a,#e0a020);color:#2a1a00;font-weight:900;cursor:pointer;}
+#spin-btn:disabled{background:#555;color:#999;cursor:not-allowed;}
+#shop-back{margin-top:6px;}
+
+/* ---------- GAME SCREEN ---------- */
+#game-screen{background:linear-gradient(180deg,#4a3560 0%,#2a1f3d 55%,#1a1428 100%);width:100%;height:100%;position:relative;}
+#topbar{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px;color:#fff;font-size:14px;z-index:5;}
+#topbar .stat{background:rgba(0,0,0,.35);padding:6px 12px;border-radius:20px;font-weight:700;}
+#health-wrap{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.35);padding:6px 10px;border-radius:14px;}
+#health-label{font-size:10px;font-weight:800;color:#ff8a9a;letter-spacing:.5px;}
+#health-bar-bg{width:80px;height:10px;background:rgba(255,255,255,.15);border-radius:6px;overflow:hidden;}
+#health-fill{height:100%;width:100%;background:linear-gradient(90deg,#4CAF50,#8bc34a);transition:width .3s ease,background .3s ease;}
+#health-fill.mid{background:linear-gradient(90deg,#ffb020,#ffd76a);}
+#health-fill.low{background:linear-gradient(90deg,#e53950,#ff5c5c);}
+#health-text{font-size:11px;font-weight:800;color:#fff;min-width:40px;text-align:right;}
+#damage-popup{position:absolute;top:130px;left:50%;transform:translateX(-50%);font-size:26px;font-weight:900;color:#ff3b3b;
+  text-shadow:0 2px 8px rgba(0,0,0,.8);opacity:0;pointer-events:none;z-index:16;}
+#damage-popup.show{animation:dmgPop .9s ease forwards;}
+@keyframes dmgPop{
+  0%{opacity:0;transform:translateX(-50%) translateY(0) scale(.8);}
+  20%{opacity:1;transform:translateX(-50%) translateY(-6px) scale(1.15);}
+  70%{opacity:1;transform:translateX(-50%) translateY(-22px) scale(1);}
+  100%{opacity:0;transform:translateX(-50%) translateY(-36px) scale(.95);}
+}
+#timerbar-wrap{position:absolute;top:44px;left:0;width:100%;height:8px;background:rgba(0,0,0,.25);z-index:5;}
+#timerbar{height:100%;width:100%;background:linear-gradient(90deg,#6cff9a,#ffe66c,#ff5c5c);transition:width .1s linear;}
+#timer-text{position:absolute;top:96px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;font-weight:700;
+  background:rgba(0,0,0,.35);padding:2px 10px;border-radius:10px;z-index:5;letter-spacing:.5px;}
+
+/* ---------- FIRST-PERSON POV RIG ---------- */
+#pov-wrap{position:absolute;inset:0;overflow:hidden;}
+#pov-wrap.grandma-blur{filter:blur(4px);}
+#pov-stack{position:absolute;top:0;left:0;width:100%;height:200%;transform:translateY(-50%);
+  transition:transform .6s cubic-bezier(.4,0,.2,1);}
+#pov-stack.instant{transition:none;}
+#pov-stack.looking-up{transform:translateY(0%);}
+#parent-view,#desk-view{position:relative;width:100%;height:50%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;}
+
+/* -- looking up at a parent -- */
+#parent-view{background:radial-gradient(ellipse at 50% 38%,#5a2a3a 0%,#2a1018 55%,#160a10 100%);}
+.parent-vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 35%,rgba(255,170,120,.16),transparent 60%);pointer-events:none;}
+#parent-face{width:min(58vw,300px);height:min(58vw,300px);filter:drop-shadow(0 12px 24px rgba(0,0,0,.6));transition:transform .15s;}
+#parent-face.angry{animation:facepulse .3s ease;}
+@keyframes facepulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+#parent-face.lunge{animation:doglunge .45s ease;}
+@keyframes doglunge{0%{transform:scale(1) translateY(0);}40%{transform:scale(1.35) translateY(20px);}100%{transform:scale(1) translateY(0);}}
+#parent-name{position:absolute;top:64px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;
+  background:rgba(0,0,0,.4);padding:4px 14px;border-radius:14px;font-weight:700;letter-spacing:1px;z-index:2;}
+#pv-weapon{position:absolute;width:min(46vw,240px);height:min(30vw,160px);top:10%;right:-14%;opacity:0;transform:scale(.3) rotate(20deg);
+  pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.6));}
+#pv-weapon.swing{animation:swingHitBig .48s ease-in forwards;}
+@keyframes swingHitBig{
+  0%{opacity:1;transform:scale(.5) rotate(55deg) translate(15%,-15%);}
+  60%{opacity:1;transform:scale(1.35) rotate(-18deg) translate(-30%,10%);}
+  100%{opacity:.9;transform:scale(1.6) rotate(-38deg) translate(-48%,22%);}
+}
+#slap-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;}
+#slap-flash.flash{animation:slapflash .25s ease;}
+#slap-flash.flash.reduced{animation:slapflashReduced .3s ease;}
+@keyframes slapflash{0%{opacity:0;}30%{opacity:.92;}100%{opacity:0;}}
+@keyframes slapflashReduced{0%{opacity:0;}30%{opacity:.35;}100%{opacity:0;}}
+
+/* -- looking down at homework -- */
+#desk-view{background:linear-gradient(180deg,#6b4429 0%,#4a2e1a 55%,#2e1c10 100%);}
+.peek-parent{position:absolute;top:5%;width:12vw;height:16vw;opacity:.34;filter:blur(2.5px) drop-shadow(0 4px 6px rgba(0,0,0,.4));}
+.peek-left{left:3%;}
+.peek-right{right:3%;}
+#hands{position:absolute;bottom:0;width:min(70vw,320px);opacity:.95;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
+
+#problem-card{position:relative;z-index:3;background:rgba(255,255,255,.96);border-radius:16px;padding:18px 26px;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);text-align:center;margin-bottom:min(14vh,90px);min-width:min(86vw,360px);
+  transition:box-shadow .2s;}
+#problem-card.pulse-correct{animation:pulseCorrect .5s ease;}
+@keyframes pulseCorrect{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.4);}50%{box-shadow:0 0 0 10px rgba(76,175,80,.55),0 10px 30px rgba(0,0,0,.4);}}
+#equation{font-size:clamp(30px,7vw,44px);font-weight:900;color:#241433;letter-spacing:1px;margin-bottom:10px;}
+#draw-hint{font-size:11px;color:#8a7599;margin-bottom:8px;letter-spacing:.3px;}
+#draw-canvas{width:100%;height:min(42vh,260px);display:block;border-radius:10px;border:2px solid #7a3a9e;
+  background-color:#fffef8;
+  background-image:
+    linear-gradient(to right, transparent 0 25px, rgba(214,80,80,.4) 25px 26px, transparent 26px 100%),
+    repeating-linear-gradient(to bottom, transparent 0 29px, rgba(120,140,190,.35) 29px 30px);
+  touch-action:none;cursor:crosshair;}
+#draw-actions{display:flex;justify-content:center;gap:10px;margin-top:10px;}
+#draw-actions button{padding:9px 22px;border-radius:8px;border:none;font-weight:800;font-size:13px;cursor:pointer;transition:transform .1s;}
+#draw-actions button:active{transform:scale(.95);}
+
+#type-area{display:none;flex-direction:column;align-items:center;gap:12px;padding:20px 0;}
+#type-input{width:min(60vw,220px);padding:14px 16px;font-size:26px;font-weight:800;text-align:center;border-radius:10px;
+  border:2px solid #7a3a9e;background:#fffef8;color:#241433;}
+#type-input:focus{outline:none;border-color:#ff5c8a;}
+#type-submit-btn{padding:10px 30px;border-radius:8px;border:none;font-weight:800;font-size:14px;cursor:pointer;
+  background:#4CAF50;color:#fff;transition:transform .1s;}
+#type-submit-btn:active{transform:scale(.95);}
+#clear-btn{background:#eee;color:#3a1f52;}
+#submit-btn{background:#4CAF50;color:#fff;}
+#draw-actions button:disabled{opacity:.5;pointer-events:none;}
+
+#toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#ffe66c;
+  padding:8px 18px;border-radius:20px;font-size:14px;font-weight:700;opacity:0;transition:opacity .25s;z-index:6;pointer-events:none;}
+#toast.show{opacity:1;}
+
+#inventory-bar{position:absolute;bottom:14px;left:14px;display:flex;flex-direction:column;gap:8px;z-index:6;}
+.inv-btn{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:10px;padding:8px 10px;font-size:18px;cursor:pointer;font-weight:800;}
+.inv-btn span{font-size:12px;}
+.inv-btn:disabled{opacity:.35;pointer-events:none;}
+#cheat-paper{position:absolute;left:50%;bottom:-240px;transform:translateX(-50%);width:min(80vw,320px);
+  background:#fdf6dc;border:2px solid #c9a227;border-radius:12px 12px 5px 5px;box-shadow:0 -8px 26px rgba(0,0,0,.55);
+  padding:16px 20px 20px;text-align:center;transition:bottom .4s cubic-bezier(.2,.9,.3,1.25);z-index:15;pointer-events:none;}
+#cheat-paper.show{bottom:16px;}
+#cheat-paper .cp-label{font-size:11px;color:#8a6d1a;font-weight:800;letter-spacing:1px;margin-bottom:6px;}
+#cheat-paper .cp-num{font-size:52px;font-weight:900;color:#241433;line-height:1;}
+
+#bruise-overlay{position:absolute;inset:0;pointer-events:none;z-index:14;opacity:0;transition:opacity .6s ease;
+  background:radial-gradient(ellipse at center,transparent 38%,rgba(70,10,50,.55) 78%,rgba(40,5,30,.75) 100%),
+    radial-gradient(circle at 15% 25%,rgba(90,20,70,.5) 0%,transparent 30%),
+    radial-gradient(circle at 85% 75%,rgba(90,20,70,.5) 0%,transparent 30%);}
+
+#sweat-overlay{position:absolute;inset:0;pointer-events:none;z-index:13;overflow:hidden;}
+.sweat-drop{position:absolute;width:22px;opacity:0;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));}
+.sweat-drop.show{animation:sweatDrip 1.6s ease-in infinite;}
+.sd1{top:8%;left:12%;animation-delay:0s;}
+.sd2{top:6%;right:16%;animation-delay:.4s;}
+.sd3{top:14%;left:48%;animation-delay:.8s;}
+@keyframes sweatDrip{
+  0%{opacity:0;transform:translateY(0) scale(.8);}
+  15%{opacity:.9;transform:translateY(4px) scale(1);}
+  80%{opacity:.7;transform:translateY(38px) scale(1);}
+  100%{opacity:0;transform:translateY(48px) scale(.9);}
+}
+
+#saved-flash{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#6cff9a;
+  padding:5px 14px;border-radius:14px;font-size:11px;font-weight:700;letter-spacing:1px;opacity:0;transition:opacity .3s;z-index:6;}
+#saved-flash.show{opacity:1;}
+
+/* ---------- BLACKOUT ---------- */
+#blackout{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:20;opacity:0;pointer-events:none;transition:opacity .25s;text-align:center;padding:20px;}
+#blackout.show{opacity:1;pointer-events:all;}
+#ed-title{font-size:clamp(34px,10vw,90px);font-weight:900;letter-spacing:2px;
+  background:linear-gradient(180deg,#ff3b3b,#7a0e2e);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 50px rgba(255,40,60,.6);transform:scale(.6);opacity:0;}
+#blackout.show #ed-title{animation:popIn .45s cubic-bezier(.2,1.4,.4,1) forwards;}
+@keyframes popIn{0%{transform:scale(.4) rotate(-8deg);opacity:0;}70%{transform:scale(1.15) rotate(2deg);opacity:1;}100%{transform:scale(1) rotate(0);opacity:1;}}
+#ed-sub{color:#ffb3c6;font-size:clamp(15px,4vw,22px);margin-top:16px;max-width:600px;line-height:1.5;font-weight:600;opacity:0;}
+#blackout.show #ed-sub{animation:fadeUp .5s ease .3s forwards;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+#blackout .cont{margin-top:34px;color:#7a5a94;font-size:13px;opacity:0;}
+#blackout.show .cont{animation:fadeUp .5s ease .9s forwards;}
+
+#screen-shake{animation:none;}
+.shake-hard{animation:hardshake .35s ease;}
+@keyframes hardshake{
+  0%,100%{transform:translate(0,0);}
+  20%{transform:translate(-8px,4px);}
+  40%{transform:translate(8px,-4px);}
+  60%{transform:translate(-6px,-4px);}
+  80%{transform:translate(6px,4px);}
+}
+
+/* ---------- GAME OVER ---------- */
+#gameover-screen{background:radial-gradient(ellipse at 50% 20%,#3a1030,#120a18 70%);color:#fff;text-align:center;padding:20px;}
+#go-title{font-size:clamp(36px,9vw,68px);font-weight:900;color:#ff5c5c;text-shadow:0 0 30px rgba(255,60,60,.5);margin-bottom:10px;}
+#go-stats{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 30px;margin-bottom:22px;min-width:260px;}
+#go-stats .row{display:flex;justify-content:space-between;font-size:15px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);}
+#go-stats .row:last-child{border-bottom:none;}
+#go-stats .row span:last-child{font-weight:800;color:#ffd76a;}
+#go-quote{color:#e0b3ff;font-size:14px;max-width:420px;margin-bottom:26px;line-height:1.5;font-style:italic;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="start-screen" class="screen">
+    <button id="mute-toggle" onclick="Game.toggleMute()">🔊</button>
+    <button id="achievements-toggle" onclick="Achievements.open()">🏆 Achievements</button>
+    <button id="invert-toggle" class="hidden" onclick="Game.toggleInvert()">🌓 Invert</button>
+    <button id="shop-toggle" onclick="Shop.open()">🛒 Shop</button>
+    <button id="settings-toggle" onclick="Settings.open()">⚙️ Settings</button>
+    <div id="coin-display">🪙 <span id="coin-count">100</span></div>
+    <h1 id="game-title" onclick="Game.onTitleClick()">EMOTIONAL<br>DAMAGE</h1>
+    <p class="sub">Do your kindergarten math homework while Mom &amp; Dad watch. Get it wrong... and pray.</p>
+    <label for="name-input">Your name</label>
+    <input id="name-input" maxlength="16" value="Jake" autocomplete="off">
+    <div class="section-label">Quiz Length</div>
+    <div class="mode-row" id="length-row">
+      <button class="mode-btn length-btn" data-len="10" onclick="Game.selectLength(10,this)">SHORT<span>10 questions</span></button>
+      <button class="mode-btn length-btn selected" data-len="20" onclick="Game.selectLength(20,this)">NORMAL<span>20 questions</span></button>
+      <button class="mode-btn length-btn" data-len="30" onclick="Game.selectLength(30,this)">EXTENDED<span>30 questions</span></button>
+      <button class="mode-btn length-btn" data-len="50" onclick="Game.selectLength(50,this)">EXAM<span>50 questions</span></button>
+    </div>
+
+    <div class="section-label">Difficulty</div>
+    <div class="mode-row" id="mode-row">
+      <button class="mode-btn" data-mode="baby" onclick="Game.selectMode('baby',this)">BABY<span>5:00 total</span></button>
+      <button class="mode-btn selected" data-mode="easy" onclick="Game.selectMode('easy',this)">EASY<span>3:00 total</span></button>
+      <button class="mode-btn" data-mode="medium" onclick="Game.selectMode('medium',this)">MEDIUM<span>2:00 total</span></button>
+      <button class="mode-btn" data-mode="hard" onclick="Game.selectMode('hard',this)">HARD<span>1:00 total</span></button>
+    </div>
+
+    <div class="section-label">Race Mode</div>
+    <div class="mode-row" id="race-row">
+      <button class="mode-btn" data-mode="asian" onclick="Game.selectMode('asian',this)">🏁 RACE TIMMY<span>15-32s total</span></button>
+      <button class="mode-btn" data-mode="raceMom" onclick="Game.selectMode('raceMom',this)">🏁 RACE MOM<span>+10s headstart, she takes 2-5s</span></button>
+      <button class="mode-btn" data-mode="raceDad" onclick="Game.selectMode('raceDad',this)">🏁 RACE DAD<span>1:00 — 1 mistake = instant KO</span></button>
+      <button class="mode-btn" data-mode="raceGrandma" onclick="Game.selectMode('raceGrandma',this)">👵 GRANDMA &amp; DOG<span>3:00 — grandma's glasses, 40% blur</span></button>
+      <button class="mode-btn locked" id="ed-mode-btn" data-mode="emotionalDamage" onclick="Game.selectMode('emotionalDamage',this)">
+        <span id="ed-mode-label">🔒 EMOTIONAL DAMAGE</span><span id="ed-mode-sub">beat ASIAN to unlock</span>
+      </button>
+    </div>
+    <button class="big-btn" onclick="Game.start()">START HOMEWORK</button>
+    <div id="best-line"></div>
+    <div class="rules">
+      The test is <b>20 pages</b>. No per-page time limit — but your whole test has one, set by the mode above.
+      In <b>ASIAN</b> mode, Timmy already finished the entire test in 15–32 seconds. That's your clock now.<br><br>
+      <b>Correct answer:</b> Mom &amp; Dad are proud. Score goes up.<br>
+      <b>Wrong answer:</b> 50% chance Dad swings the belt or slipper. 25% chance Mom does too. 25% chance you get lucky.<br>
+      You have <b>100 HP</b>. The belt hits harder than the slipper — expect to survive <b>3-5 hits</b> depending on which one lands. 0 HP and homework time is over.<br><br>
+      Beat <b>ASIAN</b> mode once to unlock the secret <b>💀 EMOTIONAL DAMAGE</b> tier — 5-10 seconds for the whole test, and a 2000🪙 jackpot if you somehow win.
+    </div>
+  </div>
+
+  <!-- SHOP SCREEN -->
+  <div id="shop-screen" class="screen hidden">
+    <h2>🛒 SHOP</h2>
+    <div id="shop-coin-line">🪙 <span id="shop-coin-count">100</span> coins</div>
+
+    <div class="shop-item">
+      <div class="icon">🛡️</div>
+      <div class="info">
+        <div class="nm">Anti-Emotional-Damage</div>
+        <div class="desc">Use it before the belt/slipper lands — blocks every hit for 5 seconds.</div>
+        <div class="owned">Owned: <span id="shop-antied-owned">0</span></div>
+      </div>
+      <button class="shop-buy-btn" id="buy-antied" onclick="Shop.buy('antiEd')">Buy 200🪙</button>
+    </div>
+
+    <div class="shop-item">
+      <div class="icon">🔎</div>
+      <div class="info">
+        <div class="nm">Cheat</div>
+        <div class="desc">Reveals the answer clearly. Risky — your parents are sometimes looking.</div>
+        <div class="owned">Owned: <span id="shop-cheat-owned">0</span></div>
+      </div>
+      <button class="shop-buy-btn" id="buy-cheat" onclick="Shop.buy('cheat')">Buy 80🪙</button>
+    </div>
+
+    <div id="wheel-box">
+      <h3>🎡 Spin the Wheel</h3>
+      <div id="wheel-status">Free spins: 0 · Ready</div>
+      <button id="spin-btn" onclick="Shop.spin()">SPIN</button>
+      <div id="wheel-result"></div>
+    </div>
+
+    <button class="big-btn" id="shop-back" onclick="Shop.close()">BACK</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settings-screen" class="screen hidden">
+    <h2>⚙️ SETTINGS</h2>
+
+    <div class="setting-row">
+      <div class="lbl">Answer input</div>
+      <div class="sub">Type is faster and always exact. Draw is more fun but the handwriting reader can occasionally misread a digit.</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="mode-type-btn" onclick="Settings.setInputMode('type')">⌨️ Type (recommended)</button>
+        <button class="toggle-opt" id="mode-draw-btn" onclick="Settings.setInputMode('draw')">✍️ Draw</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Sound</div>
+      <div class="sub">Music and sound effects.</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="sound-on-btn" onclick="Settings.setSound(true)">🔊 On</button>
+        <button class="toggle-opt" id="sound-off-btn" onclick="Settings.setSound(false)">🔇 Off</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Auto-submit while drawing</div>
+      <div class="sub">In Draw mode, automatically submit ~1.5s after you stop writing. Turn off to only submit when you tap the button — useful for multi-digit answers.</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="autosubmit-on-btn" onclick="Settings.setAutoSubmit(true)">⏱️ On</button>
+        <button class="toggle-opt" id="autosubmit-off-btn" onclick="Settings.setAutoSubmit(false)">✋ Manual only</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Screen shake</div>
+      <div class="sub">Camera shake when the belt or slipper lands.</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="shake-on-btn" onclick="Settings.setScreenShake(true)">📳 On</button>
+        <button class="toggle-opt" id="shake-off-btn" onclick="Settings.setScreenShake(false)">🚫 Off</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Flash intensity</div>
+      <div class="sub">The white screen-flash on impact. Reduce it if it's too bright/sudden for you.</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="flash-full-btn" onclick="Settings.setReduceFlash(false)">☀️ Full</button>
+        <button class="toggle-opt" id="flash-reduced-btn" onclick="Settings.setReduceFlash(true)">🌥️ Reduced</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Parent commentary</div>
+      <div class="sub">Occasional remarks from Mom & Dad while you're working ("Your handwriting is bad", etc).</div>
+      <div class="toggle-pair">
+        <button class="toggle-opt" id="commentary-on-btn" onclick="Settings.setCommentary(true)">💬 On</button>
+        <button class="toggle-opt" id="commentary-off-btn" onclick="Settings.setCommentary(false)">🔇 Off</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="lbl">Reset save data</div>
+      <div class="sub">Wipes your coins, shop items, high score, and free spins. Cannot be undone.</div>
+      <button id="reset-save-btn" onclick="Settings.resetSave()">Reset Everything</button>
+    </div>
+
+    <button class="big-btn" id="settings-back" onclick="Settings.close()">BACK</button>
+  </div>
+
+  <!-- ACHIEVEMENTS SCREEN -->
+  <div id="achievements-screen" class="screen hidden">
+    <h2>🏆 ACHIEVEMENTS</h2>
+    <div id="ach-progress"></div>
+    <div id="ach-list"></div>
+    <button class="big-btn" id="ach-back" onclick="Achievements.close()">BACK</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen hidden">
+    <div id="topbar">
+      <div class="stat">Score: <span id="score-val">0</span></div>
+      <div class="stat">Page <span id="page-val">1</span>/<span id="page-total">20</span></div>
+      <div id="health-wrap">
+        <div id="health-label">HP</div>
+        <div id="health-bar-bg"><div id="health-fill"></div></div>
+        <div id="health-text">100/100</div>
+      </div>
+    </div>
+    <div id="timerbar-wrap"><div id="timerbar"></div></div>
+    <div id="timer-text">3:00</div>
+    <div id="damage-popup"></div>
+    <div id="toast"></div>
+    <div id="inventory-bar">
+      <button class="inv-btn" id="inv-antied" onclick="Game.useShield()">🛡️<span id="inv-antied-count">0</span></button>
+      <button class="inv-btn" id="inv-cheat" onclick="Game.useCheat()">🔎<span id="inv-cheat-count">0</span></button>
+    </div>
+    <div id="cheat-paper">
+      <div class="cp-label">🔎 CHEAT SHEET</div>
+      <div class="cp-num" id="cheat-paper-num">0</div>
+    </div>
+    <div id="bruise-overlay"></div>
+    <div id="sweat-overlay">
+      <svg class="sweat-drop sd1" viewBox="0 0 20 28"><path d="M10 0 C10 0 20 15 20 20 A10 10 0 0 1 0 20 C0 15 10 0 10 0 Z" fill="#7ec8e3"/></svg>
+      <svg class="sweat-drop sd2" viewBox="0 0 20 28"><path d="M10 0 C10 0 20 15 20 20 A10 10 0 0 1 0 20 C0 15 10 0 10 0 Z" fill="#7ec8e3"/></svg>
+      <svg class="sweat-drop sd3" viewBox="0 0 20 28"><path d="M10 0 C10 0 20 15 20 20 A10 10 0 0 1 0 20 C0 15 10 0 10 0 Z" fill="#7ec8e3"/></svg>
+    </div>
+
+    <div id="pov-wrap">
+      <div id="pov-stack">
+        <!-- top half of the stack: what you see when you look UP -->
+        <div id="parent-view">
+          <div class="parent-vignette"></div>
+          <div id="parent-name">Dad</div>
+          <div id="parent-face"></div>
+          <div class="weapon" id="pv-weapon"></div>
+          <div id="slap-flash"></div>
+        </div>
+        <!-- bottom half of the stack: your homework, POV looking down -->
+        <div id="desk-view">
+          <div class="peek-parent peek-left">
+            <svg viewBox="0 0 60 90" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="30" cy="22" r="17" fill="#241c30"/>
+              <path d="M8 90 Q8 46 30 44 Q52 46 52 90 Z" fill="#241c30"/>
+            </svg>
+          </div>
+          <div class="peek-parent peek-right">
+            <svg viewBox="0 0 60 90" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 34 Q4 6 30 5 Q56 6 51 34 Q54 14 30 16 Q6 14 9 34 Z" fill="#241c30"/>
+              <circle cx="30" cy="24" r="16" fill="#241c30"/>
+              <path d="M8 90 Q8 48 30 46 Q52 48 52 90 Z" fill="#241c30"/>
+            </svg>
+          </div>
+          <div id="problem-card">
+            <div id="equation">3 + 4 = ?</div>
+            <div id="draw-area">
+              <div id="draw-hint">Write your answer on the paper with the pen</div>
+              <canvas id="draw-canvas"></canvas>
+              <div id="draw-actions">
+                <button id="clear-btn" onclick="Game.clearDrawing()">✗ Clear</button>
+                <button id="submit-btn" onclick="Game.submitDrawing()">✓ Submit</button>
+              </div>
+            </div>
+            <div id="type-area">
+              <input id="type-input" type="number" inputmode="numeric" placeholder="Your answer" autocomplete="off">
+              <button id="type-submit-btn" onclick="Game.submitTyped()">✓ Submit</button>
+            </div>
+          </div>
+          <div id="hands">
+            <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg">
+              <g transform="rotate(-28 150 90)">
+                <rect x="120" y="6" width="16" height="132" rx="3" fill="#f4c430"/>
+                <rect x="120" y="6" width="16" height="14" fill="#e0673a"/>
+                <rect x="118" y="-4" width="20" height="12" rx="2" fill="#cfcfcf"/>
+                <polygon points="120,138 136,138 128,158" fill="#e0b080"/>
+                <polygon points="126,138 130,138 128,151" fill="#332a1a"/>
+              </g>
+              <path d="M68 160 Q56 108 88 92 Q100 76 122 82 Q136 66 154 79 Q173 71 182 90 Q202 92 197 120 Q203 146 176 160 Z" fill="#e0a978"/>
+              <path d="M88 92 Q94 74 109 77 Q104 90 99 99 Z" fill="#eab88a" stroke="#c98f5e" stroke-width="1.5"/>
+              <path d="M122 82 Q128 66 142 70 Q136 82 130 92 Z" fill="#eab88a" stroke="#c98f5e" stroke-width="1.5"/>
+              <path d="M154 79 Q162 65 174 72 Q166 84 160 94 Z" fill="#eab88a" stroke="#c98f5e" stroke-width="1.5"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="saved-flash">SAVED</div>
+  </div>
+
+  <!-- BLACKOUT OVERLAY -->
+  <div id="blackout">
+    <div id="ed-title">EMOTIONAL DAMAGE</div>
+    <div id="ed-sub"></div>
+    <div class="cont">tap anywhere to continue</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover-screen" class="screen hidden">
+    <div id="go-title">HOMEWORK OVER</div>
+    <div id="go-stats">
+      <div class="row"><span>Final Score</span><span id="go-score">0</span></div>
+      <div class="row"><span>Pages Done</span><span id="go-pages">0/20</span></div>
+      <div class="row"><span>Time Taken</span><span id="go-time">0:00</span></div>
+      <div class="row"><span>Best Streak</span><span id="go-streak">0</span></div>
+      <div class="row"><span>Times Whacked</span><span id="go-whacks">0</span></div>
+      <div class="row"><span>High Score</span><span id="go-best">0</span></div>
+      <div class="row hidden" id="go-coins-row"><span>🪙 Coins Earned</span><span id="go-coins">+0</span></div>
+      <div class="row"><span>🪙 Total Coins</span><span id="go-coin-total">100</span></div>
+    </div>
+    <div id="go-quote"></div>
+    <div id="go-actions">
+      <button class="big-btn" onclick="Game.restart()">TRY AGAIN</button>
+      <button class="big-btn secondary" onclick="Game.toMainMenu()">MAIN MENU</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   AUDIO — procedural, no external files
+   ============================================================ */
+const Aud = (() => {
+  let ctx, bgGain, sfxGain, musicNodes = [], musicTimer = null, muted = false;
+
+  function ensure() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      bgGain = ctx.createGain(); bgGain.gain.value = 0.1; bgGain.connect(ctx.destination);
+      sfxGain = ctx.createGain(); sfxGain.gain.value = 0.35; sfxGain.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+
+  function setMuted(m) {
+    muted = m;
+    if (bgGain) bgGain.gain.value = m ? 0 : 0.1;
+    if (sfxGain) sfxGain.gain.value = m ? 0 : 0.35;
+  }
+
+  // tense little music-box loop
+  const NOTES = { A3:220.00,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,C5:523.25 };
+  const MELODY = [NOTES.A3,NOTES.C4,NOTES.E4,NOTES.A4,NOTES.G4,NOTES.E4,NOTES.C4,NOTES.D4,
+                  NOTES.F4,NOTES.A4,NOTES.C5,NOTES.A4,NOTES.G4,NOTES.F4,NOTES.E4,NOTES.D4];
+  function startMusic() {
+    ensure();
+    stopMusic();
+    const bpm = 96, beat = 60 / bpm;
+    let t = ctx.currentTime + 0.05;
+    function sched() {
+      MELODY.forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        o.connect(g); g.connect(bgGain);
+        const st = t + i * beat * 0.5;
+        g.gain.setValueAtTime(0, st);
+        g.gain.linearRampToValueAtTime(0.55, st + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, st + beat * 0.42);
+        o.start(st); o.stop(st + beat * 0.5);
+      });
+      const loopDur = MELODY.length * beat * 0.5;
+      t += loopDur;
+      musicTimer = setTimeout(sched, (loopDur - 0.3) * 1000);
+    }
+    sched();
+  }
+  function stopMusic() { clearTimeout(musicTimer); musicTimer = null; }
+
+  function noiseBurst({ dur = 0.3, filterFreq = 1200, gain = 1, type = 'bandpass', q = 1 }) {
+    ensure();
+    const bufSize = ctx.sampleRate * dur;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter(); filt.type = type; filt.frequency.value = filterFreq; filt.Q.value = q;
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    src.connect(filt); filt.connect(g); g.connect(sfxGain);
+    src.start(); src.stop(ctx.currentTime + dur);
+  }
+
+  function tone({ f = 440, type = 'sine', dur = 0.15, sweep = 1, gain = 0.6 }) {
+    ensure();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(Math.max(f * sweep, 1), ctx.currentTime + dur);
+    o.connect(g); g.connect(sfxGain);
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  }
+
+  function sfx(name) {
+    ensure();
+    if (name === 'correct') { tone({ f: 523, type: 'sine', dur: 0.12, sweep: 1.3 }); setTimeout(() => tone({ f: 784, type: 'sine', dur: 0.18, sweep: 1.2 }), 90); }
+    else if (name === 'wrong') { tone({ f: 220, type: 'sawtooth', dur: 0.3, sweep: 0.6, gain: 0.4 }); }
+    else if (name === 'tick') { tone({ f: 900, type: 'square', dur: 0.03, sweep: 1, gain: 0.15 }); }
+    else if (name === 'belt') { noiseBurst({ dur: 0.28, filterFreq: 2200, q: 2.2, gain: 1.1 }); setTimeout(() => tone({ f: 140, type: 'square', dur: 0.15, sweep: 0.4, gain: 0.5 }), 40); }
+    else if (name === 'slipper') { noiseBurst({ dur: 0.22, filterFreq: 800, q: 1.4, gain: 0.9 }); setTimeout(() => tone({ f: 100, type: 'sine', dur: 0.2, sweep: 0.5, gain: 0.6 }), 30); }
+    else if (name === 'bite') { noiseBurst({ dur: 0.12, filterFreq: 1600, q: 3, gain: 1 }); setTimeout(() => tone({ f: 320, type: 'square', dur: 0.08, sweep: 0.4, gain: 0.5 }), 20); }
+    else if (name === 'ruler') { noiseBurst({ dur: 0.16, filterFreq: 3200, q: 4, gain: 0.9 }); setTimeout(() => tone({ f: 700, type: 'square', dur: 0.1, sweep: 0.5, gain: 0.4 }), 20); }
+    else if (name === 'lucky') { tone({ f: 300, type: 'sine', dur: 0.35, sweep: 2.2, gain: 0.35 }); }
+    else if (name === 'click') { tone({ f: 600, type: 'square', dur: 0.05, sweep: 1, gain: 0.2 }); }
+    else if (name === 'gameover') { [440, 349, 293, 220].forEach((f, i) => setTimeout(() => tone({ f, type: 'sawtooth', dur: 0.35, sweep: 0.8, gain: 0.4 }), i * 180)); }
+  }
+
+  // Real recorded audio clips, supplied by you — no synthetic voice. If the
+  // file for a given line doesn't exist yet, this fails silently and the
+  // text toast (already shown separately) is all the player sees.
+  let currentVoiceClip = null;
+  function playVoiceClip(key) {
+    if (muted) return;
+    try {
+      if (currentVoiceClip) { currentVoiceClip.pause(); currentVoiceClip.currentTime = 0; }
+      const audio = new Audio(`voices/${key}.mp3`);
+      audio.volume = 0.9;
+      audio.onerror = () => {};
+      currentVoiceClip = audio;
+      audio.play().catch(() => {});
+    } catch (e) {}
+  }
+
+  return { ensure, startMusic, stopMusic, sfx, playVoiceClip, setMuted, get muted() { return muted; } };
+})();
+
+/* ============================================================
+   CUSTOM VECTOR ART — no emoji, hand-drawn SVG
+   ============================================================ */
+const SVG = {
+  face(parent, angry) {
+    const isDad = parent === 'dad' || parent === 'timmy'; // short-hair silhouette
+    const isGrandma = parent === 'grandma';
+    const PALETTE = {
+      dad: { hairDark: '#241609', hairLight: '#4a3320', shirt: '#4a5568', shirtShade: '#38414f' },
+      mom: { hairDark: '#20101c', hairLight: '#4a2438', shirt: '#b5495b', shirtShade: '#8f3a48' },
+      timmy: { hairDark: '#3a2a15', hairLight: '#6b4a28', shirt: '#3a8f5a', shirtShade: '#2c6b43' },
+      grandma: { hairDark: '#cfcfcf', hairLight: '#f0f0f0', shirt: '#8a5a9e', shirtShade: '#6b4380' },
+    };
+    const pal = PALETTE[parent] || PALETTE.dad;
+    const { hairDark, hairLight, shirt, shirtShade } = pal;
+    const eyeRy = angry ? 3 : 4.6;
+
+    const brows = angry
+      ? `<path d="M27 43 Q37 49.5 47.5 51.5" stroke="${hairDark}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+         <path d="M73 43 Q63 49.5 52.5 51.5" stroke="${hairDark}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+         <path d="M47 42 L46 37.5" stroke="#8a5a3a" stroke-width="1" opacity=".5" stroke-linecap="round"/>
+         <path d="M53 42 L54 37.5" stroke="#8a5a3a" stroke-width="1" opacity=".5" stroke-linecap="round"/>`
+      : `<path d="M28 47.5 Q38 43 47 46.5" stroke="${hairDark}" stroke-width="3" fill="none" stroke-linecap="round"/>
+         <path d="M72 47.5 Q62 43 53 46.5" stroke="${hairDark}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+
+    const lashes = !isDad ? `
+         <path d="M33 55 L31 53.5" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round"/>
+         <path d="M67 55 L69 53.5" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round"/>` : '';
+
+    const eyes = `
+      <ellipse cx="39" cy="58" rx="6.6" ry="${eyeRy}" fill="#fff"/>
+      <ellipse cx="61" cy="58" rx="6.6" ry="${eyeRy}" fill="#fff"/>
+      <circle cx="39" cy="58" r="3.1" fill="#5a3a1a"/><circle cx="61" cy="58" r="3.1" fill="#5a3a1a"/>
+      <circle cx="39" cy="58" r="1.5" fill="#1a1108"/><circle cx="61" cy="58" r="1.5" fill="#1a1108"/>
+      <circle cx="37.8" cy="56.8" r=".7" fill="#fff" opacity=".85"/><circle cx="59.8" cy="56.8" r=".7" fill="#fff" opacity=".85"/>
+      ${lashes}`;
+
+    const nose = `
+      <path d="M48.5 56 Q46.5 64 44.5 69 Q47 72 50 71 Q53 72 55.5 69 Q53.5 64 51.5 56"
+        fill="none" stroke="#a8683c" stroke-width="1.1" opacity=".55"/>
+      <ellipse cx="50" cy="70.5" rx="3.6" ry="1.1" fill="#a8683c" opacity=".3"/>`;
+
+    const mouth = angry
+      ? `<path d="M38 78 Q50 76 62 78 Q64 88 50 92 Q36 88 38 78 Z" fill="#4a1414"/>
+         <path d="M40.5 79 Q50 77.5 59.5 79 Q58.5 82 50 82.5 Q41.5 82 40.5 79 Z" fill="#f5f0e8"/>
+         <ellipse cx="50" cy="87.5" rx="6" ry="2.6" fill="#a8394a"/>`
+      : (isDad
+          ? `<path d="M41 81.5 Q50 84.5 59 81.5" stroke="#7a4a34" stroke-width="2" fill="none" stroke-linecap="round"/>`
+          : `<path d="M41 81 Q50 86 59 81 Q50 83.8 41 81 Z" fill="#b5566a"/>`);
+
+    const cheekShade = `
+      <path d="M25 64 Q29 77 39 84" stroke="#000" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".06"/>
+      <path d="M75 64 Q71 77 61 84" stroke="#000" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".06"/>`;
+
+    const hairShape = isDad
+      ? `<path d="M18 46 Q20 14 50 12 Q80 14 82 46 Q82 30 50 28 Q18 30 18 46 Z" fill="url(#hairGrad)"/>
+         <path d="M14 40 Q13 54 18 60 Q15 48 16.5 40 Z" fill="${hairDark}"/>
+         <path d="M86 40 Q87 54 82 60 Q85 48 83.5 40 Z" fill="${hairDark}"/>`
+      : `<path d="M11 52 Q4 12 50 9 Q96 12 89 52 Q93 26 50 23 Q7 26 11 52 Z" fill="url(#hairGrad)"/>
+         <path d="M13 40 Q8 68 20 82 Q13 58 19 43 Z" fill="${hairDark}"/>
+         <path d="M87 40 Q92 68 80 82 Q87 58 81 43 Z" fill="${hairDark}"/>
+         <circle cx="16" cy="61" r="2.3" fill="#e0c060"/><circle cx="84" cy="61" r="2.3" fill="#e0c060"/>`;
+
+    const flush = angry ? `<ellipse cx="50" cy="56" rx="30" ry="34" fill="#ff4444" opacity=".09"/>` : '';
+
+    return `<svg viewBox="0 0 100 132" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="skinGrad" cx="42%" cy="30%" r="78%">
+          <stop offset="0%" stop-color="#f4cd9d"/>
+          <stop offset="60%" stop-color="#e0a978"/>
+          <stop offset="100%" stop-color="#b8794a"/>
+        </radialGradient>
+        <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${hairLight}"/>
+          <stop offset="100%" stop-color="${hairDark}"/>
+        </linearGradient>
+      </defs>
+      <path d="M-5 132 Q8 100 50 103 Q92 100 105 132 Z" fill="${shirt}"/>
+      <path d="M-5 132 Q8 100 50 103 L50 108 Q10 106 -5 132 Z" fill="${shirtShade}" opacity=".5"/>
+      <path d="M40 92 L40 114 Q50 118 60 114 L60 92 Z" fill="url(#skinGrad)"/>
+      <ellipse cx="21" cy="58" rx="5" ry="8" fill="url(#skinGrad)"/>
+      <ellipse cx="79" cy="58" rx="5" ry="8" fill="url(#skinGrad)"/>
+      <path d="M22 54 C20 28 32 12 50 12 C68 12 80 28 78 54 C78 78 66 96 50 98 C34 96 22 78 22 54 Z" fill="url(#skinGrad)"/>
+      ${hairShape}
+      ${brows}${eyes}
+      ${isGrandma ? `<ellipse cx="39" cy="58" rx="10" ry="8" fill="none" stroke="#333" stroke-width="2.2"/>
+         <ellipse cx="61" cy="58" rx="10" ry="8" fill="none" stroke="#333" stroke-width="2.2"/>
+         <line x1="49" y1="58" x2="51" y2="58" stroke="#333" stroke-width="2.2"/>
+         <line x1="29" y1="56" x2="20" y2="52" stroke="#333" stroke-width="2"/>
+         <line x1="71" y1="56" x2="80" y2="52" stroke="#333" stroke-width="2"/>` : ''}
+      ${nose}
+      ${mouth}
+      ${cheekShade}
+      ${flush}
+    </svg>`;
+  },
+
+  dogFace() {
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <ellipse cx="20" cy="38" rx="13" ry="18" fill="#a86a3a" transform="rotate(-25 20 38)"/>
+      <ellipse cx="80" cy="38" rx="13" ry="18" fill="#a86a3a" transform="rotate(25 80 38)"/>
+      <ellipse cx="50" cy="55" rx="38" ry="34" fill="#d8a86a"/>
+      <path d="M32 60 Q30 78 42 86 Q50 90 58 86 Q70 78 68 60 Z" fill="#f0e0c0"/>
+      <ellipse cx="50" cy="60" rx="8" ry="6" fill="#2a1a10"/>
+      <path d="M50 66 Q46 74 40 74 M50 66 Q54 74 60 74" stroke="#2a1a10" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="34" cy="48" r="5.5" fill="#fff"/><circle cx="66" cy="48" r="5.5" fill="#fff"/>
+      <circle cx="35" cy="49" r="3" fill="#2a1a10"/><circle cx="65" cy="49" r="3" fill="#2a1a10"/>
+      <circle cx="33.7" cy="47.7" r=".8" fill="#fff"/><circle cx="63.7" cy="47.7" r=".8" fill="#fff"/>
+    </svg>`;
+  },
+  weapon(type) {
+    if (type === 'belt') {
+      return `<svg viewBox="0 0 200 70" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <rect x="0" y="20" width="200" height="30" rx="6" fill="#6b4423"/>
+        <rect x="0" y="20" width="200" height="6" fill="#8a5a30"/>
+        <circle cx="20" cy="35" r="3" fill="#4a2e14"/><circle cx="42" cy="35" r="3" fill="#4a2e14"/><circle cx="64" cy="35" r="3" fill="#4a2e14"/>
+        <rect x="150" y="10" width="45" height="50" rx="6" fill="#c9c9c9"/>
+        <rect x="160" y="20" width="25" height="30" rx="3" fill="#6b4423"/>
+        <rect x="170" y="30" width="6" height="10" fill="#c9c9c9"/>
+      </svg>`;
+    }
+    if (type === 'ruler') {
+      return `<svg viewBox="0 0 200 50" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <rect x="0" y="10" width="200" height="30" rx="3" fill="#e8d9a8"/>
+        <rect x="0" y="10" width="200" height="30" rx="3" fill="none" stroke="#a8934f" stroke-width="2"/>
+        ${Array.from({ length: 19 }, (_, i) => `<line x1="${(i + 1) * 10}" y1="10" x2="${(i + 1) * 10}" y2="${i % 5 === 4 ? 24 : 18}" stroke="#8a763a" stroke-width="1.2"/>`).join('')}
+      </svg>`;
+    }
+    return `<svg viewBox="0 0 140 100" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <path d="M70 8 C110 8 130 30 128 60 C126 85 100 96 70 96 C40 96 14 85 12 60 C10 30 30 8 70 8 Z" fill="#c97b3d"/>
+      <path d="M70 10 C108 10 126 31 124 59 C122 82 99 93 70 93" fill="none" stroke="#8a5023" stroke-width="3"/>
+      <line x1="70" y1="20" x2="30" y2="55" stroke="#2a1a10" stroke-width="6" stroke-linecap="round"/>
+      <line x1="70" y1="20" x2="110" y2="55" stroke="#2a1a10" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="70" cy="20" r="6" fill="#2a1a10"/>
+    </svg>`;
+  },
+};
+
+const SAVE_KEY = 'emotionalDamage_save';
+
+const MESSAGES = {
+  hit: (name) => [
+    `${name}... EMOTIONAL DAMAGE.`,
+    `Little Timmy was in college at 8 years old.`,
+    `Timmy became a doctor before he lost his first tooth.`,
+    `Somewhere, Timmy just solved this in his head. For fun.`,
+    `Timmy skipped two grades and still had time for violin practice.`,
+    `The belt remembers this moment forever, ${name}.`,
+    `Even the slipper is disappointed in you, ${name}.`,
+    `Timmy is currently curing a disease. You said "uhh."`,
+    `Your cousin Timmy is teaching the class now.`,
+    `Somewhere a slipper achieved supersonic speed.`,
+    `Timmy invented a new number by age six.`,
+    `Grandma heard that from two rooms away.`,
+    `${name}, that one's going in the family group chat.`,
+    `The belt hit so hard the WiFi went out.`,
+    `Timmy got an A-sian. You got a B-sian, ${name}.`,
+    `Timmy started his first company at age 7. You started crying.`,
+    `The belt has a name now, ${name}. It's "Discipline."`,
+    `Somewhere, Timmy is being knighted. You got hit with a slipper.`,
+    `Dad didn't even warm up for that one, ${name}.`,
+    `Timmy's report card needs a second page.`,
+    `Your ancestors are watching, ${name}. They are not proud.`,
+    `Timmy taught HIS parents math. Backwards.`,
+    `The slipper broke the sound barrier on its way to you.`,
+    `${name}, even the family dog flinched.`,
+    `Timmy's tears are made of pride. Yours are just tears.`,
+    `That's a new personal record for disappointment, ${name}.`,
+    `Dad's arm isn't tired from the swing. It's tired from how many times he's had to do this.`,
+    `Somewhere, Timmy just got accepted into a school that doesn't exist yet.`,
+    `Mom didn't yell. She just looked at you. That was worse.`,
+    `The neighbors heard that one, ${name}.`,
+  ],
+  lucky: (name) => [
+    `Dad missed! The slipper is now lodged in the ceiling fan.`,
+    `Mom got distracted by a phone call. You live, ${name}.`,
+    `The belt got tangled in the couch. Lucky escape.`,
+    `Dad's arm cramped up mid-swing. Saved by fate.`,
+    `Mom decided you're "not worth the energy" today.`,
+    `The slipper flew off and hit the dog instead.`,
+    `Dad pulled a muscle mid-swing. Karma's confusing sometimes.`,
+    `Mom was too busy comparing you to Timmy to actually hit you.`,
+    `The belt slipped out of Dad's hand and hit HIM instead.`,
+    `Grandma walked in at the perfect moment. Saved by seniority.`,
+    `Dad's phone rang. It was Timmy's dad, bragging. You got a pass.`,
+    `Mom's arm gave out from all the disappointment. You're safe.`,
+    `The slipper hit the family photo instead. Somehow still your fault.`,
+  ],
+  ambient: (name) => [
+    `Your handwriting is bad, ${name}.`,
+    `Timmy writes in cursive already.`,
+    `Are you even trying?`,
+    `Sit up straight.`,
+    `Why is this taking so long?`,
+    `Timmy finished his in half the time.`,
+    `Hold the pencil right, ${name}.`,
+    `We didn't raise you to be slow.`,
+    `Your cousin never needed this long.`,
+    `Stop erasing and just think.`,
+    `Is that a 7 or a rock, ${name}?`,
+    `Timmy already emailed his teacher the answer.`,
+    `We paid for tutoring, ${name}. Use it.`,
+    `Even the calculator is judging you.`,
+    `Timmy's parents post his grades online. We could never.`,
+    `You're holding that pencil like it owes you money.`,
+    `Grandma says hi. She also says you're slow.`,
+    `Timmy doesn't need paper. He just knows.`,
+    `This is why we don't talk about you at dinner parties.`,
+    `Your cousin sent his homework over. From the future.`,
+    `We didn't raise a quitter. We raised a slow starter.`,
+  ],
+  timmy: (name) => [
+    `Timmy slaps you with a ruler and teaches you calculus. In 10 seconds. You still don't get it, ${name}.`,
+    `Timmy interrupted his own graduation to fix your homework, ${name}. Rude of him.`,
+    `The ruler hurt less than the calculus lesson, ${name}.`,
+    `Timmy explained derivatives faster than you can say "ouch," ${name}.`,
+  ],
+};
+
+const BAD_WORDS = ['fuck','shit','bitch','asshole','bastard','dick','cunt','pussy','nigger','nigga','fag','faggot','slut','whore','rape','cock','twat','ass'];
+function containsBadWord(str) {
+  // whole-word match only, so a word that merely contains a bad word as a
+  // substring (e.g. "bass", "class", "cockpit") is not falsely flagged
+  const tokens = str.toLowerCase().split(/[^a-z]+/i).filter(Boolean);
+  return tokens.some((t) => BAD_WORDS.includes(t));
+}
+
+const MODES = {
+  baby: { time: 300 },
+  easy: { time: 180 },
+  medium: { time: 120 },
+  hard: { time: 60 },
+  asian: { time: null }, // total time is Timmy's random finish time instead
+  raceMom: { time: null }, // 10s headstart + Mom's random 2-5s pace
+  raceDad: { time: 60 },  // any wrong answer is a guaranteed instant KO
+  raceGrandma: { time: 180 }, // generous time, but the view is blurred
+  emotionalDamage: { time: null }, // total time is a random 5-10s, unlocked by beating Asian
+};
+
+// coin reward for winning: base + (leftover seconds * rate). Asian mode is a
+// flat reward (rate 0) plus a free wheel spin, since finishing it at all
+// already means beating Timmy's clock. EMOTIONAL DAMAGE mode is the secret
+// unlockable jackpot tier — 1 coin every 0.333s (3/sec) on top of a flat 2000.
+const REWARD_TABLE = {
+  baby: { base: 20, rate: 1 / 3 },
+  easy: { base: 50, rate: 1 },
+  medium: { base: 85, rate: 1 },
+  hard: { base: 130, rate: 2 },
+  asian: { base: 500, rate: 0 },
+  raceMom: { base: 450, rate: 1 },
+  raceDad: { base: 200, rate: 2 },
+  raceGrandma: { base: 150, rate: 1 },
+  emotionalDamage: { base: 2000, rate: 3 },
+};
+
+// 20 regular achievements. Each `check` runs against live Game state at the
+// relevant trigger point and returns true the moment it's satisfied — once
+// unlocked it's never checked again. Rewards are coins unless `item` is set.
+const ACHIEVEMENTS = [
+  { id: 'first_correct', name: 'First Steps', desc: 'Answer your first question correctly.', coins: 20 },
+  { id: 'streak5', name: 'Getting The Hang Of It', desc: 'Reach a 5-answer streak.', coins: 30 },
+  { id: 'streak10', name: 'On Fire', desc: 'Reach a 10-answer streak.', coins: 60 },
+  { id: 'streak20', name: 'Unstoppable', desc: 'Reach a 20-answer streak — a flawless test.', coins: 100 },
+  { id: 'win_any', name: 'Homework Survivor', desc: 'Win any test.', coins: 50 },
+  { id: 'win_easy', name: 'Easy Does It', desc: 'Beat EASY mode.', coins: 30 },
+  { id: 'win_medium', name: 'Medium Well', desc: 'Beat MEDIUM mode.', coins: 50 },
+  { id: 'win_hard', name: 'Hard Mode Hero', desc: 'Beat HARD mode.', coins: 90 },
+  { id: 'win_asian', name: 'Race Against Timmy', desc: 'Beat ASIAN mode.', coins: 150 },
+  { id: 'win_ed', name: 'The Impossible', desc: 'Beat EMOTIONAL DAMAGE mode.', coins: 400 },
+  { id: 'perfect_test', name: 'Perfect Test', desc: 'Win a test without a single wrong answer.', coins: 120 },
+  { id: 'first_hit', name: 'Ouch', desc: 'Get hit for the first time.', coins: 10 },
+  { id: 'ko_once', name: 'Grounded', desc: 'Run out of HP and get sent to your room.', coins: 20 },
+  { id: 'belt5', name: 'Belt Collector', desc: 'Get hit by the belt 5 times total.', coins: 50 },
+  { id: 'slipper5', name: 'Slipper Collector', desc: 'Get hit by the slipper 5 times total.', coins: 50 },
+  { id: 'lucky5', name: 'Lucky Star', desc: 'Escape a punishment 5 times total.', coins: 40 },
+  { id: 'shield_save', name: 'Shielded', desc: 'Block a hit with the Anti-Emotional-Damage shield.', item: 'cheat' },
+  { id: 'cheat_safe5', name: 'Smooth Criminal', desc: 'Use Cheat safely 5 times total.', item: 'antiEd' },
+  { id: 'cheat_caught', name: 'Caught Red-Handed', desc: 'Get caught cheating.', coins: 20 },
+  { id: 'wheel10', name: 'Wheel Winner', desc: 'Spin the wheel 10 times total.', freeSpin: 1 },
+];
+
+const SECRET_ACHIEVEMENTS = [
+  { id: 'secret_cursed_name', name: 'The Cursed Name', desc: 'You named yourself EMOTIONAL DAMAG3. You paid for it.' },
+  { id: 'secret_invert', name: 'Through The Looking Glass', desc: 'Clicked ASIAN 4 times, then the title. Unlocked color inversion.' },
+  { id: 'secret_combo', name: 'Konami Kid', desc: 'Set every switch just right, then knocked on the title. 2x coins forever.' },
+];
+
+const Game = {
+  name: 'Jake',
+  state: 'start',
+  selectedMode: 'easy', selectedLength: 20,
+  score: 0, streak: 0, bestStreak: 0, maxHealth: 100, health: 100, whacks: 0,
+  answer: null, timerId: null,
+  page: 0, pagesTotal: 20, totalTime: 180, timeRemaining: 180, timmyTime: null, paused: false,
+  drawCtx: null, canvasW: 0, canvasH: 0,
+  locked: false, _drawing: false, autoSubmitTimer: null,
+  saveTimer: null, ambientTimer: null,
+  coins: 100, antiEdCount: 0, cheatCount: 0, freeSpins: 0, lastSpinTime: 0, shieldUntil: 0, inputMode: 'type',
+  autoSubmit: true, screenShake: true, reduceFlash: false, parentCommentary: true,
+  unlockedAchievements: [], statHits: 0, statBeltHits: 0, statSlipperHits: 0, statLucky: 0,
+  statShieldSaves: 0, statCheatSafe: 0, statCheatCaught: 0, statWheelSpins: 0,
+  invertUnlocked: false, invertOn: false, doubleCoins: false,
+  edUnlocked: false, hadWrongAnswer: false,
+  asianClickStreak: 0, readyForSecret2: false, readyForSecret3: false,
+
+  el(id) { return document.getElementById(id); },
+
+  selectMode(mode, btnEl) {
+    if (mode === 'emotionalDamage' && !this.loadBest().edUnlocked) {
+      this.toast('Beat ASIAN mode first to unlock this.');
+      return;
+    }
+    // Secret 2 tracker: click ASIAN 4 times in a row, then the title.
+    this.asianClickStreak = mode === 'asian' ? this.asianClickStreak + 1 : 0;
+    this.readyForSecret2 = this.asianClickStreak >= 4;
+
+    this.selectedMode = mode;
+    document.querySelectorAll('.mode-btn:not(.length-btn)').forEach((b) => b.classList.remove('selected'));
+    btnEl.classList.add('selected');
+    Aud.sfx('click');
+  },
+
+  selectLength(len, btnEl) {
+    this.selectedLength = len;
+    document.querySelectorAll('.length-btn').forEach((b) => b.classList.remove('selected'));
+    btnEl.classList.add('selected');
+    Aud.sfx('click');
+  },
+
+  onTitleClick() {
+    if (this.readyForSecret2) {
+      this.readyForSecret2 = false;
+      this.asianClickStreak = 0;
+      this.invertUnlocked = true;
+      this.invertOn = true;
+      this.saveState(false);
+      this.applyInvert();
+      this.el('invert-toggle').classList.remove('hidden');
+      this.unlockAchievement('secret_invert');
+    } else if (this.readyForSecret3) {
+      this.readyForSecret3 = false;
+      this.doubleCoins = true;
+      this.saveState(false);
+      this.unlockAchievement('secret_combo');
+    } else {
+      Aud.sfx('click');
+    }
+  },
+
+  toggleInvert() {
+    this.invertOn = !this.invertOn;
+    this.saveState(false);
+    this.applyInvert();
+    Aud.sfx('click');
+  },
+
+  refreshEdModeButton() {
+    const btn = this.el('ed-mode-btn');
+    const unlocked = this.loadBest().edUnlocked;
+    btn.classList.toggle('locked', !unlocked);
+    btn.classList.toggle('unlocked-ed', !!unlocked);
+    this.el('ed-mode-label').textContent = unlocked ? '💀 EMOTIONAL DAMAGE' : '🔒 EMOTIONAL DAMAGE';
+    this.el('ed-mode-sub').textContent = unlocked ? '5-10s total — jackpot 2000🪙' : 'beat ASIAN to unlock';
+  },
+
+  toggleMute() {
+    const m = !Aud.muted;
+    Aud.setMuted(m);
+    this.el('mute-toggle').textContent = m ? '🔇' : '🔊';
+    this.saveState(false);
+  },
+
+  loadBest() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        return {
+          highScore: d.highScore || 0, bestStreak: d.bestStreak || 0,
+          coins: d.coins != null ? d.coins : 100,
+          antiEdCount: d.antiEdCount || 0, cheatCount: d.cheatCount || 0,
+          freeSpins: d.freeSpins || 0, lastSpinTime: d.lastSpinTime || 0,
+          inputMode: d.inputMode || 'type', soundOn: d.soundOn != null ? d.soundOn : true,
+          autoSubmit: d.autoSubmit != null ? d.autoSubmit : true,
+          screenShake: d.screenShake != null ? d.screenShake : true,
+          reduceFlash: d.reduceFlash != null ? d.reduceFlash : false,
+          parentCommentary: d.parentCommentary != null ? d.parentCommentary : true,
+          edUnlocked: !!d.edUnlocked,
+          unlockedAchievements: d.unlockedAchievements || [],
+          statHits: d.statHits || 0, statBeltHits: d.statBeltHits || 0, statSlipperHits: d.statSlipperHits || 0,
+          statLucky: d.statLucky || 0, statShieldSaves: d.statShieldSaves || 0,
+          statCheatSafe: d.statCheatSafe || 0, statCheatCaught: d.statCheatCaught || 0, statWheelSpins: d.statWheelSpins || 0,
+          invertUnlocked: !!d.invertUnlocked, invertOn: !!d.invertOn, doubleCoins: !!d.doubleCoins,
+        };
+      }
+    } catch (e) {}
+    return {
+      highScore: 0, bestStreak: 0, coins: 100, antiEdCount: 0, cheatCount: 0, freeSpins: 0, lastSpinTime: 0,
+      inputMode: 'type', soundOn: true, autoSubmit: true, screenShake: true, reduceFlash: false, parentCommentary: true,
+      edUnlocked: false, unlockedAchievements: [],
+      statHits: 0, statBeltHits: 0, statSlipperHits: 0, statLucky: 0, statShieldSaves: 0,
+      statCheatSafe: 0, statCheatCaught: 0, statWheelSpins: 0,
+      invertUnlocked: false, invertOn: false, doubleCoins: false,
+    };
+  },
+
+  saveState(flash) {
+    try {
+      const prev = this.loadBest();
+      const data = {
+        highScore: Math.max(prev.highScore || 0, this.score),
+        bestStreak: Math.max(prev.bestStreak || 0, this.streak, this.bestStreak),
+        coins: this.coins != null ? this.coins : prev.coins,
+        antiEdCount: this.antiEdCount != null ? this.antiEdCount : prev.antiEdCount,
+        cheatCount: this.cheatCount != null ? this.cheatCount : prev.cheatCount,
+        freeSpins: this.freeSpins != null ? this.freeSpins : prev.freeSpins,
+        lastSpinTime: this.lastSpinTime != null ? this.lastSpinTime : prev.lastSpinTime,
+        inputMode: this.inputMode || prev.inputMode,
+        soundOn: !Aud.muted,
+        autoSubmit: this.autoSubmit != null ? this.autoSubmit : prev.autoSubmit,
+        screenShake: this.screenShake != null ? this.screenShake : prev.screenShake,
+        reduceFlash: this.reduceFlash != null ? this.reduceFlash : prev.reduceFlash,
+        parentCommentary: this.parentCommentary != null ? this.parentCommentary : prev.parentCommentary,
+        edUnlocked: !!(this.edUnlocked || prev.edUnlocked),
+        unlockedAchievements: this.unlockedAchievements || prev.unlockedAchievements,
+        statHits: this.statHits != null ? this.statHits : prev.statHits,
+        statBeltHits: this.statBeltHits != null ? this.statBeltHits : prev.statBeltHits,
+        statSlipperHits: this.statSlipperHits != null ? this.statSlipperHits : prev.statSlipperHits,
+        statLucky: this.statLucky != null ? this.statLucky : prev.statLucky,
+        statShieldSaves: this.statShieldSaves != null ? this.statShieldSaves : prev.statShieldSaves,
+        statCheatSafe: this.statCheatSafe != null ? this.statCheatSafe : prev.statCheatSafe,
+        statCheatCaught: this.statCheatCaught != null ? this.statCheatCaught : prev.statCheatCaught,
+        statWheelSpins: this.statWheelSpins != null ? this.statWheelSpins : prev.statWheelSpins,
+        invertUnlocked: !!(this.invertUnlocked || prev.invertUnlocked),
+        invertOn: this.invertOn != null ? this.invertOn : prev.invertOn,
+        doubleCoins: !!(this.doubleCoins || prev.doubleCoins),
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      if (flash) {
+        const f = this.el('saved-flash');
+        f.classList.add('show');
+        setTimeout(() => f.classList.remove('show'), 1200);
+      }
+    } catch (e) {}
+  },
+
+  init() {
+    const best = this.loadBest();
+    if (best.highScore) this.el('best-line').textContent = `Best score: ${best.highScore} — Best streak: ${best.bestStreak || 0}`;
+    this.loadEconomy();
+    this.refreshEdModeButton();
+    if (best.soundOn === false) { Aud.setMuted(true); this.el('mute-toggle').textContent = '🔇'; }
+    this.el('name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.start(); });
+    this.el('blackout').addEventListener('click', () => this.resumeFromBlackout());
+    this.el('type-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.submitTyped(); });
+    this.bindCanvas();
+    window.addEventListener('resize', () => {
+      if (this.state === 'playing') { this.sizeCanvas(); this.clearCanvas(); }
+    });
+  },
+
+  loadEconomy() {
+    const d = this.loadBest();
+    this.coins = d.coins; this.antiEdCount = d.antiEdCount; this.cheatCount = d.cheatCount;
+    this.freeSpins = d.freeSpins; this.lastSpinTime = d.lastSpinTime;
+    this.inputMode = d.inputMode;
+    this.autoSubmit = d.autoSubmit; this.screenShake = d.screenShake;
+    this.reduceFlash = d.reduceFlash; this.parentCommentary = d.parentCommentary;
+    this.unlockedAchievements = d.unlockedAchievements.slice();
+    this.statHits = d.statHits; this.statBeltHits = d.statBeltHits; this.statSlipperHits = d.statSlipperHits;
+    this.statLucky = d.statLucky; this.statShieldSaves = d.statShieldSaves;
+    this.statCheatSafe = d.statCheatSafe; this.statCheatCaught = d.statCheatCaught; this.statWheelSpins = d.statWheelSpins;
+    this.invertUnlocked = d.invertUnlocked; this.invertOn = d.invertOn; this.doubleCoins = d.doubleCoins;
+    this.applyInvert();
+    this.el('coin-count').textContent = this.coins;
+    this.updateInventoryUI();
+  },
+
+  applyInvert() {
+    document.documentElement.classList.toggle('inverted', !!(this.invertUnlocked && this.invertOn));
+    this.el('invert-toggle').classList.toggle('hidden', !this.invertUnlocked);
+  },
+
+  awardCoins(amount) {
+    const final = this.doubleCoins ? amount * 2 : amount;
+    this.coins += final;
+    return final;
+  },
+
+  unlockAchievement(id) {
+    if (this.unlockedAchievements.includes(id)) return;
+    const def = ACHIEVEMENTS.find((a) => a.id === id) || SECRET_ACHIEVEMENTS.find((a) => a.id === id);
+    if (!def) return;
+    this.unlockedAchievements.push(id);
+    let rewardText = '';
+    if (def.coins) { const got = this.awardCoins(def.coins); rewardText = ` (+${got}🪙)`; }
+    else if (def.item === 'antiEd') { this.antiEdCount++; rewardText = ' (+1 🛡️)'; }
+    else if (def.item === 'cheat') { this.cheatCount++; rewardText = ' (+1 🔎)'; }
+    else if (def.freeSpin) { this.freeSpins += def.freeSpin; rewardText = ` (+${def.freeSpin} 🎡 spin)`; }
+    this.saveState(false);
+    this.updateInventoryUI();
+    this.toast(`🏆 ${def.name}${rewardText}`);
+  },
+
+  updateInventoryUI() {
+    this.el('inv-antied-count').textContent = this.antiEdCount;
+    this.el('inv-cheat-count').textContent = this.cheatCount;
+    this.el('inv-antied').disabled = this.antiEdCount <= 0;
+    this.el('inv-cheat').disabled = this.cheatCount <= 0;
+    this.el('coin-count').textContent = this.coins;
+  },
+
+  start() {
+    Aud.ensure();
+    let n = this.el('name-input').value.trim();
+    if (containsBadWord(n)) n = '';
+    this.name = n || 'Jake';
+    this.el('name-input').value = this.name;
+    this.score = 0; this.streak = 0; this.bestStreak = 0; this.health = this.maxHealth; this.whacks = 0;
+    this.shieldUntil = 0;
+    this.hadWrongAnswer = false;
+    this.el('bruise-overlay').style.opacity = 0;
+    this._sweatShowing = false;
+    document.querySelectorAll('.sweat-drop').forEach((d) => d.classList.remove('show'));
+    this.renderHealth();
+    this.updateStats();
+    this.loadEconomy();
+
+    if (n === 'EMOTIONAL DAMAG3') { this.startCursedSequence(); return; }
+
+    this.mode = this.selectedMode;
+    this.pagesTotal = this.selectedLength;
+    this.page = 0;
+    this.timmyTime = this.mode === 'asian' ? rand(15, 32) : null;
+    this.momTime = this.mode === 'raceMom' ? rand(2, 5) : null;
+    this.totalTime = this.mode === 'asian' ? this.timmyTime
+      : this.mode === 'emotionalDamage' ? rand(5, 10)
+      : this.mode === 'raceMom' ? this.momTime + 10
+      : MODES[this.mode].time;
+    this.timeRemaining = this.totalTime;
+    this.el('pov-wrap').classList.toggle('grandma-blur', this.mode === 'raceGrandma');
+    this.paused = false;
+    this.el('page-total').textContent = this.pagesTotal;
+
+    this.el('start-screen').classList.add('hidden');
+    this.el('gameover-screen').classList.add('hidden');
+    this.el('game-screen').classList.remove('hidden');
+    this.el('pov-stack').classList.remove('looking-up');
+    this.state = 'playing';
+    Aud.startMusic();
+    this.saveTimer = setInterval(() => this.saveState(true), 30000);
+    this.startTimer();
+    this.scheduleAmbient();
+    this.showProblem();
+  },
+
+  useShield() {
+    if (this.state !== 'playing' || this.locked || this.antiEdCount <= 0) return;
+    this.antiEdCount--;
+    this.shieldUntil = Date.now() + 5000;
+    this.saveState(false);
+    this.updateInventoryUI();
+    this.toast('🛡️ Shield active for 5 seconds!');
+    Aud.sfx('click');
+  },
+
+  useCheat() {
+    if (this.state !== 'playing' || this.locked || this.cheatCount <= 0) return;
+    this.cheatCount--;
+    this.saveState(false);
+    this.updateInventoryUI();
+    Aud.sfx('click');
+    const caught = Math.random() < 0.3;
+    if (caught) {
+      this.toast('Your parents caught you cheating!');
+      Aud.sfx('wrong');
+      this.statCheatCaught++;
+      this.unlockAchievement('cheat_caught');
+      setTimeout(() => this.lookUpSequence(), 400);
+    } else {
+      const paper = this.el('cheat-paper');
+      this.el('cheat-paper-num').textContent = this.answer;
+      paper.classList.add('show');
+      clearTimeout(this._cheatPaperTimer);
+      this._cheatPaperTimer = setTimeout(() => paper.classList.remove('show'), 5000);
+      this.statCheatSafe++;
+      if (this.statCheatSafe >= 5) this.unlockAchievement('cheat_safe5');
+    }
+  },
+
+  scheduleAmbient() {
+    clearTimeout(this.ambientTimer);
+    this.ambientTimer = setTimeout(() => {
+      if (this.parentCommentary && this.state === 'playing' && !this.paused && !this.locked) {
+        const { text, index } = pickIndexed(MESSAGES.ambient(this.name));
+        this.toast(text);
+        this.playVoiceFor(Math.random() < 0.5 ? 'dad' : 'mom', 'ambient', index);
+      }
+      this.scheduleAmbient();
+    }, rand(4500, 8500));
+  },
+
+  playVoiceFor(parent, category, index) {
+    Aud.playVoiceClip(`${category}-${parent}-${index}`);
+  },
+
+  restart() {
+    this.el('gameover-screen').classList.add('hidden');
+    this.start();
+  },
+
+  // Secret 1: name yourself EMOTIONAL DAMAG3 and this plays instead of a real test.
+  startCursedSequence() {
+    this.state = 'cursed';
+    this.mode = 'cursed';
+    this.page = 0; this.pagesTotal = 20; this.totalTime = 0; this.timeRemaining = 0;
+    this.el('start-screen').classList.add('hidden');
+    this.el('gameover-screen').classList.add('hidden');
+    this.el('game-screen').classList.remove('hidden');
+    this.el('pov-stack').classList.remove('looking-up');
+    this.el('equation').textContent = '🥿 + 🥿 = ?';
+    this.el('draw-area').style.display = 'none';
+    this.el('type-area').style.display = 'none';
+    this.unlockAchievement('secret_cursed_name');
+
+    let count = 0;
+    const smack = () => {
+      count++;
+      const parent = count % 2 === 1 ? 'dad' : 'mom';
+      const weapon = Math.random() < 0.5 ? 'belt' : 'slipper';
+      this.el('pov-stack').classList.add('looking-up');
+      this.el('parent-name').textContent = parent === 'dad' ? 'Dad' : 'Mom';
+      this.el('parent-face').innerHTML = SVG.face(parent, true);
+      const weaponEl = this.el('pv-weapon');
+      weaponEl.innerHTML = SVG.weapon(weapon);
+      weaponEl.classList.remove('swing'); void weaponEl.offsetWidth; weaponEl.classList.add('swing');
+      Aud.sfx(weapon);
+      this.whacks++;
+      this.health = Math.max(0, this.health - 10);
+      this.renderHealth();
+      this.el('bruise-overlay').style.opacity = Math.min(0.75, (1 - this.health / this.maxHealth) * 0.9);
+      this.el('ed-sub').textContent = `EMOTIONAL DAMAGE  x${count}/10`;
+      this.el('blackout').classList.add('show');
+      setTimeout(() => {
+        this.el('blackout').classList.remove('show');
+        this.el('pov-stack').classList.remove('looking-up');
+        if (count < 10) setTimeout(smack, 260);
+        else setTimeout(() => this.endGame('cursed'), 300);
+      }, 480);
+    };
+    setTimeout(smack, 500);
+  },
+
+  toMainMenu() {
+    this.state = 'start';
+    const best = this.loadBest();
+    this.el('best-line').textContent = `Best score: ${best.highScore} — Best streak: ${best.bestStreak || 0}`;
+    this.loadEconomy();
+    this.refreshEdModeButton();
+    this.el('gameover-screen').classList.add('hidden');
+    this.el('start-screen').classList.remove('hidden');
+  },
+
+  renderHealth() {
+    const pct = Math.max(0, this.health / this.maxHealth) * 100;
+    const fill = this.el('health-fill');
+    fill.style.width = pct + '%';
+    fill.classList.toggle('low', pct <= 30);
+    fill.classList.toggle('mid', pct > 30 && pct <= 60);
+    this.el('health-text').textContent = `${Math.max(0, Math.round(this.health))}/${this.maxHealth}`;
+  },
+
+  showDamagePopup(amount) {
+    const el = this.el('damage-popup');
+    el.textContent = `-${amount} HP`;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  },
+
+  updateStats() {
+    this.el('score-val').textContent = this.score;
+  },
+
+  startTimer() {
+    clearInterval(this.timerId);
+    this.updateTimerDisplay();
+    this.timerId = setInterval(() => {
+      if (this.paused || this.state !== 'playing') return;
+      this.timeRemaining = Math.max(0, this.timeRemaining - 0.1);
+      this.updateTimerDisplay();
+      if (this.timeRemaining <= 0) {
+        clearInterval(this.timerId);
+        this.timeUp();
+      }
+    }, 100);
+  },
+
+  updateTimerDisplay() {
+    const pct = Math.min(100, Math.max(0, this.timeRemaining / this.totalTime) * 100);
+    this.el('timerbar').style.width = pct + '%';
+    const t = Math.max(0, this.timeRemaining);
+    const mm = Math.floor(t / 60), ss = t % 60;
+    this.el('timer-text').textContent = `${mm}:${ss.toFixed(2).padStart(5, '0')}`;
+
+    const lowTime = this.timeRemaining <= Math.min(10, this.totalTime * 0.2) && this.timeRemaining > 0;
+    if (lowTime !== this._sweatShowing) {
+      this._sweatShowing = lowTime;
+      document.querySelectorAll('.sweat-drop').forEach((d) => d.classList.toggle('show', lowTime));
+    }
+  },
+
+  // Queued so an achievement popping mid-tick doesn't silently clobber the
+  // "Correct!"/"Wrong" feedback toast that was just shown for the same event.
+  toast(msg) {
+    this._toastQueue = this._toastQueue || [];
+    this._toastQueue.push(msg);
+    this._processToastQueue();
+  },
+
+  _processToastQueue() {
+    if (this._toastBusy || !this._toastQueue.length) return;
+    this._toastBusy = true;
+    const t = this.el('toast');
+    t.textContent = this._toastQueue.shift();
+    t.classList.add('show');
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => { this._toastBusy = false; this._processToastQueue(); }, 150);
+    }, 1400);
+  },
+
+  genProblem() {
+    const ops = ['+', '-', '×', '÷'];
+    // keep numbers easy regardless of streak, per design
+    const op = ops[Math.floor(Math.random() * (this.streak > 2 ? 4 : 2))];
+    let a, b, answer, text;
+    if (op === '+') { a = rand(1, 20); b = rand(1, 20); answer = a + b; text = `${a} + ${b}`; }
+    else if (op === '-') { a = rand(5, 25); b = rand(1, a); answer = a - b; text = `${a} - ${b}`; }
+    else if (op === '×') { a = rand(2, 9); b = rand(2, 9); answer = a * b; text = `${a} × ${b}`; }
+    else { b = rand(2, 9); answer = rand(2, 9); a = b * answer; text = `${a} ÷ ${b}`; }
+    return { text, answer };
+  },
+
+  showProblem() {
+    if (this.state !== 'playing') return;
+    const p = this.genProblem();
+    this.answer = p.answer;
+    this.el('equation').textContent = `${p.text} = ?`;
+    this.locked = false;
+    clearTimeout(this._cheatPaperTimer);
+    this.el('cheat-paper').classList.remove('show');
+    if (this.inputMode === 'type') {
+      this.el('draw-area').style.display = 'none';
+      this.el('type-area').style.display = 'flex';
+      const input = this.el('type-input');
+      input.value = ''; input.disabled = false;
+      this.el('type-submit-btn').disabled = false;
+      setTimeout(() => input.focus(), 50);
+    } else {
+      this.el('draw-area').style.display = 'block';
+      this.el('type-area').style.display = 'none';
+      this.setupCanvas();
+    }
+    this.el('page-val').textContent = Math.min(this.page + 1, this.pagesTotal);
+  },
+
+  submitTyped() {
+    if (this.state !== 'playing' || this.locked) return;
+    const input = this.el('type-input');
+    const raw = input.value.trim();
+    if (raw === '') { this.toast('Write your answer first!'); return; }
+    const value = parseInt(raw, 10);
+    this.locked = true;
+    input.disabled = true;
+    this.el('type-submit-btn').disabled = true;
+    this.answerPicked(value === this.answer, value);
+  },
+
+  advance() {
+    this.page++;
+    if (this.page >= this.pagesTotal) this.finishWin();
+    else this.showProblem();
+  },
+
+  // ---- drawing surface: the mouse/finger is a pen. There are no options —
+  // you write the number, and it's compared (as a shape) to the real answer ----
+  bindCanvas() {
+    const canvas = this.el('draw-canvas');
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    canvas.addEventListener('pointerdown', (e) => {
+      if (this.state !== 'playing' || this.locked) return;
+      e.preventDefault();
+      this._drawing = true;
+      clearTimeout(this.autoSubmitTimer);
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      const pos = getPos(e);
+      const ctx = this.drawCtx;
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!this._drawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      const ctx = this.drawCtx;
+      ctx.lineTo(pos.x, pos.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    });
+    const endStroke = () => {
+      if (!this._drawing) return;
+      this._drawing = false;
+      clearTimeout(this.autoSubmitTimer);
+      if (this.autoSubmit) this.autoSubmitTimer = setTimeout(() => this.submitDrawing(), 1500);
+    };
+    canvas.addEventListener('pointerup', endStroke);
+    canvas.addEventListener('pointercancel', endStroke);
+    canvas.addEventListener('pointerleave', endStroke);
+  },
+
+  sizeCanvas() {
+    const canvas = this.el('draw-canvas');
+    const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+    if (!cssW || !cssH) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.drawCtx = ctx; this.canvasW = cssW; this.canvasH = cssH;
+  },
+
+  setupCanvas() {
+    this.locked = false;
+    this.el('clear-btn').disabled = false;
+    this.el('submit-btn').disabled = false;
+    this.el('draw-canvas').style.background = '';
+    this.sizeCanvas();
+    this.clearCanvas();
+  },
+
+  clearCanvas() {
+    const ctx = this.drawCtx;
+    if (!ctx) return;
+    ctx.clearRect(0, 0, this.canvasW, this.canvasH);
+  },
+
+  clearDrawing() {
+    if (this.locked) return;
+    clearTimeout(this.autoSubmitTimer);
+    this.clearCanvas();
+    Aud.sfx('click');
+  },
+
+  submitDrawing() {
+    if (this.state !== 'playing' || this.locked) return;
+    clearTimeout(this.autoSubmitTimer);
+    const canvas = this.el('draw-canvas');
+    const recognized = recognizeNumber(this.drawCtx.getImageData(0, 0, canvas.width, canvas.height));
+    if (recognized === null) { this.toast('Write your answer first!'); return; }
+
+    const correct = recognized === this.answer;
+    this.locked = true;
+    this.el('clear-btn').disabled = true;
+    this.el('submit-btn').disabled = true;
+    this.el('draw-canvas').style.background = correct
+      ? 'rgba(76,175,80,.28)'
+      : 'rgba(229,57,80,.28)';
+    this.answerPicked(correct, recognized);
+  },
+
+  answerPicked(correct, recognized) {
+    if (this.state !== 'playing') return;
+    if (correct) {
+      this.streak++; this.bestStreak = Math.max(this.bestStreak, this.streak);
+      this.score += 10 + Math.floor(this.streak / 3) * 5;
+      this.timeRemaining += 2;
+      this.updateTimerDisplay();
+      this.updateStats();
+      Aud.sfx('correct');
+      const card = this.el('problem-card');
+      card.classList.remove('pulse-correct'); void card.offsetWidth; card.classList.add('pulse-correct');
+      const prefix = this.inputMode === 'type' ? '' : `Read as ${recognized} — `;
+      this.toast(this.streak > 3 ? `${prefix}Nice streak! (+2s)` : `${prefix}Correct! (+2s)`);
+      this.unlockAchievement('first_correct');
+      if (this.streak >= 5) this.unlockAchievement('streak5');
+      if (this.streak >= 10) this.unlockAchievement('streak10');
+      if (this.streak >= 20) this.unlockAchievement('streak20');
+      setTimeout(() => this.advance(), 700);
+    } else {
+      this.streak = 0; this.updateStats();
+      this.hadWrongAnswer = true;
+      Aud.sfx('wrong');
+      this.toast(this.inputMode === 'type' ? `${recognized} is wrong, not ${this.answer}` : `Read that as ${recognized}, not ${this.answer}`);
+      setTimeout(() => this.lookUpSequence(), 500);
+    }
+  },
+
+  // Camera tilts up from the paper to whichever parent reacts.
+  lookUpSequence() {
+    this.paused = true;
+    let hitParent = null;
+    let instaKill = false;
+    let isTimmyEvent = false;
+
+    if (this.mode === 'raceDad') {
+      // One mistake in Race Dad is an automatic, guaranteed hit.
+      hitParent = 'dad';
+      instaKill = true;
+    } else if (this.mode === 'raceGrandma') {
+      // Grandma and the dog join the roster here, plus a 1% Timmy cameo.
+      const roll = Math.random() * 100;
+      if (roll < 1) { hitParent = 'timmy'; isTimmyEvent = true; }
+      else if (roll < 40) hitParent = 'dad';
+      else if (roll < 55) hitParent = 'mom';
+      else if (roll < 70) hitParent = 'grandma';
+      else if (roll < 85) hitParent = 'dog';
+      else hitParent = null;
+    } else {
+      const roll = Math.random() * 100;
+      hitParent = roll < 50 ? 'dad' : (roll < 75 ? 'mom' : null);
+    }
+
+    const shieldBlocked = !!hitParent && this.shieldUntil > Date.now();
+    if (shieldBlocked) { hitParent = null; instaKill = false; isTimmyEvent = false; }
+    this._instaKill = instaKill;
+    this._isTimmyEvent = isTimmyEvent;
+
+    const peekRoster = this.mode === 'raceGrandma' ? ['dad', 'mom', 'grandma', 'dog'] : ['dad', 'mom'];
+    const peekParent = hitParent || pick(peekRoster);
+    this._reactingParent = peekParent;
+
+    const faceEl = this.el('parent-face');
+    faceEl.classList.remove('angry');
+    const displayName = { dad: 'Dad', mom: 'Mom', grandma: 'Grandma', dog: 'The Dog', timmy: 'Timmy' }[peekParent];
+    this.el('parent-name').textContent = displayName;
+    faceEl.innerHTML = peekParent === 'dog' ? SVG.dogFace() : SVG.face(peekParent, !!hitParent);
+
+    this.el('pov-stack').classList.add('looking-up');
+
+    setTimeout(() => {
+      if (hitParent) this.strikeAt();
+      else this.gladYouLooked(shieldBlocked);
+    }, 620);
+  },
+
+  gladYouLooked(shieldBlocked) {
+    Aud.sfx('lucky');
+    if (shieldBlocked) {
+      this.toast('🛡️ The shield absorbed it!');
+    } else {
+      const { text, index } = pickIndexed(MESSAGES.lucky(this.name));
+      this.toast(text);
+      this.playVoiceFor(this._reactingParent, 'lucky', index);
+    }
+    if (shieldBlocked) { this.statShieldSaves++; this.unlockAchievement('shield_save'); }
+    else { this.statLucky++; if (this.statLucky >= 5) this.unlockAchievement('lucky5'); }
+    setTimeout(() => {
+      this.el('pov-stack').classList.remove('looking-up');
+      setTimeout(() => { this.paused = false; this.advance(); }, 620);
+    }, 1100);
+  },
+
+  strikeAt() {
+    const attacker = this._reactingParent;
+    const isDog = attacker === 'dog';
+    let weapon;
+    if (this._instaKill) weapon = 'belt';
+    else if (attacker === 'grandma') weapon = 'slipper';
+    else if (attacker === 'timmy') weapon = 'ruler';
+    else if (isDog) weapon = null;
+    else weapon = Math.random() < 0.5 ? 'belt' : 'slipper';
+
+    const weaponEl = this.el('pv-weapon');
+    const faceEl = this.el('parent-face');
+    faceEl.classList.remove('angry'); void faceEl.offsetWidth; faceEl.classList.add('angry');
+    if (isDog) {
+      weaponEl.innerHTML = '';
+      faceEl.classList.remove('lunge'); void faceEl.offsetWidth; faceEl.classList.add('lunge');
+    } else {
+      weaponEl.innerHTML = SVG.weapon(weapon);
+      weaponEl.classList.remove('swing'); void weaponEl.offsetWidth; weaponEl.classList.add('swing');
+    }
+
+    setTimeout(() => {
+      Aud.sfx(isDog ? 'bite' : weapon);
+      const flash = this.el('slap-flash');
+      flash.classList.remove('flash', 'reduced');
+      void flash.offsetWidth;
+      flash.classList.add('flash');
+      if (this.reduceFlash) flash.classList.add('reduced');
+      if (this.screenShake) this.el('game-screen').classList.add('shake-hard');
+
+      // Belt lands harder than the slipper — with a 100 HP bar this naturally
+      // means you survive ~3 hits if it's mostly belt, ~5 if mostly slipper.
+      // Race Dad is a guaranteed instant KO regardless of weapon.
+      const damage = this._instaKill ? 100
+        : isDog ? rand(10, 16)
+        : weapon === 'belt' ? rand(28, 38)
+        : rand(18, 24); // slipper, grandma's slipper, or ruler all land in this range
+      this.health = Math.max(0, this.health - damage);
+      this.whacks++;
+      this.renderHealth();
+      this.showDamagePopup(damage);
+      this.el('bruise-overlay').style.opacity = Math.min(0.75, (1 - this.health / this.maxHealth) * 0.9);
+      this.statHits++;
+      this.unlockAchievement('first_hit');
+      if (weapon === 'belt') { this.statBeltHits++; if (this.statBeltHits >= 5) this.unlockAchievement('belt5'); }
+      else if (weapon === 'slipper') { this.statSlipperHits++; if (this.statSlipperHits >= 5) this.unlockAchievement('slipper5'); }
+      setTimeout(() => {
+        this.el('game-screen').classList.remove('shake-hard');
+        faceEl.classList.remove('lunge');
+        this.triggerBlackout();
+      }, 220);
+    }, 330);
+  },
+
+  triggerBlackout() {
+    this.state = 'blackout';
+    const category = this._isTimmyEvent ? 'timmy' : 'hit';
+    const pool = this._isTimmyEvent ? MESSAGES.timmy(this.name) : MESSAGES.hit(this.name);
+    const { text, index } = pickIndexed(pool);
+    this.el('ed-sub').textContent = text;
+    this.playVoiceFor(this._reactingParent, category, index);
+    this.el('blackout').classList.add('show');
+    if (this.health <= 0) {
+      this._pendingGameOver = true;
+    }
+  },
+
+  resumeFromBlackout() {
+    if (this.state !== 'blackout') return;
+    this.el('blackout').classList.remove('show');
+    const stack = this.el('pov-stack');
+    stack.classList.add('instant');
+    stack.classList.remove('looking-up');
+    void stack.offsetWidth;
+    stack.classList.remove('instant');
+    if (this._pendingGameOver) {
+      this._pendingGameOver = false;
+      this.endGame('ko');
+    } else {
+      this.state = 'playing';
+      this.paused = false;
+      this.advance();
+    }
+  },
+
+  finishWin() {
+    clearInterval(this.timerId);
+    this.endGame('win');
+  },
+
+  timeUp() {
+    Aud.sfx('wrong');
+    this.endGame('timeup');
+  },
+
+  endGame(outcome) {
+    this.state = 'gameover';
+    clearInterval(this.timerId);
+    clearInterval(this.saveTimer);
+    clearTimeout(this.ambientTimer);
+    Aud.stopMusic();
+    Aud.sfx(outcome === 'win' ? 'correct' : 'gameover');
+    this.saveState(false);
+    const best = this.loadBest();
+    const elapsed = Math.max(0, this.totalTime - Math.max(0, this.timeRemaining));
+    const mm = Math.floor(elapsed / 60), ss = Math.floor(elapsed % 60);
+    const timeStr = `${mm}:${String(ss).padStart(2, '0')}`;
+
+    let title, quote, coinsEarned = 0;
+    if (outcome === 'win') {
+      title = 'TEST COMPLETE!';
+      const r = REWARD_TABLE[this.mode];
+      coinsEarned = this.awardCoins(r.base + Math.floor(Math.max(0, this.timeRemaining) * r.rate));
+      this.unlockAchievement('win_any');
+      const winAchByMode = { easy: 'win_easy', medium: 'win_medium', hard: 'win_hard', asian: 'win_asian', emotionalDamage: 'win_ed' };
+      if (winAchByMode[this.mode]) this.unlockAchievement(winAchByMode[this.mode]);
+      if (!this.hadWrongAnswer) this.unlockAchievement('perfect_test');
+      if (this.mode === 'asian') {
+        this.freeSpins++;
+        const wasLocked = !this.loadBest().edUnlocked;
+        this.edUnlocked = true;
+        this.refreshEdModeButton();
+        quote = elapsed <= this.timmyTime
+          ? `You beat Timmy?! ${this.name}, that's not possible. (Timmy: ${this.timmyTime}s vs you: ${elapsed.toFixed(1)}s) +1 free wheel spin!`
+          : `Timmy finished in ${this.timmyTime}s. You took ${timeStr}. Still an L, ${this.name}. +1 free wheel spin!`;
+        if (wasLocked) quote += ` 💀 EMOTIONAL DAMAGE mode unlocked!`;
+      } else if (this.mode === 'emotionalDamage') {
+        this.freeSpins += 2;
+        const freeItem = Math.random() < 0.5 ? 'antiEd' : 'cheat';
+        if (freeItem === 'antiEd') this.antiEdCount++; else this.cheatCount++;
+        this.updateInventoryUI();
+        quote = `${this.name} did the impossible. Timmy is SHOOK. +2000🪙 jackpot, +2 free spins, +1 free ${freeItem === 'antiEd' ? 'Anti-Emotional-Damage shield' : 'Cheat'}!`;
+      } else {
+        quote = pick([
+          `Homework: 0. ${this.name}: 1. For once.`,
+          `${this.name} actually did it.`,
+          `Mom & Dad are shook.`,
+        ]);
+      }
+      this.saveState(false);
+      this.updateInventoryUI();
+    } else if (outcome === 'timeup') {
+      title = "TIME'S UP";
+      if (this.mode === 'asian') {
+        quote = `Timmy finished this whole test in ${this.timmyTime}s. You didn't even finish page ${Math.min(this.page + 1, this.pagesTotal)}, ${this.name}.`;
+      } else if (this.mode === 'emotionalDamage') {
+        quote = `${this.totalTime.toFixed(1)}s wasn't enough, ${this.name}. Nobody's ever finished this. EMOTIONAL DAMAGE.`;
+      } else {
+        quote = `Pencils down, ${this.name}. Timmy finished this ages ago.`;
+      }
+    } else if (outcome === 'cursed') {
+      title = 'EMOTIONAL DAMAGE x10';
+      quote = pick([
+        `${this.name}, naming yourself that was your first mistake.`,
+        `You typed it in all caps. You knew what you were doing.`,
+        `The belt and slipper both called in for overtime.`,
+        `Some names you just don't say out loud, ${this.name}.`,
+      ]);
+    } else {
+      title = 'HOMEWORK OVER';
+      this.unlockAchievement('ko_once');
+      quote = pick([
+        `Timmy's mom never had to do this. Just saying, ${this.name}.`,
+        `Homework: 1. ${this.name}: 0.`,
+        `The belt has retired for the day.`,
+        `Somewhere, Timmy is graduating early.`,
+      ]);
+    }
+
+    this.el('go-title').textContent = title;
+    this.el('go-quote').textContent = quote;
+    this.el('go-score').textContent = this.score;
+    this.el('go-pages').textContent = `${Math.min(this.page, this.pagesTotal)}/${this.pagesTotal}`;
+    this.el('go-time').textContent = timeStr;
+    this.el('go-streak').textContent = this.bestStreak;
+    this.el('go-whacks').textContent = this.whacks;
+    this.el('go-best').textContent = best.highScore;
+    this.el('go-coins-row').classList.toggle('hidden', coinsEarned <= 0);
+    this.el('go-coins').textContent = `+${coinsEarned}`;
+    this.el('go-coin-total').textContent = this.coins;
+    this.el('game-screen').classList.add('hidden');
+    this.el('gameover-screen').classList.remove('hidden');
+  },
+};
+
+const WHEEL_TABLE = [
+  { amt: 10, weight: 25 }, { amt: 15, weight: 20 }, { amt: 20, weight: 18 }, { amt: 30, weight: 15 },
+  { amt: 50, weight: 10 }, { amt: 75, weight: 7 }, { amt: 100, weight: 4 }, { amt: 200, weight: 1 },
+];
+const SPIN_COOLDOWN_MS = 3600000;
+
+const Shop = {
+  el(id) { return document.getElementById(id); },
+
+  open() {
+    Game.loadEconomy();
+    this.render();
+    Game.el('start-screen').classList.add('hidden');
+    this.el('shop-screen').classList.remove('hidden');
+  },
+
+  close() {
+    this.el('shop-screen').classList.add('hidden');
+    Game.el('start-screen').classList.remove('hidden');
+  },
+
+  render() {
+    this.el('shop-coin-count').textContent = Game.coins;
+    this.el('coin-count').textContent = Game.coins;
+    this.el('shop-antied-owned').textContent = Game.antiEdCount;
+    this.el('shop-cheat-owned').textContent = Game.cheatCount;
+    this.el('buy-antied').disabled = Game.coins < 200;
+    this.el('buy-cheat').disabled = Game.coins < 80;
+    this.renderWheelStatus();
+  },
+
+  buy(item) {
+    const price = item === 'antiEd' ? 200 : 80;
+    if (Game.coins < price) return;
+    Game.coins -= price;
+    if (item === 'antiEd') Game.antiEdCount++; else Game.cheatCount++;
+    Game.saveState(false);
+    Game.updateInventoryUI();
+    this.render();
+    Aud.sfx('correct');
+  },
+
+  renderWheelStatus() {
+    const remaining = SPIN_COOLDOWN_MS - (Date.now() - Game.lastSpinTime);
+    const canSpin = Game.freeSpins > 0 || remaining <= 0;
+    this.el('spin-btn').disabled = !canSpin;
+    if (Game.freeSpins > 0) {
+      this.el('wheel-status').textContent = `Free spins: ${Game.freeSpins} · Ready!`;
+    } else if (remaining > 0) {
+      const mm = Math.floor(remaining / 60000), ss = Math.floor((remaining % 60000) / 1000);
+      this.el('wheel-status').textContent = `Free spins: 0 · Next spin in ${mm}m ${ss}s`;
+    } else {
+      this.el('wheel-status').textContent = `Free spins: 0 · Ready!`;
+    }
+  },
+
+  spin() {
+    const canFree = Game.freeSpins > 0;
+    const canRegular = (Date.now() - Game.lastSpinTime) >= SPIN_COOLDOWN_MS;
+    if (!canFree && !canRegular) return;
+    if (canFree) Game.freeSpins--; else Game.lastSpinTime = Date.now();
+    const reward = Game.awardCoins(weightedPick(WHEEL_TABLE));
+    Game.statWheelSpins++;
+    Game.saveState(false);
+    Game.updateInventoryUI();
+    this.el('spin-btn').disabled = true;
+    this.el('wheel-result').textContent = '';
+    let ticks = 0;
+    const cycle = setInterval(() => {
+      this.el('wheel-result').textContent = `🪙 ${pick(WHEEL_TABLE.map((w) => w.amt))}`;
+      ticks++;
+      if (ticks > 8) {
+        clearInterval(cycle);
+        this.el('wheel-result').textContent = `🪙 +${reward} coins!`;
+        Aud.sfx('correct');
+        if (Game.statWheelSpins >= 10) Game.unlockAchievement('wheel10');
+        this.render();
+      }
+    }, 80);
+  },
+};
+
+const Settings = {
+  el(id) { return document.getElementById(id); },
+
+  open() {
+    this.render();
+    Game.el('start-screen').classList.add('hidden');
+    this.el('settings-screen').classList.remove('hidden');
+  },
+
+  close() {
+    // Secret 3: switches set to Draw / Off / Manual / On / Reduced / On (in that
+    // top-to-bottom order) arms the combo. Clicking the title next unlocks it.
+    const match = Game.inputMode === 'draw' && Aud.muted === true && Game.autoSubmit === false
+      && Game.screenShake === true && Game.reduceFlash === true && Game.parentCommentary === true;
+    Game.readyForSecret3 = match;
+    this.el('settings-screen').classList.add('hidden');
+    Game.el('start-screen').classList.remove('hidden');
+  },
+
+  render() {
+    const d = Game.loadBest();
+    this.el('mode-type-btn').classList.toggle('selected', d.inputMode === 'type');
+    this.el('mode-draw-btn').classList.toggle('selected', d.inputMode === 'draw');
+    this.el('sound-on-btn').classList.toggle('selected', d.soundOn !== false);
+    this.el('sound-off-btn').classList.toggle('selected', d.soundOn === false);
+    this.el('autosubmit-on-btn').classList.toggle('selected', d.autoSubmit !== false);
+    this.el('autosubmit-off-btn').classList.toggle('selected', d.autoSubmit === false);
+    this.el('shake-on-btn').classList.toggle('selected', d.screenShake !== false);
+    this.el('shake-off-btn').classList.toggle('selected', d.screenShake === false);
+    this.el('flash-full-btn').classList.toggle('selected', !d.reduceFlash);
+    this.el('flash-reduced-btn').classList.toggle('selected', !!d.reduceFlash);
+    this.el('commentary-on-btn').classList.toggle('selected', d.parentCommentary !== false);
+    this.el('commentary-off-btn').classList.toggle('selected', d.parentCommentary === false);
+  },
+
+  setInputMode(mode) {
+    Game.inputMode = mode;
+    Game.saveState(false);
+    this.render();
+    Aud.sfx('click');
+  },
+
+  setSound(on) {
+    Aud.setMuted(!on);
+    Game.el('mute-toggle').textContent = on ? '🔊' : '🔇';
+    Game.saveState(false);
+    this.render();
+    if (on) Aud.sfx('click');
+  },
+
+  setAutoSubmit(on) {
+    Game.autoSubmit = on;
+    Game.saveState(false);
+    this.render();
+    Aud.sfx('click');
+  },
+
+  setScreenShake(on) {
+    Game.screenShake = on;
+    Game.saveState(false);
+    this.render();
+    Aud.sfx('click');
+  },
+
+  setReduceFlash(reduced) {
+    Game.reduceFlash = reduced;
+    Game.saveState(false);
+    this.render();
+    Aud.sfx('click');
+  },
+
+  setCommentary(on) {
+    Game.parentCommentary = on;
+    Game.saveState(false);
+    this.render();
+    Aud.sfx('click');
+  },
+
+  resetSave() {
+    if (!confirm('Reset all coins, shop items, high score, and free spins? This cannot be undone.')) return;
+    localStorage.removeItem(SAVE_KEY);
+    Game.loadEconomy();
+    Game.refreshEdModeButton();
+    Game.el('invert-toggle').classList.add('hidden');
+    this.render();
+    Game.el('best-line').textContent = '';
+  },
+};
+
+const Achievements = {
+  el(id) { return document.getElementById(id); },
+
+  open() {
+    this.render();
+    Game.el('start-screen').classList.add('hidden');
+    this.el('achievements-screen').classList.remove('hidden');
+  },
+
+  close() {
+    this.el('achievements-screen').classList.add('hidden');
+    Game.el('start-screen').classList.remove('hidden');
+  },
+
+  render() {
+    const unlocked = Game.loadBest().unlockedAchievements;
+    const list = this.el('ach-list');
+    list.innerHTML = '';
+    ACHIEVEMENTS.forEach((a) => {
+      const got = unlocked.includes(a.id);
+      const row = document.createElement('div');
+      row.className = 'ach-row' + (got ? ' unlocked' : '');
+      row.innerHTML = `<div class="ach-icon">${got ? '🏆' : '🔒'}</div>
+        <div class="ach-info"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`;
+      list.appendChild(row);
+    });
+    SECRET_ACHIEVEMENTS.forEach((a) => {
+      const got = unlocked.includes(a.id);
+      const row = document.createElement('div');
+      row.className = 'ach-row secret' + (got ? ' unlocked' : '');
+      row.innerHTML = got
+        ? `<div class="ach-icon">🏆</div><div class="ach-info"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`
+        : `<div class="ach-icon">❓</div><div class="ach-info"><div class="ach-name">???</div><div class="ach-desc">Hidden achievement.</div></div>`;
+      list.appendChild(row);
+    });
+    const totalCount = ACHIEVEMENTS.length + SECRET_ACHIEVEMENTS.length;
+    this.el('ach-progress').textContent = `${unlocked.length} / ${totalCount} unlocked`;
+  },
+};
+
+function weightedPick(table) {
+  const total = table.reduce((s, t) => s + t.weight, 0);
+  let r = Math.random() * total;
+  for (const t of table) {
+    if (r < t.weight) return t.amt;
+    r -= t.weight;
+  }
+  return table[table.length - 1].amt;
+}
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+// Same as pick(), but also returns the index — needed to look up the matching
+// voices/{category}-{parent}-{index}.mp3 clip for whichever line got picked.
+function pickIndexed(arr) {
+  const index = Math.floor(Math.random() * arr.length);
+  return { text: arr[index], index };
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ============================================================
+   HANDWRITING RECOGNITION — no ML model. Each stroke-connected
+   blob of ink is treated as one digit. Each blob is classified
+   against digits 0-9 using classic hand-built features: hole
+   count (Euler-number style — separates 0/6/8/9 from the rest),
+   aspect ratio, ink density, and a vertical thirds-profile, plus
+   a coarse-grid silhouette overlap as a tiebreaker. Recognized
+   digits are read left-to-right and compared as a whole number
+   against the real answer.
+   ============================================================ */
+function dilatedInkMask(imgData, radius) {
+  // closes 1px antialiasing gaps in rendered/drawn strokes so hole
+  // detection doesn't leak through a loop that should be closed
+  const { data, width, height } = imgData;
+  const src = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) src[i] = data[i * 4 + 3] > 10 ? 1 : 0;
+  const tmp = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let v = 0;
+      for (let dx = -radius; dx <= radius && !v; dx++) {
+        const xx = x + dx;
+        if (xx >= 0 && xx < width && src[y * width + xx]) v = 1;
+      }
+      tmp[y * width + x] = v;
+    }
+  }
+  const out = new Uint8Array(width * height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let v = 0;
+      for (let dy = -radius; dy <= radius && !v; dy++) {
+        const yy = y + dy;
+        if (yy >= 0 && yy < height && tmp[yy * width + x]) v = 1;
+      }
+      out[y * width + x] = v;
+    }
+  }
+  return out;
+}
+
+function findBlobs(imgData, minArea) {
+  const { width, height } = imgData;
+  const mask = dilatedInkMask(imgData, 1);
+  const isInk = (x, y) => mask[y * width + x] === 1;
+  const visited = new Uint8Array(width * height);
+  const qx = new Int32Array(width * height), qy = new Int32Array(width * height);
+  const blobs = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (visited[idx] || !isInk(x, y)) continue;
+      let qh = 0, qt = 0;
+      qx[qt] = x; qy[qt] = y; qt++; visited[idx] = 1;
+      let minX = x, maxX = x, minY = y, maxY = y, count = 0;
+      const memberSet = new Set();
+      while (qh < qt) {
+        const cx = qx[qh], cy = qy[qh]; qh++;
+        memberSet.add(cy * width + cx);
+        count++;
+        if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const nx = cx + dx, ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            const nidx = ny * width + nx;
+            if (visited[nidx] || !isInk(nx, ny)) continue;
+            visited[nidx] = 1; qx[qt] = nx; qy[qt] = ny; qt++;
+          }
+        }
+      }
+      if (count >= minArea) blobs.push({ minX, minY, maxX, maxY, memberSet, width, count });
+    }
+  }
+  return blobs;
+}
+
+function blobToGrid(blob, gridSize) {
+  const { minX, minY, maxX, maxY, memberSet, width } = blob;
+  const bw = maxX - minX + 1, bh = maxY - minY + 1;
+  const grid = new Uint8Array(gridSize * gridSize);
+  memberSet.forEach((idx) => {
+    const x = idx % width, y = Math.floor(idx / width);
+    let gx = Math.floor(((x - minX) / bw) * gridSize); gx = Math.min(gridSize - 1, Math.max(0, gx));
+    let gy = Math.floor(((y - minY) / bh) * gridSize); gy = Math.min(gridSize - 1, Math.max(0, gy));
+    grid[gy * gridSize + gx] = 1;
+  });
+  return grid;
+}
+
+function countHoles(blob) {
+  const { minX, minY, maxX, maxY, memberSet, width } = blob;
+  const offX = minX - 1, offY = minY - 1;
+  const bw = maxX - minX + 3, bh = maxY - minY + 3;
+  const isMember = (lx, ly) => memberSet.has((ly + offY) * width + (lx + offX));
+  const reached = new Uint8Array(bw * bh);
+  const stack = [];
+  for (let lx = 0; lx < bw; lx++) { stack.push([lx, 0], [lx, bh - 1]); }
+  for (let ly = 0; ly < bh; ly++) { stack.push([0, ly], [bw - 1, ly]); }
+  while (stack.length) {
+    const [lx, ly] = stack.pop();
+    if (lx < 0 || ly < 0 || lx >= bw || ly >= bh) continue;
+    const vidx = ly * bw + lx;
+    if (reached[vidx] || isMember(lx, ly)) continue;
+    reached[vidx] = 1;
+    stack.push([lx + 1, ly], [lx - 1, ly], [lx, ly + 1], [lx, ly - 1]);
+  }
+  const seen = new Uint8Array(bw * bh);
+  let holes = 0;
+  for (let ly = 0; ly < bh; ly++) {
+    for (let lx = 0; lx < bw; lx++) {
+      const vidx = ly * bw + lx;
+      if (reached[vidx] || seen[vidx] || isMember(lx, ly)) continue;
+      holes++;
+      const stack2 = [[lx, ly]]; seen[vidx] = 1;
+      while (stack2.length) {
+        const [cx, cy] = stack2.pop();
+        [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]].forEach(([nx, ny]) => {
+          if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) return;
+          const nvidx = ny * bw + nx;
+          if (reached[nvidx] || seen[nvidx] || isMember(nx, ny)) return;
+          seen[nvidx] = 1; stack2.push([nx, ny]);
+        });
+      }
+    }
+  }
+  return holes;
+}
+
+function blobFeatures(blob, gridSize) {
+  const bw = blob.maxX - blob.minX + 1, bh = blob.maxY - blob.minY + 1;
+  let t = 0, m = 0, b = 0;
+  const thirdH = bh / 3;
+  let midMinX = Infinity, midMaxX = -Infinity;
+  blob.memberSet.forEach((idx) => {
+    const x = idx % blob.width - blob.minX;
+    const y = Math.floor(idx / blob.width) - blob.minY;
+    if (y < thirdH) t++;
+    else if (y < thirdH * 2) { m++; if (x < midMinX) midMinX = x; if (x > midMaxX) midMaxX = x; }
+    else b++;
+  });
+  const total = blob.count || 1;
+  // How wide the ink spans in the middle third, relative to the whole glyph's
+  // width — near 0 for a plain vertical shaft ("1"), near 1 for a crossbar
+  // reaching corner to corner ("4", "+"-shaped strokes).
+  const midSpan = midMaxX >= midMinX ? (midMaxX - midMinX + 1) / bw : 0;
+  return {
+    grid: blobToGrid(blob, gridSize),
+    holeCount: countHoles(blob),
+    aspectRatio: bw / bh,
+    density: blob.count / (bw * bh),
+    thirds: [t / total, m / total, b / total],
+    midSpan,
+  };
+}
+
+function featureDistance(a, b) {
+  const holePenalty = a.holeCount === b.holeCount ? 0 : 2.2;
+  const aspectDiff = Math.abs(a.aspectRatio - b.aspectRatio) * 1.0;
+  const densityDiff = Math.abs(a.density - b.density) * 0.15;
+  const thirdsDiff = (Math.abs(a.thirds[0] - b.thirds[0]) + Math.abs(a.thirds[1] - b.thirds[1]) + Math.abs(a.thirds[2] - b.thirds[2])) * 0.5;
+  const diceDist = (1 - diceScore(a.grid, b.grid)) * 2.0;
+  return holePenalty + aspectDiff + densityDiff + thirdsDiff + diceDist;
+}
+
+function diceScore(gridA, gridB) {
+  let inter = 0, sumA = 0, sumB = 0;
+  for (let i = 0; i < gridA.length; i++) {
+    if (gridA[i]) sumA++;
+    if (gridB[i]) sumB++;
+    if (gridA[i] && gridB[i]) inter++;
+  }
+  if (sumA === 0 || sumB === 0) return 0;
+  return (2 * inter) / (sumA + sumB);
+}
+
+const DIGIT_GRID_SIZE = 22;
+let _digitTemplates = null;
+function getDigitTemplates() {
+  if (_digitTemplates) return _digitTemplates;
+  _digitTemplates = {};
+  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 160;
+  const ctx = cv.getContext('2d');
+  for (let d = 0; d <= 9; d++) {
+    ctx.clearRect(0, 0, 160, 160);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 130px Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(d), 80, 84);
+    const blobs = findBlobs(ctx.getImageData(0, 0, 160, 160), 20);
+    blobs.sort((a, b) => b.count - a.count);
+    _digitTemplates[d] = blobFeatures(blobs[0], DIGIT_GRID_SIZE);
+  }
+  return _digitTemplates;
+}
+
+function classifyBlob(blob) {
+  const feat = blobFeatures(blob, DIGIT_GRID_SIZE);
+  // "1" is a hard outlier: every other digit's template sits at aspect ratio
+  // 0.65-0.74, while "1" (even with a flag/foot) sits well below that. This is
+  // a far more reliable signal than the general-purpose distance below, so it
+  // gets a direct shortcut instead of competing feature-by-feature.
+  if (feat.holeCount === 0 && feat.aspectRatio < 0.58 && feat.midSpan < 0.55) return 1;
+  const templates = getDigitTemplates();
+  let best = 0, bestDist = Infinity;
+  for (let d = 0; d <= 9; d++) {
+    const dist = featureDistance(feat, templates[d]);
+    if (dist < bestDist) { bestDist = dist; best = d; }
+  }
+  return best;
+}
+
+function recognizeNumber(imgData) {
+  const blobs = findBlobs(imgData, 20);
+  if (!blobs.length) return null;
+  blobs.sort((a, b) => (a.minX + a.maxX) - (b.minX + b.maxX));
+  const digits = blobs.map(classifyBlob).join('');
+  return digits.length ? parseInt(digits, 10) : null;
+}
+
+Game.init();
+</script>
+</body>
+</html>
