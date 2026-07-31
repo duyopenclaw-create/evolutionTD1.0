@@ -66,7 +66,13 @@
   .tierCell.found{color:var(--text);}
   .tierCell.bloop.found .em{filter:none;text-shadow:0 0 12px #a855f7;}
   .overlay{position:absolute;inset:0;background:rgba(2,10,20,.82);display:flex;align-items:center;justify-content:center;
-    border-radius:14px;flex-direction:column;gap:12px;text-align:center;padding:20px;}
+    border-radius:14px;flex-direction:column;gap:12px;text-align:center;padding:20px;overflow-y:auto;}
+  @media (max-width:480px){
+    .overlay{padding:10px;gap:6px;}
+    .overlay h1{font-size:1.05em;}
+    .overlay .tagline{font-size:.78em;line-height:1.35;}
+    .overlay .btn{padding:8px 14px;font-size:.85em;}
+  }
   .canvasWrap{position:relative;}
   #savedFlash{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#03251a;
     font-weight:700;padding:8px 16px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;}
@@ -174,7 +180,7 @@
         <canvas id="fisherCanvas" width="800" height="460"></canvas>
         <div class="overlay" id="fisherIntro">
           <h1>🎣 Reel it in!</h1>
-          <p class="tagline">Move your mouse to aim your line — depth is limited until you upgrade your <b>Boat</b>. Click <b>3 times</b> to lower your hook and set it: cast, lower, strike! Bigger, rarer catches are much harder to land and worth far more. Catches go straight to your <b>Inventory</b> — sell them whenever you like. Watch for junk and treasure too.</p>
+          <p class="tagline">Aim with your mouse, click <b>3 times</b> to cast, lower &amp; strike. Catches go to your <b>Inventory</b> to sell later.</p>
           <button class="btn gold" id="fisherStart">Start Fishing</button>
         </div>
       </div>
@@ -211,7 +217,7 @@
         <canvas id="fishCanvas" width="800" height="460"></canvas>
         <div class="overlay" id="fishIntro">
           <h1>🐠 Swim for your life!</h1>
-          <p class="tagline">Move with your mouse, finger, or ↑/↓ arrows. Eat smaller or equal-sized creatures to grow — avoid bigger ones and any hooks or nets. Fill your growth bar to evolve, all the way up to <b>THE BLOOP</b>.</p>
+          <p class="tagline">Move with mouse/finger/arrows. Eat smaller creatures, dodge bigger ones &amp; hooks. Evolve up to <b>THE BLOOP</b>.</p>
           <button class="btn gold" id="fishStart">Start Swimming</button>
         </div>
         <div class="overlay" id="fishSummary" style="display:none;">
@@ -536,26 +542,16 @@ function shade(hex, percent){
   r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
   return `rgb(${r},${g},${b})`;
 }
-function drawCreature(ctx, tier, x, y, size, facingLeft, golden, t){
-  if(tier.isBloop){ drawBloop(ctx,x,y,size,t||0); return; }
-  ctx.save();
-  ctx.translate(x,y);
-  if(!facingLeft) ctx.scale(-1,1);
+function drawCreatureShape(ctx, tier, size, t, phase){
   const color = tier.color;
   switch(tier.shape){
-    case 'shark': drawSharkBody(ctx,size,color,tier.special); break;
-    case 'whale': drawWhaleBody(ctx,size,color,tier.special,t); break;
-    case 'mammal': drawMammalBody(ctx,size,color); break;
+    case 'shark': drawSharkBody(ctx,size,color,tier.special,t,phase); break;
+    case 'whale': drawWhaleBody(ctx,size,color,tier.special,t,phase); break;
+    case 'mammal': drawMammalBody(ctx,size,color,t,phase); break;
     case 'shell': drawShellBody(ctx,size,color,tier.shell); break;
     case 'eel': drawEelBody(ctx,size,color,t); break;
     case 'seaweed': drawSeaweedBody(ctx,size,color,t); break;
-    default: drawFishBody(ctx,size,color,tier.special); break;
-  }
-  if(golden){
-    ctx.globalCompositeOperation='source-atop';
-    ctx.fillStyle='rgba(255,209,102,0.4)';
-    ctx.fillRect(-size,-size,size*2,size*2);
-    ctx.globalCompositeOperation='source-over';
+    default: drawFishBody(ctx,size,color,tier.special,t,phase); break;
   }
   if(tier.name==='Muscular Fish'){
     ctx.font=`${Math.max(10,size*0.5)}px sans-serif`;
@@ -566,14 +562,54 @@ function drawCreature(ctx, tier, x, y, size, facingLeft, golden, t){
     ctx.beginPath(); ctx.arc(size*0.32,-size*0.42,Math.max(2,size*0.06),0,Math.PI*2);
     ctx.fillStyle='#fff59d'; ctx.shadowColor='#fff59d'; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
   }
-  ctx.restore();
 }
-function drawFishBody(ctx,size,color,special){
+function drawCreature(ctx, tier, x, y, size, facingLeft, golden, t, phase, depthDark){
+  if(tier.isBloop){ drawBloop(ctx,x,y,size,t||0); return; }
+  phase = phase||0; depthDark = depthDark||0;
+  if(!golden && depthDark<=0.02){
+    ctx.save();
+    ctx.translate(x,y);
+    if(!facingLeft) ctx.scale(-1,1);
+    drawCreatureShape(ctx, tier, size, t, phase);
+    ctx.restore();
+    return;
+  }
+  // tinted (golden / depth-darkened) creatures are drawn on an isolated
+  // offscreen buffer first, since source-atop otherwise composites
+  // against the whole canvas (including the background) instead of
+  // just this sprite's own pixels.
+  const pad = Math.ceil(size*4.4);
+  const buf = document.createElement('canvas');
+  buf.width = pad; buf.height = pad;
+  const bctx = buf.getContext('2d');
+  bctx.save();
+  bctx.translate(pad/2, pad/2);
+  if(!facingLeft) bctx.scale(-1,1);
+  drawCreatureShape(bctx, tier, size, t, phase);
+  bctx.restore();
+  if(depthDark>0){
+    bctx.globalCompositeOperation='source-atop';
+    bctx.fillStyle=`rgba(0,8,18,${Math.min(0.6,depthDark)})`;
+    bctx.fillRect(0,0,pad,pad);
+    bctx.globalCompositeOperation='source-over';
+  }
+  if(golden){
+    bctx.globalCompositeOperation='source-atop';
+    bctx.fillStyle='rgba(255,209,102,0.4)';
+    bctx.fillRect(0,0,pad,pad);
+    bctx.globalCompositeOperation='source-over';
+  }
+  ctx.drawImage(buf, x-pad/2, y-pad/2);
+}
+function drawFishBody(ctx,size,color,special,t,phase){
   const bw=size*0.5, bh=size*0.32;
+  ctx.save();
+  ctx.translate(-bw*0.85,0); ctx.rotate(Math.sin((t||0)*9+(phase||0))*0.3); ctx.translate(bw*0.85,0);
   ctx.fillStyle=shade(color,-0.25);
   ctx.beginPath();
   ctx.moveTo(-bw*0.85,0); ctx.lineTo(-bw*1.5,-bh*0.9); ctx.lineTo(-bw*1.5,bh*0.9);
   ctx.closePath(); ctx.fill();
+  ctx.restore();
   ctx.fillStyle=color;
   ctx.beginPath(); ctx.ellipse(0,0,bw,bh,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='rgba(255,255,255,0.25)';
@@ -592,13 +628,16 @@ function drawFishBody(ctx,size,color,special){
   ctx.fillStyle='#111';
   ctx.beginPath(); ctx.arc(bw*0.6,-bh*0.15,bw*0.08,0,Math.PI*2); ctx.fill();
 }
-function drawSharkBody(ctx,size,color,special){
+function drawSharkBody(ctx,size,color,special,t,phase){
   const bw=size*0.62, bh=size*0.24;
   const isMeg = special==='megalodon';
+  ctx.save();
+  ctx.translate(-bw*0.9,0); ctx.rotate(Math.sin((t||0)*7+(phase||0))*0.22); ctx.translate(bw*0.9,0);
   ctx.fillStyle=shade(color,-0.15);
   ctx.beginPath();
   ctx.moveTo(-bw*0.9,0); ctx.lineTo(-bw*1.6,-bh*1.8); ctx.lineTo(-bw*1.1,-bh*0.2);
   ctx.lineTo(-bw*1.4,bh*1.0); ctx.closePath(); ctx.fill();
+  ctx.restore();
   ctx.fillStyle=color;
   ctx.beginPath();
   ctx.moveTo(bw,0);
@@ -629,13 +668,16 @@ function drawSharkBody(ctx,size,color,special){
   ctx.beginPath(); ctx.arc(bw*0.65,-bh*0.1,Math.max(1.5,bw*0.07),0,Math.PI*2); ctx.fill();
   ctx.shadowBlur=0;
 }
-function drawWhaleBody(ctx,size,color,special,t){
+function drawWhaleBody(ctx,size,color,special,t,phase){
   const bw=size*0.62, bh=size*0.4;
   const isOrca = special==='orca';
+  ctx.save();
+  ctx.translate(-bw*0.85,0); ctx.rotate(Math.sin((t||0)*4+(phase||0))*0.16); ctx.translate(bw*0.85,0);
   ctx.fillStyle=shade(color,-0.15);
   ctx.beginPath();
   ctx.moveTo(-bw*0.85,0); ctx.lineTo(-bw*1.35,-bh*0.6); ctx.lineTo(-bw*1.0,0);
   ctx.lineTo(-bw*1.35,bh*0.6); ctx.closePath(); ctx.fill();
+  ctx.restore();
   ctx.fillStyle=color;
   ctx.beginPath(); ctx.ellipse(0,0,bw,bh,0,0,Math.PI*2); ctx.fill();
   if(isOrca){
@@ -786,8 +828,8 @@ const FISHER_W=800, FISHER_H=460, WATERLINE=90;
 const fisherCanvas = document.getElementById('fisherCanvas');
 const fctx = fisherCanvas.getContext('2d');
 const fisher = {
-  objects:[], ripples:[], floaters:[], feed:[],
-  spawnTimer:0, autoTimer:0, running:false, t:0,
+  objects:[], ripples:[], floaters:[], feed:[], bubbles:[],
+  spawnTimer:0, autoTimer:0, bubbleTimer:0, running:false, t:0,
   aimX:400, aimY:140, cast:{stage:0,x:0,y:0,lastT:0}, mapBoostTimer:0,
 };
 const JUNK_ITEMS = [
@@ -872,7 +914,15 @@ function spawnFisherItem(kind, def){
   fisher.objects.push({ kind, itemDef:def, x: fromLeft? -40: FISHER_W+40, y, vx: fromLeft? speed: -speed, phase:Math.random()*10, dead:false, spooked:0 });
 }
 function trimFeed(){ fisher.feed.length = Math.min(fisher.feed.length,6); }
+function spawnSplash(x,y){
+  for(let k=0;k<7;k++){
+    const a=Math.random()*Math.PI*2;
+    fisher.ripples.push({x:x+Math.cos(a)*4,y:y+Math.sin(a)*3,r:2+Math.random()*3,life:0.5+Math.random()*0.3,color:'rgba(255,255,255,0.8)'});
+  }
+  fisher.ripples.push({x,y,r:4,life:1,color:'rgba(255,255,255,0.9)'});
+}
 function resolveCast(x,y){
+  spawnSplash(x,y);
   const radius = 30+(G.upgrades.net||0)*6;
   let best=null, bestDist=Infinity;
   for(const o of fisher.objects){
@@ -888,27 +938,9 @@ function resolveCast(x,y){
   if(best.kind==='fish'){
     const tier=TIERS[best.tierIdx];
     const chance = (tier.isBloop && best.rareSighting) ? bloopSightingChance() : fishCatchChance(best.tierIdx);
-    const success = Math.random()<chance;
-    if(success){
-      let mult=1;
-      if(Math.random() < 0.02+(G.upgrades.luck||0)*0.004){ mult=3; toast('🍀 LUCKY CATCH! Triple value when sold!'); }
-      if(best.golden) mult*=2;
-      G.inventory.fish.push({tier:best.tierIdx, mult});
-      G.stats.totalCaught=(G.stats.totalCaught||0)+1; discover(best.tierIdx);
-      if(best.tierIdx>G.stats.highestTierCaught) G.stats.highestTierCaught=best.tierIdx;
-      addXP(4+best.tierIdx*2);
-      fisher.floaters.push({x,y:y-10,text:'Caught!',life:1.1,vy:-38});
-      fisher.feed.unshift(`${tier.emoji} Caught a ${best.golden?'✨golden ':''}${tier.name}! (in your inventory)`);
-      trimFeed(); best.dead=true;
-      beep(tier.isBloop?'evolve':'catch');
-      if(tier.isBloop) onBloopCatch();
-      updateHud(); saveGame(); renderFisherFeed(); renderFisherInventoryPanel();
-    } else {
-      best.spooked=1.2;
-      fisher.ripples.push({x,y,r:6,life:1,color:'#ef476f'});
-      fisher.feed.unshift(`${tier.emoji} The ${tier.name} got away!`); trimFeed(); renderFisherFeed();
-      beep('fail');
-    }
+    best.dead=true;
+    fisher.fight = { obj:best, x, y, chance, t:0, duration:0.9+Math.random()*0.5, tug:0 };
+    beep('shield');
     return;
   }
   const chance = best.kind==='junk'? 0.95 : 0.9;
@@ -948,6 +980,34 @@ function resolveCast(x,y){
     beep('catch');
   }
   trimFeed(); updateHud(); saveGame(); renderFisherFeed(); renderFisherInventoryPanel();
+}
+function finalizeFight(){
+  const f=fisher.fight; if(!f) return;
+  const best=f.obj, x=f.x, y=f.y;
+  const tier=TIERS[best.tierIdx];
+  const success = Math.random()<f.chance;
+  if(success){
+    let mult=1;
+    if(Math.random() < 0.02+(G.upgrades.luck||0)*0.004){ mult=3; toast('🍀 LUCKY CATCH! Triple value when sold!'); }
+    if(best.golden) mult*=2;
+    G.inventory.fish.push({tier:best.tierIdx, mult});
+    G.stats.totalCaught=(G.stats.totalCaught||0)+1; discover(best.tierIdx);
+    if(best.tierIdx>G.stats.highestTierCaught) G.stats.highestTierCaught=best.tierIdx;
+    addXP(4+best.tierIdx*2);
+    fisher.floaters.push({x,y:y-10,text:'Caught!',life:1.1,vy:-38});
+    for(let k=0;k<8;k++) fisher.ripples.push({x,y,r:4+Math.random()*6,life:1,color:'#eaf6ff'});
+    fisher.feed.unshift(`${tier.emoji} Caught a ${best.golden?'✨golden ':''}${tier.name}! (in your inventory)`);
+    trimFeed();
+    beep(tier.isBloop?'evolve':'catch');
+    if(tier.isBloop) onBloopCatch();
+    updateHud(); saveGame(); renderFisherFeed(); renderFisherInventoryPanel();
+  } else {
+    fisher.ripples.push({x,y,r:6,life:1,color:'#ef476f'});
+    for(let k=0;k<5;k++) fisher.ripples.push({x,y,r:3+Math.random()*5,life:0.8,color:'#ef476f'});
+    fisher.feed.unshift(`${tier.emoji} The ${tier.name} fought hard and got away!`); trimFeed(); renderFisherFeed();
+    beep('fail');
+  }
+  fisher.fight=null;
 }
 function onBloopCatch(){
   if(!G.stats.bloopReached){ G.stats.bloopReached=true; }
@@ -1035,25 +1095,26 @@ function useMap(){
 }
 function updateCastHint(){
   const el=document.getElementById('castHint'); if(!el) return;
-  if(fisher.cast.stage===0) el.textContent = fisher.running? 'Move the mouse to aim, then click to cast.' : '';
+  if(fisher.fight) el.textContent = `Fighting a ${TIERS[fisher.fight.obj.tierIdx].name}! Hold on...`;
+  else if(fisher.cast.stage===0) el.textContent = fisher.running? 'Move the mouse to aim, then click to cast.' : '';
   else if(fisher.cast.stage===1) el.textContent = 'Casting... click again to lower your line! (2 more clicks)';
   else if(fisher.cast.stage===2) el.textContent = 'Click once more to set the hook!';
 }
 document.getElementById('fisherStart').addEventListener('click', ()=>{
   document.getElementById('fisherIntro').style.display='none';
-  fisher.objects=[]; fisher.ripples=[]; fisher.floaters=[];
+  fisher.objects=[]; fisher.ripples=[]; fisher.floaters=[]; fisher.fight=null; fisher.bubbles=[]; fisher.bubbleTimer=0;
   fisher.cast={stage:0,x:0,y:0,lastT:0}; fisher.mapBoostTimer=0; fisher.spawnTimer=0.4;
   fisher.running=true;
   updateCastHint();
 });
 function fisherHandleMove(e){
-  if(!fisher.running || fisher.cast.stage!==0) return;
+  if(!fisher.running || fisher.fight || fisher.cast.stage!==0) return;
   const p=canvasPoint(e,fisherCanvas);
   fisher.aimX = Math.max(40,Math.min(760,p.x));
   fisher.aimY = Math.max(WATERLINE+10,Math.min(fisherEffectiveMaxY(),p.y));
 }
 function fisherHandleClick(e){
-  if(!fisher.running) return;
+  if(!fisher.running || fisher.fight) return;
   if(e.preventDefault) e.preventDefault();
   fisherHandleMove(e);
   if(fisher.cast.stage===0){
@@ -1093,6 +1154,13 @@ function updateFisher(dt){
   renderFisherMapUI();
   if(!fisher.running) return;
   if(fisher.mapBoostTimer>0) fisher.mapBoostTimer=Math.max(0,fisher.mapBoostTimer-dt);
+  if(fisher.fight){
+    fisher.fight.t += dt;
+    fisher.fight.tug = Math.sin(fisher.fight.t*14)*0.5+0.5;
+    updateCastHint();
+    if(fisher.fight.t >= fisher.fight.duration){ finalizeFight(); updateCastHint(); }
+    return;
+  }
   if(fisher.cast.stage>0 && (fisher.t-fisher.cast.lastT)>1.8){
     fisher.cast.stage=0; toast('The line went slack — recast!'); updateCastHint();
   }
@@ -1108,6 +1176,15 @@ function updateFisher(dt){
   }
   for(let i=fisher.ripples.length-1;i>=0;i--){ const r=fisher.ripples[i]; r.r+=90*dt; r.life-=dt*2.2; if(r.life<=0) fisher.ripples.splice(i,1); }
   for(let i=fisher.floaters.length-1;i>=0;i--){ const f=fisher.floaters[i]; f.y+=f.vy*dt; f.life-=dt*0.9; if(f.life<=0) fisher.floaters.splice(i,1); }
+  fisher.bubbleTimer-=dt;
+  if(fisher.bubbleTimer<=0){
+    fisher.bubbleTimer=0.3+Math.random()*0.4;
+    fisher.bubbles.push({x:20+Math.random()*(FISHER_W-40), y:FISHER_H-10, vy:-(18+Math.random()*14), r:1.5+Math.random()*2.5, wob:Math.random()*10});
+  }
+  for(let i=fisher.bubbles.length-1;i>=0;i--){
+    const b=fisher.bubbles[i]; b.y+=b.vy*dt;
+    if(b.y<WATERLINE+5) fisher.bubbles.splice(i,1);
+  }
   fisher.autoTimer+=dt;
   if(fisher.autoTimer>=1){
     fisher.autoTimer-=1;
@@ -1117,14 +1194,20 @@ function updateFisher(dt){
     }
   }
 }
-function drawAngler(ctx,t,castStage,castX,castY,aimX,aimY){
+function drawAngler(ctx,t,castStage,castX,castY,aimX,aimY,fight){
   const boatCenterX=400, boatY=WATERLINE-6+Math.sin(t*1.5)*3;
+  ctx.save();
+  ctx.globalAlpha=0.22; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(boatCenterX,boatY+30,66,10,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
   ctx.fillStyle='#7a4a2b';
   ctx.beginPath();
   ctx.moveTo(boatCenterX-70,boatY); ctx.lineTo(boatCenterX+70,boatY);
   ctx.lineTo(boatCenterX+50,boatY+22); ctx.lineTo(boatCenterX-50,boatY+22);
   ctx.closePath(); ctx.fill();
   ctx.fillStyle='#5c3a1e'; ctx.fillRect(boatCenterX-70,boatY-6,140,8);
+  ctx.strokeStyle='#4a2f18'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(boatCenterX-60,boatY+10); ctx.lineTo(boatCenterX-95,boatY+34); ctx.stroke();
   const outfit = OUTFITS.find(o=>o.id===G.cosmetics.equipped)||OUTFITS[0];
   const headX=boatCenterX-10, headY=boatY-34;
   ctx.fillStyle=outfit.shirt;
@@ -1144,29 +1227,72 @@ function drawAngler(ctx,t,castStage,castX,castY,aimX,aimY){
   const handX=headX+16, handY=boatY-20;
   ctx.strokeStyle='#e8b48a'; ctx.lineWidth=4; ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(headX+6,boatY-16); ctx.lineTo(handX,handY); ctx.stroke();
-  const rodTipX=handX+40, rodTipY=handY-30;
+  const bend = fight? Math.sin(fight.t*10)*0.35+fight.tug*0.5 : 0;
+  const rodTipX=handX+40-bend*14, rodTipY=handY-30+bend*10;
   ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(handX,handY); ctx.lineTo(rodTipX,rodTipY); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(handX,handY);
+  ctx.quadraticCurveTo(handX+22-bend*10,handY-18+bend*8,rodTipX,rodTipY);
+  ctx.stroke();
+  ctx.strokeStyle='#8a6a3a'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(handX,handY,5,0,Math.PI*2); ctx.stroke();
   let lineToX, lineToY, progress;
-  if(castStage===0){ lineToX=aimX; lineToY=aimY; progress=0.2; }
+  if(fight){ lineToX=fight.x; lineToY=fight.y; progress=1; }
+  else if(castStage===0){ lineToX=aimX; lineToY=aimY; progress=0.2; }
   else { lineToX=castX; lineToY=castY; progress=castStage/3; }
   const curX = rodTipX+(lineToX-rodTipX)*progress;
   const curY = rodTipY+(lineToY-rodTipY)*progress;
-  ctx.strokeStyle = castStage===0? 'rgba(255,255,255,0.35)':'rgba(255,255,255,0.85)';
-  ctx.setLineDash(castStage===0?[4,4]:[]);
-  ctx.lineWidth=1.5;
+  ctx.strokeStyle = castStage===0&&!fight? 'rgba(255,255,255,0.35)':'rgba(255,255,255,0.85)';
+  ctx.setLineDash(castStage===0&&!fight?[4,4]:[]);
+  ctx.lineWidth = fight? 2.2 : 1.5;
   ctx.beginPath(); ctx.moveTo(rodTipX,rodTipY); ctx.lineTo(curX,curY); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = castStage===0? 'rgba(255,255,255,0.5)':'#e74c3c';
-  ctx.beginPath(); ctx.arc(curX,curY,castStage===0?4:6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = fight? '#ffd166' : (castStage===0? 'rgba(255,255,255,0.5)':'#e74c3c');
+  ctx.beginPath(); ctx.arc(curX,curY,fight?7:(castStage===0?4:6),0,Math.PI*2); ctx.fill();
 }
 function renderFisher(){
   const skyGrad=fctx.createLinearGradient(0,0,0,WATERLINE);
   skyGrad.addColorStop(0,'#bfe3f5'); skyGrad.addColorStop(1,'#8fc8e8');
   fctx.fillStyle=skyGrad; fctx.fillRect(0,0,FISHER_W,WATERLINE);
+  fctx.save();
+  fctx.fillStyle='rgba(255,250,210,0.9)'; fctx.shadowColor='rgba(255,240,180,0.8)'; fctx.shadowBlur=30;
+  fctx.beginPath(); fctx.arc(700,30,20,0,Math.PI*2); fctx.fill();
+  fctx.restore();
+  fctx.fillStyle='rgba(255,255,255,0.75)';
+  for(let c=0;c<3;c++){
+    const cx=((fisher.t*6+c*260)%(FISHER_W+160))-80, cy=22+c*14;
+    for(let k=0;k<3;k++){ fctx.beginPath(); fctx.ellipse(cx+k*16,cy,16,9,0,0,Math.PI*2); fctx.fill(); }
+  }
+  fctx.strokeStyle='rgba(90,90,110,0.6)'; fctx.lineWidth=1.5;
+  for(let s=0;s<2;s++){
+    const sx=((fisher.t*40+s*300)%(FISHER_W+100))-50, sy=50+s*10+Math.sin(fisher.t*3+s)*4;
+    const wing=Math.sin(fisher.t*8+s*2)*5;
+    fctx.beginPath(); fctx.moveTo(sx-8,sy+wing); fctx.quadraticCurveTo(sx,sy-6,sx+8,sy+wing); fctx.stroke();
+  }
   const waterGrad=fctx.createLinearGradient(0,WATERLINE,0,FISHER_H);
   waterGrad.addColorStop(0,'#1e7fae'); waterGrad.addColorStop(1,'#03263e');
   fctx.fillStyle=waterGrad; fctx.fillRect(0,WATERLINE,FISHER_W,FISHER_H-WATERLINE);
+  fctx.strokeStyle='rgba(255,255,255,0.5)'; fctx.lineWidth=2;
+  fctx.beginPath();
+  for(let x=0;x<=FISHER_W;x+=14){
+    const y=WATERLINE+Math.sin(x*0.05+fisher.t*1.8)*2.5;
+    x===0? fctx.moveTo(x,y): fctx.lineTo(x,y);
+  }
+  fctx.stroke();
+  for(let g=0;g<6;g++){
+    const gx=(g*137+ (fisher.t*30)%137)% (FISHER_W-40)+20;
+    const gy=WATERLINE+8+((g*53)%40);
+    const glint=Math.max(0,Math.sin(fisher.t*3+g*1.7));
+    if(glint>0.55){
+      fctx.fillStyle=`rgba(255,255,255,${(glint-0.55)*1.6})`;
+      fctx.fillRect(gx,gy,10+glint*6,1.5);
+    }
+  }
+  for(const b of fisher.bubbles){
+    const bx=b.x+Math.sin(fisher.t*3+b.wob)*4;
+    fctx.beginPath(); fctx.arc(bx,b.y,b.r,0,Math.PI*2);
+    fctx.strokeStyle='rgba(255,255,255,0.35)'; fctx.lineWidth=1; fctx.stroke();
+  }
   const limitY = fisherEffectiveMaxY();
   fctx.save();
   fctx.strokeStyle = fisher.mapBoostTimer>0? 'rgba(255,209,102,0.7)':'rgba(255,255,255,0.35)';
@@ -1178,10 +1304,13 @@ function renderFisher(){
     fctx.fillStyle='rgba(0,0,0,0.18)';
     fctx.fillRect(0,limitY,FISHER_W,FISHER_H-limitY);
   }
+  const fisherDepthSpan=Math.max(40,fisherEffectiveMaxY()-WATERLINE);
   for(const o of fisher.objects){
+    if(fisher.fight && fisher.fight.obj===o) continue;
     const wobble = Math.sin(fisher.t*2.4+o.phase)*4;
     if(o.kind==='fish'){
-      drawCreature(fctx, TIERS[o.tierIdx], o.x, o.y+wobble, tierFontSize(o.tierIdx,18), o.vx<0, o.golden, fisher.t);
+      const depthDark=Math.max(0,Math.min(0.5,(o.y-WATERLINE)/fisherDepthSpan*0.5));
+      drawCreature(fctx, TIERS[o.tierIdx], o.x, o.y+wobble, tierFontSize(o.tierIdx,18), o.vx<0, o.golden, fisher.t, o.phase, depthDark);
     } else {
       fctx.save(); fctx.translate(o.x,o.y+wobble);
       fctx.font='24px sans-serif'; fctx.textAlign='center'; fctx.textBaseline='middle';
@@ -1189,7 +1318,16 @@ function renderFisher(){
       fctx.restore();
     }
   }
-  drawAngler(fctx, fisher.t, fisher.cast.stage, fisher.cast.x, fisher.cast.y, fisher.aimX, fisher.aimY);
+  if(fisher.fight){
+    const f=fisher.fight, o=f.obj;
+    const shake=Math.sin(f.t*22)*6, shakeY=Math.cos(f.t*18)*4;
+    drawCreature(fctx, TIERS[o.tierIdx], f.x+shake, f.y+shakeY, tierFontSize(o.tierIdx,18)*1.05, shake<0, o.golden, fisher.t, o.phase, 0);
+    for(let k=0;k<2;k++){
+      fctx.beginPath(); fctx.arc(f.x+shake,f.y+shakeY,10+k*6+Math.random()*3,0,Math.PI*2);
+      fctx.strokeStyle='rgba(255,255,255,0.5)'; fctx.lineWidth=1.2; fctx.stroke();
+    }
+  }
+  drawAngler(fctx, fisher.t, fisher.cast.stage, fisher.cast.x, fisher.cast.y, fisher.aimX, fisher.aimY, fisher.fight);
   for(const r of fisher.ripples){
     fctx.beginPath(); fctx.arc(r.x,r.y,r.r,0,Math.PI*2);
     fctx.strokeStyle=r.color; fctx.globalAlpha=Math.max(0,r.life); fctx.lineWidth=2; fctx.stroke(); fctx.globalAlpha=1;
@@ -1384,7 +1522,7 @@ function renderFish(){
     } else {
       const tier=TIERS[o.tier];
       const wobble=Math.sin(fish.t*2.6+o.phase)*4;
-      drawCreature(xctx, tier, o.x, o.y+wobble, tierFontSize(o.tier,20), o.vx<0, o.golden, fish.t);
+      drawCreature(xctx, tier, o.x, o.y+wobble, tierFontSize(o.tier,20), o.vx<0, o.golden, fish.t, o.phase);
     }
   }
   for(const p of fish.particles){
@@ -1394,7 +1532,7 @@ function renderFish(){
   const playerTier=TIERS[fish.tier];
   xctx.save();
   if(fish.invuln>0 && Math.floor(fish.t*12)%2===0) xctx.globalAlpha=0.4;
-  drawCreature(xctx, playerTier, 140, fish.y, tierFontSize(fish.tier,22), true, false, fish.t);
+  drawCreature(xctx, playerTier, 140, fish.y, tierFontSize(fish.tier,22), true, false, fish.t, 0);
   xctx.restore();
   if(!fish.running){
     xctx.fillStyle='rgba(0,0,0,0.25)'; xctx.fillRect(0,0,FISH_W,FISH_H);
