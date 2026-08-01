@@ -1,0 +1,16 @@
+{
+  "name": "drawing-perfect",
+  "version": "1.4.0",
+  "description": "Multiplayer drawing game: pick a word from 300 cards, draw it in 5 minutes, then everyone votes on the best artist.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
+}

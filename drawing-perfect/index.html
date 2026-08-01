@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Drawing Perfect</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- JOIN SCREEN -->
+  <section id="screen-join" class="screen active">
+    <div class="join-card">
+      <h1>🖌️ Drawing Perfect</h1>
+      <p class="subtitle">Pick a card, draw the word, get voted the best artist.</p>
+      <label>Your name</label>
+      <input id="input-name" maxlength="20" placeholder="Enter your name" autocomplete="off">
+      <label>Room code <span class="hint">(leave blank to create a new room)</span></label>
+      <input id="input-code" maxlength="4" placeholder="e.g. AB12" autocomplete="off" style="text-transform:uppercase">
+      <button id="btn-join" class="btn-primary">Join / Create Room</button>
+      <p id="join-error" class="error-text"></p>
+      <button id="btn-toggle-music" class="btn-small music-toggle" type="button">🔊 Music: On</button>
+      <div class="join-icon-row">
+        <button id="btn-open-friends-join" class="btn-small" type="button">👥 Friends</button>
+        <button id="btn-open-settings-join" class="btn-small" type="button">⚙️ Settings</button>
+        <button id="btn-open-about-join" class="btn-small" type="button">ℹ️ About</button>
+      </div>
+      <p class="version-tag">v1.5</p>
+    </div>
+  </section>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>⚙️ Settings</h2>
+        <button id="btn-close-settings" class="btn-small" type="button">✕</button>
+      </div>
+      <label>SFX Volume</label>
+      <input id="setting-sfx-volume" type="range" min="0" max="100" value="100" class="settings-slider">
+      <label>Music Volume</label>
+      <input id="setting-music-volume" type="range" min="0" max="100" value="100" class="settings-slider">
+      <label>Contrast</label>
+      <input id="setting-contrast" type="range" min="0" max="2" value="1" step="1" class="settings-slider">
+      <div class="contrast-labels"><span>Lower</span><span>Normal</span><span>Higher</span></div>
+    </div>
+  </div>
+
+  <!-- ABOUT MODAL -->
+  <div id="about-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>ℹ️ About</h2>
+        <button id="btn-close-about" class="btn-small" type="button">✕</button>
+      </div>
+      <p>Drawing Perfect is about making cool and funny drawings to test your ability.</p>
+      <p>Made by Coder-Claude. Testing every day.</p>
+    </div>
+  </div>
+
+  <!-- SHOP MODAL -->
+  <div id="shop-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🛍️ Shop</h2>
+        <button id="btn-close-shop" class="btn-small" type="button">✕</button>
+      </div>
+      <p class="hint">Spend coins you earn from games on icons that show up next to your name in chat. Win a round for coins — 1st place earns the most.</p>
+      <p>Your balance: <strong>🪙 <span id="shop-coin-balance">0</span></strong></p>
+      <p id="shop-error" class="error-text"></p>
+      <div id="shop-grid" class="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- FRIENDS MODAL -->
+  <div id="friends-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>👥 Friends</h2>
+        <button id="btn-close-friends" class="btn-small" type="button">✕</button>
+      </div>
+
+      <div id="friends-claim-section">
+        <p class="hint">Pick a username so friends can find you. This is separate from your in-game display name, and stays yours across sessions.</p>
+        <input id="input-claim-username" maxlength="20" placeholder="Choose a username" autocomplete="off">
+        <button id="btn-claim-username" class="btn-primary" type="button">Claim Username</button>
+        <p id="claim-error" class="error-text"></p>
+      </div>
+
+      <div id="friends-main-section" class="hidden">
+        <p class="hint">You are: <strong id="my-username-display"></strong> <button id="btn-rename-username" class="btn-small" type="button">Change</button></p>
+        <div id="rename-row" class="friends-add-row hidden">
+          <input id="input-rename-username" maxlength="20" placeholder="New username…" autocomplete="off">
+          <button id="btn-confirm-rename" class="btn-small" type="button">Save</button>
+        </div>
+        <p id="rename-error" class="error-text"></p>
+
+        <div class="friends-add-row">
+          <input id="input-add-friend" maxlength="20" placeholder="Add friend by username…" autocomplete="off">
+          <button id="btn-send-friend-request" class="btn-small" type="button">Send Request</button>
+        </div>
+        <p id="friend-request-error" class="error-text"></p>
+
+        <div id="incoming-requests-section" class="hidden">
+          <h3>Friend Requests</h3>
+          <div id="incoming-requests-list" class="friend-list"></div>
+        </div>
+
+        <div id="outgoing-requests-section" class="hidden">
+          <h3>Pending (sent)</h3>
+          <div id="outgoing-requests-list" class="friend-list"></div>
+        </div>
+
+        <h3>Your Friends</h3>
+        <div id="friends-list" class="friend-list"></div>
+        <p id="no-friends-msg" class="hint">No friends yet — send a request above!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOM LAYOUT (lobby / game / voting / results share this shell) -->
+  <section id="screen-room" class="screen">
+    <div id="reconnect-banner" class="reconnect-banner hidden">
+      <span>⚠️ Disconnected from the server.</span>
+      <button id="btn-reconnect" class="btn-primary" type="button">Reconnect</button>
+    </div>
+    <div class="game-layout">
+      <div class="main-panel">
+
+        <div class="players-here-bar">
+          <button id="btn-players-here" class="btn-small" type="button">👥 <span id="players-here-count">0</span> Here</button>
+          <div id="players-here-popover" class="players-here-popover hidden"></div>
+          <button id="btn-open-shop" class="btn-small coin-badge" type="button">🪙 <span id="coin-balance">0</span></button>
+        </div>
+
+        <!-- LOBBY -->
+        <div id="view-lobby" class="room-view">
+          <div class="room-header">
+            <div>Room Code: <span id="lobby-code" class="room-code"></span></div>
+            <button id="btn-copy-code" class="btn-small">Copy</button>
+          </div>
+          <h2>Waiting in Lobby</h2>
+
+          <div class="lobby-columns">
+            <div class="lobby-main-column">
+              <div id="host-settings" class="host-settings hidden">
+                <h3>Game Settings</h3>
+                <p id="suggest-hint" class="hint suggestion-hint hidden">👀 Viewing the host's settings — click any field to suggest a change in chat.</p>
+                <label>Game Mode</label>
+                <select id="setting-mode" data-suggest-label="Game Mode">
+                  <option value="normal">Normal</option>
+                  <option value="challenge">Challenge — limited strokes</option>
+                  <option value="perfectionist">Perfectionist — hard words, 10+ min</option>
+                  <option value="foggy">Foggy — draw nearly blind</option>
+                  <option value="additive">Additive — pass it on to add more</option>
+                  <option value="humanbody">Human Body — everyone draws one part</option>
+                  <option value="copyit">Copy It — trace a real reference photo</option>
+                  <option value="custom">Custom — type your own word</option>
+                </select>
+                <p id="mode-description" class="hint mode-description"></p>
+                <div id="challenge-settings" class="hidden">
+                  <label>Max strokes (1-10)</label>
+                  <input id="setting-max-strokes" type="number" min="1" max="10" value="3" data-suggest-label="Max strokes">
+                </div>
+                <label>Words per player</label>
+                <input id="setting-words" type="number" min="1" max="50" value="5" data-suggest-label="Words per player">
+                <label>Seconds per drawing</label>
+                <input id="setting-seconds" type="number" min="5" max="600" value="300" data-suggest-label="Seconds per drawing">
+                <label>Seconds to guess</label>
+                <input id="setting-guess-seconds" type="number" min="15" max="300" value="60" data-suggest-label="Seconds to guess">
+                <button id="btn-start" class="btn-primary">Start Game</button>
+              </div>
+              <p id="non-host-msg" class="hint">Waiting for the host to start the game…</p>
+            </div>
+
+            <div class="lobby-doodle">
+              <div class="lobby-doodle-header">✏️ Doodle while you wait</div>
+              <canvas id="lobby-paper" width="360" height="280"></canvas>
+              <button id="btn-lobby-clear" class="btn-small" type="button">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- DRAWING: card picker -->
+        <div id="view-card-picker" class="room-view hidden">
+          <div class="picker-header">
+            <h2>Pick a word to draw</h2>
+            <div class="progress-badge"><span id="progress-count">0</span> / <span id="progress-total">5</span> drawn</div>
+          </div>
+          <p id="body-part-banner" class="body-part-banner hidden"></p>
+          <input id="card-search" placeholder="Search words…" autocomplete="off">
+          <div id="card-grid" class="card-grid"></div>
+          <div id="custom-word-section" class="hidden">
+            <p class="hint">Type your own word to draw. Keep it specific — no super abstract words like "Color" or "Time".</p>
+            <input id="input-custom-word" maxlength="40" placeholder="Type a word or phrase to draw…" autocomplete="off">
+            <button id="btn-submit-custom-word" class="btn-primary" type="button">Draw This</button>
+            <p id="custom-word-error" class="error-text"></p>
+          </div>
+        </div>
+
+        <!-- DRAWING: canvas -->
+        <div id="view-canvas" class="room-view hidden">
+          <div class="canvas-header">
+            <div>Draw: <span id="current-word" class="current-word"></span></div>
+            <div id="strokes-left" class="timer hidden">3 strokes left</div>
+            <div id="word-timer" class="timer">5:00</div>
+          </div>
+          <div class="toolbar">
+            <div class="swatches" id="swatches"></div>
+            <input id="color-picker" type="color" value="#111111" title="Custom color">
+            <div class="size-presets" id="size-presets">
+              <button type="button" class="size-preset-btn" data-size="1">1px</button>
+              <button type="button" class="size-preset-btn" data-size="10">10px</button>
+              <button type="button" class="size-preset-btn" data-size="60">60px</button>
+              <button type="button" class="size-preset-btn" data-size="100">100px</button>
+            </div>
+            <label class="tool-label">Size <input id="brush-size" type="range" min="1" max="120" value="5"> <span id="brush-size-label">5px</span></label>
+            <button id="btn-undo" class="btn-small" title="Undo">↩ Undo</button>
+            <button id="btn-redo" class="btn-small" title="Redo">↪ Redo</button>
+            <button id="btn-bucket" class="btn-small">🪣 Fill</button>
+            <button id="btn-eraser" class="btn-small">Eraser</button>
+            <button id="btn-clear" class="btn-small">Clear</button>
+            <button id="btn-peek" class="btn-small hidden" title="Peek through the fog">👁 Peek</button>
+            <button id="btn-reference" class="btn-small hidden" title="Show/hide the reference photo">📷 Reference</button>
+            <button id="btn-submit" class="btn-primary">Done (Enter ⏎)</button>
+          </div>
+          <div class="canvas-wrap">
+            <div class="canvas-stack">
+              <canvas id="paper" width="900" height="600"></canvas>
+              <div id="fog-overlay" class="fog-overlay hidden"></div>
+              <div id="reference-overlay" class="reference-overlay hidden">
+                <div id="reference-loading" class="reference-loading hidden">Loading photo…</div>
+                <div id="reference-missing" class="reference-missing hidden">No reference photo found — draw from imagination!</div>
+                <img id="reference-img" alt="Reference photo">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DRAWING: waiting for others -->
+        <div id="view-waiting" class="room-view hidden">
+          <h2 id="waiting-heading">Nice work! 🎉</h2>
+          <p id="waiting-hint" class="hint">Waiting for other players to finish drawing…</p>
+          <button id="btn-force-end" class="btn-small hidden">Skip waiting &amp; start guessing (host)</button>
+        </div>
+
+        <!-- GUESSING -->
+        <div id="view-guessing" class="room-view hidden">
+          <div class="picker-header">
+            <h2>Guess what everyone drew!</h2>
+            <div id="guess-timer" class="timer">1:00</div>
+          </div>
+          <p class="hint">Type your guess under each drawing. Guess a drawing correctly and its artist earns a point. You can't guess your own.</p>
+          <div id="guessing-gallery" class="gallery"></div>
+          <button id="btn-submit-guesses" class="btn-primary">Submit Guesses</button>
+          <button id="btn-force-end-guessing" class="btn-small hidden">Skip waiting &amp; move to voting (host)</button>
+        </div>
+
+        <!-- VOTING -->
+        <div id="view-voting" class="room-view hidden">
+          <h2>Vote for the best artist!</h2>
+          <p class="hint">You can't vote for yourself. Pick your favorite portfolio. Each vote is worth 2 points.</p>
+          <div id="gallery" class="gallery"></div>
+          <button id="btn-force-end-voting" class="btn-small hidden">Skip waiting &amp; show results (host)</button>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="view-results" class="room-view hidden">
+          <h2>Results</h2>
+          <div id="winner-banner" class="winner-banner"></div>
+          <div id="results-list" class="results-list"></div>
+          <div id="body-composite" class="body-composite hidden">
+            <h3>🧍 The Completed Human!</h3>
+            <div id="body-composite-parts" class="body-composite-parts"></div>
+          </div>
+          <button id="btn-play-again" class="btn-primary hidden">Play Again</button>
+          <p id="results-non-host-msg" class="hint hidden">Waiting for the host to start a new game…</p>
+        </div>
+
+      </div>
+
+      <aside class="chat-panel">
+        <div class="chat-title-row">
+          <span class="chat-title">Players</span>
+          <div class="chat-title-actions">
+            <button id="btn-open-friends-room" class="btn-small" type="button">👥 Friends</button>
+            <button id="btn-open-settings-room" class="btn-small" type="button">⚙️</button>
+            <button id="btn-open-about-room" class="btn-small" type="button">ℹ️</button>
+          </div>
+        </div>
+        <div id="roster" class="roster"></div>
+        <div class="chat-title-row">
+          <span class="chat-title">Chat</span>
+          <button id="btn-toggle-tts" class="btn-small" type="button" title="Read chat aloud">🔈 Voice: Off</button>
+        </div>
+        <div id="chat-log" class="chat-log"></div>
+        <div id="emoji-panel" class="emoji-panel hidden"></div>
+        <form id="chat-form" class="chat-form">
+          <button id="btn-emoji" type="button" class="btn-small" title="Insert emoji">😀</button>
+          <input id="chat-input" maxlength="300" placeholder="Say something…" autocomplete="off">
+          <button type="submit" class="btn-small">Send</button>
+        </form>
+      </aside>
+    </div>
+  </section>
+
+</div>
+
+<script src="words.js"></script>
+<script src="hardwords.js"></script>
+<script src="audio.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
