@@ -12,6 +12,17 @@
   --radius: 14px;
 }
 
+/* Night Owl secret achievement reward — grey theme instead of bright white panels */
+body[data-theme="dark"] {
+  --bg: #1c1a24;
+  --bg-grad: linear-gradient(135deg, #1c1a24 0%, #26222f 100%);
+  --panel: #3a3a42;
+  --panel-alt: #2f2f37;
+  --ink: #e8e6f0;
+  --border: #4c4c56;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -71,6 +82,12 @@ input, textarea {
   background: var(--panel-alt);
 }
 .join-card input:focus { outline: 2px solid var(--accent2); }
+.join-card input:disabled { opacity: .75; cursor: not-allowed; }
+.name-locked-hint { margin: 6px 0 0; font-size: 12px; }
+.link-btn {
+  background: none; border: none; padding: 0; margin: 0;
+  color: var(--accent2); font-weight: 700; font-size: 12px; cursor: pointer; text-decoration: underline;
+}
 .error-text { color: var(--accent); font-size: 13px; min-height: 18px; margin-top: 10px; }
 .music-toggle { margin-top: 8px; width: 100%; }
 .join-icon-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -134,7 +151,54 @@ body[data-contrast="2"] #app { filter: contrast(1.25) saturate(1.1); }
 .shop-item button:disabled { opacity: .55; cursor: not-allowed; }
 .shop-item.owned { border-color: var(--accent3); }
 .shop-item.equipped button.btn-equip { background: var(--accent3); color: white; border-color: var(--accent3); }
-.chat-msg .who-icon { margin-right: 3px; }
+
+/* ---------- Achievements ---------- */
+#achievements-search {
+  width: 100%; margin: 10px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-alt); font-size: 14px;
+}
+.achievements-list { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; }
+.achievement-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--panel-alt); border: 1px solid var(--border); border-radius: 10px;
+}
+.achievement-row.locked { opacity: .55; }
+.achievement-row.unlocked { border-color: var(--accent3); }
+.achievement-row .achievement-emoji { font-size: 20px; flex-shrink: 0; }
+.achievement-row .achievement-name { font-weight: 700; font-size: 13px; }
+.achievement-row .achievement-desc { font-size: 12px; color: #8a8299; }
+
+/* ---------- Stats ---------- */
+.stats-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+.stat-tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px; text-align: center;
+  background: var(--panel-alt); border: 1px solid var(--border); border-radius: 10px;
+}
+.stat-tile .stat-value { font-size: 22px; font-weight: 800; color: var(--accent2); }
+.stat-tile .stat-label { font-size: 11px; color: #8a8299; }
+
+.achievement-toast {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; z-index: 999;
+  background: linear-gradient(135deg, #fff3c4, #ffe08a); color: #6b4b00;
+  border-radius: 14px; padding: 12px 18px; box-shadow: var(--shadow);
+  transition: opacity .3s, transform .3s; max-width: 90vw;
+}
+.achievement-toast.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-20px); }
+.achievement-toast-icon { font-size: 28px; }
+.achievement-toast-title { font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.achievement-toast-name { font-weight: 700; font-size: 15px; }
+.achievement-toast-desc { font-size: 12px; opacity: .85; }
+
+.dark-mode-row { margin-top: 14px; }
+.dark-mode-row label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.name-icon-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: auto; height: 18px; padding: 0 7px; border-radius: 9px; font-size: 10px;
+  font-weight: 600; line-height: 1; white-space: nowrap;
+  background: var(--panel-alt); border: 1px solid var(--border); flex-shrink: 0;
+  margin-right: 5px; vertical-align: middle;
+}
+.chat-msg .name-icon-badge { height: 16px; padding: 0 6px; font-size: 9px; margin-right: 4px; }
 
 .btn-primary {
   margin-top: 20px;
@@ -205,6 +269,7 @@ body[data-contrast="2"] #app { filter: contrast(1.25) saturate(1.1); }
   position: relative;
 }
 .players-here-bar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; position: relative; }
+.players-here-bar .music-toggle { width: auto; margin-top: 0; }
 .coin-badge { color: #b8860b; font-weight: 700; }
 .players-here-popover {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
@@ -306,6 +371,10 @@ body[data-contrast="2"] #app { filter: contrast(1.25) saturate(1.1); }
 .body-part-banner {
   margin: 10px 0 0; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 13px;
   background: linear-gradient(135deg, #fff0e0, #ffe0c8); color: #8a5200; display: inline-block;
+}
+.body-part-reminder {
+  padding: 6px 12px; border-radius: 10px; font-weight: 700; font-size: 12px;
+  background: linear-gradient(135deg, #fff0e0, #ffe0c8); color: #8a5200; white-space: nowrap;
 }
 .progress-badge {
   background: var(--panel-alt); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--accent2);

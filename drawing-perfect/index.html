@@ -10,6 +10,15 @@
 
 <div id="app">
 
+  <div id="achievement-toast" class="achievement-toast hidden">
+    <div class="achievement-toast-icon">🏆</div>
+    <div>
+      <div id="achievement-toast-title" class="achievement-toast-title">Achievement Unlocked!</div>
+      <div id="achievement-toast-name" class="achievement-toast-name"></div>
+      <div id="achievement-toast-desc" class="achievement-toast-desc"></div>
+    </div>
+  </div>
+
   <!-- JOIN SCREEN -->
   <section id="screen-join" class="screen active">
     <div class="join-card">
@@ -17,6 +26,7 @@
       <p class="subtitle">Pick a card, draw the word, get voted the best artist.</p>
       <label>Your name</label>
       <input id="input-name" maxlength="20" placeholder="Enter your name" autocomplete="off">
+      <p id="name-locked-hint" class="hint name-locked-hint hidden">🔒 This is your Friends username. <button id="btn-change-locked-name" class="link-btn" type="button">Change it</button></p>
       <label>Room code <span class="hint">(leave blank to create a new room)</span></label>
       <input id="input-code" maxlength="4" placeholder="e.g. AB12" autocomplete="off" style="text-transform:uppercase">
       <button id="btn-join" class="btn-primary">Join / Create Room</button>
@@ -27,7 +37,7 @@
         <button id="btn-open-settings-join" class="btn-small" type="button">⚙️ Settings</button>
         <button id="btn-open-about-join" class="btn-small" type="button">ℹ️ About</button>
       </div>
-      <p class="version-tag">v1.5</p>
+      <p class="version-tag">v1.7</p>
     </div>
   </section>
 
@@ -45,6 +55,9 @@
       <label>Contrast</label>
       <input id="setting-contrast" type="range" min="0" max="2" value="1" step="1" class="settings-slider">
       <div class="contrast-labels"><span>Lower</span><span>Normal</span><span>Higher</span></div>
+      <div id="dark-mode-row" class="dark-mode-row hidden">
+        <label><input id="setting-dark-mode" type="checkbox"> 🦉 Dark Mode <span class="hint">(unlocked by the Night Owl achievement)</span></label>
+      </div>
     </div>
   </div>
 
@@ -57,6 +70,7 @@
       </div>
       <p>Drawing Perfect is about making cool and funny drawings to test your ability.</p>
       <p>Made by Coder-Claude. Testing every day.</p>
+      <p>YouTube channel: <a href="https://www.youtube.com/@ClaudeEDITZ2-xD2" target="_blank" rel="noopener noreferrer">Claude EDITZ2</a></p>
     </div>
   </div>
 
@@ -71,6 +85,30 @@
       <p>Your balance: <strong>🪙 <span id="shop-coin-balance">0</span></strong></p>
       <p id="shop-error" class="error-text"></p>
       <div id="shop-grid" class="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- STATS MODAL -->
+  <div id="stats-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>📊 Your Stats</h2>
+        <button id="btn-close-stats" class="btn-small" type="button">✕</button>
+      </div>
+      <div id="stats-list" class="stats-list"></div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS MODAL -->
+  <div id="achievements-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🏆 Achievements</h2>
+        <button id="btn-close-achievements" class="btn-small" type="button">✕</button>
+      </div>
+      <p class="hint"><span id="achievements-progress">0 / 0</span> unlocked. Secret achievements stay hidden until you find them.</p>
+      <input id="achievements-search" placeholder="Search achievements…" autocomplete="off">
+      <div id="achievements-list" class="achievements-list"></div>
     </div>
   </div>
 
@@ -132,6 +170,9 @@
         <div class="players-here-bar">
           <button id="btn-players-here" class="btn-small" type="button">👥 <span id="players-here-count">0</span> Here</button>
           <div id="players-here-popover" class="players-here-popover hidden"></div>
+          <button id="btn-toggle-music-room" class="btn-small music-toggle" type="button">🔊 Music: On</button>
+          <button id="btn-open-stats" class="btn-small" type="button">📊 Stats</button>
+          <button id="btn-open-achievements" class="btn-small" type="button">🏆 Achievements</button>
           <button id="btn-open-shop" class="btn-small coin-badge" type="button">🪙 <span id="coin-balance">0</span></button>
         </div>
 
@@ -158,6 +199,7 @@
                   <option value="humanbody">Human Body — everyone draws one part</option>
                   <option value="copyit">Copy It — trace a real reference photo</option>
                   <option value="custom">Custom — type your own word</option>
+                  <option value="solo">Solo — Copy It, just you</option>
                 </select>
                 <p id="mode-description" class="hint mode-description"></p>
                 <div id="challenge-settings" class="hidden">
@@ -204,6 +246,7 @@
         <div id="view-canvas" class="room-view hidden">
           <div class="canvas-header">
             <div>Draw: <span id="current-word" class="current-word"></span></div>
+            <div id="canvas-body-part" class="body-part-reminder hidden"></div>
             <div id="strokes-left" class="timer hidden">3 strokes left</div>
             <div id="word-timer" class="timer">5:00</div>
           </div>
@@ -271,6 +314,7 @@
           <h2>Results</h2>
           <div id="winner-banner" class="winner-banner"></div>
           <div id="results-list" class="results-list"></div>
+          <div id="solo-gallery" class="gallery-thumbs hidden"></div>
           <div id="body-composite" class="body-composite hidden">
             <h3>🧍 The Completed Human!</h3>
             <div id="body-composite-parts" class="body-composite-parts"></div>
@@ -311,6 +355,7 @@
 <script src="words.js"></script>
 <script src="hardwords.js"></script>
 <script src="audio.js"></script>
+<script src="achievements.js"></script>
 <script src="client.js"></script>
 </body>
 </html>

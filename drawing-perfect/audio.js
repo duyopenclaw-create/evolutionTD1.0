@@ -4,6 +4,7 @@ const GameAudio = (() => {
   let musicTimer = null;
   let sfxVolume = 1;
   let musicVolume = 1;
+  let activeMusicNotes = []; // { osc1, osc2, gain } for notes currently scheduled/sounding
 
   function ensureCtx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -12,7 +13,7 @@ const GameAudio = (() => {
   }
 
   // a soft plucked-piano-ish tone: sine fundamental + quiet triangle overtone, quick attack, exponential decay
-  function pianoNote(freq, startTime, duration, peakGain) {
+  function pianoNote(freq, startTime, duration, peakGain, track = false) {
     if (!enabled) return;
     const ac = ensureCtx();
     const osc1 = ac.createOscillator();
@@ -39,6 +40,32 @@ const GameAudio = (() => {
     osc2.start(startTime);
     osc1.stop(startTime + duration + 0.05);
     osc2.stop(startTime + duration + 0.05);
+
+    if (track) {
+      const entry = { osc1, osc2, gain };
+      activeMusicNotes.push(entry);
+      osc1.onended = () => {
+        const idx = activeMusicNotes.indexOf(entry);
+        if (idx !== -1) activeMusicNotes.splice(idx, 1);
+      };
+    }
+  }
+
+  // immediately silence every currently-scheduled/sounding music note instead of
+  // letting up to a full loop's worth (~8s) of already-scheduled notes play out
+  function killActiveMusicNotes() {
+    if (!ctx) { activeMusicNotes = []; return; }
+    const now = ctx.currentTime;
+    activeMusicNotes.forEach(({ osc1, osc2, gain }) => {
+      try {
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+        osc1.stop(now + 0.06);
+        osc2.stop(now + 0.06);
+      } catch (_) { /* already stopped */ }
+    });
+    activeMusicNotes = [];
   }
 
   function sfx(freqs, peak = 0.15, gap = 0.09, dur = 0.16) {
@@ -67,7 +94,7 @@ const GameAudio = (() => {
     const ac = ensureCtx();
     let t = ac.currentTime + 0.1;
     MELODY.forEach(freq => {
-      if (musicVolume > 0) pianoNote(freq, t, NOTE_LEN * 0.9, 0.06 * musicVolume);
+      if (musicVolume > 0) pianoNote(freq, t, NOTE_LEN * 0.9, 0.06 * musicVolume, true);
       t += NOTE_LEN;
     });
     musicTimer = setTimeout(scheduleMenuLoop, MELODY.length * NOTE_LEN * 1000 - 60);
@@ -82,6 +109,7 @@ const GameAudio = (() => {
   function stopMenuMusic() {
     if (musicTimer) clearTimeout(musicTimer);
     musicTimer = null;
+    killActiveMusicNotes();
   }
 
   function setEnabled(v) {

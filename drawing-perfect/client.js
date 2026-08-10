@@ -6,6 +6,25 @@
     return NAME_COLORS[id % NAME_COLORS.length];
   }
 
+  function iconLabel(iconId) {
+    if (!iconId) return '';
+    const item = iconCatalog.find(i => i.id === iconId)
+      || (typeof SECRET_ICONS !== 'undefined' ? SECRET_ICONS[iconId] : null);
+    return item ? `${item.emoji} ${item.name}` : iconId;
+  }
+
+  function makeIconBadge(iconId) {
+    if (!iconId) return null;
+    const badge = document.createElement('span');
+    badge.className = 'name-icon-badge';
+    badge.textContent = iconLabel(iconId);
+    return badge;
+  }
+
+  function iconBadgeHtml(iconId) {
+    return iconId ? `<span class="name-icon-badge">${escapeHtml(iconLabel(iconId))}</span>` : '';
+  }
+
   function getDeviceId() {
     try {
       let id = localStorage.getItem('dp_device_id');
@@ -67,6 +86,9 @@
 
   let wallet = { coins: 0, ownedIcons: [], equippedIcon: null };
   let iconCatalog = [];
+  let modPrice = 2500;
+  let unlockedAchievements = [];
+  let playerStats = {};
 
   // ---------- dom ----------
   const $ = id => document.getElementById(id);
@@ -86,6 +108,22 @@
   const btnOpenShop = $('btn-open-shop');
   const shopModal = $('shop-modal');
   const btnCloseShop = $('btn-close-shop');
+  const btnOpenStats = $('btn-open-stats');
+  const statsModal = $('stats-modal');
+  const btnCloseStats = $('btn-close-stats');
+  const statsListEl = $('stats-list');
+  const btnOpenAchievements = $('btn-open-achievements');
+  const achievementsModal = $('achievements-modal');
+  const btnCloseAchievements = $('btn-close-achievements');
+  const achievementsProgressEl = $('achievements-progress');
+  const achievementsSearchEl = $('achievements-search');
+  const achievementsListEl = $('achievements-list');
+  const achievementToastEl = $('achievement-toast');
+  const achievementToastTitleEl = $('achievement-toast-title');
+  const achievementToastNameEl = $('achievement-toast-name');
+  const achievementToastDescEl = $('achievement-toast-desc');
+  const darkModeRow = $('dark-mode-row');
+  const settingDarkMode = $('setting-dark-mode');
   const shopCoinBalanceEl = $('shop-coin-balance');
   const coinBalanceEl = $('coin-balance');
   const shopErrorEl = $('shop-error');
@@ -106,6 +144,7 @@
   const progressCount = $('progress-count');
   const progressTotal = $('progress-total');
   const bodyPartBanner = $('body-part-banner');
+  const canvasBodyPart = $('canvas-body-part');
   const cardSearch = $('card-search');
   const cardGrid = $('card-grid');
   const customWordSection = $('custom-word-section');
@@ -214,6 +253,14 @@
     if (!name) { joinError.textContent = 'Please enter your name.'; return; }
     joinError.textContent = '';
     btnJoin.disabled = true;
+    if (!myUsername) {
+      // No claimed Friends username yet — best-effort claim this name so it becomes
+      // your forced display name from now on. Doesn't block joining if it fails (taken, etc).
+      ensureFriendsSocket();
+      const trySend = () => friendsWs.send(JSON.stringify({ type: 'claimUsername', username: name }));
+      if (friendsWs.readyState === WebSocket.OPEN) trySend();
+      else friendsWs.addEventListener('open', trySend, { once: true });
+    }
     connect(name, inputCode.value);
   });
 
@@ -239,18 +286,26 @@
 
   // ---------- audio ----------
   const btnToggleMusic = $('btn-toggle-music');
+  const btnToggleMusicRoom = $('btn-toggle-music-room');
+  const musicToggleButtons = [btnToggleMusic, btnToggleMusicRoom];
   document.addEventListener('pointerdown', function unlockAudioOnce() {
     GameAudio.ensureCtx();
     GameAudio.startMenuMusic();
     document.removeEventListener('pointerdown', unlockAudioOnce);
   }, { once: true });
 
-  btnToggleMusic.addEventListener('click', () => {
+  function setMusicButtonsText(on) {
+    musicToggleButtons.forEach(btn => { btn.textContent = on ? '🔊 Music: On' : '🔇 Music: Off'; });
+  }
+
+  function toggleMusic() {
     const next = !GameAudio.isEnabled();
     GameAudio.setEnabled(next);
-    btnToggleMusic.textContent = next ? '🔊 Music: On' : '🔇 Music: Off';
+    setMusicButtonsText(next);
     if (next) GameAudio.startMenuMusic();
-  });
+  }
+
+  musicToggleButtons.forEach(btn => btn.addEventListener('click', toggleMusic));
 
   // ---------- settings modal (sfx/music volume, contrast) ----------
   const settingsModal = $('settings-modal');
@@ -320,7 +375,11 @@
 
   function renderShop() {
     shopGridEl.innerHTML = '';
-    iconCatalog.forEach(item => {
+    // secret achievement icons (e.g. clown, clover) you already own but can't buy — still list them so they can be equipped
+    const secretOwned = wallet.ownedIcons
+      .filter(id => !iconCatalog.some(i => i.id === id))
+      .map(id => ({ ...((typeof SECRET_ICONS !== 'undefined' && SECRET_ICONS[id]) || { id, emoji: '❓', name: id }), secret: true }));
+    [...iconCatalog, ...secretOwned].forEach(item => {
       const owned = wallet.ownedIcons.includes(item.id);
       const equipped = wallet.equippedIcon === item.id;
       const div = document.createElement('div');
@@ -338,7 +397,7 @@
 
       const price = document.createElement('div');
       price.className = 'shop-item-price';
-      price.textContent = owned ? 'Owned' : `🪙 ${item.price}`;
+      price.textContent = item.secret ? '🌟 Secret' : (owned ? 'Owned' : `🪙 ${item.price}`);
       div.appendChild(price);
 
       const btn = document.createElement('button');
@@ -389,6 +448,157 @@
   btnCloseShop.addEventListener('click', closeShopModal);
   shopModal.addEventListener('click', e => { if (e.target === shopModal) closeShopModal(); });
 
+  // ---------- stats ----------
+  const STAT_LABELS = {
+    wordsDrawn: 'Words Drawn',
+    gamesPlayed: 'Games Played',
+    gamesWon: 'Games Won',
+    votesReceived: 'Votes Received',
+    votesCast: 'Votes Cast',
+    chatMessages: 'Chat Messages',
+    coinsEarned: 'Coins Earned',
+    coinsSpent: 'Coins Spent',
+    roomsHosted: 'Rooms Hosted',
+    friendsAdded: 'Friends Added',
+    modPromotions: 'Times Made Mod',
+    modesPlayed: 'Modes Played',
+    iconsOwned: 'Icons Owned',
+    copyitHighMatches: '80%+ Copy It Matches',
+    copyitPerfectMatches: '100% Copy It Matches',
+    wordsDrawn_normal: 'Normal Words',
+    wordsDrawn_challenge: 'Challenge Words',
+    wordsDrawn_perfectionist: 'Perfectionist Words',
+    wordsDrawn_foggy: 'Foggy Words',
+    wordsDrawn_additive: 'Additive Words',
+    wordsDrawn_humanbody: 'Human Body Words',
+    wordsDrawn_copyit: 'Copy It Words',
+    wordsDrawn_custom: 'Custom Words',
+  };
+  const STAT_ORDER = [
+    'wordsDrawn', 'gamesPlayed', 'gamesWon', 'votesReceived', 'votesCast', 'chatMessages',
+    'coinsEarned', 'coinsSpent', 'iconsOwned', 'modesPlayed', 'roomsHosted', 'friendsAdded',
+    'modPromotions', 'copyitHighMatches', 'copyitPerfectMatches',
+    'wordsDrawn_normal', 'wordsDrawn_challenge', 'wordsDrawn_perfectionist', 'wordsDrawn_foggy',
+    'wordsDrawn_additive', 'wordsDrawn_humanbody', 'wordsDrawn_copyit', 'wordsDrawn_custom',
+  ];
+
+  function renderStats() {
+    statsListEl.innerHTML = '';
+    STAT_ORDER.forEach(key => {
+      const value = playerStats[key] || 0;
+      const tile = document.createElement('div');
+      tile.className = 'stat-tile';
+      tile.innerHTML = `<div class="stat-value">${value}</div><div class="stat-label">${escapeHtml(STAT_LABELS[key] || key)}</div>`;
+      statsListEl.appendChild(tile);
+    });
+  }
+
+  function openStatsModal() {
+    renderStats();
+    statsModal.classList.remove('hidden');
+  }
+  function closeStatsModal() { statsModal.classList.add('hidden'); }
+  btnOpenStats.addEventListener('click', openStatsModal);
+  btnCloseStats.addEventListener('click', closeStatsModal);
+  statsModal.addEventListener('click', e => { if (e.target === statsModal) closeStatsModal(); });
+
+  // ---------- achievements ----------
+  const ALL_ACHIEVEMENTS = (typeof ACHIEVEMENTS !== 'undefined') ? ACHIEVEMENTS : [];
+
+  function renderAchievements() {
+    const filter = achievementsSearchEl.value.trim().toLowerCase();
+    achievementsListEl.innerHTML = '';
+    let unlockedCount = 0;
+    ALL_ACHIEVEMENTS.forEach(ach => {
+      const isUnlocked = unlockedAchievements.includes(ach.id);
+      if (isUnlocked) unlockedCount++;
+      const showSecretHidden = ach.secret && !isUnlocked;
+      const name = showSecretHidden ? '??? Secret Achievement' : ach.name;
+      const desc = showSecretHidden ? "You haven't found this one yet." : ach.description;
+      if (filter && !showSecretHidden && !name.toLowerCase().includes(filter) && !desc.toLowerCase().includes(filter)) return;
+      if (filter && showSecretHidden && !'secret'.includes(filter) && !'???'.includes(filter)) return;
+
+      const row = document.createElement('div');
+      row.className = 'achievement-row ' + (isUnlocked ? 'unlocked' : 'locked');
+      const emoji = document.createElement('div');
+      emoji.className = 'achievement-emoji';
+      emoji.textContent = isUnlocked ? (ach.secret ? '🌟' : '🏆') : '🔒';
+      row.appendChild(emoji);
+      const text = document.createElement('div');
+      text.innerHTML = `<div class="achievement-name">${escapeHtml(name)}</div><div class="achievement-desc">${escapeHtml(desc)}</div>`;
+      row.appendChild(text);
+      achievementsListEl.appendChild(row);
+    });
+    achievementsProgressEl.textContent = `${unlockedCount} / ${ALL_ACHIEVEMENTS.length}`;
+  }
+
+  function openAchievementsModal() {
+    achievementsSearchEl.value = '';
+    renderAchievements();
+    achievementsModal.classList.remove('hidden');
+  }
+  function closeAchievementsModal() { achievementsModal.classList.add('hidden'); }
+  btnOpenAchievements.addEventListener('click', openAchievementsModal);
+  btnCloseAchievements.addEventListener('click', closeAchievementsModal);
+  achievementsModal.addEventListener('click', e => { if (e.target === achievementsModal) closeAchievementsModal(); });
+  achievementsSearchEl.addEventListener('input', renderAchievements);
+
+  let achievementToastTimer = null;
+  function showAchievementToast(ach) {
+    achievementToastTitleEl.textContent = 'Achievement Unlocked!';
+    achievementToastNameEl.textContent = ach.name;
+    achievementToastDescEl.textContent = ach.description;
+    achievementToastEl.classList.remove('hidden');
+    GameAudio.sfxWin();
+    clearTimeout(achievementToastTimer);
+    achievementToastTimer = setTimeout(() => achievementToastEl.classList.add('hidden'), 4500);
+  }
+
+  // ---------- dark mode (Night Owl secret reward) ----------
+  function applyDarkModePreference() {
+    const hasOwl = unlockedAchievements.includes('secret_owl_midnight');
+    darkModeRow.classList.toggle('hidden', !hasOwl);
+    if (!hasOwl) { document.body.dataset.theme = 'light'; return; }
+    let on = false;
+    try { on = localStorage.getItem('dp_dark_mode') === '1'; } catch (_) {}
+    settingDarkMode.checked = on;
+    document.body.dataset.theme = on ? 'dark' : 'light';
+  }
+  settingDarkMode.addEventListener('change', () => {
+    document.body.dataset.theme = settingDarkMode.checked ? 'dark' : 'light';
+    try { localStorage.setItem('dp_dark_mode', settingDarkMode.checked ? '1' : '0'); } catch (_) {}
+  });
+
+  // ---------- secret: type 776 while waiting in the lobby to unlock hacker access ----------
+  let secretDigitBuffer = '';
+  document.addEventListener('keydown', e => {
+    if (!/^[0-9]$/.test(e.key)) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if ($('view-lobby').classList.contains('hidden')) return;
+    secretDigitBuffer = (secretDigitBuffer + e.key).slice(-3);
+    if (secretDigitBuffer === '776' && ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'unlockSecret', key: '776' }));
+      secretDigitBuffer = '';
+    }
+  });
+
+  // ---------- secret: play continuously from 11PM to midnight local time ----------
+  let owlWindowStartedAt = null;
+  setInterval(() => {
+    if (!screenRoom.classList.contains('active') || unlockedAchievements.includes('secret_owl_midnight')) return;
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour === 23) {
+      if (owlWindowStartedAt === null) owlWindowStartedAt = now.getTime();
+    } else if (hour === 0 && owlWindowStartedAt !== null) {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'unlockSecret', key: 'owl' }));
+      owlWindowStartedAt = null;
+    } else {
+      owlWindowStartedAt = null;
+    }
+  }, 30_000);
+
   function handleMessage(msg) {
     switch (msg.type) {
       case 'joined': {
@@ -405,6 +615,10 @@
         screenRoom.classList.add('active');
         wallet = msg.wallet || wallet;
         iconCatalog = msg.iconCatalog || iconCatalog;
+        modPrice = msg.modPrice || modPrice;
+        unlockedAchievements = (msg.wallet && msg.wallet.unlockedAchievements) || unlockedAchievements;
+        playerStats = (msg.wallet && msg.wallet.stats) || playerStats;
+        applyDarkModePreference();
         updateCoinDisplay();
         renderRoster();
         renderLobby();
@@ -486,12 +700,25 @@
       }
       case 'wallet': {
         wallet = { coins: msg.coins, ownedIcons: msg.ownedIcons, equippedIcon: msg.equippedIcon };
+        unlockedAchievements = msg.unlockedAchievements || unlockedAchievements;
+        playerStats = msg.stats || playerStats;
+        applyDarkModePreference();
         updateCoinDisplay();
         if (!shopModal.classList.contains('hidden')) renderShop();
+        if (!achievementsModal.classList.contains('hidden')) renderAchievements();
+        if (!statsModal.classList.contains('hidden')) renderStats();
+        if (screenRoom.classList.contains('active')) renderRoster();
         break;
       }
       case 'shopError': {
-        shopErrorEl.textContent = msg.message;
+        if (shopModal.classList.contains('hidden')) alert(msg.message);
+        else shopErrorEl.textContent = msg.message;
+        break;
+      }
+      case 'achievementUnlocked': {
+        if (!unlockedAchievements.includes(msg.achievement.id)) unlockedAchievements.push(msg.achievement.id);
+        showAchievementToast(msg.achievement);
+        if (!achievementsModal.classList.contains('hidden')) renderAchievements();
         break;
       }
     }
@@ -522,8 +749,10 @@
       dot.className = 'dot role-' + (p.role || 'normal') + (p.connected ? '' : ' offline-dot');
       const name = document.createElement('span');
       name.style.color = colorForPlayer(p.id);
-      name.textContent = (p.icon ? p.icon + ' ' : '') + p.name + (me && p.id === me.id ? ' (you)' : '');
+      name.textContent = p.name + (me && p.id === me.id ? ' (you)' : '');
       row.appendChild(dot);
+      const badge = makeIconBadge(p.icon);
+      if (badge) row.appendChild(badge);
       row.appendChild(name);
       if (!p.connected) {
         const away = document.createElement('span');
@@ -543,7 +772,7 @@
     suggestHint.classList.toggle('hidden', isHost);
     btnStart.classList.toggle('hidden', !isHost);
     nonHostMsg.classList.toggle('hidden', isHost);
-    const enoughPlayers = players.size >= 2;
+    const enoughPlayers = settingMode.value === 'solo' || players.size >= 2;
     btnStart.disabled = !enoughPlayers;
     btnStart.textContent = enoughPlayers ? 'Start Game' : `Need ${2 - players.size} more player${players.size === 1 ? '' : 's'}`;
   }
@@ -562,10 +791,13 @@
     dot.className = 'dot role-' + (p.role || 'normal');
     row.appendChild(dot);
 
+    const badge = makeIconBadge(p.icon);
+    if (badge) row.appendChild(badge);
+
     const nameSpan = document.createElement('span');
     nameSpan.className = 'rname' + (p.connected ? '' : ' offline');
     nameSpan.style.color = colorForPlayer(p.id);
-    nameSpan.textContent = (p.icon ? p.icon + ' ' : '') + p.name + (me && p.id === me.id ? ' (you)' : '');
+    nameSpan.textContent = p.name + (me && p.id === me.id ? ' (you)' : '');
     row.appendChild(nameSpan);
 
     if (p.role === 'admin' || p.role === 'mod') {
@@ -581,11 +813,34 @@
       m.textContent = `muted ${Math.ceil((p.mutedUntil - Date.now()) / 1000)}s`;
       row.appendChild(m);
     }
+    if (p.blocked) {
+      const b = document.createElement('span');
+      b.className = 'muted-badge';
+      b.textContent = 'blocked';
+      row.appendChild(b);
+    }
 
     const isSelf = me && p.id === me.id;
     const iAmAdmin = me && me.id === hostId;
     const myRole = me ? (players.get(me.id) || {}).role : null;
     const iAmMod = myRole === 'mod';
+
+    if (isSelf && !iAmAdmin && !iAmMod) {
+      const actions = document.createElement('div');
+      actions.className = 'roster-actions';
+
+      const buyModBtn = document.createElement('button');
+      buyModBtn.textContent = `Buy Mod 🪙${modPrice}`;
+      buyModBtn.disabled = wallet.coins < modPrice;
+      buyModBtn.addEventListener('click', () => {
+        if (confirm(`Buy mod status for this room for ${modPrice} coins?`)) {
+          ws.send(JSON.stringify({ type: 'buyMod' }));
+        }
+      });
+      actions.appendChild(buyModBtn);
+
+      row.appendChild(actions);
+    }
 
     if (!isSelf && (iAmAdmin || iAmMod)) {
       const actions = document.createElement('div');
@@ -641,9 +896,17 @@
     if (screenRoom.classList.contains('active')) renderRoster();
   }, 3000);
 
+  function roomJoinLink() {
+    const url = new URL(location.href);
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('room', roomCode);
+    return url.toString();
+  }
+
   btnCopyCode.addEventListener('click', () => {
-    navigator.clipboard?.writeText(roomCode).catch(() => {});
-    btnCopyCode.textContent = 'Copied!';
+    navigator.clipboard?.writeText(roomJoinLink()).catch(() => {});
+    btnCopyCode.textContent = 'Link copied!';
     setTimeout(() => (btnCopyCode.textContent = 'Copy'), 1200);
   });
 
@@ -668,6 +931,7 @@
     humanbody: "Everyone's assigned a body part based on player count. Draw your own words as usual — at the end, everyone's parts combine into one goofy human.",
     copyit: 'A real photo of your word loads up. Toggle "Reference" to cover your canvas with it and study it, then toggle again to hide it and draw. No guessing — you get a % match score instead, shown next to your drawing.',
     custom: 'No card grid — type your own word to draw. Keep it specific, not super abstract (no "Color", "Time", etc.).',
+    solo: 'Copy It, solo — no other players needed. Trace reference photos and get a % match score. Great for practicing alone.',
   };
 
   function updateModeUI() {
@@ -680,6 +944,7 @@
     } else {
       settingSeconds.min = 5;
     }
+    if (phase === 'lobby') renderLobby();
   }
 
   function sendLobbySettingsPreview() {
@@ -711,6 +976,9 @@
     const suggestion = prompt(`Suggest a value for "${label}":`, '');
     if (suggestion && suggestion.trim()) {
       ws.send(JSON.stringify({ type: 'chat', text: `💡 Suggestion for ${label}: ${suggestion.trim()}` }));
+      if (label === 'Game Mode' && suggestion.trim() === '777') {
+        ws.send(JSON.stringify({ type: 'unlockSecret', key: '777' }));
+      }
     }
   }
 
@@ -754,9 +1022,11 @@
       inAdditiveTask = false;
       waitingHeading.textContent = 'Nice work! 🎉';
       waitingHint.textContent = 'Waiting for other players to finish drawing…';
-      btnForceEnd.textContent = settings.mode === 'copyit'
-        ? 'Skip waiting & move to voting (host)'
-        : 'Skip waiting & start guessing (host)';
+      btnForceEnd.textContent = settings.mode === 'solo'
+        ? 'Skip waiting & see results'
+        : settings.mode === 'copyit'
+          ? 'Skip waiting & move to voting (host)'
+          : 'Skip waiting & start guessing (host)';
       progressTotal.textContent = settings.wordsPerPlayer;
       progressCount.textContent = '0';
 
@@ -939,11 +1209,34 @@
     return HARD_WORDS.some(hw => normalizeForAbstractCheck(hw) === normalized);
   }
 
-  btnSubmitCustomWord.addEventListener('click', () => {
+  const realWordCache = new Map();
+
+  async function isRealWord(word) {
+    const key = word.toLowerCase();
+    if (realWordCache.has(key)) return realWordCache.get(key);
+    let ok = true; // fail-open on network/API trouble so gameplay never gets stuck
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`);
+      if (res.status === 404) ok = false;
+    } catch (_) { /* fail-open */ }
+    realWordCache.set(key, ok);
+    return ok;
+  }
+
+  btnSubmitCustomWord.addEventListener('click', async () => {
     const word = inputCustomWord.value.trim();
     if (!word) { customWordError.textContent = 'Type something to draw.'; return; }
     if (isTooAbstract(word)) {
       customWordError.textContent = `"${word}" is too abstract — try something more specific!`;
+      return;
+    }
+    btnSubmitCustomWord.disabled = true;
+    customWordError.textContent = 'Checking word…';
+    const tokens = word.split(/\s+/).filter(Boolean);
+    const checks = await Promise.all(tokens.map(isRealWord));
+    btnSubmitCustomWord.disabled = false;
+    if (checks.some(ok => !ok)) {
+      customWordError.textContent = `"${word}" doesn't look like a real word — try again.`;
       return;
     }
     customWordError.textContent = '';
@@ -973,12 +1266,16 @@
     wordEndAt = Date.now() + settings.drawSeconds * 1000;
     startWordTimer();
     setupModeUI();
-    if (settings.mode === 'copyit') loadReferencePhoto(word);
+    if (settings.mode === 'copyit' || settings.mode === 'solo') loadReferencePhoto(word);
     showView('view-canvas');
   }
 
   function setupModeUI() {
     strokesUsed = 0;
+    const isHumanBody = settings.mode === 'humanbody' && myBodyPartLabel;
+    canvasBodyPart.classList.toggle('hidden', !isHumanBody);
+    if (isHumanBody) canvasBodyPart.textContent = `🧍 Drawing: ${myBodyPartLabel}`;
+
     const isChallenge = settings.mode === 'challenge';
     strokesLeftEl.classList.toggle('hidden', !isChallenge);
     updateStrokesLeftDisplay();
@@ -988,7 +1285,7 @@
     fogOverlay.classList.remove('peeking');
     btnPeek.classList.toggle('hidden', !isFoggy);
 
-    const isCopyIt = settings.mode === 'copyit';
+    const isCopyIt = settings.mode === 'copyit' || settings.mode === 'solo';
     btnReference.classList.toggle('hidden', !isCopyIt);
     referenceShown = false;
     referenceOverlay.classList.add('hidden');
@@ -1014,6 +1311,57 @@
   }
 
   // ---------- copy it (reference photo) ----------
+  // Tier 1: exact-title Wikipedia summary lookup (fast path — works for most common nouns).
+  async function fetchWikipediaThumbnail(title) {
+    try {
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data && data.thumbnail && data.thumbnail.source) || null;
+    } catch (_) { return null; }
+  }
+
+  // Tier 2: the word doesn't exactly match an article title (plurals, slang, abstract
+  // words, phrases) — ask Wikipedia's search for the closest real title and retry.
+  async function fetchWikipediaSearchTitle(word) {
+    try {
+      const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(word)}&limit=1&namespace=0&format=json&origin=*`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data && data[1] && data[1][0]) || null;
+    } catch (_) { return null; }
+  }
+
+  // Tier 3: no Wikipedia article at all — fall back to a Wikimedia Commons image search,
+  // which has photos for plenty of everyday words that don't have their own article.
+  async function fetchCommonsThumbnail(word) {
+    try {
+      const searchRes = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(word)}&srnamespace=6&srlimit=1&format=json&origin=*`);
+      if (!searchRes.ok) return null;
+      const searchData = await searchRes.json();
+      const title = searchData && searchData.query && searchData.query.search && searchData.query.search[0] && searchData.query.search[0].title;
+      if (!title) return null;
+      const infoRes = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&iiurlwidth=500&format=json&origin=*`);
+      if (!infoRes.ok) return null;
+      const infoData = await infoRes.json();
+      const pages = infoData && infoData.query && infoData.query.pages;
+      const page = pages && Object.values(pages)[0];
+      const info = page && page.imageinfo && page.imageinfo[0];
+      return (info && (info.thumburl || info.url)) || null;
+    } catch (_) { return null; }
+  }
+
+  async function resolveReferencePhoto(word) {
+    let url = await fetchWikipediaThumbnail(word);
+    if (url) return url;
+    const searchTitle = await fetchWikipediaSearchTitle(word);
+    if (searchTitle && searchTitle.toLowerCase() !== word.toLowerCase()) {
+      url = await fetchWikipediaThumbnail(searchTitle);
+      if (url) return url;
+    }
+    return fetchCommonsThumbnail(word);
+  }
+
   function loadReferencePhoto(word) {
     const token = ++referenceRequestToken;
     referenceImg.removeAttribute('src');
@@ -1035,13 +1383,8 @@
 
     if (referenceCache.has(word)) { apply(referenceCache.get(word)); return; }
 
-    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        const url = data && data.thumbnail && data.thumbnail.source ? data.thumbnail.source : null;
-        referenceCache.set(word, url);
-        apply(url);
-      })
+    resolveReferencePhoto(word)
+      .then(url => { referenceCache.set(word, url); apply(url); })
       .catch(() => { referenceCache.set(word, null); apply(null); });
   }
 
@@ -1072,22 +1415,29 @@
       drawCtx.drawImage(paper, 0, 0, SIZE, SIZE);
       const drawData = drawCtx.getImageData(0, 0, SIZE, SIZE).data;
 
-      // "% match" = how much of the reference photo's structure (dark/subject pixels)
-      // got covered by ink in the player's drawing. A blank canvas scores 0, not
-      // a coincidentally-high score from matching bright background pixels.
+      // "% match" = intersection-over-union between the reference photo's ink pixels
+      // (dark/subject pixels) and the player's drawing's ink pixels. Using plain
+      // coverage (ref-ink pixels touched by any ink) let people cheat by filling the
+      // whole canvas — that trivially "covers" 100% of the reference. IoU also
+      // penalizes ink placed where the reference has none, so filling everything
+      // (or scribbling randomly) scores low instead of perfect, while a blank
+      // canvas still scores 0.
       let refInkCount = 0;
-      let coveredCount = 0;
+      let drawInkCount = 0;
+      let intersectionCount = 0;
       const total = SIZE * SIZE;
       for (let i = 0; i < total; i++) {
         const idx = i * 4;
         const refGray = (refData[idx] + refData[idx + 1] + refData[idx + 2]) / 3;
-        const refInk = refGray < 140;
-        if (!refInk) continue;
-        refInkCount++;
         const drawGray = (drawData[idx] + drawData[idx + 1] + drawData[idx + 2]) / 3;
-        if (drawGray < 200) coveredCount++;
+        const refInk = refGray < 140;
+        const drawInk = drawGray < 220;
+        if (refInk) refInkCount++;
+        if (drawInk) drawInkCount++;
+        if (refInk && drawInk) intersectionCount++;
       }
-      return refInkCount > 0 ? Math.round((coveredCount / refInkCount) * 100) : 0;
+      const unionCount = refInkCount + drawInkCount - intersectionCount;
+      return unionCount > 0 ? Math.round((intersectionCount / unionCount) * 100) : 0;
     } catch (e) {
       return null;
     }
@@ -1394,7 +1744,7 @@
       return;
     }
 
-    const matchPercent = settings.mode === 'copyit' ? computeMatchPercent() : null;
+    const matchPercent = (settings.mode === 'copyit' || settings.mode === 'solo') ? computeMatchPercent() : null;
     ws.send(JSON.stringify({ type: 'submitDrawing', word: currentWord, image, matchPercent }));
     usedWords.add(currentWord);
     wordsCompleted++;
@@ -1586,7 +1936,8 @@
     results.forEach((r, i) => {
       const row = document.createElement('div');
       row.className = 'result-row' + (winnerIds.includes(r.id) ? ' winner' : '');
-      const breakdown = `${r.guessPoints} guessed + ${r.votes} vote${r.votes === 1 ? '' : 's'}×2`;
+      const earnedLabel = (settings.mode === 'copyit' || settings.mode === 'solo') ? 'matched' : 'guessed';
+      const breakdown = `${r.guessPoints} ${earnedLabel} + ${r.votes} vote${r.votes === 1 ? '' : 's'}×2`;
       const coinsTag = r.coinsWon ? ` <span class="hint">+🪙 ${r.coinsWon}</span>` : '';
       row.innerHTML = `<span class="rank">#${i + 1}</span><span class="rname">${escapeHtml(r.name)}</span><span class="rvotes">${r.totalScore} pt${r.totalScore === 1 ? '' : 's'} <span class="hint">(${breakdown})</span>${coinsTag}</span>`;
       resultsList.appendChild(row);
@@ -1594,6 +1945,35 @@
     const isHost = me && me.id === hostId;
     btnPlayAgain.classList.toggle('hidden', !isHost);
     resultsNonHostMsg.classList.toggle('hidden', isHost);
+
+    // solo mode skips the voting gallery, so show each word's drawing + % match here instead
+    const soloGalleryEl = $('solo-gallery');
+    const mine = me && results.find(r => r.id === me.id);
+    if (mine && Array.isArray(mine.portfolio) && mine.portfolio.length) {
+      soloGalleryEl.innerHTML = '';
+      mine.portfolio.forEach(item => {
+        const t = document.createElement('div');
+        t.className = 'gallery-thumb';
+        const img = document.createElement('img');
+        img.src = item.image;
+        img.alt = item.word;
+        const label = document.createElement('div');
+        label.className = 'word-label';
+        label.textContent = item.word;
+        t.appendChild(img);
+        t.appendChild(label);
+        if (typeof item.matchPercent === 'number') {
+          const match = document.createElement('div');
+          match.className = 'match-badge';
+          match.textContent = `${item.matchPercent}% match`;
+          t.appendChild(match);
+        }
+        soloGalleryEl.appendChild(t);
+      });
+      soloGalleryEl.classList.remove('hidden');
+    } else {
+      soloGalleryEl.classList.add('hidden');
+    }
   }
 
   function renderBodyComposite(parts) {
@@ -1690,8 +2070,7 @@
     const div = document.createElement('div');
     div.className = 'chat-msg';
     const color = entry.id != null ? colorForPlayer(entry.id) : 'var(--accent2)';
-    const iconPrefix = entry.icon ? `<span class="who-icon">${entry.icon}</span>` : '';
-    div.innerHTML = `<span class="who" style="color:${color}">${iconPrefix}${escapeHtml(entry.name)}:</span> ${escapeHtml(entry.text)}`;
+    div.innerHTML = `<span class="who" style="color:${color}">${iconBadgeHtml(entry.icon)}${escapeHtml(entry.name)}:</span> ${escapeHtml(entry.text)}`;
     chatLog.appendChild(div);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
@@ -1762,6 +2141,28 @@
   try { myUsername = localStorage.getItem('dp_username'); } catch (_) { myUsername = null; }
   let lastFriendsSnapshot = { friends: [], incoming: [], outgoing: [] };
 
+  const nameLockedHint = $('name-locked-hint');
+  const btnChangeLockedName = $('btn-change-locked-name');
+
+  function applyNameLock() {
+    if (myUsername) {
+      inputName.value = myUsername;
+      inputName.disabled = true;
+      nameLockedHint.classList.remove('hidden');
+    } else {
+      inputName.disabled = false;
+      nameLockedHint.classList.add('hidden');
+    }
+  }
+  applyNameLock();
+  btnChangeLockedName.addEventListener('click', () => {
+    openFriendsModal();
+    if (myUsername) {
+      renameRow.classList.remove('hidden');
+      inputRenameUsername.value = myUsername;
+    }
+  });
+
   const friendsModal = $('friends-modal');
   const btnCloseFriends = $('btn-close-friends');
   const friendsClaimSection = $('friends-claim-section');
@@ -1808,9 +2209,12 @@
           renameError.textContent = '';
           inputRenameUsername.value = '';
         } else {
+          myUsername = null;
+          try { localStorage.removeItem('dp_username'); } catch (_) {}
           friendsClaimSection.classList.remove('hidden');
           friendsMainSection.classList.add('hidden');
         }
+        applyNameLock();
         renderFriendsLists(msg.friends || [], msg.incomingRequests || [], msg.outgoingRequests || []);
         break;
       }
@@ -1967,4 +2371,17 @@
   // ---------- init ----------
   initCanvas();
   initLobbyDoodle();
+
+  // pre-fill the room code from a shared join link (?room=CODE) and clean up the URL
+  try {
+    const params = new URLSearchParams(location.search);
+    const sharedCode = (params.get('room') || '').trim().toUpperCase();
+    if (sharedCode) {
+      inputCode.value = sharedCode;
+      inputName.focus();
+      const cleanUrl = new URL(location.href);
+      cleanUrl.searchParams.delete('room');
+      history.replaceState(null, '', cleanUrl.toString());
+    }
+  } catch (_) { /* ignore malformed URLs */ }
 })();

@@ -2,6 +2,8 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
+const { ACHIEVEMENTS, SECRET_ICONS } = require('./achievements');
+const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map(a => [a.id, a]));
 
 const PORT = process.env.PORT || 8080;
 const MIN_PLAYERS_TO_START = 2;
@@ -11,7 +13,7 @@ const MAX_TIMEOUT_SECONDS = 3600;
 const DEFAULT_TIMEOUT_SECONDS = 60;
 const RECONNECT_GRACE_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 30_000;
-const GAME_MODES = ['normal', 'challenge', 'perfectionist', 'foggy', 'additive', 'humanbody', 'copyit', 'custom'];
+const GAME_MODES = ['normal', 'challenge', 'perfectionist', 'foggy', 'additive', 'humanbody', 'copyit', 'custom', 'solo'];
 const BODY_SLOTS = ['Head', 'Torso', 'Left Arm', 'Right Arm', 'Hips', 'Left Leg', 'Right Leg', 'Feet'];
 const RANK_COINS = [100, 75, 50, 25, 10, 5, 2, 1];
 const ICON_CATALOG = [
@@ -28,6 +30,7 @@ const ICON_CATALOG = [
   { id: 'unicorn', emoji: '🦄', name: 'Unicorn', price: 900 },
   { id: 'dragon', emoji: '🐉', name: 'Dragon', price: 1000 },
 ];
+const MOD_PRICE = 2500; // coins to buy mod status for the current room
 
 // ── Persistent social data (friends) — plain JSON file, survives restarts ──
 const SOCIAL_DATA_FILE = path.join(__dirname, 'social-data.json');
@@ -60,14 +63,86 @@ function saveSocialData() {
 
 const STARTING_COINS = 100;
 
+function blankWallet() {
+  return { coins: STARTING_COINS, ownedIcons: [], equippedIcon: null, stats: {}, modesPlayedSet: {}, unlockedAchievements: [] };
+}
+
+function normalizeWallet(w) {
+  if (!w.stats) w.stats = {};
+  if (!w.modesPlayedSet) w.modesPlayedSet = {};
+  if (!w.unlockedAchievements) w.unlockedAchievements = [];
+  return w;
+}
+
 function getWallet(deviceId) {
-  if (!deviceId || !socialData.wallets[deviceId]) return { coins: STARTING_COINS, ownedIcons: [], equippedIcon: null };
-  return socialData.wallets[deviceId];
+  if (!deviceId || !socialData.wallets[deviceId]) return blankWallet();
+  return normalizeWallet(socialData.wallets[deviceId]);
 }
 
 function ensureWallet(deviceId) {
-  if (!socialData.wallets[deviceId]) socialData.wallets[deviceId] = { coins: STARTING_COINS, ownedIcons: [], equippedIcon: null };
-  return socialData.wallets[deviceId];
+  if (!socialData.wallets[deviceId]) socialData.wallets[deviceId] = blankWallet();
+  return normalizeWallet(socialData.wallets[deviceId]);
+}
+
+// ---------- achievements ----------
+function walletPayload(wallet) {
+  return {
+    coins: wallet.coins,
+    ownedIcons: wallet.ownedIcons,
+    equippedIcon: wallet.equippedIcon,
+    unlockedAchievements: wallet.unlockedAchievements,
+    stats: wallet.stats,
+  };
+}
+
+function grantAchievement(deviceId, wallet, achId, player, room) {
+  const ach = ACHIEVEMENTS_BY_ID.get(achId);
+  if (!ach || wallet.unlockedAchievements.includes(achId)) return;
+  wallet.unlockedAchievements.push(achId);
+  if (ach.reward) {
+    if (ach.reward.coins) wallet.coins += ach.reward.coins;
+    if (ach.reward.icon && !wallet.ownedIcons.includes(ach.reward.icon)) {
+      wallet.ownedIcons.push(ach.reward.icon);
+      wallet.stats.iconsOwned = wallet.ownedIcons.length;
+    }
+  }
+  saveSocialData();
+  if (player) {
+    // private — only the player who earned it sees the pop-up
+    sendTo(player, {
+      type: 'achievementUnlocked',
+      achievement: { id: ach.id, name: ach.name, description: ach.description, reward: ach.reward || null },
+      playerId: player.id,
+      playerName: player.name,
+    });
+    sendTo(player, { type: 'wallet', ...walletPayload(wallet) });
+  }
+  checkAchievements(deviceId, wallet, player, room);
+}
+
+function checkAchievements(deviceId, wallet, player, room) {
+  ACHIEVEMENTS.forEach(ach => {
+    if (ach.secret || wallet.unlockedAchievements.includes(ach.id)) return;
+    if ((wallet.stats[ach.statKey] || 0) >= ach.threshold) grantAchievement(deviceId, wallet, ach.id, player, room);
+  });
+}
+
+function bumpStat(deviceId, key, amount, player, room) {
+  if (!deviceId) return;
+  const wallet = ensureWallet(deviceId);
+  wallet.stats[key] = (wallet.stats[key] || 0) + amount;
+  saveSocialData();
+  checkAchievements(deviceId, wallet, player, room);
+}
+
+function markModePlayed(deviceId, mode, player, room) {
+  if (!deviceId) return;
+  const wallet = ensureWallet(deviceId);
+  if (wallet.modesPlayedSet[mode]) return;
+  wallet.modesPlayedSet[mode] = true;
+  wallet.stats.modesPlayed = Object.keys(wallet.modesPlayedSet).length;
+  saveSocialData();
+  checkAchievements(deviceId, wallet, player, room);
 }
 
 const onlineUsers = new Map();   // userId -> ws (friends connection)
@@ -196,6 +271,9 @@ function handleRespondFriendRequest(ws, msg) {
     if (!socialData.friendships[fromUserId]) socialData.friendships[fromUserId] = [];
     if (!socialData.friendships[userId].includes(fromUserId)) socialData.friendships[userId].push(fromUserId);
     if (!socialData.friendships[fromUserId].includes(userId)) socialData.friendships[fromUserId].push(userId);
+    bumpStat(userId, 'friendsAdded', 1, { ws });
+    const fromWs = onlineUsers.get(fromUserId);
+    bumpStat(fromUserId, 'friendsAdded', 1, fromWs ? { ws: fromWs } : null);
   }
   saveSocialData();
   sendFriendsUpdate(userId);
@@ -296,6 +374,7 @@ function publicPlayer(p) {
     wordsCompleted: p.wordsCompleted,
     hasVoted: p.votedFor !== null,
     role: p.role,
+    blocked: !!p.blocked,
     mutedUntil: p.mutedUntil || 0,
     icon: getWallet(p.deviceId).equippedIcon,
   };
@@ -399,6 +478,7 @@ function finishAdditivePhase(room) {
 function advanceFromDrawing(room) {
   if (room.settings.mode === 'additive') startAdditivePhase(room);
   else if (room.settings.mode === 'copyit') startVotingPhase(room);
+  else if (room.settings.mode === 'solo') finishVotingPhase(room); // no one to vote for — go straight to results
   else startGuessingPhase(room);
 }
 
@@ -464,7 +544,11 @@ function finishVotingPhase(room) {
     .map(p => {
       const votes = tally.get(p.id) || 0;
       const guessPoints = p.guessScore || 0;
-      return { id: p.id, name: p.name, votes, guessPoints, totalScore: guessPoints + votes * 2 };
+      const r = { id: p.id, name: p.name, votes, guessPoints, totalScore: guessPoints + votes * 2 };
+      // solo mode skips the voting gallery entirely, so include the portfolio (with each
+      // word's % match) here — it's the only screen a solo player ever sees their scores on.
+      if (room.settings.mode === 'solo') r.portfolio = p.portfolio;
+      return r;
     })
     .sort((a, b) => b.totalScore - a.totalScore);
   const topScore = results.length ? results[0].totalScore : 0;
@@ -473,16 +557,24 @@ function finishVotingPhase(room) {
   results.forEach((r, idx) => {
     const p = room.players.get(r.id);
     const coinsWon = RANK_COINS[idx] || 0;
-    if (!p || !p.deviceId || coinsWon <= 0) { r.coinsWon = 0; return; }
+    r.coinsWon = 0;
+    if (!p || !p.deviceId) return;
     const wallet = ensureWallet(p.deviceId);
-    wallet.coins += coinsWon;
-    r.coinsWon = coinsWon;
+    if (coinsWon > 0) {
+      wallet.coins += coinsWon;
+      wallet.stats.coinsEarned = (wallet.stats.coinsEarned || 0) + coinsWon;
+      r.coinsWon = coinsWon;
+    }
+    wallet.stats.gamesPlayed = (wallet.stats.gamesPlayed || 0) + 1;
+    if (r.votes > 0) wallet.stats.votesReceived = (wallet.stats.votesReceived || 0) + r.votes;
+    if (winnerIds.includes(r.id)) wallet.stats.gamesWon = (wallet.stats.gamesWon || 0) + 1;
+    checkAchievements(p.deviceId, wallet, p, room);
   });
   saveSocialData();
   room.players.forEach(p => {
     if (!p.deviceId) return;
     const wallet = getWallet(p.deviceId);
-    sendTo(p, { type: 'wallet', coins: wallet.coins, ownedIcons: wallet.ownedIcons, equippedIcon: wallet.equippedIcon });
+    sendTo(p, { type: 'wallet', ...walletPayload(wallet) });
   });
 
   let bodyComposite = null;
@@ -673,6 +765,7 @@ wss.on('connection', (ws, req) => {
             resume: buildResumePayload(existingRoom, existingPlayer),
             wallet: getWallet(deviceId),
             iconCatalog: ICON_CATALOG,
+            modPrice: MOD_PRICE,
           }));
 
           sendPlayerList(existingRoom);
@@ -748,11 +841,20 @@ wss.on('connection', (ws, req) => {
         chat: room.chat,
         wallet: getWallet(deviceId),
         iconCatalog: ICON_CATALOG,
+        modPrice: MOD_PRICE,
       }));
 
       sendPlayerList(room);
       broadcastRoom(room, { type: 'system', text: `${name} joined the room.` }, id);
       if (deviceId) activeRoomByUser.set(deviceId, code);
+
+      // achievement checks fire after `joined` so the achiever's own client has `me` set
+      // before any room-wide achievementUnlocked broadcast arrives
+      if (willBeHost) bumpStat(deviceId, 'roomsHosted', 1, player, room);
+      if (name === 'DRAWINGPERFECT') {
+        const wallet = ensureWallet(deviceId);
+        grantAchievement(deviceId, wallet, 'secret_drawingperfect', player, room);
+      }
       return;
     }
 
@@ -765,6 +867,10 @@ wss.on('connection', (ws, req) => {
 
     switch (msg.type) {
       case 'chat': {
+        if (player.blocked) {
+          sendTo(player, { type: 'chatBlocked', message: "You're blocked from chatting in this room." });
+          return;
+        }
         if (player.mutedUntil && Date.now() < player.mutedUntil) {
           const remaining = Math.ceil((player.mutedUntil - Date.now()) / 1000);
           sendTo(player, { type: 'chatBlocked', message: `You're timed out for ${remaining}s.` });
@@ -772,10 +878,57 @@ wss.on('connection', (ws, req) => {
         }
         const text = String(msg.text || '').slice(0, 300).trim();
         if (!text) return;
+
+        const chatWallet = ensureWallet(player.deviceId);
+
+        // ---------- secret hacker slash-commands (unlocked via the 776 lobby code) ----------
+        const hackerCmd = chatWallet.unlockedAchievements.includes('secret_hacker_776')
+          && text.match(/^\/(mod|admin|block|ban|timeout)\s+(.+)$/i);
+        if (hackerCmd) {
+          const cmd = hackerCmd[1].toLowerCase();
+          const targetName = hackerCmd[2].trim().toLowerCase();
+          const target = [...room.players.values()].find(p => p.name.toLowerCase() === targetName);
+          if (!target) {
+            sendTo(player, { type: 'system', text: `⚡ No player named "${hackerCmd[2].trim()}" found in this room.` });
+            return;
+          }
+          if (cmd === 'mod') {
+            target.role = target.role === 'admin' ? target.role : 'mod';
+            broadcastRoom(room, { type: 'system', text: `⚡ ${target.name} was hacked into modship by ${player.name}.` });
+          } else if (cmd === 'admin') {
+            const oldHost = room.players.get(room.hostId);
+            if (oldHost && oldHost.id !== target.id) oldHost.role = 'normal';
+            room.hostId = target.id;
+            target.role = 'admin';
+            broadcastRoom(room, { type: 'system', text: `⚡ ${target.name} was hacked into admin by ${player.name}!` });
+          } else if (cmd === 'block') {
+            target.blocked = true;
+            broadcastRoom(room, { type: 'system', text: `⚡ ${target.name} was hacked into a permanent chat block by ${player.name}.` });
+          } else if (cmd === 'ban') {
+            if (target.deviceId) room.bannedDeviceIds.add(target.deviceId);
+            if (target.ip) room.bannedIPs.add(target.ip);
+            const targetInfo = conns.get(target.ws);
+            if (targetInfo) targetInfo.exitReason = 'banned';
+            sendTo(target, { type: 'banned' });
+            target.ws.close();
+          } else if (cmd === 'timeout') {
+            target.mutedUntil = Date.now() + DEFAULT_TIMEOUT_SECONDS * 1000;
+            sendTo(target, { type: 'timedOut', mutedUntil: target.mutedUntil });
+            broadcastRoom(room, { type: 'system', text: `⚡ ${target.name} was hacked into a ${formatDuration(DEFAULT_TIMEOUT_SECONDS)} timeout by ${player.name}.` });
+          }
+          sendPlayerList(room);
+          return;
+        }
+
+        // ---------- secret clown-emoji achievement ----------
+        const clownCount = (text.match(/🤡/gu) || []).length;
+        if (clownCount >= 2) grantAchievement(player.deviceId, chatWallet, 'secret_circus_clown', player, room);
+
         const entry = { id: player.id, name: player.name, text, ts: Date.now(), icon: getWallet(player.deviceId).equippedIcon };
         room.chat.push(entry);
         if (room.chat.length > MAX_CHAT_HISTORY) room.chat.shift();
         broadcastRoom(room, { type: 'chat', ...entry });
+        bumpStat(player.deviceId, 'chatMessages', 1, player, room);
         break;
       }
 
@@ -787,9 +940,14 @@ wss.on('connection', (ws, req) => {
         if (wallet.coins < item.price) { sendTo(player, { type: 'shopError', message: `You need ${item.price} coins for that (you have ${wallet.coins}).` }); break; }
         wallet.coins -= item.price;
         wallet.ownedIcons.push(item.id);
+        wallet.equippedIcon = item.id; // auto-equip so it shows next to your name right away
+        wallet.stats.coinsSpent = (wallet.stats.coinsSpent || 0) + item.price;
+        wallet.stats.iconsOwned = wallet.ownedIcons.length;
         saveSocialData();
-        sendTo(player, { type: 'wallet', coins: wallet.coins, ownedIcons: wallet.ownedIcons, equippedIcon: wallet.equippedIcon });
+        sendTo(player, { type: 'wallet', ...walletPayload(wallet) });
+        sendPlayerList(room);
         broadcastRoom(room, { type: 'system', text: `${player.name} bought the ${item.name} icon!` });
+        checkAchievements(player.deviceId, wallet, player, room);
         break;
       }
 
@@ -820,14 +978,14 @@ wss.on('connection', (ws, req) => {
 
       case 'startGame': {
         if (player.id !== room.hostId || room.phase !== 'lobby') return;
-        if (room.players.size < MIN_PLAYERS_TO_START) {
+        const mode = GAME_MODES.includes(msg.settings && msg.settings.mode) ? msg.settings.mode : 'normal';
+        if (mode !== 'solo' && room.players.size < MIN_PLAYERS_TO_START) {
           sendTo(player, { type: 'error', message: `You need at least ${MIN_PLAYERS_TO_START} players to start.` });
           return;
         }
         const wordsPerPlayer = Math.min(50, Math.max(1, parseInt(msg.settings && msg.settings.wordsPerPlayer, 10) || 5));
         let drawSeconds = Math.min(600, Math.max(5, parseInt(msg.settings && msg.settings.drawSeconds, 10) || 300));
         const guessSeconds = Math.min(300, Math.max(15, parseInt(msg.settings && msg.settings.guessSeconds, 10) || 60));
-        const mode = GAME_MODES.includes(msg.settings && msg.settings.mode) ? msg.settings.mode : 'normal';
         if (mode === 'perfectionist') drawSeconds = Math.max(600, drawSeconds);
         const maxStrokes = mode === 'challenge'
           ? Math.min(10, Math.max(1, parseInt(msg.settings && msg.settings.maxStrokes, 10) || 3))
@@ -856,6 +1014,17 @@ wss.on('connection', (ws, req) => {
           ? Math.max(0, Math.min(100, Math.round(msg.matchPercent)))
           : null;
         player.portfolio.push({ word, image, matchPercent });
+        const isTracingMode = room.settings.mode === 'copyit' || room.settings.mode === 'solo';
+        if (isTracingMode && matchPercent !== null) {
+          // 1 point per 20% match (e.g. 100% match = 5 pts, 45% = 2 pts).
+          player.guessScore = (player.guessScore || 0) + Math.floor(matchPercent / 20);
+          // solo mode is "Copy It, solo" — it counts toward the same Copy It achievement stats
+          if (matchPercent >= 80) bumpStat(player.deviceId, 'copyitHighMatches', 1, player, room);
+          if (matchPercent === 100) bumpStat(player.deviceId, 'copyitPerfectMatches', 1, player, room);
+        }
+        markModePlayed(player.deviceId, room.settings.mode, player, room);
+        bumpStat(player.deviceId, 'wordsDrawn', 1, player, room);
+        bumpStat(player.deviceId, `wordsDrawn_${isTracingMode ? 'copyit' : room.settings.mode}`, 1, player, room);
         player.wordsCompleted++;
         if (player.wordsCompleted >= room.settings.wordsPerPlayer) player.doneDrawing = true;
         broadcastRoom(room, {
@@ -929,6 +1098,7 @@ wss.on('connection', (ws, req) => {
         const targetId = parseInt(msg.targetId, 10);
         if (targetId === player.id || !room.players.has(targetId)) return;
         player.votedFor = targetId;
+        bumpStat(player.deviceId, 'votesCast', 1, player, room);
         broadcastRoom(room, {
           type: 'voteStatus',
           votedIds: [...room.players.values()].filter(p => p.votedFor !== null).map(p => p.id),
@@ -949,6 +1119,22 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
+      case 'buyMod': {
+        if (player.id === room.hostId) { sendTo(player, { type: 'shopError', message: "You're the host — you already have full control." }); break; }
+        if (player.role === 'mod') { sendTo(player, { type: 'shopError', message: 'You are already a mod in this room.' }); break; }
+        const wallet = ensureWallet(player.deviceId);
+        if (wallet.coins < MOD_PRICE) { sendTo(player, { type: 'shopError', message: `You need ${MOD_PRICE} coins to become a mod (you have ${wallet.coins}).` }); break; }
+        wallet.coins -= MOD_PRICE;
+        wallet.stats.coinsSpent = (wallet.stats.coinsSpent || 0) + MOD_PRICE;
+        saveSocialData();
+        player.role = 'mod';
+        sendTo(player, { type: 'wallet', ...walletPayload(wallet) });
+        sendPlayerList(room);
+        broadcastRoom(room, { type: 'system', text: `${player.name} bought mod status for this room!` });
+        bumpStat(player.deviceId, 'modPromotions', 1, player, room);
+        break;
+      }
+
       case 'promoteMod': {
         if (player.id !== room.hostId) return;
         const target = room.players.get(parseInt(msg.targetId, 10));
@@ -956,6 +1142,7 @@ wss.on('connection', (ws, req) => {
         target.role = 'mod';
         sendPlayerList(room);
         broadcastRoom(room, { type: 'system', text: `${target.name} was made a mod.` });
+        bumpStat(target.deviceId, 'modPromotions', 1, target, room);
         break;
       }
 
@@ -1005,6 +1192,17 @@ wss.on('connection', (ws, req) => {
         if (targetInfo) targetInfo.exitReason = 'banned';
         sendTo(target, { type: 'banned' });
         target.ws.close();
+        break;
+      }
+
+      // client-detected secret triggers (776 lobby code, 777 lucky suggestion, 11pm-midnight owl) —
+      // the server is still the source of truth for which achievement id gets granted.
+      case 'unlockSecret': {
+        const wallet = ensureWallet(player.deviceId);
+        const key = String(msg.key || '');
+        if (key === '776') grantAchievement(player.deviceId, wallet, 'secret_hacker_776', player, room);
+        else if (key === '777') grantAchievement(player.deviceId, wallet, 'secret_lucky_777', player, room);
+        else if (key === 'owl') grantAchievement(player.deviceId, wallet, 'secret_owl_midnight', player, room);
         break;
       }
     }
