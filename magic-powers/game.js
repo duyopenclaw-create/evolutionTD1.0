@@ -680,15 +680,19 @@ function buildArena(){
       let prev = basePad;
       for (let f=0; f<floors; f++){
         const fw=rand(5.5,7), fd=rand(5.5,7);
-        const heightStep = rand(2.5,3.2);
+        // alternate real jump-up ledges (open gap, no ramp) with walkable ramp floors for variety
+        const useJump = Math.random()<0.55;
+        const heightStep = useJump ? rand(1.3,2.6) : rand(2.6,3.3);
+        const connLen = useJump ? rand(2.4,3.6) : 3.6+heightStep*2.2;
         const y = prev.y + heightStep;
         const x = prev.x + rand(-1.0,1.0);
-        const connLen = 3.6+heightStep*2.2;
         const z = prev.z - prev.d/2 - connLen - fd/2;
         const floorPad = { x, z, y, w:fw, d:fd, index:"towerFloor"+f, isFirst:false, isLast:false, isTower:true, ramp:false };
         rooms.push(floorPad); floorPads.push(floorPad);
-        const towerConn = makeConnectorPad(prev, floorPad, "ramp", connLen, false);
-        if (towerConn) floorPads.push(towerConn);
+        if (!useJump){
+          const towerConn = makeConnectorPad(prev, floorPad, "ramp", connLen, false);
+          if (towerConn) floorPads.push(towerConn);
+        } // useJump: intentionally no floor between — jump (or double-jump) up onto the ledge
         prev = floorPad;
       }
       towerTop = prev;
@@ -971,7 +975,7 @@ function spawnEnemiesOnPads(rooms, boss){
       if (Math.random()<0.35) spawnGrunt(room, realm, dm, 0.55);
     });
     const hp = Math.round((260 + S.chapter*46 + S.segment*4) * dm.hp * (S.chapter>=60?1.9:1));
-    const dmg = Math.round((14 + S.chapter*1.6) * dm.dmg * (S.chapter>=60?1.3:1));
+    const dmg = Math.round((26 + S.chapter*3.4) * dm.dmg * (S.chapter>=60?1.3:1));
     const mesh = buildEnemyMesh(realm.element, true);
     mesh.position.set(lastRoom.x, lastRoom.y, lastRoom.z-lastRoom.d*0.2);
     worldGroup.add(mesh);
@@ -1000,7 +1004,7 @@ function spawnEnemiesOnPads(rooms, boss){
 }
 function spawnGrunt(room, realm, dm, hpMult){
   const hp = Math.round((9 + S.chapter*4.2 + S.segment*1.5) * dm.hp * hpMult);
-  const dmg = Math.round((3 + S.chapter*1.05) * dm.dmg);
+  const dmg = Math.round((9 + S.chapter*2.4) * dm.dmg);
   const px = room.x+rand(-room.w/2+1.5,room.w/2-1.5), pz = room.z+rand(-room.d/2+1.5,room.d/2-1.5);
   const mesh = buildEnemyMesh(realm.element, false);
   mesh.position.set(px, room.y, pz);
@@ -1356,7 +1360,8 @@ function playerAttack(){
 function enemyAttackPlayer(en, dmg){
   if (runtime.invuln>0) return;
   const def = totalDef();
-  const dmgTaken = Math.max(1, dmg - def*0.6);
+  // proportional mitigation (diminishing returns), never a flat subtract — a big hit still hurts through armor
+  const dmgTaken = Math.max(2, dmg * (100/(100+def)));
   runtime.hp -= dmgTaken;
   runtime.invuln = 0.5;
   Audio_.sfx.playerHurt();
