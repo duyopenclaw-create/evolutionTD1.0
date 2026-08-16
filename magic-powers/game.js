@@ -498,6 +498,14 @@ function floorPadAt(x,z){
       if (h>bestH){ bestH=h; best=p; }
     }
   }
+  // obstacle tops count as standable ground too — jump up and you can perch on them
+  for (const ob of obstacles){
+    if (ob.topH==null) continue;
+    if (Math.hypot(x-ob.x, z-ob.z) <= ob.r){
+      const topY = ob.baseY + ob.topH;
+      if (topY>bestH){ bestH=topY; best={x:ob.x,z:ob.z,y:topY,w:ob.r*2,d:ob.r*2,ramp:false,isObstacleTop:true}; }
+    }
+  }
   return best;
 }
 function floorHeightAt(x,z){
@@ -784,26 +792,30 @@ function buildArena(){
       const shape = pick(["pillar","crate","rock"]);
       const wallTexClone = repeatTexture(wallTex,1,1);
       const mat = new THREE.MeshStandardMaterial({map:wallTexClone,color:realm.wall,roughness:0.85});
-      let mesh, r, h;
+      let mesh, r, topH;
+      // heights are kept jump-able (single or double jump) so every obstacle doubles as a climbable perch
       if (shape==="pillar"){
-        h = rand(2.6,4.8);
-        mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.85,1.05,h,8), mat);
+        topH = rand(1.6,2.8);
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.85,1.05,topH,8), mat);
+        mesh.position.set(px, p.y+topH/2, pz);
         r = 1.0;
       } else if (shape==="crate"){
-        h = rand(1.2,2.1);
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(h,h,h), mat);
+        topH = rand(1.0,2.0);
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(topH,topH,topH), mat);
         mesh.rotation.y = rand(0,Math.PI*2);
-        r = h*0.62;
+        mesh.position.set(px, p.y+topH/2, pz);
+        r = topH*0.62;
       } else {
-        h = rand(1.4,2.4);
-        mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(h*0.6,0), mat);
+        const rockR = rand(0.8,1.3);
+        topH = rockR*2;
+        mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(rockR,0), mat);
         mesh.rotation.set(rand(0,Math.PI*2),rand(0,Math.PI*2),0);
-        r = h*0.55;
+        mesh.position.set(px, p.y+rockR, pz); // sits flush on the ground instead of half-sunk into it
+        r = rockR*0.9;
       }
-      mesh.position.set(px, p.y+h/2, pz);
       mesh.castShadow=true; mesh.receiveShadow=true;
       worldGroup.add(mesh);
-      obstacles.push({x:px,z:pz,r});
+      obstacles.push({x:px,z:pz,r,topH,baseY:p.y});
     }
   });
 
@@ -1641,7 +1653,9 @@ function updatePlaying(dt){
     const cz = playerObj.position.z + mzN*speed*dt;
     let blocked=false;
     for (const ob of obstacles){
-      if (Math.hypot(cx-ob.x, cz-ob.z) < ob.r+PLAYER_RADIUS){ blocked=true; break; }
+      // only solid from the side — once you're standing at/above its top you can walk across it freely
+      const onTop = ob.topH!=null && playerObj.position.y >= ob.baseY+ob.topH-0.15;
+      if (!onTop && Math.hypot(cx-ob.x, cz-ob.z) < ob.r+PLAYER_RADIUS){ blocked=true; break; }
     }
     if (!blocked){ nx=cx; nz=cz; playerFacing.set(mxN,0,mzN).normalize(); }
     const targetAngle = Math.atan2(playerFacing.x, playerFacing.z);
