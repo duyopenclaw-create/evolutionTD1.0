@@ -137,6 +137,9 @@ body.touch #touchControls{display:block;}
 .bossBanner{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;
   color:#ff5b5b;font-size:clamp(24px,6vw,44px);font-weight:900;letter-spacing:2px;
   text-shadow:0 0 20px #000,0 0 8px #ff2020;opacity:0;transition:opacity .5s;pointer-events:none;}
+#bossHpWrap{position:absolute;top:56px;left:50%;transform:translateX(-50%);width:min(500px,72vw);pointer-events:none;}
+#bossHpName{text-align:center;font-weight:800;color:#ff8a8a;text-shadow:0 0 8px #000,0 0 3px #000;
+  margin-bottom:3px;font-size:13px;letter-spacing:1px;text-transform:uppercase;}
 @media (max-width:640px){
   .statBox{min-width:90px;font-size:11px;} #hpBar{width:100px;} #stamBar{width:100px;}
   .spellSlot{width:44px;height:44px;font-size:18px;}
@@ -173,15 +176,16 @@ body.touch #touchControls{display:block;}
     <button class="closeX" data-close="howPanel">×</button>
     <h2>How To Play</h2>
     <p>🧙 Move with <b>WASD/Arrows</b> or the left joystick. Each segment is a real place — a chain of rooms, bridges, ramps and jump-gaps, not one flat arena. Explore it.</p>
-    <p>🦘 <b>Jump</b> with Space / the jump button to clear gaps and climb ledges. Fall into a chasm and you'll respawn on the last safe ledge with a bit of fall damage — it's not fatal, just careful.</p>
+    <p>⬆️ <b>Jump</b> with Space / the jump button to clear gaps and climb ledges. Fall into a chasm and you'll respawn on the last safe ledge with a bit of fall damage — it's not fatal, just careful.</p>
     <p>🏃 Hold <b>Shift</b> to sprint (drains stamina, regenerates when you stop).</p>
     <p>⚔️ <b>Attack</b> with F / Enter / Left-Click / the red button — auto-swings at the nearest foe.</p>
     <p>🔥 Cast spells with number keys <b>1-6</b> or the spell buttons once an element is unlocked in your <b>Book (B)</b>.</p>
     <p>🎒 Open your <b>Backpack (I)</b> to equip 2 weapons, a shield and armor found in chests.</p>
-    <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1. Level Wind to 5 to unlock a double-jump.</p>
+    <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1. You always have a <b>double-jump</b> — leveling Wind just makes it stronger.</p>
     <p>💰 Coins drop from monsters &amp; chests. Spend them in the <b>Shop</b> on gear, more Magic Points (1000c) or Backpack slots (1000c/slot).</p>
     <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins. Some sit on hidden side-paths off the main route.</p>
-    <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
+    <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Some gaps have a <b>moving platform</b> shuttling across them — time your jump on and off. Some segments hide a <b>2-5 story tower</b> to climb for a guaranteed diamond chest. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
+    <p>👹 Monsters now roam the whole level and will hunt you down wherever you are — expect more of them, but each one is weaker than before. Watch their health bars.</p>
     <p>👹 Every 10th segment is a <b>Boss</b>. Every 10 chapters you enter a new elemental Realm. Beat Chapter 60's boss to win.</p>
     <button class="btn" data-close="howPanel">Got it</button>
   </div>
@@ -208,11 +212,15 @@ body.touch #touchControls{display:block;}
   <div id="comboText"></div>
   <div id="saveFlash">SAVED</div>
   <div class="bossBanner" id="bossBanner"></div>
+  <div id="bossHpWrap" class="hidden">
+    <div id="bossHpName">Boss</div>
+    <div class="bar" style="height:14px;"><div id="bossHpFill" style="width:100%;background:linear-gradient(90deg,#ff3b47,#ff8a5c);"></div></div>
+  </div>
   <div class="hudBottom">
     <div class="iconBtnRow" style="align-self:flex-end;">
       <div class="iconBtn" id="btnBookHud" title="Book (B)">📖</div>
       <div class="iconBtn" id="btnBagHud" title="Backpack (I)">🎒</div>
-      <div class="iconBtn" id="btnShopHud" title="Shop">🏪</div>
+      <div class="iconBtn" id="btnShopHud" title="Shop">💰</div>
       <div class="iconBtn" id="btnPauseHud" title="Pause (Esc)">⏸</div>
     </div>
     <div class="spellBar" id="spellBar"></div>
@@ -223,7 +231,7 @@ body.touch #touchControls{display:block;}
 <div id="touchControls">
   <div id="joyOuter"><div id="joyInner"></div></div>
   <div id="atkBtn">⚔️</div>
-  <div id="jumpBtn">🦘</div>
+  <div id="jumpBtn">⬆️</div>
   <div id="spellRing"></div>
 </div>
 
@@ -255,7 +263,7 @@ body.touch #touchControls{display:block;}
 <div id="shopPanel" class="overlay hidden">
   <div class="panel center" style="max-width:640px;">
     <button class="closeX" data-close="shopPanel">×</button>
-    <h2>🏪 Shop</h2>
+    <h2>💰 Shop</h2>
     <div class="muted">Coins: <b id="shopCoins">0</b></div>
     <div class="tabRow">
       <button class="tabBtn active" data-tab="tabGeneral">General</button>
@@ -298,7 +306,7 @@ body.touch #touchControls{display:block;}
     <h2 id="ccTitle">Chapter Complete!</h2>
     <p id="ccRewards" class="muted"></p>
     <div class="menuCol" style="margin:0 auto;">
-      <button class="btn gold" id="btnCcShop">🏪 Visit Shop</button>
+      <button class="btn gold" id="btnCcShop">💰 Visit Shop</button>
       <button class="btn green" id="btnCcContinue">➡ Continue</button>
     </div>
   </div>

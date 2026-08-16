@@ -330,7 +330,7 @@ function nextLevelCost(level){ // cost to go from `level` to `level+1`
 let renderer, scene, camera, clock;
 let worldGroup, playerObj, groundMesh;
 let enemies=[], chests=[], projectiles=[], particles=[], obstacles=[];
-let levelPads=[], hazardZones=[], exitPortal=null, ambientEmitter=null, torchLights=[];
+let levelPads=[], hazardZones=[], exitPortal=null, ambientEmitter=null, torchLights=[], movingPads=[];
 let playerFacing = new THREE.Vector3(0,0,-1);
 let cameraYawOffset = 0;
 const textureCache = {};
@@ -356,14 +356,19 @@ function resizeRenderer(){
   if (camera){ camera.aspect=w/h; camera.updateProjectionMatrix(); }
 }
 
+function disposeEnemy(en){
+  disposeObj(en.mesh);
+  const hb = en.mesh.userData.healthBar;
+  if (hb){ hb.bg.geometry.dispose(); hb.fg.geometry.dispose(); disposeObj(hb.bg); disposeObj(hb.fg); }
+}
 function clearWorld(){
   if (worldGroup) scene.remove(worldGroup);
-  enemies.forEach(e=>disposeObj(e.mesh)); enemies=[];
+  enemies.forEach(disposeEnemy); enemies=[];
   chests.forEach(c=>disposeObj(c.mesh)); chests=[];
   projectiles.forEach(p=>disposeObj(p.mesh)); projectiles=[];
   particles.forEach(p=>disposeObj(p.points)); particles=[];
   obstacles=[];
-  levelPads=[]; hazardZones=[]; exitPortal=null; torchLights=[];
+  levelPads=[]; hazardZones=[]; exitPortal=null; torchLights=[]; movingPads=[];
   if (ambientEmitter){ disposeObj(ambientEmitter.points); ambientEmitter=null; }
 }
 function disposeObj(obj){
@@ -472,19 +477,37 @@ function repeatTexture(base, rx, rz){
 /* ---------------------------------------------------------------------- */
 /*  LEVEL GENERATION — connected platforms, ramps, gaps, side rooms        */
 /* ---------------------------------------------------------------------- */
-function floorHeightAt(x,z){
-  let best=null;
+function padHeightAt(p, z){
+  if (!p.ramp) return p.y;
+  const t = clamp((p.rampZStart-z)/(p.rampZStart-p.rampZEnd || 1), 0, 1);
+  return p.rampY0 + (p.rampY1-p.rampY0)*t;
+}
+function floorPadAt(x,z){
+  let best=null, bestH=-Infinity;
   for (const p of levelPads){
     if (Math.abs(x-p.x)<=p.w/2+0.05 && Math.abs(z-p.z)<=p.d/2+0.05){
-      let h;
-      if (p.ramp){
-        const t = clamp((p.rampZStart-z)/(p.rampZStart-p.rampZEnd || 1), 0, 1);
-        h = p.rampY0 + (p.rampY1-p.rampY0)*t;
-      } else h = p.y;
-      if (best===null || h>best) best = h;
+      const h = padHeightAt(p,z);
+      if (h>bestH){ bestH=h; best=p; }
     }
   }
   return best;
+}
+function floorHeightAt(x,z){
+  const p = floorPadAt(x,z);
+  return p ? padHeightAt(p,z) : null;
+}
+function tryStepEnemy(en, targetX, targetZ, speed, dt){
+  const dir = new THREE.Vector3(targetX-en.mesh.position.x, 0, targetZ-en.mesh.position.z);
+  const dist = dir.length();
+  if (dist<0.3) return false;
+  dir.normalize();
+  const nx = en.mesh.position.x + dir.x*speed*dt;
+  const nz = en.mesh.position.z + dir.z*speed*dt;
+  const floor = floorHeightAt(nx, nz);
+  if (floor===null) return false; // won't step off into a chasm
+  for (const ob of obstacles){ if (Math.hypot(nx-ob.x,nz-ob.z)<ob.r+0.55) return false; }
+  en.mesh.position.x = nx; en.mesh.position.z = nz; en.mesh.position.y = floor;
+  return true;
 }
 function addTorch(x,y,z,color){
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,1.6,6), new THREE.MeshStandardMaterial({color:0x2a2015}));
@@ -544,6 +567,19 @@ function makeConnectorPad(from,to,type,len,lateral){
     ramp:isRamp, rampY0:from.y, rampY1:to.y, rampZStart:zStart, rampZEnd:zEnd, isConnector:true,
   };
 }
+function makeMovingPad(from,to,gapLen){
+  // a small platform that shuttles back and forth across a gap — time your jump on and off
+  const zStart = from.z-from.d/2, zEnd = to.z+to.d/2;
+  const centerZ = (zStart+zEnd)/2, centerX = (from.x+to.x)/2;
+  const w=2.7, d=2.7;
+  const amplitude = Math.max(1.1, (zStart-zEnd)/2 - d/2*0.35);
+  const y = Math.min(from.y,to.y);
+  return {
+    x:centerX, z:centerZ, y, w, d, ramp:false, isConnector:true, moving:true,
+    axis:"z", center:{x:centerX,z:centerZ,y}, amplitude, speed:rand(0.55,0.95), phase:rand(0,6), clockT:rand(0,6),
+    dx:0, dz:0, dy:0,
+  };
+}
 
 function buildArena(){
   clearWorld();
@@ -591,14 +627,24 @@ function buildArena(){
     if (!isFirst){
       const heightDiff = Math.abs(y-prev.y);
       if (heightDiff>0.25){ connType="ramp"; connLen = 4+heightDiff*2.3; }
-      else { connType = Math.random()<0.4 ? "gap" : "bridge"; connLen = connType==="gap" ? rand(3,4.4) : rand(3.5,6); }
+      else {
+        const r = Math.random();
+        if (r<0.32){ connType="bridge"; connLen=rand(3.5,6); }
+        else if (r<0.6 && !boss){ connType="moving"; connLen=rand(5,8); }
+        else { connType="gap"; connLen=rand(3,4.4); }
+      }
       z = prev.z - prev.d/2 - connLen - d/2;
     }
     const pad = { x, z, y, w, d, index:i, isFirst, isLast, isBoss:isLast&&boss, ramp:false };
     rooms.push(pad); floorPads.push(pad);
     if (!isFirst){
-      const cpad = makeConnectorPad(prev, pad, connType, connLen, false);
-      if (cpad) floorPads.push(cpad);
+      if (connType==="moving"){
+        const mpad = makeMovingPad(prev, pad, connLen);
+        floorPads.push(mpad); movingPads.push(mpad);
+      } else {
+        const cpad = makeConnectorPad(prev, pad, connType, connLen, false);
+        if (cpad) floorPads.push(cpad);
+      }
     }
     prev = pad;
   }
@@ -617,10 +663,51 @@ function buildArena(){
     if (cpad) floorPads.push(cpad);
   }
 
+  // ---------- optional multi-story tower (2-5 floors) — a climbable bonus structure ----------
+  let towerTop = null;
+  if (!boss && rooms.length>=5 && Math.random()<0.55){
+    const branchFrom = pick(rooms.filter(r=>!r.isFirst && !r.isLast && !r.isSide));
+    if (branchFrom){
+      const sign = Math.random()<0.5?-1:1;
+      const baseW=6.2, baseD=6.2;
+      const basePad = { x:branchFrom.x+sign*(branchFrom.w/2+rand(3,4.2)+baseW/2), z:branchFrom.z+rand(-1.5,1.5),
+        y:branchFrom.y, w:baseW, d:baseD, index:"towerBase", isFirst:false, isLast:false, isTower:true, ramp:false };
+      rooms.push(basePad); floorPads.push(basePad);
+      const branchConn = makeConnectorPad(branchFrom, basePad, Math.random()<0.5?"gap":"bridge", rand(3,4.2), true);
+      if (branchConn) floorPads.push(branchConn);
+
+      const floors = randi(2,5);
+      let prev = basePad;
+      for (let f=0; f<floors; f++){
+        const fw=rand(5.5,7), fd=rand(5.5,7);
+        const heightStep = rand(2.5,3.2);
+        const y = prev.y + heightStep;
+        const x = prev.x + rand(-1.0,1.0);
+        const connLen = 3.6+heightStep*2.2;
+        const z = prev.z - prev.d/2 - connLen - fd/2;
+        const floorPad = { x, z, y, w:fw, d:fd, index:"towerFloor"+f, isFirst:false, isLast:false, isTower:true, ramp:false };
+        rooms.push(floorPad); floorPads.push(floorPad);
+        const towerConn = makeConnectorPad(prev, floorPad, "ramp", connLen, false);
+        if (towerConn) floorPads.push(towerConn);
+        prev = floorPad;
+      }
+      towerTop = prev;
+    }
+  }
+
   levelPads = floorPads;
 
   // ---------- render floor pads ----------
   floorPads.forEach(p=>{
+    if (p.moving){
+      const mat = new THREE.MeshStandardMaterial({color:0x8a92ac, emissive:0x5566ee, emissiveIntensity:0.4, metalness:0.65, roughness:0.3});
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w,0.5,p.d), mat);
+      mesh.position.set(p.x, p.y-0.25, p.z);
+      mesh.castShadow=true; mesh.receiveShadow=true;
+      worldGroup.add(mesh);
+      p.mesh = mesh;
+      return;
+    }
     const isRoom = !p.isConnector;
     const rx = p.w/4.2, rz = p.d/4.2;
     const mat = new THREE.MeshStandardMaterial({
@@ -650,20 +737,40 @@ function buildArena(){
   pit.rotation.x=-Math.PI/2; pit.position.set((minX+maxX)/2,-9,(minZ+maxZ)/2);
   worldGroup.add(pit);
 
-  // pillars/obstacles on room pads (not on the last/boss pad, keep it open)
+  // obstacles on room pads — pillars, crates, jagged rocks; more of them, scaled to room size
   rooms.forEach(p=>{
     if (p.isBoss) return;
-    const n = randi(0,2);
+    const areaFactor = clamp((p.w*p.d)/95, 0.35, 1.6);
+    const n = Math.round(randi(3,6)*areaFactor);
     for (let i=0;i<n;i++){
-      const px = p.x+rand(-p.w/2+1.5,p.w/2-1.5), pz = p.z+rand(-p.d/2+1.5,p.d/2-1.5);
-      if (Math.hypot(px-p.x,pz-p.z)<2.5) continue;
-      const h = rand(2.6,4.6);
+      const px = p.x+rand(-p.w/2+1.4,p.w/2-1.4), pz = p.z+rand(-p.d/2+1.4,p.d/2-1.4);
+      if (Math.hypot(px-p.x,pz-p.z)<2.3) continue;
+      let tooClose=false;
+      for (const ob of obstacles){ if (Math.hypot(px-ob.x,pz-ob.z)<2.2){ tooClose=true; break; } }
+      if (tooClose) continue;
+      const shape = pick(["pillar","crate","rock"]);
       const wallTexClone = repeatTexture(wallTex,1,1);
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.1,h,8), new THREE.MeshStandardMaterial({map:wallTexClone,color:realm.wall}));
+      const mat = new THREE.MeshStandardMaterial({map:wallTexClone,color:realm.wall,roughness:0.85});
+      let mesh, r, h;
+      if (shape==="pillar"){
+        h = rand(2.6,4.8);
+        mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.85,1.05,h,8), mat);
+        r = 1.0;
+      } else if (shape==="crate"){
+        h = rand(1.2,2.1);
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(h,h,h), mat);
+        mesh.rotation.y = rand(0,Math.PI*2);
+        r = h*0.62;
+      } else {
+        h = rand(1.4,2.4);
+        mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(h*0.6,0), mat);
+        mesh.rotation.set(rand(0,Math.PI*2),rand(0,Math.PI*2),0);
+        r = h*0.55;
+      }
       mesh.position.set(px, p.y+h/2, pz);
       mesh.castShadow=true; mesh.receiveShadow=true;
       worldGroup.add(mesh);
-      obstacles.push({x:px,z:pz,r:1.05});
+      obstacles.push({x:px,z:pz,r});
     }
   });
 
@@ -713,6 +820,10 @@ function buildArena(){
 
   spawnChestsOnPads(rooms, boss, sidePad);
   spawnEnemiesOnPads(rooms, boss);
+  if (towerTop){
+    spawnChestOnPad(towerTop, "diamond");
+    floatText("A tower rises nearby...", "#c9a0ff");
+  }
 
   return { boss, realm };
 }
@@ -768,17 +879,31 @@ function buildEnemyMesh(elKey, boss){
   const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08*scale,6,6), eyeMat); eyeL.position.set(-0.2*scale,1.0*scale,0.42*scale); g.add(eyeL);
   const eyeR = eyeL.clone(); eyeR.position.x = 0.2*scale; g.add(eyeR);
   const legMat = new THREE.MeshStandardMaterial({color:0x1a1a1a});
+  const legs = [];
   for (let i=0;i<4;i++){
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06*scale,0.06*scale,0.5*scale,6), legMat);
     const ang = (i/4)*Math.PI*2;
     leg.position.set(Math.cos(ang)*0.35*scale, 0.3*scale, Math.sin(ang)*0.35*scale);
+    leg.userData.baseY = leg.position.y; leg.userData.phase = ang;
     g.add(leg);
+    legs.push(leg);
   }
   if (boss){
     const crown = new THREE.Mesh(new THREE.ConeGeometry(0.4,0.5,6), new THREE.MeshStandardMaterial({color:0xffd166,emissive:0xffaa00,emissiveIntensity:0.6}));
     crown.position.y = 1.65*scale; g.add(crown);
   }
   g.userData.bodyMesh = body;
+  g.userData.legs = legs;
+  g.userData.bodyBaseY = body.position.y;
+  g.userData.scale = scale;
+
+  // floating health bar (kept in worldGroup, NOT parented, so it never inherits the body's rotation)
+  const barW = 1.0*scale;
+  const barBg = new THREE.Mesh(new THREE.PlaneGeometry(barW,0.13*scale), new THREE.MeshBasicMaterial({color:0x220000, transparent:true, opacity:0.85, depthTest:false}));
+  const barFg = new THREE.Mesh(new THREE.PlaneGeometry(barW,0.13*scale), new THREE.MeshBasicMaterial({color:0x33dd55, transparent:true, opacity:0.95, depthTest:false}));
+  barBg.renderOrder = 10; barFg.renderOrder = 11;
+  g.userData.healthBar = { bg:barBg, fg:barFg, width:barW, yOff: 1.55*scale + 0.35 };
+
   return g;
 }
 
@@ -792,6 +917,7 @@ function buildChestMesh(kind){
   lid.position.y=0.63; lid.castShadow=true; g.add(lid);
   const light = new THREE.PointLight(colors[kind], kind==="wooden"?0.2:0.9, 4);
   light.position.y=0.6; g.add(light);
+  g.userData.lid = lid;
   return g;
 }
 
@@ -829,34 +955,42 @@ function spawnChestsOnPads(rooms, boss, sidePad){
 
 function difficultyMult(){ return DIFFICULTIES[S.difficulty]; }
 
+function addHealthBar(mesh){
+  const hb = mesh.userData.healthBar;
+  if (!hb) return;
+  worldGroup.add(hb.bg); worldGroup.add(hb.fg);
+}
 function spawnEnemiesOnPads(rooms, boss){
   const dm = difficultyMult();
   const realm = REALMS[realmIndex(S.chapter)];
   if (boss){
     const lastRoom = rooms.find(r=>r.isLast);
-    // a couple of light guards on the approach corridor for tension
+    // a handful of light guards on the approach corridor for tension
     rooms.filter(r=>!r.isFirst && !r.isLast).forEach(room=>{
-      if (Math.random()<0.6) spawnGrunt(room, realm, dm, 0.7);
+      if (Math.random()<0.7) spawnGrunt(room, realm, dm, 0.55);
+      if (Math.random()<0.35) spawnGrunt(room, realm, dm, 0.55);
     });
     const hp = Math.round((260 + S.chapter*46 + S.segment*4) * dm.hp * (S.chapter>=60?1.9:1));
     const dmg = Math.round((14 + S.chapter*1.6) * dm.dmg * (S.chapter>=60?1.3:1));
     const mesh = buildEnemyMesh(realm.element, true);
     mesh.position.set(lastRoom.x, lastRoom.y, lastRoom.z-lastRoom.d*0.2);
     worldGroup.add(mesh);
+    addHealthBar(mesh);
     const isFinal = (S.chapter>=60);
     enemies.push({
       mesh, hp, maxHp:hp, dmg, boss:true, isFinal, homePad:lastRoom,
       speed: 2.1 + S.chapter*0.008,
       atkCd:0, phaseTimer: rand(1.5,2.5),
       name: isFinal ? "THE OBSIDIAN SOVEREIGN" : (realm.name.replace(" Realm","")+" Warlord"),
-      hitFlash:0, alive:true, radius:0.9,
+      hitFlash:0, alive:true, radius:0.9, bobPhase:rand(0,10),
     });
     showBossBanner(enemies[enemies.length-1].name);
     Audio_.sfx.bossRoar();
     Audio_.startMusic(realmIndex(S.chapter), true);
   } else {
+    // more, weaker monsters — a real swarm instead of a couple of tanky duos
     const combatRooms = rooms.filter(r=>!r.isFirst);
-    const totalCount = clamp(Math.round((2 + S.segment*0.35 + S.chapter*0.06) * dm.spawn), 2, 9);
+    const totalCount = clamp(Math.round((5 + S.segment*0.7 + S.chapter*0.16) * dm.spawn), 5, 18);
     for (let i=0;i<totalCount;i++){
       const room = combatRooms[i % combatRooms.length];
       spawnGrunt(room, realm, dm, 1);
@@ -865,17 +999,18 @@ function spawnEnemiesOnPads(rooms, boss){
   }
 }
 function spawnGrunt(room, realm, dm, hpMult){
-  const hp = Math.round((16 + S.chapter*7 + S.segment*2.4) * dm.hp * hpMult);
+  const hp = Math.round((9 + S.chapter*4.2 + S.segment*1.5) * dm.hp * hpMult);
   const dmg = Math.round((3 + S.chapter*1.05) * dm.dmg);
   const px = room.x+rand(-room.w/2+1.5,room.w/2-1.5), pz = room.z+rand(-room.d/2+1.5,room.d/2-1.5);
   const mesh = buildEnemyMesh(realm.element, false);
   mesh.position.set(px, room.y, pz);
   worldGroup.add(mesh);
+  addHealthBar(mesh);
   enemies.push({
     mesh, hp, maxHp:hp, dmg, boss:false, homePad:room,
-    speed: rand(1.6,2.6), aggro: rand(7,9.5),
+    speed: rand(1.8,2.9), aggro: 999, // monsters roam the whole reachable level, not just their spawn room
     atkCd: rand(0,1), hitFlash:0, alive:true, radius:0.55,
-    patrolTimer: rand(0,1.5), patrolTarget:null,
+    bobPhase: rand(0,10),
   });
 }
 
@@ -958,11 +1093,12 @@ function resetRuntimeForSegment(){
   runtime.vy = 0; runtime.grounded = true; runtime.doubleJumpUsed = false;
   runtime.lastSafe = { x:spawnStart.x, y:spawnStart.y, z:spawnStart.z };
   runtime.fallStartY = spawnStart.y;
+  runtime.currentPad = null;
 }
 function fallRespawn(){
   const fellDist = Math.max(0, runtime.fallStartY - playerObj.position.y);
   playerObj.position.set(runtime.lastSafe.x, runtime.lastSafe.y+0.5, runtime.lastSafe.z);
-  runtime.vy = 0; runtime.grounded = true; runtime.doubleJumpUsed = false;
+  runtime.vy = 0; runtime.grounded = true; runtime.doubleJumpUsed = false; runtime.currentPad = null;
   if (fellDist>2){
     const dmg = Math.round(clamp(fellDist*1.5, 3, 30));
     runtime.hp -= dmg;
@@ -1073,6 +1209,7 @@ function tryCastSpell(idx){
 function castSpell(elKey, level){
   Audio_.ensure();
   Audio_.sfx.spell(elKey);
+  runtime.castAnimT = 1;
   const mult = elementDamageMult(level);
   const meta = ELEMENTS.find(e=>e.key===elKey);
   const p = playerObj.position;
@@ -1178,7 +1315,9 @@ function damageEnemy(en, dmg, crit){
 function killEnemy(en){
   Audio_.sfx.enemyDeath();
   spawnParticles(en.mesh.position, 0xff8844, 22, 3, 0.7);
-  disposeObj(en.mesh);
+  en.dying = true; en.deathT = 0; // shrink-and-rise death animation, disposed once finished (see updatePlaying)
+  const hb = en.mesh.userData.healthBar;
+  if (hb){ hb.bg.visible=false; hb.fg.visible=false; }
   S.stats.kills++;
   bumpCombo();
   const dm = difficultyMult();
@@ -1194,13 +1333,15 @@ function killEnemy(en){
 function playerAttack(){
   if (runtime.atkCd>0) return;
   runtime.atkCd = 0.55;
+  runtime.atkAnimT = 1;
   const dmg = weaponDamage() * (1+S.chapter*0.02);
   const range = 2.4;
   let hitSomething=false;
   enemies.forEach(en=>{
     if (!en.alive) return;
-    const d = en.mesh.position.distanceTo(playerObj.position);
-    if (d<range){
+    const d = Math.hypot(en.mesh.position.x-playerObj.position.x, en.mesh.position.z-playerObj.position.z);
+    const dy = Math.abs(en.mesh.position.y-playerObj.position.y);
+    if (d<range && dy<1.8){
       damageEnemy(en, dmg);
       hitSomething=true;
       const dir = new THREE.Vector3(en.mesh.position.x-playerObj.position.x,0,en.mesh.position.z-playerObj.position.z).normalize();
@@ -1245,7 +1386,8 @@ function openChest(ch){
   if (Math.random() < (ch.kind==="wooden"?0.12:ch.kind==="golden"?0.35:0.6)){
     maybeDropGear();
   }
-  disposeObj(ch.mesh);
+  ch.opening = true; ch.openT = 0; // lid swings open in place instead of vanishing (see updatePlaying)
+  ch.mesh.position.y = ch.baseY;
   updateHud();
 }
 function maybeDropGear(){
@@ -1403,6 +1545,23 @@ function loop(){
 function updatePlaying(dt){
   S.stats.playtime += dt;
 
+  // ---- moving platforms: advance them first, then carry the player if they're riding one ----
+  movingPads.forEach(p=>{
+    p.clockT += dt;
+    const offset = Math.sin(p.clockT*p.speed + p.phase) * p.amplitude;
+    const oldX=p.x, oldZ=p.z, oldY=p.y;
+    if (p.axis==="x") p.x = p.center.x + offset;
+    else if (p.axis==="z") p.z = p.center.z + offset;
+    else p.y = p.center.y + offset;
+    p.dx = p.x-oldX; p.dz = p.z-oldZ; p.dy = p.y-oldY;
+    if (p.mesh) p.mesh.position.set(p.x, p.y-0.25, p.z);
+  });
+  if (runtime.currentPad && runtime.currentPad.moving && runtime.grounded){
+    playerObj.position.x += runtime.currentPad.dx;
+    playerObj.position.y += runtime.currentPad.dy;
+    playerObj.position.z += runtime.currentPad.dz;
+  }
+
   // ---- horizontal movement input ----
   let mx=0, mz=0;
   if (keys["KeyW"]||keys["ArrowUp"]) mz-=1;
@@ -1440,16 +1599,20 @@ function updatePlaying(dt){
     if (runtime.grounded){
       runtime.vy = JUMP_FORCE; runtime.grounded=false; runtime.doubleJumpUsed=false;
       Audio_.sfx.jump();
-    } else if (!runtime.doubleJumpUsed && S.elements.wind.level>=5){
-      runtime.vy = DOUBLE_JUMP_FORCE; runtime.doubleJumpUsed = true;
+    } else if (!runtime.doubleJumpUsed){
+      // double jump is a base movement ability; investing in Wind makes it stronger
+      runtime.vy = DOUBLE_JUMP_FORCE + S.elements.wind.level*0.025;
+      runtime.doubleJumpUsed = true;
       Audio_.sfx.jump(); floatText("Double Jump!","#aaffee");
-      spawnParticles(playerObj.position, 0xaaffee, 12, 1.6, 0.35);
+      spawnParticles(playerObj.position, 0xaaffee, 14, 1.8, 0.4);
+      playerObj.userData.spinT = 1;
     }
     wantJump=false;
   }
   runtime.vy += GRAVITY*dt;
   let newY = playerObj.position.y + runtime.vy*dt;
-  const floor = floorHeightAt(nx, nz);
+  const landedPad = floorPadAt(nx, nz);
+  const floor = landedPad ? padHeightAt(landedPad, nz) : null;
   if (floor!==null && newY<=floor){
     if (!runtime.grounded){
       const fell = runtime.fallStartY - floor;
@@ -1461,6 +1624,7 @@ function updatePlaying(dt){
     runtime.doubleJumpUsed = false;
     runtime.lastSafe = {x:nx,y:floor,z:nz};
     runtime.fallStartY = floor;
+    runtime.currentPad = landedPad;
   } else {
     if (runtime.grounded) runtime.fallStartY = playerObj.position.y;
     runtime.grounded = false;
@@ -1468,16 +1632,31 @@ function updatePlaying(dt){
   playerObj.position.set(nx, newY, nz);
   if (playerObj.position.y < VOID_FALL_Y) fallRespawn();
 
-  // ---- player animation: walk bob, arm swing, landing squash ----
+  // ---- player animation: walk bob, arm swing, attack/cast flourishes, landing squash, air tilt ----
   runtime.squash = Math.max(0, (runtime.squash||0) - dt*4);
+  runtime.atkAnimT = Math.max(0, (runtime.atkAnimT||0) - dt*4.5);
+  runtime.castAnimT = Math.max(0, (runtime.castAnimT||0) - dt*3.2);
+  playerObj.userData.spinT = Math.max(0, (playerObj.userData.spinT||0) - dt*2.4);
   playerObj.scale.set(1+runtime.squash*0.08, 1-runtime.squash*0.16, 1+runtime.squash*0.08);
   if (playerObj.userData.armL){
-    const swing = moving && runtime.grounded ? Math.sin(runtime.moveT*9)*0.5 : 0;
-    playerObj.userData.armL.rotation.x = swing;
-    playerObj.userData.armR.rotation.x = -swing*0.7;
+    const walkSwing = moving && runtime.grounded ? Math.sin(runtime.moveT*9)*0.5 : 0;
+    const atkSwing = runtime.atkAnimT * -2.2;       // weapon arm chops forward on attack
+    const castRaise = runtime.castAnimT * -1.6;     // staff arm raises on spellcast
+    playerObj.userData.armL.rotation.x = walkSwing;
+    playerObj.userData.armR.rotation.x = -walkSwing*0.7 + atkSwing + castRaise;
     playerObj.userData.robe.position.y = 0.85 + (moving&&runtime.grounded? Math.abs(Math.sin(runtime.moveT*9))*0.04 : 0);
+    // air tilt: lean slightly in the direction of vertical motion for a bit of weight/realism
+    const airTilt = runtime.grounded ? 0 : clamp(-runtime.vy*0.025, -0.35, 0.35);
+    playerObj.userData.head.rotation.x = airTilt*0.6;
   }
-  if (playerObj.userData.orb) playerObj.userData.orb.position.y = 1.78 + Math.sin(performance.now()*0.004)*0.05;
+  if (playerObj.userData.orb){
+    const pulse = runtime.castAnimT>0 ? 1.6+runtime.castAnimT*1.4 : 1.6;
+    playerObj.userData.orb.position.y = 1.78 + Math.sin(performance.now()*0.004)*0.05;
+    playerObj.userData.orb.material.emissiveIntensity = pulse;
+  }
+  if (playerObj.userData.spinT>0){
+    playerObj.rotation.y += dt*Math.PI*2*2.2*Math.min(1,playerObj.userData.spinT*2);
+  }
 
   // timers
   runtime.atkCd = Math.max(0, runtime.atkCd-dt);
@@ -1491,55 +1670,90 @@ function updatePlaying(dt){
 
   if (wantAttack){ playerAttack(); wantAttack=false; }
 
-  // ---- enemies AI: patrol within their room until the player wanders in, then chase ----
+  // ---- enemies AI: roam the whole reachable level and always hunt the player ----
   enemies.forEach(en=>{
-    if (!en.alive) return;
+    if (!en.alive){
+      if (en.dying && !en.disposed){
+        en.deathT += dt;
+        const t = clamp(en.deathT/0.4,0,1);
+        const s = Math.max(0.001,1-t);
+        en.mesh.scale.set(s,s,s);
+        en.mesh.position.y += dt*0.6;
+        if (t>=1){ en.disposed=true; disposeEnemy(en); }
+      }
+      return;
+    }
     en.hitFlash = Math.max(0, en.hitFlash-dt);
+    en.bobPhase += dt;
     if (en.mesh.userData.bodyMesh){
       en.mesh.userData.bodyMesh.material.emissiveIntensity = en.hitFlash>0 ? 1.4 : (en.boss?0.55:0.25);
-      en.mesh.rotation.y += dt*0.6;
     }
     en.slowT = Math.max(0, (en.slowT||0)-dt);
     const speedMult = en.slowT>0 ? 0.4 : 1;
     const toPlayer = new THREE.Vector3(playerObj.position.x-en.mesh.position.x,0,playerObj.position.z-en.mesh.position.z);
     const dist = toPlayer.length();
     en.atkCd = Math.max(0, en.atkCd-dt);
+    let moved = false;
     if (en.boss){
+      moved = dist>1.8;
       updateBoss(en, dt, dist, toPlayer);
     } else {
-      let targetX, targetZ;
-      if (dist<=en.aggro){
-        targetX = playerObj.position.x; targetZ = playerObj.position.z;
-      } else {
-        en.patrolTimer -= dt;
-        if (en.patrolTimer<=0 && en.homePad){
-          en.patrolTimer = rand(2.5,5.5);
-          en.patrolTarget = {
-            x: en.homePad.x + rand(-en.homePad.w/2+1.2, en.homePad.w/2-1.2),
-            z: en.homePad.z + rand(-en.homePad.d/2+1.2, en.homePad.d/2-1.2),
-          };
+      if (en.telegraphing){
+        en.telegraphT -= dt;
+        if (en.telegraphT<=0){
+          en.telegraphing = false;
+          if (dist<1.6){ en.atkCd = 1.15; enemyAttackPlayer(en, en.dmg); }
         }
-        targetX = en.patrolTarget ? en.patrolTarget.x : en.mesh.position.x;
-        targetZ = en.patrolTarget ? en.patrolTarget.z : en.mesh.position.z;
-      }
-      if (en.homePad){
-        targetX = clamp(targetX, en.homePad.x-en.homePad.w/2+0.6, en.homePad.x+en.homePad.w/2-0.6);
-        targetZ = clamp(targetZ, en.homePad.z-en.homePad.d/2+0.6, en.homePad.z+en.homePad.d/2-0.6);
-      }
-      const toTarget = new THREE.Vector3(targetX-en.mesh.position.x,0,targetZ-en.mesh.position.z);
-      const moveDist = toTarget.length();
-      const chaseSpeed = dist<=en.aggro ? en.speed : en.speed*0.45;
-      if (moveDist>0.3){
-        toTarget.normalize();
-        en.mesh.position.x += toTarget.x*chaseSpeed*speedMult*dt;
-        en.mesh.position.z += toTarget.z*chaseSpeed*speedMult*dt;
-      }
-      if (dist<1.3 && en.atkCd<=0){
-        en.atkCd = 1.1;
-        enemyAttackPlayer(en, en.dmg);
+      } else {
+        const chaseSpeed = en.speed*speedMult;
+        moved = tryStepEnemy(en, playerObj.position.x, playerObj.position.z, chaseSpeed, dt);
+        if (dist<1.3 && en.atkCd<=0){
+          en.telegraphing = true; en.telegraphT = 0.28; // brief wind-up so a hit is dodgeable, not instant
+        }
       }
     }
+    // idle bob + leg-swing animation instead of the old constant spin
+    if (en.mesh.userData.legs){
+      const swingAmp = moved ? 0.5 : 0.12;
+      const bob = Math.sin(en.bobPhase*(moved?7:2.2))*(moved?0.05:0.03)*(en.mesh.userData.scale||1);
+      if (en.mesh.userData.bodyMesh) en.mesh.userData.bodyMesh.position.y = en.mesh.userData.bodyBaseY + bob;
+      en.mesh.userData.legs.forEach(leg=>{
+        leg.rotation.x = Math.sin(en.bobPhase*7+leg.userData.phase)*swingAmp;
+      });
+      if (en.telegraphing){
+        const p = 1 + (0.28-Math.max(0,en.telegraphT))/0.28*0.28;
+        en.mesh.scale.set(p,p,p);
+      } else {
+        en.mesh.scale.set(1,1,1);
+      }
+      // face movement/attack direction instead of endlessly spinning
+      if (dist>0.4){
+        const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
+        en.mesh.rotation.y += (targetAngle-en.mesh.rotation.y)*clamp(dt*6,0,1);
+      }
+    }
+    // floating health bar (kept out of the mesh group so it always faces the fixed-angle camera cleanly)
+    const hb = en.mesh.userData.healthBar;
+    if (hb){
+      const frac = clamp(en.hp/en.maxHp,0,1);
+      hb.bg.position.set(en.mesh.position.x, en.mesh.position.y+hb.yOff, en.mesh.position.z);
+      hb.fg.position.set(en.mesh.position.x-(hb.width/2)*(1-frac), en.mesh.position.y+hb.yOff, en.mesh.position.z+0.01);
+      hb.fg.scale.x = Math.max(0.001, frac);
+      hb.fg.material.color.setHex(frac>0.5?0x33dd55:frac>0.25?0xffcc33:0xff3344);
+      hb.bg.visible = hb.fg.visible = (frac<0.999 || en.boss);
+    }
   });
+
+  // boss HUD health bar
+  const bossEn = enemies.find(e=>e.boss && e.alive);
+  const bossWrap = document.getElementById("bossHpWrap");
+  if (bossEn){
+    bossWrap.classList.remove("hidden");
+    document.getElementById("bossHpName").textContent = bossEn.name;
+    document.getElementById("bossHpFill").style.width = clamp(bossEn.hp/bossEn.maxHp*100,0,100)+"%";
+  } else {
+    bossWrap.classList.add("hidden");
+  }
 
   // ---- hazard zones (lava/riptide/electrified floor/etc, telegraphed on-off cycles) ----
   hazardZones.forEach(hz=>{
@@ -1638,9 +1852,18 @@ function updatePlaying(dt){
     if (p.t>=p.life){ disposeObj(p.points); particles.splice(i,1); }
   }
 
-  // chest interaction (auto-open when near, at the pad's own height)
+  // chest interaction: idle spin+bob while closed, lid-opening animation once looted
   chests.forEach(ch=>{
-    if (ch.opened) return;
+    if (ch.opened){
+      if (ch.opening){
+        ch.openT += dt;
+        const t = clamp(ch.openT/0.5,0,1);
+        const lid = ch.mesh.userData.lid;
+        if (lid){ lid.rotation.x = -t*1.85; lid.position.y = 0.63 + t*0.4; lid.position.z = -t*0.12; }
+        if (t>=1) ch.opening=false;
+      }
+      return;
+    }
     ch.spin += dt;
     ch.mesh.rotation.y = ch.spin;
     ch.mesh.position.y = ch.baseY + Math.sin(performance.now()*0.002+ch.spin)*0.08;
@@ -1799,7 +2022,7 @@ function renderBook(){
 }
 
 /* ---- BACKPACK ---- */
-function itemIcon(type){ return type==="weapon"?"⚔️":type==="shield"?"🛡️":"🥋"; }
+function itemIcon(type){ return type==="weapon"?"⚔️":type==="shield"?"🛡️":"👕"; }
 function renderBackpack(){
   document.getElementById("bagCapTxt").textContent = bagUsed()+"/"+bagCap();
   document.getElementById("bagCapFill").style.width = clamp(bagUsed()/bagCap()*100,0,100)+"%";
