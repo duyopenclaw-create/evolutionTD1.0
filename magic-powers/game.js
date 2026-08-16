@@ -525,6 +525,46 @@ function tryStepEnemy(en, targetX, targetZ, speed, dt){
   en.mesh.position.x = nx; en.mesh.position.z = nz; en.mesh.position.y = floor;
   return true;
 }
+
+/* ---------------------------------------------------------------------- */
+/*  DEBUG: hitbox visualization (Pause menu → Show Hitboxes)               */
+/* ---------------------------------------------------------------------- */
+function debugRing(x,y,z,r,color,opacity){
+  if (!debugGroup) return;
+  const geo = new THREE.RingGeometry(Math.max(0.02,r-0.045), r, 28);
+  const mat = new THREE.MeshBasicMaterial({color, transparent:true, opacity:opacity!=null?opacity:0.75, side:THREE.DoubleSide, depthTest:false});
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x = -Math.PI/2;
+  m.position.set(x, y+0.04, z);
+  m.renderOrder = 30;
+  debugGroup.add(m);
+}
+function rebuildDebugGroup(){
+  if (!debugGroup) return;
+  for (let i=debugGroup.children.length-1;i>=0;i--){
+    const c = debugGroup.children[i];
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+    debugGroup.remove(c);
+  }
+  if (!debugHitboxes || !playerObj) return;
+  debugRing(playerObj.position.x, playerObj.position.y, playerObj.position.z, PLAYER_RADIUS, 0x00ff88, 0.9);
+  enemies.forEach(en=>{
+    if (!en.alive) return;
+    debugRing(en.mesh.position.x, en.mesh.position.y, en.mesh.position.z, en.radius, 0xff3355, 0.85);
+    if (!en.boss) debugRing(en.mesh.position.x, en.mesh.position.y, en.mesh.position.z, contactRange(en), 0xffaa33, 0.3);
+  });
+  obstacles.forEach(ob=>{
+    const base = ob.baseY!=null?ob.baseY:0;
+    debugRing(ob.x, base, ob.z, ob.r, 0x3388ff, 0.8);
+    if (ob.topH!=null) debugRing(ob.x, base+ob.topH, ob.z, ob.r, 0x66ccff, 0.55);
+  });
+  chests.forEach(ch=>{ if (!ch.opened) debugRing(ch.mesh.position.x, ch.baseY, ch.mesh.position.z, CHEST_RADIUS+PLAYER_RADIUS+0.5, 0xffd166, 0.5); });
+  ladders.forEach(l=> debugRing(l.x, l.yBase, l.z, l.r, 0xffffff, 0.3));
+  if (exitPortal) debugRing(exitPortal.x, exitPortal.y, exitPortal.z, 2.2, 0x00ffff, 0.4);
+  projectiles.forEach(pr=> debugRing(pr.mesh.position.x, pr.mesh.position.y, pr.mesh.position.z, pr.radius, 0xff66ff, 0.9));
+  hazardZones.forEach(hz=> debugRing(hz.x, hz.y, hz.z, hz.r, 0xff8844, 0.35));
+}
 function addTorch(x,y,z,color){
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,1.6,6), new THREE.MeshStandardMaterial({color:0x2a2015}));
   post.position.set(x,y+0.8,z); post.castShadow=true;
@@ -625,6 +665,8 @@ function buildArena(){
 
   worldGroup = new THREE.Group();
   scene.add(worldGroup);
+  debugGroup = new THREE.Group();
+  worldGroup.add(debugGroup);
 
   const amb = new THREE.AmbientLight(0xffffff, 0.42);
   worldGroup.add(amb);
@@ -873,19 +915,57 @@ function buildArena(){
   return { boss, realm };
 }
 let levelBoundsCenter = {x:0,z:0};
+let debugHitboxes = false;
+let debugGroup = null;
 let spawnStart = {x:0,y:0,z:9};
 let spawnPads = [];
 
 /* ---------- player mesh ---------- */
+/* ---- wizard skins: cosmetic tiers unlocked by your highest element level ---- */
+const WIZARD_SKINS = [
+  { min:0,   name:"Apprentice",     robe:0x3355cc, hat:0x1f2a66, trim:0x88aaff, glow:0x2299ff, aura:false },
+  { min:20,  name:"Adept",          robe:0x5a3fae, hat:0x2c1f66, trim:0xc9a6ff, glow:0x9955ff, aura:false },
+  { min:40,  name:"Battlemage",     robe:0x8a1f2a, hat:0x4a0f14, trim:0xffcc55, glow:0xff5522, aura:true  },
+  { min:60,  name:"Archmage",       robe:0x1f7a45, hat:0x0f4a26, trim:0xffffff, glow:0x55ffaa, aura:true  },
+  { min:80,  name:"Grand Sorcerer", robe:0x140a24, hat:0x0a0514, trim:0xb266ff, glow:0xb266ff, aura:true  },
+  { min:100, name:"Ascendant",      robe:0xd4af37, hat:0xfff3c9, trim:0xffffff, glow:0xffee99, aura:true  },
+];
+function maxElementLevel(){ return Math.max(0, ...ELEMENTS.map(e=>S.elements[e.key].level)); }
+function currentWizardSkin(){
+  const lvl = maxElementLevel();
+  let skin = WIZARD_SKINS[0];
+  for (const s of WIZARD_SKINS){ if (lvl>=s.min) skin=s; }
+  return skin;
+}
+function applyWizardSkin(){
+  if (!playerObj) return;
+  const skin = currentWizardSkin();
+  const ud = playerObj.userData;
+  ud.robeMat.color.setHex(skin.robe);
+  ud.hatMat.color.setHex(skin.hat);
+  ud.trimMat.color.setHex(skin.trim);
+  ud.trimMat.emissive.setHex(skin.trim); ud.trimMat.emissiveIntensity = skin.aura?0.5:0.15;
+  ud.orb.material.color.setHex(skin.glow);
+  ud.orb.material.emissive.setHex(skin.glow);
+  if (ud.auraLight){ ud.auraLight.color.setHex(skin.glow); ud.auraLight.intensity = skin.aura?1.1:0; }
+  playerObj.userData.skinName = skin.name;
+}
+
 function buildPlayerMesh(){
   const g = new THREE.Group();
-  const robeMat = new THREE.MeshStandardMaterial({color:0x3355cc, roughness:0.7});
+  const skin = currentWizardSkin();
+  const robeMat = new THREE.MeshStandardMaterial({color:skin.robe, roughness:0.7});
   const skinMat = new THREE.MeshStandardMaterial({color:0xe8b58c, roughness:0.6});
-  const hatMat = new THREE.MeshStandardMaterial({color:0x1f2a66, roughness:0.6});
+  const hatMat = new THREE.MeshStandardMaterial({color:skin.hat, roughness:0.6});
+  const trimMat = new THREE.MeshStandardMaterial({color:skin.trim, emissive:skin.trim, emissiveIntensity:skin.aura?0.5:0.15, roughness:0.4});
 
   const robe = new THREE.Mesh(new THREE.ConeGeometry(0.55,1.3,10), robeMat);
   robe.position.y = 0.85; robe.castShadow=true;
   g.add(robe);
+
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.53,0.045,8,20), trimMat);
+  trim.rotation.x = Math.PI/2; trim.position.y = 0.24;
+  g.add(trim);
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.32,12,12), skinMat);
   head.position.y = 1.65; head.castShadow=true;
@@ -901,22 +981,40 @@ function buildPlayerMesh(){
 
   const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.3,6), new THREE.MeshStandardMaterial({color:0x5a3a1e}));
   staff.position.set(0.62,1.1,0.25); staff.rotation.z=-0.15; g.add(staff);
-  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.13,10,10), new THREE.MeshStandardMaterial({color:0x66ccff, emissive:0x2299ff, emissiveIntensity:0.8}));
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.13,10,10), new THREE.MeshStandardMaterial({color:skin.glow, emissive:skin.glow, emissiveIntensity:0.8}));
   orb.position.set(0.62,1.78,0.25); g.add(orb);
+
+  const auraLight = new THREE.PointLight(skin.glow, skin.aura?1.1:0, 4.5);
+  auraLight.position.set(0,1.2,0); g.add(auraLight);
+
   g.userData.orb = orb;
   g.userData.armL = armL; g.userData.armR = armR;
   g.userData.robe = robe; g.userData.head = head; g.userData.hat = hat;
   g.userData.armLBaseZ = armL.rotation.z; g.userData.armRBaseZ = armR.rotation.z;
+  g.userData.robeMat = robeMat; g.userData.hatMat = hatMat; g.userData.trimMat = trimMat;
+  g.userData.auraLight = auraLight; g.userData.auraTimer = 0; g.userData.skinName = skin.name;
 
   return g;
 }
 
 /* ---------- enemy mesh factory ---------- */
-function buildEnemyMesh(elKey, boss){
+/* ---- monster skins: cosmetic tiers unlocked by chapter progress ---- */
+const MONSTER_TIER_NAMES = ["","Veteran ","Elite ","Apex "];
+function monsterTier(chapter){
+  if (chapter>=46) return 3;
+  if (chapter>=31) return 2;
+  if (chapter>=16) return 1;
+  return 0;
+}
+function buildEnemyMesh(elKey, boss, tier){
+  tier = tier||0;
   const meta = ELEMENTS.find(e=>e.key===elKey) || ELEMENTS[0];
   const g = new THREE.Group();
-  const scale = boss? 2.1 : 1;
-  const bodyMat = new THREE.MeshStandardMaterial({color:meta.color, emissive:meta.glow, emissiveIntensity:boss?0.55:0.25, roughness:0.55});
+  const scale = (boss? 2.1 : 1) * (1 + (boss?0:tier*0.05));
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color:meta.color, emissive:meta.glow, emissiveIntensity:(boss?0.55:0.25)+tier*0.09,
+    roughness:0.55-tier*0.1, metalness:tier*0.18,
+  });
   const body = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55*scale,0), bodyMat);
   body.position.y = 0.9*scale; body.castShadow=true;
   g.add(body);
@@ -936,11 +1034,16 @@ function buildEnemyMesh(elKey, boss){
   if (boss){
     const crown = new THREE.Mesh(new THREE.ConeGeometry(0.4,0.5,6), new THREE.MeshStandardMaterial({color:0xffd166,emissive:0xffaa00,emissiveIntensity:0.6}));
     crown.position.y = 1.65*scale; g.add(crown);
+  } else if (tier>=2){
+    // Elite/Apex grunts get a spiked crest so their extra danger reads at a glance
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.14*scale,0.34*scale,5), new THREE.MeshStandardMaterial({color:meta.glow, emissive:meta.glow, emissiveIntensity:0.9, metalness:0.4}));
+    spike.position.y = 1.48*scale; g.add(spike);
   }
   g.userData.bodyMesh = body;
   g.userData.legs = legs;
   g.userData.bodyBaseY = body.position.y;
   g.userData.scale = scale;
+  g.userData.tier = tier;
 
   // floating health bar (kept in worldGroup, NOT parented, so it never inherits the body's rotation)
   const barW = 1.0*scale;
@@ -1017,7 +1120,8 @@ function spawnEnemiesOnPads(rooms, boss){
     });
     const hp = Math.round((260 + S.chapter*46 + S.segment*4) * dm.hp * (S.chapter>=60?1.9:1));
     const dmg = Math.round((26 + S.chapter*3.4) * dm.dmg * (S.chapter>=60?1.3:1));
-    const mesh = buildEnemyMesh(realm.element, true);
+    const tier = monsterTier(S.chapter);
+    const mesh = buildEnemyMesh(realm.element, true, tier);
     mesh.position.set(lastRoom.x, lastRoom.y, lastRoom.z-lastRoom.d*0.2);
     worldGroup.add(mesh);
     addHealthBar(mesh);
@@ -1026,7 +1130,7 @@ function spawnEnemiesOnPads(rooms, boss){
       mesh, hp, maxHp:hp, dmg, boss:true, isFinal, homePad:lastRoom,
       speed: 2.1 + S.chapter*0.008,
       atkCd:0, phaseTimer: rand(1.5,2.5),
-      name: isFinal ? "THE OBSIDIAN SOVEREIGN" : (realm.name.replace(" Realm","")+" Warlord"),
+      name: isFinal ? "THE OBSIDIAN SOVEREIGN" : (MONSTER_TIER_NAMES[tier]+realm.name.replace(" Realm","")+" Warlord"),
       hitFlash:0, alive:true, radius:0.9, bobPhase:rand(0,10),
     });
     showBossBanner(enemies[enemies.length-1].name);
@@ -1044,17 +1148,18 @@ function spawnEnemiesOnPads(rooms, boss){
   }
 }
 function spawnGrunt(room, realm, dm, hpMult){
-  const hp = Math.round((9 + S.chapter*4.2 + S.segment*1.5) * dm.hp * hpMult);
-  const dmg = Math.round((9 + S.chapter*2.4) * dm.dmg);
+  const tier = monsterTier(S.chapter);
+  const hp = Math.round((9 + S.chapter*4.2 + S.segment*1.5) * dm.hp * hpMult * (1+tier*0.15));
+  const dmg = Math.round((9 + S.chapter*2.4) * dm.dmg * (1+tier*0.12));
   const px = room.x+rand(-room.w/2+1.5,room.w/2-1.5), pz = room.z+rand(-room.d/2+1.5,room.d/2-1.5);
-  const mesh = buildEnemyMesh(realm.element, false);
+  const mesh = buildEnemyMesh(realm.element, false, tier);
   mesh.position.set(px, room.y, pz);
   worldGroup.add(mesh);
   addHealthBar(mesh);
   enemies.push({
-    mesh, hp, maxHp:hp, dmg, boss:false, homePad:room,
-    speed: rand(1.8,2.9), aggro: 999, // monsters roam the whole reachable level, not just their spawn room
-    atkCd: rand(0,1), hitFlash:0, alive:true, radius:0.55,
+    mesh, hp, maxHp:hp, dmg, boss:false, homePad:room, tier,
+    speed: rand(1.8,2.9)*(1+tier*0.04), aggro: 999, // monsters roam the whole reachable level, not just their spawn room
+    atkCd: rand(0,1), hitFlash:0, alive:true, radius:0.55*(1+tier*0.05),
     bobPhase: rand(0,10),
   });
 }
@@ -1141,6 +1246,9 @@ function resetRuntimeForSegment(){
   runtime.fallStartY = spawnStart.y;
   runtime.currentPad = null;
   runtime.climbing = false;
+  runtime.fallPending = false; runtime.fallPendingT = 0;
+  const fade = document.getElementById("fallFade");
+  if (fade) fade.style.opacity = "0";
 }
 function nearestPad(x,z){
   let best=null, bestD=Infinity;
@@ -1690,6 +1798,11 @@ function updatePlaying(dt){
       runtime.lastSafe = {x:playerObj.position.x, y:ny, z:playerObj.position.z};
       runtime.fallStartY = ny;
     }
+  } else if (runtime.fallPending){
+    runtime.climbing = false;
+    // holding still during the brief fall-transition — position is frozen so the fall distance
+    // (and its damage) is judged from where you actually crossed the void line, not however much
+    // further you'd otherwise keep dropping while the respawn is pending
   } else {
     runtime.climbing = false;
     // ---- vertical physics: jump / gravity / landing / falling into the void ----
@@ -1728,7 +1841,22 @@ function updatePlaying(dt){
       runtime.grounded = false;
     }
     playerObj.position.set(nx, newY, nz);
-    if (playerObj.position.y < VOID_FALL_Y) fallRespawn();
+    if (playerObj.position.y < VOID_FALL_Y && !runtime.fallPending){
+      // don't teleport the instant you cross the void line — let the fall actually read as a fall first
+      runtime.fallPending = true;
+      runtime.fallPendingT = 0;
+      const fade = document.getElementById("fallFade");
+      if (fade) fade.style.opacity = "1";
+    }
+  }
+  if (runtime.fallPending){
+    runtime.fallPendingT += dt;
+    if (runtime.fallPendingT>=0.5){
+      runtime.fallPending = false;
+      fallRespawn();
+      const fade = document.getElementById("fallFade");
+      if (fade) fade.style.opacity = "0";
+    }
   }
 
   // ---- player animation: walk bob, arm swing, attack/cast flourishes, landing squash, air tilt ----
@@ -1755,6 +1883,14 @@ function updatePlaying(dt){
   }
   if (playerObj.userData.spinT>0){
     playerObj.rotation.y += dt*Math.PI*2*2.2*Math.min(1,playerObj.userData.spinT*2);
+  }
+  // aura sparkle for higher wizard skin tiers
+  if (currentWizardSkin().aura){
+    playerObj.userData.auraTimer -= dt;
+    if (playerObj.userData.auraTimer<=0){
+      playerObj.userData.auraTimer = 1.4;
+      spawnParticles(playerObj.position, currentWizardSkin().glow, 6, 1, 0.8);
+    }
   }
 
   // timers
@@ -2017,6 +2153,8 @@ function updatePlaying(dt){
   }
   document.getElementById("stamFill").style.width = clamp(runtime.stamina/STAMINA_MAX*100,0,100)+"%";
 
+  if (debugHitboxes) rebuildDebugGroup();
+
   // periodic light autosave handled by interval separately
 }
 
@@ -2132,12 +2270,17 @@ function renderBook(){
       const cost = locked?1:nextLevelCost(st.level);
       if (st.level>=MAX_LEVEL) return;
       if (S.magicPoints<cost){ floatText("Not enough Magic Points!","#ff5566"); return; }
+      const skinBefore = currentWizardSkin();
       S.magicPoints -= cost;
       S.mpSpent += cost;
       st.level += 1;
       Audio_.ensure();
       if (st.level%5===0) Audio_.sfx.milestone(); else Audio_.sfx.levelup();
       floatText((locked?"Unlocked ":"Leveled ")+ELEMENTS.find(e=>e.key===key).name+" → Lv."+st.level, "#8ecbff");
+      applyWizardSkin();
+      if (currentWizardSkin().name!==skinBefore.name){
+        setTimeout(()=>{ floatText("New Wizard Skin: "+currentWizardSkin().name+"!", "#ffe08a"); Audio_.sfx.milestone(); }, 900);
+      }
       renderBook(); updateHud(); saveGame();
     });
   });
@@ -2284,6 +2427,12 @@ function togglePause(){
 document.getElementById("btnResume").addEventListener("click", ()=>{ document.getElementById("pausePanel").classList.add("hidden"); gameMode="playing"; });
 document.getElementById("btnSaveNow").addEventListener("click", ()=>{ saveGame(); });
 document.getElementById("btnOpenSettings").addEventListener("click", ()=>{ document.getElementById("settingsPanel").classList.remove("hidden"); });
+document.getElementById("btnDebugHitboxes").addEventListener("click", (e)=>{
+  debugHitboxes = !debugHitboxes;
+  e.target.textContent = "🔲 Show Hitboxes: "+(debugHitboxes?"On":"Off");
+  rebuildDebugGroup();
+  Audio_.sfx.click();
+});
 document.getElementById("btnQuitMenu").addEventListener("click", ()=>{
   saveGame();
   document.getElementById("pausePanel").classList.add("hidden");

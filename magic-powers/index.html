@@ -13,6 +13,7 @@
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;
   font-family:'Trebuchet MS','Segoe UI',sans-serif;color:#eee;}
 #gameCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+#fallFade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:15;}
 
 /* ---------- generic overlay / panel ---------- */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
@@ -152,6 +153,7 @@ body.touch #touchControls{display:block;}
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+<div id="fallFade"></div>
 
 <!-- ============ MAIN MENU ============ -->
 <div id="mainMenu" class="overlay">
@@ -188,7 +190,9 @@ body.touch #touchControls{display:block;}
     <p>💰 Coins drop from monsters &amp; chests. Spend them in the <b>Shop</b> on gear, more Magic Points (1000c) or Backpack slots (1000c/slot).</p>
     <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins. Some sit on hidden side-paths off the main route.</p>
     <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Some gaps have a <b>moving platform</b> shuttling across them — time your jump on and off. Some segments hide a <b>2-5 story tower</b> to climb for a guaranteed diamond chest — some floors are open ledges needing real jumps (and double-jumps), and every floor also has a ladder: walk up to it and hold <b>X</b> (or the 🪜 button) to climb straight up or down, no jumping required. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
-    <p>👹 Monsters now roam the whole level and will hunt you down wherever you are — expect more of them, but each one is weaker than before. Watch their health bars.</p>
+    <p>👹 Monsters now roam the whole level and will hunt you down wherever you are — expect more of them, but each one is weaker than before. Watch their health bars, and watch for Veteran/Elite/Apex monsters with a spiked crest starting Chapter 16 — tougher, and worth more.</p>
+    <p>🧙 Your wizard's look upgrades on its own as you level any element higher — Apprentice → Adept → Battlemage → Archmage → Grand Sorcerer → Ascendant at Lv.100, with a glow aura once you're deep enough in.</p>
+    <p>🔲 Pause and hit <b>Show Hitboxes</b> if you ever want to see exactly what's colliding with what.</p>
     <p>👹 Every 10th segment is a <b>Boss</b>. Every 10 chapters you enter a new elemental Realm. Beat Chapter 60's boss to win.</p>
     <button class="btn" data-close="howPanel">Got it</button>
   </div>
@@ -288,6 +292,7 @@ body.touch #touchControls{display:block;}
       <button class="btn" id="btnResume">▶ Resume</button>
       <button class="btn" id="btnSaveNow">💾 Save Now</button>
       <button class="btn" id="btnOpenSettings">⚙ Settings</button>
+      <button class="btn" id="btnDebugHitboxes">🔲 Show Hitboxes: Off</button>
       <button class="btn red" id="btnQuitMenu">🏠 Main Menu</button>
     </div>
   </div>
