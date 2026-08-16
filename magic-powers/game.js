@@ -64,6 +64,13 @@ const STEP_TOLERANCE = 0.65;   // how big a ledge you can just walk up without j
 const VOID_FALL_Y = -14;       // below this = respawn on last safe pad
 const STAMINA_MAX = 100;
 
+/* ---- hitbox sizing — every contact check is derived from real object radii, not flat guesses ---- */
+const PLAYER_RADIUS = 0.45;
+const CHEST_RADIUS = 0.5;
+const MELEE_CONTACT_BUFFER = 0.5;   // extra reach beyond two bodies actually touching
+const PLAYER_MELEE_REACH = 0.9;     // weapon swing range added on top of contact
+function contactRange(en){ return en.radius + PLAYER_RADIUS + MELEE_CONTACT_BUFFER; }
+
 /* per-realm environmental hazard flavor (visual + damage-over-time zones) */
 const HAZARDS = {
   fire:      { name:"Lava Vent",      color:0xff4400, dmgPerSec:14, cycle:2.2, tex:"lava" },
@@ -506,7 +513,7 @@ function tryStepEnemy(en, targetX, targetZ, speed, dt){
   const nz = en.mesh.position.z + dir.z*speed*dt;
   const floor = floorHeightAt(nx, nz);
   if (floor===null) return false; // won't step off into a chasm
-  for (const ob of obstacles){ if (Math.hypot(nx-ob.x,nz-ob.z)<ob.r+0.55) return false; }
+  for (const ob of obstacles){ if (Math.hypot(nx-ob.x,nz-ob.z)<ob.r+en.radius) return false; }
   en.mesh.position.x = nx; en.mesh.position.z = nz; en.mesh.position.y = floor;
   return true;
 }
@@ -1067,14 +1074,15 @@ function spawnParticles(pos, color, count, spread, life){
 }
 
 function spawnProjectile(from, to, color, dmg, kind, splash){
-  const geo = new THREE.SphereGeometry(kind==="obsidian"?0.28:0.18, 8,8);
+  const radius = kind==="obsidian"?0.28:0.18;
+  const geo = new THREE.SphereGeometry(radius, 8,8);
   const mat = new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:1.2});
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(from); mesh.position.y = from.y + 0.9;
   const light = new THREE.PointLight(color,1.2,5); mesh.add(light);
   worldGroup.add(mesh);
   const dir = new THREE.Vector3(to.x-from.x,0,to.z-from.z).normalize();
-  projectiles.push({ mesh, dir, speed:16, dmg, kind, splash, t:0, maxT:2.2, from:"player" });
+  projectiles.push({ mesh, dir, speed:16, dmg, kind, splash, radius, t:0, maxT:2.2, from:"player" });
 }
 
 function floatText(text, color){
@@ -1272,11 +1280,12 @@ function castSpell(elKey, level){
     }
     case "water": {
       const baseDmg = 8*mult;
+      const radius = 6 + level*0.03;
       let hitAny=false;
       enemies.forEach(en=>{
         if (!en.alive) return;
-        const d = en.mesh.position.distanceTo(p);
-        if (d<6+level*0.03){
+        const d = Math.hypot(en.mesh.position.x-p.x, en.mesh.position.z-p.z);
+        if (d<radius+en.radius && Math.abs(en.mesh.position.y-p.y)<3){
           damageEnemy(en, baseDmg);
           en.slowT = 3; hitAny=true;
         }
@@ -1293,8 +1302,8 @@ function castSpell(elKey, level){
       const radius = 5.5 + level*0.04;
       enemies.forEach(en=>{
         if (!en.alive) return;
-        const d = en.mesh.position.distanceTo(p);
-        if (d<radius) damageEnemy(en, baseDmg);
+        const d = Math.hypot(en.mesh.position.x-p.x, en.mesh.position.z-p.z);
+        if (d<radius+en.radius && Math.abs(en.mesh.position.y-p.y)<3) damageEnemy(en, baseDmg);
       });
       spawnParticles(p, meta.color, 34, 3.4, 0.7);
       shakeCamera(0.25);
@@ -1315,8 +1324,8 @@ function castSpell(elKey, level){
       const radius = 7 + level*0.05;
       enemies.forEach(en=>{
         if (!en.alive) return;
-        const d = en.mesh.position.distanceTo(p);
-        if (d<radius){
+        const d = Math.hypot(en.mesh.position.x-p.x, en.mesh.position.z-p.z);
+        if (d<radius+en.radius && Math.abs(en.mesh.position.y-p.y)<3){
           damageEnemy(en, baseDmg);
           const push = new THREE.Vector3(en.mesh.position.x-p.x,0,en.mesh.position.z-p.z).normalize().multiplyScalar(3+level*0.03);
           en.mesh.position.add(push);
@@ -1381,12 +1390,12 @@ function playerAttack(){
   runtime.atkCd = 0.55;
   runtime.atkAnimT = 1;
   const dmg = weaponDamage() * (1+S.chapter*0.02);
-  const range = 2.4;
   let hitSomething=false;
   enemies.forEach(en=>{
     if (!en.alive) return;
     const d = Math.hypot(en.mesh.position.x-playerObj.position.x, en.mesh.position.z-playerObj.position.z);
     const dy = Math.abs(en.mesh.position.y-playerObj.position.y);
+    const range = en.radius + PLAYER_RADIUS + PLAYER_MELEE_REACH; // scales with the target's actual size (bosses reach further)
     if (d<range && dy<1.8){
       damageEnemy(en, dmg);
       hitSomething=true;
@@ -1632,7 +1641,7 @@ function updatePlaying(dt){
     const cz = playerObj.position.z + mzN*speed*dt;
     let blocked=false;
     for (const ob of obstacles){
-      if (Math.hypot(cx-ob.x, cz-ob.z) < ob.r+0.5){ blocked=true; break; }
+      if (Math.hypot(cx-ob.x, cz-ob.z) < ob.r+PLAYER_RADIUS){ blocked=true; break; }
     }
     if (!blocked){ nx=cx; nz=cz; playerFacing.set(mxN,0,mzN).normalize(); }
     const targetAngle = Math.atan2(playerFacing.x, playerFacing.z);
@@ -1778,12 +1787,12 @@ function updatePlaying(dt){
         en.telegraphT -= dt;
         if (en.telegraphT<=0){
           en.telegraphing = false;
-          if (dist<1.6){ en.atkCd = 1.15; enemyAttackPlayer(en, en.dmg); }
+          if (dist<contactRange(en)+0.3){ en.atkCd = 1.15; enemyAttackPlayer(en, en.dmg); }
         }
       } else {
         const chaseSpeed = en.speed*speedMult;
         moved = tryStepEnemy(en, playerObj.position.x, playerObj.position.z, chaseSpeed, dt);
-        if (dist<1.3 && en.atkCd<=0){
+        if (dist<contactRange(en) && en.atkCd<=0){
           en.telegraphing = true; en.telegraphT = 0.28; // brief wind-up so a hit is dodgeable, not instant
         }
       }
@@ -1917,10 +1926,15 @@ function updatePlaying(dt){
     let hit=false;
     enemies.forEach(en=>{
       if (hit || !en.alive) return;
-      if (Math.hypot(en.mesh.position.x-pr.mesh.position.x, en.mesh.position.z-pr.mesh.position.z)<0.9){
+      if (Math.hypot(en.mesh.position.x-pr.mesh.position.x, en.mesh.position.z-pr.mesh.position.z)<en.radius+pr.radius){
         damageEnemy(en, pr.dmg);
         if (pr.splash){
-          enemies.forEach(e2=>{ if (e2!==en && e2.alive && e2.mesh.position.distanceTo(en.mesh.position)<3.5) damageEnemy(e2, pr.dmg*0.5); });
+          const splashRadius = 3.2;
+          enemies.forEach(e2=>{
+            if (e2===en || !e2.alive) return;
+            const sd = Math.hypot(e2.mesh.position.x-en.mesh.position.x, e2.mesh.position.z-en.mesh.position.z);
+            if (sd<splashRadius+e2.radius && Math.abs(e2.mesh.position.y-en.mesh.position.y)<2.5) damageEnemy(e2, pr.dmg*0.5);
+          });
           spawnParticles(en.mesh.position, 0xff8844, 20, 3, 0.5);
         }
         hit=true;
@@ -1959,7 +1973,8 @@ function updatePlaying(dt){
     ch.spin += dt;
     ch.mesh.rotation.y = ch.spin;
     ch.mesh.position.y = ch.baseY + Math.sin(performance.now()*0.002+ch.spin)*0.08;
-    if (ch.mesh.position.distanceTo(playerObj.position) < 1.5 && Math.abs(playerObj.position.y-ch.baseY)<1.6){
+    const chestDist = Math.hypot(ch.mesh.position.x-playerObj.position.x, ch.mesh.position.z-playerObj.position.z);
+    if (chestDist < CHEST_RADIUS+PLAYER_RADIUS+0.5 && Math.abs(playerObj.position.y-ch.baseY)<1.6){
       openChest(ch);
     }
   });
@@ -1993,7 +2008,8 @@ function updatePlaying(dt){
 
 function updateBoss(en, dt, dist, toPlayer){
   en.phaseTimer -= dt;
-  if (dist>1.8){
+  const bossContact = contactRange(en);
+  if (dist>bossContact){
     const dir = toPlayer.clone().normalize();
     en.mesh.position.x += dir.x*en.speed*0.6*dt;
     en.mesh.position.z += dir.z*en.speed*0.6*dt;
@@ -2006,7 +2022,7 @@ function updateBoss(en, dt, dist, toPlayer){
   if (en.phaseTimer<=0){
     en.phaseTimer = rand(2.2,3.4);
     const pattern = Math.random();
-    if (pattern<0.5 && dist<3.2){
+    if (pattern<0.5 && dist<bossContact+1.4){
       enemyAttackPlayer(en, en.dmg*1.6);
       shakeCamera(0.3);
       spawnParticles(en.mesh.position, 0xff5555, 24, 3.5, 0.6);
@@ -2024,7 +2040,7 @@ function updateBoss(en, dt, dist, toPlayer){
   }
   // boss projectile-vs-player checked in projectile loop below via 'from' tag; simplified: check directly here
   projectiles.forEach(pr=>{
-    if (pr.kind==="boss" && Math.hypot(pr.mesh.position.x-playerObj.position.x, pr.mesh.position.z-playerObj.position.z)<1){
+    if (pr.kind==="boss" && Math.hypot(pr.mesh.position.x-playerObj.position.x, pr.mesh.position.z-playerObj.position.z)<PLAYER_RADIUS+pr.radius+0.25){
       enemyAttackPlayer(en, pr.dmg);
       pr.t = 999; // mark for removal
     }
