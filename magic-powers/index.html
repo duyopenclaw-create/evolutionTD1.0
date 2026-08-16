@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Magic Powers</title>
+<style>
+:root{
+  --gold:#ffd166; --coin:#ffcc33; --mp:#8ecbff; --hp:#ff5566; --panel:rgba(10,10,20,.92);
+  --border:#3a3a5c; --accent:#7a5cff;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;
+  font-family:'Trebuchet MS','Segoe UI',sans-serif;color:#eee;}
+#gameCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+
+/* ---------- generic overlay / panel ---------- */
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.55);z-index:50;backdrop-filter:blur(2px);}
+.hidden{display:none !important;}
+.panel{background:var(--panel);border:2px solid var(--border);border-radius:16px;
+  padding:20px 24px;max-width:720px;width:92%;max-height:88vh;overflow-y:auto;
+  box-shadow:0 0 40px rgba(122,92,255,.35), inset 0 0 60px rgba(122,92,255,.05);}
+.panel h2{margin:0 0 12px;font-size:22px;letter-spacing:1px;color:var(--gold);
+  text-shadow:0 0 10px rgba(255,209,102,.5);}
+.panel::-webkit-scrollbar{width:8px;}
+.panel::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.btn{background:linear-gradient(180deg,#4b3ea8,#2c2266);border:1px solid #8a7bff;color:#fff;
+  padding:10px 16px;border-radius:10px;font-size:15px;cursor:pointer;font-weight:600;
+  transition:transform .08s, box-shadow .15s; box-shadow:0 3px 0 #1a1440;}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #1a1440;}
+.btn:hover{box-shadow:0 3px 0 #1a1440, 0 0 12px var(--accent);}
+.btn.small{padding:6px 10px;font-size:12px;border-radius:8px;}
+.btn.gold{background:linear-gradient(180deg,#a8862e,#5c4614);border-color:var(--gold);}
+.btn.red{background:linear-gradient(180deg,#a83e3e,#661414);border-color:#ff8080;}
+.btn.green{background:linear-gradient(180deg,#2e9e5c,#134f2c);border-color:#7dffb0;}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.5);}
+.muted{opacity:.65;font-size:12px;}
+
+/* ---------- main menu ---------- */
+#mainMenu{z-index:200;background:radial-gradient(ellipse at center, #241a4a 0%, #0a0716 70%);
+  flex-direction:column;backdrop-filter:none;}
+#mainMenu .title{font-size:clamp(34px,8vw,62px);font-weight:900;letter-spacing:3px;
+  background:linear-gradient(180deg,#fff3c9,var(--gold) 40%, #a8720f 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 30px rgba(255,209,102,.45);margin-bottom:2px;}
+#mainMenu .subtitle{color:#b7a8ff;letter-spacing:6px;font-size:13px;margin-bottom:26px;}
+.menuCol{display:flex;flex-direction:column;gap:10px;width:min(320px,86vw);}
+.diffGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:min(480px,90vw);margin:8px 0 16px;}
+.diffBtn{padding:8px 4px;font-size:11px;border-radius:8px;border:1px solid #5b4fae;background:#20184a;
+  color:#cfc7ff;cursor:pointer;text-align:center;font-weight:700;letter-spacing:.5px;}
+.diffBtn.sel{background:linear-gradient(180deg,#8a6cff,#4a2fb0);color:#fff;box-shadow:0 0 14px var(--accent);}
+.diffBtn small{display:block;font-weight:400;opacity:.75;font-size:9px;margin-top:2px;}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:20;font-size:14px;}
+.hudTop{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;
+  align-items:flex-start;gap:6px;flex-wrap:wrap;}
+.statBox{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:6px 10px;
+  pointer-events:auto;min-width:120px;}
+.bar{height:10px;border-radius:6px;background:#1b1b2e;overflow:hidden;border:1px solid #000;margin-top:2px;}
+.bar>div{height:100%;transition:width .25s;}
+#hpFill{background:linear-gradient(90deg,#ff3b47,#ff8a5c);}
+#hpBar{width:150px;}
+.chapterLabel{position:absolute;top:8px;left:50%;transform:translateX(-50%);text-align:center;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:5px 16px;
+  pointer-events:auto;}
+.chapterLabel .big{font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px;}
+.chapterLabel .small{font-size:10px;opacity:.8;}
+.currencyRow{display:flex;gap:8px;}
+.pill{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--border);
+  border-radius:20px;padding:5px 12px;pointer-events:auto;font-weight:700;}
+.pill.coin{color:var(--coin);} .pill.mp{color:var(--mp);}
+.hudBottom{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;
+  align-items:flex-end;gap:10px;pointer-events:none;}
+.spellBar{display:flex;gap:8px;pointer-events:auto;background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:8px;}
+.spellSlot{position:relative;width:52px;height:52px;border-radius:10px;border:2px solid #444;
+  display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;
+  background:#151525;overflow:hidden;}
+.spellSlot.locked{filter:grayscale(1) brightness(.4);cursor:not-allowed;}
+.spellSlot .lvl{position:absolute;bottom:1px;right:3px;font-size:9px;font-weight:800;
+  background:rgba(0,0,0,.6);padding:0 3px;border-radius:4px;}
+.spellSlot .cd{position:absolute;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:800;}
+.iconBtnRow{display:flex;gap:8px;pointer-events:auto;}
+.iconBtn{width:44px;height:44px;border-radius:10px;background:var(--panel);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;pointer-events:auto;}
+#floatText{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);text-align:center;
+  pointer-events:none;font-weight:900;font-size:26px;color:var(--gold);text-shadow:0 0 14px #000, 0 0 4px #000;
+  transition:opacity .4s; }
+#saveFlash{position:absolute;top:56px;right:8px;background:rgba(30,160,90,.9);padding:4px 12px;
+  border-radius:8px;font-size:11px;font-weight:700;opacity:0;transition:opacity .4s;pointer-events:none;}
+#comboText{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);font-weight:900;
+  color:#ff9f4d;font-size:20px;text-shadow:0 0 10px #000;opacity:0;pointer-events:none;transition:opacity .3s;}
+
+/* ---------- touch controls ---------- */
+#touchControls{position:fixed;inset:0;pointer-events:none;z-index:25;display:none;}
+body.touch #touchControls{display:block;}
+#joyOuter{position:absolute;left:22px;bottom:26px;width:120px;height:120px;border-radius:50%;
+  background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);pointer-events:auto;}
+#joyInner{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;
+  background:rgba(122,92,255,.55);border:1px solid #fff;}
+#atkBtn{position:absolute;right:26px;bottom:96px;width:74px;height:74px;border-radius:50%;
+  background:rgba(255,60,60,.35);border:2px solid rgba(255,150,150,.6);pointer-events:auto;
+  display:flex;align-items:center;justify-content:center;font-size:28px;}
+#spellRing{position:absolute;right:14px;bottom:180px;display:flex;flex-direction:column-reverse;gap:6px;
+  pointer-events:auto;}
+
+/* ---------- book / backpack / shop lists ---------- */
+.elemCard{display:flex;align-items:center;gap:10px;background:#14122a;border:1px solid #34305e;
+  border-radius:12px;padding:10px;margin-bottom:8px;}
+.elemIcon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;}
+.elemBody{flex:1;min-width:0;}
+.elemName{font-weight:800;font-size:15px;}
+.elemMeta{font-size:11px;opacity:.75;}
+.progWrap{height:8px;border-radius:5px;background:#0c0b1c;margin-top:4px;overflow:hidden;}
+.progWrap>div{height:100%;}
+.invGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:10px;}
+.invItem{background:#14122a;border:1px solid #34305e;border-radius:10px;padding:8px;text-align:center;
+  font-size:11px;cursor:pointer;}
+.invItem.equipped{border-color:var(--gold);box-shadow:0 0 8px rgba(255,209,102,.4);}
+.invItem .ic{font-size:22px;}
+.tabRow{display:flex;gap:6px;margin-bottom:10px;}
+.tabBtn{flex:1;padding:8px;border-radius:8px;border:1px solid #443f7a;background:#18163a;color:#cfc7ff;
+  cursor:pointer;font-size:12px;font-weight:700;}
+.tabBtn.active{background:linear-gradient(180deg,#8a6cff,#4a2fb0);color:#fff;}
+.tabPane{display:none;} .tabPane.active{display:block;}
+.slider{width:100%;}
+.closeX{position:absolute;top:10px;right:14px;font-size:22px;cursor:pointer;color:#aaa;background:none;border:none;}
+.center{position:relative;}
+.bossBanner{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;
+  color:#ff5b5b;font-size:clamp(24px,6vw,44px);font-weight:900;letter-spacing:2px;
+  text-shadow:0 0 20px #000,0 0 8px #ff2020;opacity:0;transition:opacity .5s;pointer-events:none;}
+@media (max-width:640px){
+  .statBox{min-width:90px;font-size:11px;} #hpBar{width:100px;}
+  .spellSlot{width:44px;height:44px;font-size:18px;}
+  .panel{padding:14px 16px;}
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="mainMenu" class="overlay">
+  <div class="title">MAGIC POWERS</div>
+  <div class="subtitle">SIX ELEMENTS · SIXTY CHAPTERS · ONE DESTINY</div>
+  <div class="menuCol">
+    <button class="btn gold" id="btnNewGame">🆕 New Game</button>
+    <button class="btn" id="btnContinue" disabled>▶ Continue</button>
+    <button class="btn" id="btnHow">❔ How To Play</button>
+    <button class="btn red" id="btnWipe">🗑 Erase Save</button>
+  </div>
+  <div style="margin-top:20px;text-align:center;">
+    <div class="muted" style="margin-bottom:6px;">DIFFICULTY</div>
+    <div class="diffGrid" id="diffGrid"></div>
+  </div>
+  <div class="row" style="margin-top:6px;">
+    <label class="muted">🎵 Music <input type="range" id="musicVol" min="0" max="100" value="55"></label>
+    <label class="muted">🔊 SFX <input type="range" id="sfxVol" min="0" max="100" value="70"></label>
+  </div>
+</div>
+
+<!-- ============ HOW TO PLAY ============ -->
+<div id="howPanel" class="overlay hidden">
+  <div class="panel" style="position:relative;">
+    <button class="closeX" data-close="howPanel">×</button>
+    <h2>How To Play</h2>
+    <p>🧙 Move with <b>WASD/Arrows</b> or the left joystick on mobile. Kill every monster in a segment to advance.</p>
+    <p>⚔️ <b>Attack</b> with Space / Left-Click / the red button — auto-swings at the nearest foe.</p>
+    <p>🔥 Cast spells with number keys <b>1-6</b> or the spell buttons once an element is unlocked in your <b>Book (B)</b>.</p>
+    <p>🎒 Open your <b>Backpack (I)</b> to equip 2 weapons, a shield and armor found in chests.</p>
+    <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1.</p>
+    <p>💰 Coins drop from monsters &amp; chests. Spend them in the <b>Shop</b> on gear, more Magic Points (1000c) or Backpack slots (1000c/slot).</p>
+    <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins.</p>
+    <p>👹 Every 10th segment is a <b>Boss</b>. Every 10 chapters you enter a new elemental Realm. Beat Chapter 60's boss to win.</p>
+    <button class="btn" data-close="howPanel">Got it</button>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hudTop">
+    <div class="statBox">
+      <div>❤️ HP <span id="hpText">100/100</span></div>
+      <div class="bar" id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+    </div>
+    <div class="chapterLabel">
+      <div class="big" id="chapterLbl">I-1</div>
+      <div class="small" id="realmLbl">Fire Realm</div>
+    </div>
+    <div class="currencyRow">
+      <div class="pill coin">🪙 <span id="coinTxt">0</span></div>
+      <div class="pill mp">✨ <span id="mpTxt">1</span></div>
+    </div>
+  </div>
+  <div id="floatText"></div>
+  <div id="comboText"></div>
+  <div id="saveFlash">SAVED</div>
+  <div class="bossBanner" id="bossBanner"></div>
+  <div class="hudBottom">
+    <div class="iconBtnRow" style="align-self:flex-end;">
+      <div class="iconBtn" id="btnBookHud" title="Book (B)">📖</div>
+      <div class="iconBtn" id="btnBagHud" title="Backpack (I)">🎒</div>
+      <div class="iconBtn" id="btnShopHud" title="Shop">🏪</div>
+      <div class="iconBtn" id="btnPauseHud" title="Pause (Esc)">⏸</div>
+    </div>
+    <div class="spellBar" id="spellBar"></div>
+  </div>
+</div>
+
+<!-- ============ TOUCH CONTROLS ============ -->
+<div id="touchControls">
+  <div id="joyOuter"><div id="joyInner"></div></div>
+  <div id="atkBtn">⚔️</div>
+  <div id="spellRing"></div>
+</div>
+
+<!-- ============ BOOK ============ -->
+<div id="bookPanel" class="overlay hidden">
+  <div class="panel center" style="max-width:560px;">
+    <button class="closeX" data-close="bookPanel">×</button>
+    <h2>📖 Spellbook</h2>
+    <div class="muted" style="margin-bottom:8px;">Magic Points: <b id="bookMp">1</b> — every 5th level is a milestone (costs 2 points) &amp; unlocks a named ability. Max level 100.</div>
+    <div id="elemList"></div>
+  </div>
+</div>
+
+<!-- ============ BACKPACK ============ -->
+<div id="bagPanel" class="overlay hidden">
+  <div class="panel center" style="max-width:640px;">
+    <button class="closeX" data-close="bagPanel">×</button>
+    <h2>🎒 Backpack</h2>
+    <div class="muted">Capacity: <span id="bagCapTxt">0/20</span></div>
+    <div class="progWrap"><div id="bagCapFill" style="background:var(--accent);width:0%"></div></div>
+    <h3 style="margin:12px 0 4px;font-size:14px;color:var(--gold);">Equipped</h3>
+    <div class="row" id="equippedRow"></div>
+    <h3 style="margin:12px 0 4px;font-size:14px;color:var(--gold);">Items</h3>
+    <div class="invGrid" id="bagGrid"></div>
+  </div>
+</div>
+
+<!-- ============ SHOP ============ -->
+<div id="shopPanel" class="overlay hidden">
+  <div class="panel center" style="max-width:640px;">
+    <button class="closeX" data-close="shopPanel">×</button>
+    <h2>🏪 Shop</h2>
+    <div class="muted">Coins: <b id="shopCoins">0</b></div>
+    <div class="tabRow">
+      <button class="tabBtn active" data-tab="tabGeneral">General</button>
+      <button class="tabBtn" data-tab="tabWeapons">Weapons</button>
+      <button class="tabBtn" data-tab="tabArmor">Armor/Shields</button>
+    </div>
+    <div class="tabPane active" id="tabGeneral"></div>
+    <div class="tabPane" id="tabWeapons"></div>
+    <div class="tabPane" id="tabArmor"></div>
+  </div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div id="pausePanel" class="overlay hidden">
+  <div class="panel" style="max-width:340px;text-align:center;">
+    <h2>⏸ Paused</h2>
+    <div class="menuCol" style="margin:0 auto;">
+      <button class="btn" id="btnResume">▶ Resume</button>
+      <button class="btn" id="btnSaveNow">💾 Save Now</button>
+      <button class="btn" id="btnOpenSettings">⚙ Settings</button>
+      <button class="btn red" id="btnQuitMenu">🏠 Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div id="settingsPanel" class="overlay hidden">
+  <div class="panel" style="max-width:320px;position:relative;">
+    <button class="closeX" data-close="settingsPanel">×</button>
+    <h2>⚙ Settings</h2>
+    <label class="muted">🎵 Music Volume<br><input type="range" class="slider" id="musicVol2" min="0" max="100" value="55"></label><br>
+    <label class="muted">🔊 SFX Volume<br><input type="range" class="slider" id="sfxVol2" min="0" max="100" value="70"></label><br>
+    <label class="muted"><input type="checkbox" id="touchToggle"> Force touch controls</label>
+  </div>
+</div>
+
+<!-- ============ CHAPTER COMPLETE ============ -->
+<div id="chapterCompletePanel" class="overlay hidden">
+  <div class="panel" style="max-width:420px;text-align:center;">
+    <h2 id="ccTitle">Chapter Complete!</h2>
+    <p id="ccRewards" class="muted"></p>
+    <div class="menuCol" style="margin:0 auto;">
+      <button class="btn gold" id="btnCcShop">🏪 Visit Shop</button>
+      <button class="btn green" id="btnCcContinue">➡ Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GAME OVER (respawn) ============ -->
+<div id="downPanel" class="overlay hidden">
+  <div class="panel" style="max-width:360px;text-align:center;">
+    <h2 style="color:#ff5b5b;">You Fell...</h2>
+    <p class="muted">You lost 10% of your coins. Rise again!</p>
+    <button class="btn" id="btnRespawn">🔄 Respawn</button>
+  </div>
+</div>
+
+<!-- ============ VICTORY ============ -->
+<div id="victoryPanel" class="overlay hidden">
+  <div class="panel" style="max-width:460px;text-align:center;">
+    <h2 style="color:var(--gold);">🏆 THE OBSIDIAN CROWN FALLS 🏆</h2>
+    <p>You have conquered all six Realms and 60 Chapters of Magic Powers. Your name echoes through every element.</p>
+    <p class="muted">Final Coins: <span id="vCoins"></span> · Final Magic Points spent: <span id="vMp"></span></p>
+    <button class="btn gold" id="btnVictoryMenu">🏠 Main Menu</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
