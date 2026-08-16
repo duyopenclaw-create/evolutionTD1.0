@@ -108,6 +108,9 @@ body.touch #touchControls{display:block;}
 #jumpBtn{position:absolute;right:20px;bottom:106px;width:60px;height:60px;border-radius:50%;
   background:rgba(122,92,255,.35);border:2px solid rgba(180,160,255,.6);pointer-events:auto;
   display:flex;align-items:center;justify-content:center;font-size:24px;}
+#climbBtn{position:absolute;right:96px;bottom:22px;width:56px;height:56px;border-radius:50%;
+  background:rgba(180,140,80,.35);border:2px solid rgba(220,180,120,.6);pointer-events:auto;
+  display:flex;align-items:center;justify-content:center;font-size:22px;}
 #spellRing{position:absolute;right:14px;bottom:190px;display:flex;flex-direction:column-reverse;gap:6px;
   pointer-events:auto;}
 
@@ -184,7 +187,7 @@ body.touch #touchControls{display:block;}
     <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1. You always have a <b>double-jump</b> — leveling Wind just makes it stronger.</p>
     <p>💰 Coins drop from monsters &amp; chests. Spend them in the <b>Shop</b> on gear, more Magic Points (1000c) or Backpack slots (1000c/slot).</p>
     <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins. Some sit on hidden side-paths off the main route.</p>
-    <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Some gaps have a <b>moving platform</b> shuttling across them — time your jump on and off. Some segments hide a <b>2-5 story tower</b> to climb for a guaranteed diamond chest — some floors are open ledges, so you'll need real jumps (and double-jumps) to reach the top, not just a walk up a ramp. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
+    <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Some gaps have a <b>moving platform</b> shuttling across them — time your jump on and off. Some segments hide a <b>2-5 story tower</b> to climb for a guaranteed diamond chest — some floors are open ledges needing real jumps (and double-jumps), and every floor also has a ladder: walk up to it and hold <b>X</b> (or the 🪜 button) to climb straight up or down, no jumping required. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
     <p>👹 Monsters now roam the whole level and will hunt you down wherever you are — expect more of them, but each one is weaker than before. Watch their health bars.</p>
     <p>👹 Every 10th segment is a <b>Boss</b>. Every 10 chapters you enter a new elemental Realm. Beat Chapter 60's boss to win.</p>
     <button class="btn" data-close="howPanel">Got it</button>
@@ -232,6 +235,7 @@ body.touch #touchControls{display:block;}
   <div id="joyOuter"><div id="joyInner"></div></div>
   <div id="atkBtn">⚔️</div>
   <div id="jumpBtn">⬆️</div>
+  <div id="climbBtn">🪜</div>
   <div id="spellRing"></div>
 </div>
 

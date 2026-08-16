@@ -330,7 +330,8 @@ function nextLevelCost(level){ // cost to go from `level` to `level+1`
 let renderer, scene, camera, clock;
 let worldGroup, playerObj, groundMesh;
 let enemies=[], chests=[], projectiles=[], particles=[], obstacles=[];
-let levelPads=[], hazardZones=[], exitPortal=null, ambientEmitter=null, torchLights=[], movingPads=[];
+let levelPads=[], hazardZones=[], exitPortal=null, ambientEmitter=null, torchLights=[], movingPads=[], ladders=[];
+const LADDER_SPEED = 3.6;
 let playerFacing = new THREE.Vector3(0,0,-1);
 let cameraYawOffset = 0;
 const textureCache = {};
@@ -368,7 +369,7 @@ function clearWorld(){
   projectiles.forEach(p=>disposeObj(p.mesh)); projectiles=[];
   particles.forEach(p=>disposeObj(p.points)); particles=[];
   obstacles=[];
-  levelPads=[]; hazardZones=[]; exitPortal=null; torchLights=[]; movingPads=[];
+  levelPads=[]; hazardZones=[]; exitPortal=null; torchLights=[]; movingPads=[]; ladders=[];
   if (ambientEmitter){ disposeObj(ambientEmitter.points); ambientEmitter=null; }
 }
 function disposeObj(obj){
@@ -520,6 +521,26 @@ function addTorch(x,y,z,color){
   light.position.set(x,y+1.8,z);
   worldGroup.add(light);
   torchLights.push({ flame, base:y+1.7, t:Math.random()*10 });
+}
+function addLadder(fromPad, toPad){
+  // a real climbable ladder between two tower floors — press X (or the climb button) near it
+  const x = (fromPad.x+toPad.x)/2;
+  const z = fromPad.z - fromPad.d/2 + 0.65;
+  const yBase = fromPad.y, yTop = toPad.y;
+  const mat = new THREE.MeshStandardMaterial({color:0x6b4a24, roughness:0.75});
+  const railGeo = new THREE.CylinderGeometry(0.055,0.055, (yTop-yBase)+0.5, 6);
+  const railL = new THREE.Mesh(railGeo, mat); railL.position.set(x-0.32, (yBase+yTop)/2, z); railL.castShadow=true;
+  const railR = railL.clone(); railR.position.x = x+0.32;
+  worldGroup.add(railL); worldGroup.add(railR);
+  const rungCount = Math.max(2, Math.round((yTop-yBase)/0.42));
+  for (let i=0;i<=rungCount;i++){
+    const ry = yBase + (yTop-yBase)*(i/rungCount);
+    const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.68,6), mat);
+    rung.rotation.z = Math.PI/2;
+    rung.position.set(x, ry, z);
+    worldGroup.add(rung);
+  }
+  ladders.push({ x, z, yBase, yTop, r:1.15 });
 }
 function buildAmbientEmitter(realm, boundsCenter, boundsRadius){
   const kinds = {
@@ -693,6 +714,7 @@ function buildArena(){
           const towerConn = makeConnectorPad(prev, floorPad, "ramp", connLen, false);
           if (towerConn) floorPads.push(towerConn);
         } // useJump: intentionally no floor between — jump (or double-jump) up onto the ledge
+        addLadder(prev, floorPad); // always available too — hold X to climb straight up, no jump needed
         prev = floorPad;
       }
       towerTop = prev;
@@ -1098,10 +1120,22 @@ function resetRuntimeForSegment(){
   runtime.lastSafe = { x:spawnStart.x, y:spawnStart.y, z:spawnStart.z };
   runtime.fallStartY = spawnStart.y;
   runtime.currentPad = null;
+  runtime.climbing = false;
+}
+function nearestPad(x,z){
+  let best=null, bestD=Infinity;
+  for (const p of spawnPads){
+    const d = Math.hypot(x-p.x, z-p.z);
+    if (d<bestD){ bestD=d; best=p; }
+  }
+  return best;
 }
 function fallRespawn(){
   const fellDist = Math.max(0, runtime.fallStartY - playerObj.position.y);
-  playerObj.position.set(runtime.lastSafe.x, runtime.lastSafe.y+0.5, runtime.lastSafe.z);
+  // respawn on whichever platform is nearest to where you fell, not some far-off checkpoint
+  const np = nearestPad(playerObj.position.x, playerObj.position.z);
+  const spot = np ? {x:np.x, y:np.y, z:np.z} : runtime.lastSafe;
+  playerObj.position.set(spot.x, spot.y+0.5, spot.z);
   runtime.vy = 0; runtime.grounded = true; runtime.doubleJumpUsed = false; runtime.currentPad = null;
   if (fellDist>2){
     const dmg = Math.round(clamp(fellDist*1.5, 3, 30));
@@ -1122,6 +1156,7 @@ const keys = {};
 let moveVec = {x:0,y:0}; // from joystick, -1..1
 let wantAttack=false;
 let wantJump=false;
+let touchClimbHeld=false;
 
 window.addEventListener("keydown", e=>{
   keys[e.code]=true;
@@ -1180,6 +1215,13 @@ function setupTouch(){
   const pressJump = ()=>{ wantJump=true; };
   jumpBtn.addEventListener("touchstart", e=>{e.preventDefault(); pressJump();}, {passive:false});
   jumpBtn.addEventListener("mousedown", pressJump);
+
+  const climbBtn = document.getElementById("climbBtn");
+  climbBtn.addEventListener("touchstart", e=>{e.preventDefault(); touchClimbHeld=true;}, {passive:false});
+  climbBtn.addEventListener("touchend", e=>{e.preventDefault(); touchClimbHeld=false;}, {passive:false});
+  climbBtn.addEventListener("mousedown", ()=>{ touchClimbHeld=true; });
+  climbBtn.addEventListener("mouseup", ()=>{ touchClimbHeld=false; });
+  climbBtn.addEventListener("mouseleave", ()=>{ touchClimbHeld=false; });
 }
 document.getElementById("gameCanvas").addEventListener("mousedown", e=>{
   if (gameMode==="playing" && !isTouchDevice()) wantAttack=true;
@@ -1599,43 +1641,72 @@ function updatePlaying(dt){
   }
   runtime.hazardSlow = 0;
 
-  // ---- vertical physics: jump / gravity / landing / falling into the void ----
-  if (wantJump){
+  // ---- ladder climbing: hold X (or the climb button) near a ladder to go straight up/down ----
+  let nearLadder = null;
+  for (const l of ladders){
+    if (Math.hypot(nx-l.x, nz-l.z) < l.r && playerObj.position.y > l.yBase-1.2 && playerObj.position.y < l.yTop+1.2){
+      nearLadder = l; break;
+    }
+  }
+  const climbHeld = keys["KeyX"] || touchClimbHeld;
+  if (nearLadder && climbHeld && !wantJump){
+    if (!runtime.climbing){ runtime.climbing = true; Audio_.sfx.click(); }
+    runtime.vy = 0; runtime.doubleJumpUsed = false;
+    let climbDir = 0;
+    if (keys["KeyW"]||keys["ArrowUp"]||moveVec.y<-0.3) climbDir = 1;
+    if (keys["KeyS"]||keys["ArrowDown"]||moveVec.y>0.3) climbDir = -1;
+    const ny = clamp(playerObj.position.y + climbDir*LADDER_SPEED*dt, nearLadder.yBase, nearLadder.yTop+0.15);
+    playerObj.position.set(
+      playerObj.position.x + (nearLadder.x-playerObj.position.x)*clamp(dt*5,0,1),
+      ny,
+      playerObj.position.z + (nearLadder.z-playerObj.position.z)*clamp(dt*5,0,1)
+    );
+    runtime.grounded = ny>=nearLadder.yTop-0.02;
     if (runtime.grounded){
-      runtime.vy = JUMP_FORCE; runtime.grounded=false; runtime.doubleJumpUsed=false;
-      Audio_.sfx.jump();
-    } else if (!runtime.doubleJumpUsed){
-      // double jump is a base movement ability; investing in Wind makes it stronger
-      runtime.vy = DOUBLE_JUMP_FORCE + S.elements.wind.level*0.025;
-      runtime.doubleJumpUsed = true;
-      Audio_.sfx.jump(); floatText("Double Jump!","#aaffee");
-      spawnParticles(playerObj.position, 0xaaffee, 14, 1.8, 0.4);
-      playerObj.userData.spinT = 1;
+      runtime.currentPad = null;
+      runtime.lastSafe = {x:playerObj.position.x, y:ny, z:playerObj.position.z};
+      runtime.fallStartY = ny;
     }
-    wantJump=false;
-  }
-  runtime.vy += GRAVITY*dt;
-  let newY = playerObj.position.y + runtime.vy*dt;
-  const landedPad = floorPadAt(nx, nz);
-  const floor = landedPad ? padHeightAt(landedPad, nz) : null;
-  if (floor!==null && newY<=floor){
-    if (!runtime.grounded){
-      const fell = runtime.fallStartY - floor;
-      if (fell>2.2){ spawnParticles({x:nx,y:floor,z:nz},0xffffff,10,1.4,0.3); Audio_.sfx.land(); runtime.squash=1; }
-    }
-    newY = floor;
-    runtime.vy = 0;
-    runtime.grounded = true;
-    runtime.doubleJumpUsed = false;
-    runtime.lastSafe = {x:nx,y:floor,z:nz};
-    runtime.fallStartY = floor;
-    runtime.currentPad = landedPad;
   } else {
-    if (runtime.grounded) runtime.fallStartY = playerObj.position.y;
-    runtime.grounded = false;
+    runtime.climbing = false;
+    // ---- vertical physics: jump / gravity / landing / falling into the void ----
+    if (wantJump){
+      if (runtime.grounded){
+        runtime.vy = JUMP_FORCE; runtime.grounded=false; runtime.doubleJumpUsed=false;
+        Audio_.sfx.jump();
+      } else if (!runtime.doubleJumpUsed){
+        // double jump is a base movement ability; investing in Wind makes it stronger
+        runtime.vy = DOUBLE_JUMP_FORCE + S.elements.wind.level*0.025;
+        runtime.doubleJumpUsed = true;
+        Audio_.sfx.jump(); floatText("Double Jump!","#aaffee");
+        spawnParticles(playerObj.position, 0xaaffee, 14, 1.8, 0.4);
+        playerObj.userData.spinT = 1;
+      }
+      wantJump=false;
+    }
+    runtime.vy += GRAVITY*dt;
+    let newY = playerObj.position.y + runtime.vy*dt;
+    const landedPad = floorPadAt(nx, nz);
+    const floor = landedPad ? padHeightAt(landedPad, nz) : null;
+    if (floor!==null && newY<=floor){
+      if (!runtime.grounded){
+        const fell = runtime.fallStartY - floor;
+        if (fell>2.2){ spawnParticles({x:nx,y:floor,z:nz},0xffffff,10,1.4,0.3); Audio_.sfx.land(); runtime.squash=1; }
+      }
+      newY = floor;
+      runtime.vy = 0;
+      runtime.grounded = true;
+      runtime.doubleJumpUsed = false;
+      runtime.lastSafe = {x:nx,y:floor,z:nz};
+      runtime.fallStartY = floor;
+      runtime.currentPad = landedPad;
+    } else {
+      if (runtime.grounded) runtime.fallStartY = playerObj.position.y;
+      runtime.grounded = false;
+    }
+    playerObj.position.set(nx, newY, nz);
+    if (playerObj.position.y < VOID_FALL_Y) fallRespawn();
   }
-  playerObj.position.set(nx, newY, nz);
-  if (playerObj.position.y < VOID_FALL_Y) fallRespawn();
 
   // ---- player animation: walk bob, arm swing, attack/cast flourishes, landing squash, air tilt ----
   runtime.squash = Math.max(0, (runtime.squash||0) - dt*4);
@@ -1715,6 +1786,22 @@ function updatePlaying(dt){
         if (dist<1.3 && en.atkCd<=0){
           en.telegraphing = true; en.telegraphT = 0.28; // brief wind-up so a hit is dodgeable, not instant
         }
+      }
+      // monsters fall too — if wind/hazards knock one off a ledge (or it ends up over open air),
+      // gravity takes over instead of it floating in place; falling into the void kills it
+      en.vy = en.vy||0;
+      const floorEn = floorHeightAt(en.mesh.position.x, en.mesh.position.z);
+      if (floorEn===null || en.mesh.position.y>floorEn+0.05){
+        en.vy += GRAVITY*dt;
+        en.mesh.position.y += en.vy*dt;
+        if (floorEn!==null && en.mesh.position.y<=floorEn){ en.mesh.position.y=floorEn; en.vy=0; }
+      } else {
+        en.mesh.position.y = floorEn; en.vy = 0;
+      }
+      if (en.mesh.position.y < VOID_FALL_Y && en.alive){
+        en.alive = false;
+        spawnParticles(en.mesh.position, 0xffffff, 16, 2.2, 0.5);
+        killEnemy(en);
       }
     }
     // idle bob + leg-swing animation instead of the old constant spin
