@@ -102,10 +102,13 @@ body.touch #touchControls{display:block;}
   background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);pointer-events:auto;}
 #joyInner{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;
   background:rgba(122,92,255,.55);border:1px solid #fff;}
-#atkBtn{position:absolute;right:26px;bottom:96px;width:74px;height:74px;border-radius:50%;
+#atkBtn{position:absolute;right:104px;bottom:96px;width:74px;height:74px;border-radius:50%;
   background:rgba(255,60,60,.35);border:2px solid rgba(255,150,150,.6);pointer-events:auto;
   display:flex;align-items:center;justify-content:center;font-size:28px;}
-#spellRing{position:absolute;right:14px;bottom:180px;display:flex;flex-direction:column-reverse;gap:6px;
+#jumpBtn{position:absolute;right:20px;bottom:106px;width:60px;height:60px;border-radius:50%;
+  background:rgba(122,92,255,.35);border:2px solid rgba(180,160,255,.6);pointer-events:auto;
+  display:flex;align-items:center;justify-content:center;font-size:24px;}
+#spellRing{position:absolute;right:14px;bottom:190px;display:flex;flex-direction:column-reverse;gap:6px;
   pointer-events:auto;}
 
 /* ---------- book / backpack / shop lists ---------- */
@@ -135,7 +138,7 @@ body.touch #touchControls{display:block;}
   color:#ff5b5b;font-size:clamp(24px,6vw,44px);font-weight:900;letter-spacing:2px;
   text-shadow:0 0 20px #000,0 0 8px #ff2020;opacity:0;transition:opacity .5s;pointer-events:none;}
 @media (max-width:640px){
-  .statBox{min-width:90px;font-size:11px;} #hpBar{width:100px;}
+  .statBox{min-width:90px;font-size:11px;} #hpBar{width:100px;} #stamBar{width:100px;}
   .spellSlot{width:44px;height:44px;font-size:18px;}
   .panel{padding:14px 16px;}
 }
@@ -169,13 +172,16 @@ body.touch #touchControls{display:block;}
   <div class="panel" style="position:relative;">
     <button class="closeX" data-close="howPanel">×</button>
     <h2>How To Play</h2>
-    <p>🧙 Move with <b>WASD/Arrows</b> or the left joystick on mobile. Kill every monster in a segment to advance.</p>
-    <p>⚔️ <b>Attack</b> with Space / Left-Click / the red button — auto-swings at the nearest foe.</p>
+    <p>🧙 Move with <b>WASD/Arrows</b> or the left joystick. Each segment is a real place — a chain of rooms, bridges, ramps and jump-gaps, not one flat arena. Explore it.</p>
+    <p>🦘 <b>Jump</b> with Space / the jump button to clear gaps and climb ledges. Fall into a chasm and you'll respawn on the last safe ledge with a bit of fall damage — it's not fatal, just careful.</p>
+    <p>🏃 Hold <b>Shift</b> to sprint (drains stamina, regenerates when you stop).</p>
+    <p>⚔️ <b>Attack</b> with F / Enter / Left-Click / the red button — auto-swings at the nearest foe.</p>
     <p>🔥 Cast spells with number keys <b>1-6</b> or the spell buttons once an element is unlocked in your <b>Book (B)</b>.</p>
     <p>🎒 Open your <b>Backpack (I)</b> to equip 2 weapons, a shield and armor found in chests.</p>
-    <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1.</p>
+    <p>📖 Every segment clear grants <b>1 Magic Point</b>. Spend Magic Points in the Book to unlock/level elements up to level 100 — every 5th level is a big milestone upgrade and costs 2 points instead of 1. Level Wind to 5 to unlock a double-jump.</p>
     <p>💰 Coins drop from monsters &amp; chests. Spend them in the <b>Shop</b> on gear, more Magic Points (1000c) or Backpack slots (1000c/slot).</p>
-    <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins.</p>
+    <p>📦 Wooden chests: 10-100 coins. 🟡 Golden chests: 1-2 Magic Points + 50-250 coins. 💎 Diamond chests: 3-8 Magic Points + 100-500 coins. Some sit on hidden side-paths off the main route.</p>
+    <p>☠️ Watch for environmental hazards — lava, riptides, charged floors — that telegraph before they hurt. Kill everything in a segment, then find and reach the glowing portal to move on.</p>
     <p>👹 Every 10th segment is a <b>Boss</b>. Every 10 chapters you enter a new elemental Realm. Beat Chapter 60's boss to win.</p>
     <button class="btn" data-close="howPanel">Got it</button>
   </div>
@@ -187,6 +193,7 @@ body.touch #touchControls{display:block;}
     <div class="statBox">
       <div>❤️ HP <span id="hpText">100/100</span></div>
       <div class="bar" id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+      <div class="bar" id="stamBar" style="width:150px;margin-top:3px;"><div id="stamFill" style="width:100%;background:linear-gradient(90deg,#8ecbff,#c9f0ff);"></div></div>
     </div>
     <div class="chapterLabel">
       <div class="big" id="chapterLbl">I-1</div>
@@ -216,6 +223,7 @@ body.touch #touchControls{display:block;}
 <div id="touchControls">
   <div id="joyOuter"><div id="joyInner"></div></div>
   <div id="atkBtn">⚔️</div>
+  <div id="jumpBtn">🦘</div>
   <div id="spellRing"></div>
 </div>
 
