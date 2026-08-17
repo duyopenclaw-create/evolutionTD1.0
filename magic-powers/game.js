@@ -124,6 +124,7 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 const Audio_ = (function(){
   let ctx=null, master=null, musicGain=null, sfxGain=null;
   let musicNodes=[], musicTimer=null, currentRealm=-1, bossMode=false;
+  let ambientNodes=[];
   function ensure(){
     if (ctx) return;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -185,6 +186,38 @@ const Audio_ = (function(){
     musicNodes=[];
     if (musicTimer){ clearInterval(musicTimer); musicTimer=null; }
     if (reverbSend){ try{ reverbSend.disconnect(); }catch(e){} reverbSend=null; }
+    stopAmbient();
+  }
+
+  /* ---- ambient environmental bed: a continuous filtered-noise atmosphere per realm, ----
+     ---- layered quietly under the music instead of the world just sitting in silence ---- */
+  const AMBIENT_CFG = [
+    { freq:900,  depth:400, rate:0.15, gain:0.05  }, // fire — hissing/crackling air
+    { freq:600,  depth:250, rate:0.28, gain:0.045 }, // water — babbling movement
+    { freq:220,  depth:50,  rate:0.05, gain:0.06  }, // earth — low rumble
+    { freq:2400, depth:1000,rate:0.45,gain:0.032  }, // lightning — charged static
+    { freq:1500, depth:750, rate:0.32, gain:0.05  }, // wind — sweeping gusts
+    { freq:140,  depth:35,  rate:0.04, gain:0.065 }, // obsidian — dread drone
+  ];
+  function stopAmbient(){
+    ambientNodes.forEach(n=>{ try{n.stop();}catch(e){} });
+    ambientNodes=[];
+  }
+  function startAmbient(realmIdx){
+    const cfg = AMBIENT_CFG[realmIdx%AMBIENT_CFG.length];
+    const bufSize = ctx.sampleRate*2;
+    const buf = ctx.createBuffer(1,bufSize,ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<bufSize;i++) d[i] = Math.random()*2-1;
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const filt = ctx.createBiquadFilter(); filt.type = "bandpass"; filt.frequency.value = cfg.freq; filt.Q.value = 0.6;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = cfg.rate;
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = cfg.depth;
+    lfo.connect(lfoGain); lfoGain.connect(filt.frequency);
+    const g = ctx.createGain(); g.gain.value = cfg.gain;
+    src.connect(filt); filt.connect(g); g.connect(musicGain);
+    src.start(); lfo.start();
+    ambientNodes = [src, lfo];
   }
 
   /* ---- real generative score: distinct scale/tempo/rhythm per realm, ----
@@ -280,6 +313,7 @@ const Audio_ = (function(){
     if (currentRealm===realmIdx && bossMode===!!boss && musicTimer) return;
     stopMusic();
     currentRealm = realmIdx; bossMode = !!boss;
+    startAmbient(realmIdx);
     const base = REALM_MUSIC[realmIdx%REALM_MUSIC.length];
     const cfg = Object.assign({}, base, boss? {
       bpm: Math.round(base.bpm*1.22),
@@ -439,6 +473,7 @@ function nextLevelCost(level){ // cost to go from `level` to `level+1`
 /* ---------------------------------------------------------------------- */
 let renderer, scene, camera, clock;
 let worldGroup, playerObj, groundMesh;
+let playerShadowBlob = null;
 let enemies=[], chests=[], projectiles=[], particles=[], obstacles=[];
 let levelPads=[], hazardZones=[], exitPortal=null, ambientEmitter=null, torchLights=[], movingPads=[], ladders=[];
 const LADDER_SPEED = 3.6;
@@ -471,6 +506,8 @@ function disposeEnemy(en){
   disposeObj(en.mesh);
   const hb = en.mesh.userData.healthBar;
   if (hb){ hb.bg.geometry.dispose(); hb.fg.geometry.dispose(); disposeObj(hb.bg); disposeObj(hb.fg); }
+  const shadow = en.mesh.userData.shadowBlob;
+  if (shadow){ shadow.geometry.dispose(); disposeObj(shadow); }
 }
 function clearWorld(){
   if (worldGroup) scene.remove(worldGroup);
@@ -562,6 +599,60 @@ function drawPattern(ctx, size, cfg){
     }
   }
   ctx.globalAlpha=1;
+}
+function mixColor(a,b,t){
+  const ar=(a>>16)&255, ag=(a>>8)&255, ab=a&255;
+  const br=(b>>16)&255, bg=(b>>8)&255, bb=b&255;
+  return (Math.round(ar+(br-ar)*t)<<16) | (Math.round(ag+(bg-ag)*t)<<8) | Math.round(ab+(bb-ab)*t);
+}
+function hexCss(hex){ return "#"+hex.toString(16).padStart(6,"0"); }
+function getSkyTexture(elKey, skyHex, fogHex){
+  const key = "sky_"+elKey;
+  if (textureCache[key]) return textureCache[key];
+  const w=2, h=256;
+  const canvas = document.createElement("canvas"); canvas.width=w; canvas.height=h;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, hexCss(mixColor(skyHex,0x000000,0.15)));   // zenith — a touch darker than the base
+  grad.addColorStop(0.55, hexCss(skyHex));
+  grad.addColorStop(1, hexCss(mixColor(fogHex,0xffffff,0.22)));   // horizon — hazy glow toward the fog color
+  ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+  const tex = new THREE.CanvasTexture(canvas);
+  textureCache[key] = tex;
+  return tex;
+}
+function getShadowTexture(){
+  const key = "shadowBlob";
+  if (textureCache[key]) return textureCache[key];
+  const size=128;
+  const canvas = document.createElement("canvas"); canvas.width=size; canvas.height=size;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+  grad.addColorStop(0,"rgba(0,0,0,0.5)");
+  grad.addColorStop(0.7,"rgba(0,0,0,0.28)");
+  grad.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle = grad; ctx.fillRect(0,0,size,size);
+  const tex = new THREE.CanvasTexture(canvas);
+  textureCache[key] = tex;
+  return tex;
+}
+function makeShadowBlob(radius){
+  const mat = new THREE.MeshBasicMaterial({map:getShadowTexture(), transparent:true, depthWrite:false, opacity:0.55});
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(radius*2, radius*2), mat);
+  mesh.rotation.x = -Math.PI/2;
+  mesh.renderOrder = 1;
+  return mesh;
+}
+// updates a ground shadow blob to sit under (x,y,z), fading/shrinking with height above the real floor
+function updateShadowBlob(mesh, x, y, z, baseRadius){
+  const floorY = floorHeightAt(x,z);
+  const groundY = floorY!=null ? floorY : y;
+  const heightAbove = Math.max(0, y-groundY);
+  mesh.position.set(x, groundY+0.03, z);
+  const k = clamp(1-heightAbove/6, 0.25, 1);
+  mesh.scale.set(k,k,k);
+  mesh.material.opacity = clamp(0.55*k - heightAbove*0.015, 0.04, 0.55);
+  mesh.visible = heightAbove<9;
 }
 function getBaseTexture(elKey, kind){
   const key = elKey+"_"+kind;
@@ -773,7 +864,7 @@ function buildArena(){
   clearWorld();
   const realm = REALMS[realmIndex(S.chapter)];
   scene.fog = new THREE.Fog(realm.fog, 16, 58);
-  scene.background = new THREE.Color(realm.sky);
+  scene.background = getSkyTexture(realm.element, realm.sky, realm.fog);
 
   worldGroup = new THREE.Group();
   scene.add(worldGroup);
@@ -1276,6 +1367,9 @@ function addHealthBar(mesh){
   const hb = mesh.userData.healthBar;
   if (!hb) return;
   worldGroup.add(hb.bg); worldGroup.add(hb.fg);
+  const shadow = makeShadowBlob((mesh.userData.scale||1)*0.75);
+  worldGroup.add(shadow);
+  mesh.userData.shadowBlob = shadow;
 }
 function spawnEnemiesOnPads(rooms, boss){
   const dm = difficultyMult();
@@ -1668,6 +1762,7 @@ function killEnemy(en){
   en.dying = true; en.deathT = 0; // shrink-and-rise death animation, disposed once finished (see updatePlaying)
   const hb = en.mesh.userData.healthBar;
   if (hb){ hb.bg.visible=false; hb.fg.visible=false; }
+  if (en.mesh.userData.shadowBlob) en.mesh.userData.shadowBlob.visible=false;
   S.stats.kills++;
   bumpCombo();
   const dm = difficultyMult();
@@ -2070,6 +2165,9 @@ function updatePlaying(dt){
       runtime.footstepTimer = 0;
     }
   }
+  if (playerShadowBlob){
+    updateShadowBlob(playerShadowBlob, playerObj.position.x, playerObj.position.y, playerObj.position.z, 0.7);
+  }
   if (playerObj.userData.orb){
     const pulse = runtime.castAnimT>0 ? 1.6+runtime.castAnimT*1.4 : 1.6;
     playerObj.userData.orb.position.y = 1.78 + Math.sin(performance.now()*0.004)*0.05;
@@ -2186,6 +2284,9 @@ function updatePlaying(dt){
       hb.fg.scale.x = Math.max(0.001, frac);
       hb.fg.material.color.setHex(frac>0.5?0x33dd55:frac>0.25?0xffcc33:0xff3344);
       hb.bg.visible = hb.fg.visible = (frac<0.999 || en.boss);
+    }
+    if (en.mesh.userData.shadowBlob){
+      updateShadowBlob(en.mesh.userData.shadowBlob, en.mesh.position.x, en.mesh.position.y, en.mesh.position.z, 0.7*(en.mesh.userData.scale||1));
     }
   });
 
@@ -2696,6 +2797,8 @@ function beginPlaying(isNew){
   if (!playerObj){
     playerObj = buildPlayerMesh();
     scene.add(playerObj);
+    playerShadowBlob = makeShadowBlob(0.7);
+    scene.add(playerShadowBlob);
   }
   startSegment();
   updateHud();
