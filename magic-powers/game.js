@@ -624,7 +624,16 @@ function tryStepEnemy(en, targetX, targetZ, speed, dt){
   const nz = en.mesh.position.z + dir.z*speed*dt;
   const floor = floorHeightAt(nx, nz);
   if (floor===null) return false; // won't step off into a chasm
-  for (const ob of obstacles){ if (Math.hypot(nx-ob.x,nz-ob.z)<ob.r+en.radius) return false; }
+  for (const ob of obstacles){
+    const newDist = Math.hypot(nx-ob.x,nz-ob.z);
+    if (newDist>=ob.r+en.radius) continue;
+    // blocked — unless this step is actually escaping an obstacle it somehow ended up inside
+    // (e.g. spawned overlapping one), in which case moving away must still be allowed or it'd be
+    // permanently stuck with every direction reading as "too close" to the same obstacle
+    const curDist = Math.hypot(en.mesh.position.x-ob.x, en.mesh.position.z-ob.z);
+    if (newDist>=curDist) continue;
+    return false;
+  }
   en.mesh.position.x = nx; en.mesh.position.z = nz; en.mesh.position.y = floor;
   return true;
 }
@@ -1301,7 +1310,11 @@ function spawnGrunt(room, realm, dm, hpMult){
   const tier = monsterTier(S.chapter);
   const hp = Math.round((9 + S.chapter*4.2 + S.segment*1.5) * dm.hp * hpMult * (1+tier*0.15));
   const dmg = Math.round((9 + S.chapter*2.4) * dm.dmg * (1+tier*0.12));
-  const px = room.x+rand(-room.w/2+1.5,room.w/2-1.5), pz = room.z+rand(-room.d/2+1.5,room.d/2-1.5);
+  let px, pz, tries=0;
+  do {
+    px = room.x+rand(-room.w/2+1.5,room.w/2-1.5); pz = room.z+rand(-room.d/2+1.5,room.d/2-1.5);
+    tries++;
+  } while (tries<10 && obstacles.some(ob=>Math.hypot(px-ob.x,pz-ob.z)<ob.r+1.0));
   const mesh = buildEnemyMesh(realm.element, false, tier);
   mesh.position.set(px, room.y, pz);
   worldGroup.add(mesh);
@@ -1912,10 +1925,14 @@ function updatePlaying(dt){
     const cx = playerObj.position.x + mxN*speed*dt;
     const cz = playerObj.position.z + mzN*speed*dt;
     let blocked=false;
-    for (const ob of obstacles){
-      // only solid from the side — once you're standing at/above its top you can walk across it freely
-      const onTop = ob.topH!=null && playerObj.position.y >= ob.baseY+ob.topH-0.15;
-      if (!onTop && Math.hypot(cx-ob.x, cz-ob.z) < ob.r+PLAYER_RADIUS){ blocked=true; break; }
+    // obstacles are only solid walls while you're walking at ground level — mid-jump you pass over
+    // their footprint freely and vertical physics (floorPadAt) naturally lands you on top of them.
+    // (a height-threshold check here was nearly impossible to satisfy: it only allowed passing
+    // through right at the very peak of a jump, which is basically unhittable in practice)
+    if (runtime.grounded){
+      for (const ob of obstacles){
+        if (Math.hypot(cx-ob.x, cz-ob.z) < ob.r+PLAYER_RADIUS){ blocked=true; break; }
+      }
     }
     if (!blocked){ nx=cx; nz=cz; playerFacing.set(mxN,0,mzN).normalize(); }
     const targetAngle = Math.atan2(playerFacing.x, playerFacing.z);
