@@ -846,7 +846,8 @@ function buildArena(){
 
   // ---------- optional multi-story cylinder tower (2-5 floors) — a climbable bonus structure ----------
   let towerTop = null;
-  if (!boss && rooms.length>=5 && Math.random()<0.55){
+  let towerBase = null;
+  if (!boss && rooms.length>=5 && Math.random()<0.75){
     const branchFrom = pick(rooms.filter(r=>!r.isFirst && !r.isLast && !r.isSide));
     if (branchFrom){
       const sign = Math.random()<0.5?-1:1;
@@ -854,6 +855,7 @@ function buildArena(){
       const basePad = { x:branchFrom.x+sign*(branchFrom.w/2+rand(3,4.2)+baseW/2), z:branchFrom.z+rand(-1.5,1.5),
         y:branchFrom.y, w:baseW, d:baseD, index:"towerBase", isFirst:false, isLast:false, isTower:true, ramp:false };
       rooms.push(basePad); floorPads.push(basePad);
+      towerBase = basePad;
       const branchConn = makeConnectorPad(branchFrom, basePad, Math.random()<0.5?"gap":"bridge", rand(3,4.2), true);
       if (branchConn) floorPads.push(branchConn);
 
@@ -1039,7 +1041,18 @@ function buildArena(){
     roof.position.set(towerTop.x, towerTop.y+3.6, towerTop.z);
     roof.castShadow = true;
     worldGroup.add(roof);
-    floatText("A tower rises nearby...", "#c9a0ff");
+    // a tall glowing beacon over the tower's base so it's visible from clear across the level, not just a text popup
+    if (towerBase){
+      const beaconH = 22;
+      const beaconMat = new THREE.MeshBasicMaterial({color:0xffd166, transparent:true, opacity:0.4, depthWrite:false, side:THREE.DoubleSide});
+      const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.35,beaconH,10,1,true), beaconMat);
+      beacon.position.set(towerBase.x, towerBase.y+beaconH/2, towerBase.z);
+      worldGroup.add(beacon);
+      const beaconLight = new THREE.PointLight(0xffd166, 1.4, 14);
+      beaconLight.position.set(towerBase.x, towerBase.y+2.5, towerBase.z);
+      worldGroup.add(beaconLight);
+    }
+    showBossBanner("🗼 A Tower Rises Nearby — Climb It!", true, "#ffd166");
   }
 
   return { boss, realm };
@@ -1301,9 +1314,10 @@ function spawnGrunt(room, realm, dm, hpMult){
   });
 }
 
-function showBossBanner(name){
+function showBossBanner(name, plain, color){
   const el = document.getElementById("bossBanner");
-  el.textContent = "⚠ "+name+" ⚠";
+  el.textContent = plain ? name : ("⚠ "+name+" ⚠");
+  el.style.color = color || "#ff5b5b";
   el.style.opacity=1;
   clearTimeout(showBossBanner._t);
   showBossBanner._t = setTimeout(()=>{ el.style.opacity=0; }, 2600);
