@@ -844,7 +844,7 @@ function buildArena(){
     if (cpad) floorPads.push(cpad);
   }
 
-  // ---------- optional multi-story tower (2-5 floors) — a climbable bonus structure ----------
+  // ---------- optional multi-story cylinder tower (2-5 floors) — a climbable bonus structure ----------
   let towerTop = null;
   if (!boss && rooms.length>=5 && Math.random()<0.55){
     const branchFrom = pick(rooms.filter(r=>!r.isFirst && !r.isLast && !r.isSide));
@@ -860,19 +860,19 @@ function buildArena(){
       const floors = randi(2,5);
       let prev = basePad;
       for (let f=0; f<floors; f++){
-        const fw=rand(5.5,7), fd=rand(5.5,7);
+        const fw=rand(5,6.2), fd=rand(5,6.2);
         // alternate real jump-up ledges (open gap, no ramp) with walkable ramp floors for variety
         const useJump = Math.random()<0.55;
         const heightStep = useJump ? rand(1.3,2.6) : rand(2.6,3.3);
-        const connLen = useJump ? rand(2.4,3.6) : 3.6+heightStep*2.2;
+        const connLen = useJump ? rand(2.2,3.2) : 2.8+heightStep*1.1; // kept short so floors stack close around the tower core
         const y = prev.y + heightStep;
-        const x = prev.x + rand(-1.0,1.0);
+        const x = prev.x + rand(-0.6,0.6);
         const z = prev.z - prev.d/2 - connLen - fd/2;
         const floorPad = { x, z, y, w:fw, d:fd, index:"towerFloor"+f, isFirst:false, isLast:false, isTower:true, ramp:false };
         rooms.push(floorPad); floorPads.push(floorPad);
         if (!useJump){
           const towerConn = makeConnectorPad(prev, floorPad, "ramp", connLen, false);
-          if (towerConn) floorPads.push(towerConn);
+          if (towerConn){ towerConn.isTowerTrunk = true; floorPads.push(towerConn); }
         } // useJump: intentionally no floor between — jump (or double-jump) up onto the ledge
         addLadder(prev, floorPad); // always available too — hold X to climb straight up, no jump needed
         prev = floorPad;
@@ -892,6 +892,27 @@ function buildArena(){
       mesh.castShadow=true; mesh.receiveShadow=true;
       worldGroup.add(mesh);
       p.mesh = mesh;
+      return;
+    }
+    if (p.isTower && !p.isConnector){
+      // tower landings are round drum-top platforms, not square rooms — reads as a real cylinder tower
+      const discMat = new THREE.MeshStandardMaterial({map:repeatTexture(groundTex,p.w/3,p.w/3), color:realm.ground, roughness:0.9});
+      const discMesh = new THREE.Mesh(new THREE.CylinderGeometry(p.w/2, p.w/2*1.06, 0.6, 18), discMat);
+      discMesh.position.set(p.x, p.y-0.3, p.z);
+      discMesh.receiveShadow = true; discMesh.castShadow = true;
+      worldGroup.add(discMesh);
+      return;
+    }
+    if (p.isTowerTrunk){
+      // a tapered cylindrical trunk segment between tower floors, standing in for the ramp box
+      const len = Math.abs(p.rampZStart-p.rampZEnd);
+      const angle = Math.atan2(p.rampY1-p.rampY0, len);
+      const trunkMat = new THREE.MeshStandardMaterial({map:repeatTexture(wallTex,2.4,Math.max(1,len/3)), color:realm.wall, roughness:0.88});
+      const trunkMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.0,2.35, len/Math.max(0.4,Math.cos(angle))+0.6, 14), trunkMat);
+      trunkMesh.position.set(p.x, (p.rampY0+p.rampY1)/2, p.z);
+      trunkMesh.rotation.x = Math.PI/2 - angle;
+      trunkMesh.castShadow = true; trunkMesh.receiveShadow = true;
+      worldGroup.add(trunkMesh);
       return;
     }
     const isRoom = !p.isConnector;
@@ -1011,7 +1032,13 @@ function buildArena(){
   spawnChestsOnPads(rooms, boss, sidePad);
   spawnEnemiesOnPads(rooms, boss);
   if (towerTop){
-    spawnChestOnPad(towerTop, "diamond");
+    spawnChestOnPad(towerTop, Math.random()<0.55?"diamond":"golden");
+    // a decorative spire cap floating above the top landing (clear of head height, not blocking the platform)
+    const roofMat = new THREE.MeshStandardMaterial({map:repeatTexture(wallTex,2,2), color:realm.wall, roughness:0.7});
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(towerTop.w/2*0.65, 2.2, 18), roofMat);
+    roof.position.set(towerTop.x, towerTop.y+3.6, towerTop.z);
+    roof.castShadow = true;
+    worldGroup.add(roof);
     floatText("A tower rises nearby...", "#c9a0ff");
   }
 
@@ -1176,7 +1203,14 @@ function buildChestMesh(kind){
 /*  ENTITIES                                                               */
 /* ---------------------------------------------------------------------- */
 function spawnChestOnPad(pad, kind){
-  const px = pad.x+rand(-pad.w/2+1.2,pad.w/2-1.2), pz = pad.z+rand(-pad.d/2+1.2,pad.d/2-1.2);
+  let px, pz;
+  if (pad.isTower){
+    // tower landings are round — keep the chest well inside the visible disc, not near a "corner" that isn't really there
+    const ang = rand(0,Math.PI*2), rad = rand(0,pad.w/2-1.3);
+    px = pad.x+Math.cos(ang)*rad; pz = pad.z+Math.sin(ang)*rad;
+  } else {
+    px = pad.x+rand(-pad.w/2+1.2,pad.w/2-1.2); pz = pad.z+rand(-pad.d/2+1.2,pad.d/2-1.2);
+  }
   const mesh = buildChestMesh(kind);
   mesh.position.set(px, pad.y, pz);
   worldGroup.add(mesh);
@@ -1349,6 +1383,7 @@ function resetRuntimeForSegment(){
   runtime.fallStartY = spawnStart.y;
   runtime.currentPad = null;
   runtime.climbing = false;
+  runtime.coyoteTimer = 0;
   runtime.fallPending = false; runtime.fallPendingT = 0;
   const fade = document.getElementById("fallFade");
   if (fade) fade.style.opacity = "0";
@@ -1909,9 +1944,12 @@ function updatePlaying(dt){
   } else {
     runtime.climbing = false;
     // ---- vertical physics: jump / gravity / landing / falling into the void ----
+    runtime.coyoteTimer = Math.max(0, (runtime.coyoteTimer||0) - dt);
     if (wantJump){
-      if (runtime.grounded){
-        runtime.vy = JUMP_FORCE; runtime.grounded=false; runtime.doubleJumpUsed=false;
+      if (runtime.grounded || runtime.coyoteTimer>0){
+        // coyote time: walking off a ledge still counts as "grounded" for a brief moment,
+        // so it costs your normal jump instead of silently burning the double-jump
+        runtime.vy = JUMP_FORCE; runtime.grounded=false; runtime.doubleJumpUsed=false; runtime.coyoteTimer=0;
         Audio_.sfx.jump();
       } else if (!runtime.doubleJumpUsed){
         // double jump is a base movement ability; investing in Wind makes it stronger
@@ -1940,7 +1978,7 @@ function updatePlaying(dt){
       runtime.fallStartY = floor;
       runtime.currentPad = landedPad;
     } else {
-      if (runtime.grounded) runtime.fallStartY = playerObj.position.y;
+      if (runtime.grounded){ runtime.fallStartY = playerObj.position.y; runtime.coyoteTimer = 0.15; }
       runtime.grounded = false;
     }
     playerObj.position.set(nx, newY, nz);
