@@ -184,35 +184,138 @@ const Audio_ = (function(){
     musicNodes.forEach(n=>{ try{n.stop();}catch(e){} });
     musicNodes=[];
     if (musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+    if (reverbSend){ try{ reverbSend.disconnect(); }catch(e){} reverbSend=null; }
+  }
+
+  /* ---- real generative score: distinct scale/tempo/rhythm per realm, ----
+     ---- scheduled with a lookahead sequencer instead of setInterval-per-note ---- */
+  const REALM_MUSIC = [
+    { root:130.81, scale:[0,3,5,6,7,10], bpm:126, lead:"sawtooth", bass:"triangle",
+      kick:"1000100010001000", hat:"0101101101011010", bassSeq:[0,0,3,0], leadSeq:[0,2,3,5,3,2,0,-3], leadDensity:0.85 }, // Fire — driving minor blues
+    { root:146.83, scale:[0,2,3,5,7,9,10], bpm:96, lead:"sine", bass:"sine",
+      kick:"1000000100010000", hat:"0010101010101010", bassSeq:[0,4,0,4], leadSeq:[0,2,4,7,4,2,4,2], leadDensity:0.55 }, // Water — flowing dorian
+    { root:98.00,  scale:[0,2,3,5,7,8,10], bpm:84, lead:"triangle", bass:"sawtooth",
+      kick:"1000000010000000", hat:"0000100000001000", bassSeq:[0,0,0,5], leadSeq:[0,3,5,7,5,3], leadDensity:0.4 },   // Earth — heavy, sparse
+    { root:196.00, scale:[0,2,4,6,7,9,11], bpm:154, lead:"square", bass:"square",
+      kick:"1010101010101010", hat:"1111111111111111", bassSeq:[0,7,0,4], leadSeq:[0,4,7,11,7,4,0,7], leadDensity:0.9 }, // Lightning — frantic lydian
+    { root:174.61, scale:[0,2,4,7,9], bpm:104, lead:"sine", bass:"sine",
+      kick:"0000000000000000", hat:"1010101010101010", bassSeq:[0,4], leadSeq:[0,2,4,7,9,7,4,2], leadDensity:0.6 },   // Wind — airy pentatonic, no kick
+    { root:98.00,  scale:[0,1,4,5,7,8,10], bpm:78, lead:"sawtooth", bass:"sawtooth",
+      kick:"1000000010001000", hat:"0000000100000001", bassSeq:[0,0,8,0], leadSeq:[0,1,4,5,4,1], leadDensity:0.35 }, // Obsidian — dread phrygian
+  ];
+  function freqFromScale(root, scale, degree, extraSemitones){
+    const len = scale.length;
+    const octave = Math.floor(degree/len);
+    const idx = ((degree%len)+len)%len;
+    const semitones = scale[idx] + octave*12 + (extraSemitones||0);
+    return root * Math.pow(2, semitones/12);
+  }
+  let reverbSend = null;
+  function ensureReverb(){
+    if (reverbSend) return reverbSend;
+    const delay = ctx.createDelay(1.0); delay.delayTime.value = 0.27;
+    const feedback = ctx.createGain(); feedback.gain.value = 0.3;
+    const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 2200;
+    delay.connect(filt); filt.connect(feedback); feedback.connect(delay);
+    delay.connect(musicGain);
+    reverbSend = delay;
+    return delay;
+  }
+  function musicKick(t, boost){
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(155,t); o.frequency.exponentialRampToValueAtTime(42,t+0.11);
+    const g = ctx.createGain(); g.gain.setValueAtTime((boost?1.0:0.85),t);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
+    o.connect(g); g.connect(musicGain);
+    o.start(t); o.stop(t+0.25);
+  }
+  function musicHat(t, gain){
+    const bufSize = Math.floor(ctx.sampleRate*0.045);
+    const buf = ctx.createBuffer(1,bufSize,ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<bufSize;i++) d[i] = (Math.random()*2-1)*(1-i/bufSize);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const hp = ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=7500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.045);
+    src.connect(hp); hp.connect(g); g.connect(musicGain);
+    src.start(t);
+  }
+  function musicBass(freq, t, dur, wave){
+    const o = ctx.createOscillator(); o.type = wave||"triangle"; o.frequency.value = freq;
+    const filt = ctx.createBiquadFilter(); filt.type="lowpass"; filt.frequency.value=520;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.38,t+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(filt); filt.connect(g); g.connect(musicGain);
+    o.start(t); o.stop(t+dur+0.05);
+    musicNodes.push(o);
+  }
+  function musicLead(freq, t, dur, wave){
+    const o = ctx.createOscillator(); o.type = wave||"sine"; o.frequency.value = freq;
+    const filt = ctx.createBiquadFilter(); filt.type="lowpass"; filt.frequency.value=3400;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(filt); filt.connect(g);
+    g.connect(musicGain); g.connect(ensureReverb());
+    o.start(t); o.stop(t+dur+0.05);
+    musicNodes.push(o);
+  }
+  function musicPad(cfg, t, boss){
+    const chordDegrees = [0,2,4];
+    chordDegrees.forEach((deg,i)=>{
+      const o = ctx.createOscillator(); o.type = boss?"sawtooth":"sine";
+      o.frequency.value = freqFromScale(cfg.root, cfg.scale, deg, i===0?-12:0);
+      const g = ctx.createGain(); g.gain.value = 0.0001;
+      const dur = 60/cfg.bpm*8;
+      g.gain.linearRampToValueAtTime((boss?0.075:0.06), t+0.6);
+      g.gain.linearRampToValueAtTime(0.0001, t+dur);
+      o.connect(g); g.connect(musicGain); g.connect(ensureReverb());
+      o.start(t); o.stop(t+dur+0.1);
+      musicNodes.push(o);
+    });
   }
   function startMusic(realmIdx, boss){
     ensure();
     if (currentRealm===realmIdx && bossMode===!!boss && musicTimer) return;
     stopMusic();
     currentRealm = realmIdx; bossMode = !!boss;
-    const roots=[130.8,146.8,164.8,174.6,196,220]; // per-realm root pitch
-    const root = roots[realmIdx%roots.length];
-    const chordSets = boss ? [[1,1.2,1.5],[1,1.19,1.5]] : [[1,1.25,1.5],[1,1.2,1.5],[0.9,1.25,1.5]];
-    let step=0;
-    const playChord = ()=>{
-      const chord = chordSets[step%chordSets.length]; step++;
-      chord.forEach((mult,i)=>{
-        const o = ctx.createOscillator(); o.type = boss? "sawtooth":"sine";
-        o.frequency.value = root*mult*(boss?1: (i===0?0.5:1));
-        const g = ctx.createGain(); g.gain.value=0.0001;
-        const t0=ctx.currentTime;
-        g.gain.linearRampToValueAtTime(boss?0.09:0.07, t0+0.4);
-        g.gain.linearRampToValueAtTime(0.0001, t0+(boss?1.6:3.2));
-        o.connect(g); g.connect(musicGain);
-        o.start(t0); o.stop(t0+(boss?1.7:3.3));
-        musicNodes.push(o);
-      });
-      if (boss){
-        noiseBurst(0.08,0.12,0.05);
+    const base = REALM_MUSIC[realmIdx%REALM_MUSIC.length];
+    const cfg = Object.assign({}, base, boss? {
+      bpm: Math.round(base.bpm*1.22),
+      lead: "sawtooth",
+      kick: "1010101010101010",
+      leadDensity: Math.min(1, base.leadDensity+0.25),
+    } : {});
+    const secondsPerStep = 60/cfg.bpm/4; // 16th notes
+    let step = 0;
+    let nextNoteTime = ctx.currentTime + 0.05;
+    const scheduleAhead = 0.2;
+    const scheduleStep = (barStep, t)=>{
+      if (cfg.kick[barStep]==="1") musicKick(t, boss);
+      if (cfg.hat[barStep]==="1") musicHat(t, barStep%4===0?0.16:0.08);
+      if (barStep%4===0){
+        const beat = Math.floor(step/4);
+        const degree = cfg.bassSeq[beat%cfg.bassSeq.length];
+        musicBass(freqFromScale(cfg.root, cfg.scale, degree, -12), t, secondsPerStep*4*0.92, boss?"sawtooth":cfg.bass);
+      }
+      if (barStep%2===0 && Math.random()<cfg.leadDensity){
+        const eighth = Math.floor(step/2);
+        const degree = cfg.leadSeq[eighth%cfg.leadSeq.length];
+        musicLead(freqFromScale(cfg.root, cfg.scale, degree, 0), t, secondsPerStep*(boss?1.4:1.9), cfg.lead);
+      }
+      if (barStep===0) musicPad(cfg, t, boss);
+      if (boss && barStep===8) noiseBurst(0.1, 0.1, 0);
+    };
+    const scheduler = ()=>{
+      while (nextNoteTime < ctx.currentTime + scheduleAhead){
+        scheduleStep(step%16, nextNoteTime);
+        nextNoteTime += secondsPerStep;
+        step++;
       }
     };
-    playChord();
-    musicTimer = setInterval(playChord, boss?900:2600);
+    scheduler();
+    musicTimer = setInterval(scheduler, 45);
   }
   return { ensure, setMusicVol, setSfxVol, sfx, startMusic, stopMusic };
 })();
