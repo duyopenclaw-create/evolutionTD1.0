@@ -915,13 +915,19 @@ function buildArena(){
       return;
     }
     if (p.isTowerTrunk){
-      // a tapered cylindrical trunk segment between tower floors, standing in for the ramp box
+      // a tapered cylindrical trunk segment between tower floors, standing in for the ramp box.
+      // Oriented with setFromUnitVectors (Three.js's own vector-alignment math) instead of hand
+      // trig, so it can't come out twisted the wrong way — it always points exactly along the
+      // real from->to slope, which is the same slope the invisible walkable ramp uses.
       const len = Math.abs(p.rampZStart-p.rampZEnd);
-      const angle = Math.atan2(p.rampY1-p.rampY0, len);
+      const rise = p.rampY1-p.rampY0;
+      const slopeLen = Math.hypot(len, rise);
       const trunkMat = new THREE.MeshStandardMaterial({map:repeatTexture(wallTex,2.4,Math.max(1,len/3)), color:realm.wall, roughness:0.88});
-      const trunkMesh = new THREE.Mesh(new THREE.CylinderGeometry(2.0,2.35, len/Math.max(0.4,Math.cos(angle))+0.6, 14), trunkMat);
+      const rBase = clamp(p.w/2*0.82, 1.4, 2.4);
+      const trunkMesh = new THREE.Mesh(new THREE.CylinderGeometry(rBase*0.88, rBase, slopeLen+0.6, 14), trunkMat);
       trunkMesh.position.set(p.x, (p.rampY0+p.rampY1)/2, p.z);
-      trunkMesh.rotation.x = Math.PI/2 - angle;
+      const dir3 = new THREE.Vector3(0, rise, p.rampZEnd-p.rampZStart).normalize();
+      trunkMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir3);
       trunkMesh.castShadow = true; trunkMesh.receiveShadow = true;
       worldGroup.add(trunkMesh);
       return;
@@ -934,10 +940,14 @@ function buildArena(){
     });
     if (p.ramp){
       const len = Math.abs(p.rampZStart-p.rampZEnd);
-      const angle = Math.atan2(p.rampY1-p.rampY0, len);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, 0.6, len/Math.max(0.4,Math.cos(angle))+0.5), mat);
+      const rise = p.rampY1-p.rampY0;
+      const slopeLen = Math.hypot(len, rise);
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w, 0.6, slopeLen+0.5), mat);
       mesh.position.set(p.x, (p.rampY0+p.rampY1)/2, p.z);
-      mesh.rotation.x = -angle;
+      // aligned with setFromUnitVectors (Three.js's own math) rather than hand trig, so the visible
+      // ramp can't end up tilted the wrong way relative to the invisible walkable slope beneath it
+      const dir3 = new THREE.Vector3(0, rise, p.rampZEnd-p.rampZStart).normalize();
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir3);
       mesh.receiveShadow = true; mesh.castShadow=true;
       worldGroup.add(mesh);
     } else {
@@ -2047,6 +2057,18 @@ function updatePlaying(dt){
     // air tilt: lean slightly in the direction of vertical motion for a bit of weight/realism
     const airTilt = runtime.grounded ? 0 : clamp(-runtime.vy*0.025, -0.35, 0.35);
     playerObj.userData.head.rotation.x = airTilt*0.6;
+    // footstep dust, timed to the same walk cycle as the arm swing/bob above
+    runtime.footstepTimer = (runtime.footstepTimer||0) - dt;
+    if (moving && runtime.grounded){
+      if (runtime.footstepTimer<=0){
+        runtime.footstepTimer = (wantSprint?0.19:0.3);
+        const footPos = playerObj.position.clone();
+        footPos.x += rand(-0.15,0.15); footPos.z += rand(-0.15,0.15);
+        spawnParticles(footPos, 0xcabf9e, 4, 0.5, 0.35);
+      }
+    } else {
+      runtime.footstepTimer = 0;
+    }
   }
   if (playerObj.userData.orb){
     const pulse = runtime.castAnimT>0 ? 1.6+runtime.castAnimT*1.4 : 1.6;
@@ -2311,6 +2333,10 @@ function updatePlaying(dt){
     playerObj.position.z + camDist
   );
   camera.position.lerp(desired, clamp(dt*3.2,0,1));
+  // subtle walking bob, synced to the same step cycle as the footsteps/arm swing — a static camera
+  // reads as gliding even when the character is visibly walking
+  const camBob = (moving && runtime.grounded) ? Math.sin(runtime.moveT*9*2)*0.06 : 0;
+  camera.position.y += camBob;
   let lookTarget = playerObj.position.clone(); lookTarget.y+=1.1;
   if (camShake>0.001){
     lookTarget.x += rand(-camShake,camShake); lookTarget.y += rand(-camShake,camShake);
