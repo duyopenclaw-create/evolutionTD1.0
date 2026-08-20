@@ -1204,6 +1204,72 @@ function applyWizardSkin(){
   playerObj.userData.skinName = skin.name;
 }
 
+/* ---- elemental orbiting auras: unlock an element and it visibly manifests around you ---- */
+const ORB_DEFS = {
+  fire:      { color:0xff5522, glow:0xff9944, shape:"sphere", size:0.15, light:true, speed:1.3, bobFreq:6 },
+  water:     { color:0x2299ff, glow:0x66ccff, shape:"sphere", size:0.14, transparent:true, opacity:0.72, speed:0.7, bobFreq:2.2 },
+  earth:     { color:0x8a6d3b, glow:0xc2a15a, shape:"rock",   size:0.17, speed:0.5, bobFreq:0, tumble:true },
+  lightning: { color:0xffee55, glow:0xfff9b0, shape:"octa",   size:0.14, light:true, speed:2.4, bobFreq:0, jitter:true },
+  wind:      { color:0xaaffee, glow:0xe0fff9, shape:"ring",   size:0.18, transparent:true, opacity:0.5, speed:1.6, bobFreq:1.4 },
+  obsidian:  { color:0x6a1fd0, glow:0xb066ff, shape:"shard",  size:0.16, speed:0.4, bobFreq:0.8 },
+};
+let elementOrbs = {};
+function buildElementOrb(elKey){
+  const def = ORB_DEFS[elKey];
+  let geo;
+  if (def.shape==="sphere") geo = new THREE.SphereGeometry(def.size,10,10);
+  else if (def.shape==="rock") geo = new THREE.IcosahedronGeometry(def.size,0);
+  else if (def.shape==="octa") geo = new THREE.OctahedronGeometry(def.size,0);
+  else if (def.shape==="ring") geo = new THREE.TorusGeometry(def.size,def.size*0.35,6,12);
+  else geo = new THREE.ConeGeometry(def.size*0.7,def.size*2.2,5);
+  const mat = new THREE.MeshStandardMaterial({
+    color:def.color, emissive:def.glow, emissiveIntensity:0.9,
+    transparent:!!def.transparent, opacity:def.opacity!=null?def.opacity:1,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.visible = false;
+  if (def.light){
+    const light = new THREE.PointLight(def.glow, 0.7, 3.2);
+    mesh.add(light);
+  }
+  scene.add(mesh);
+  return mesh;
+}
+function ensureElementOrbs(){
+  ELEMENTS.forEach(e=>{ if (!elementOrbs[e.key]) elementOrbs[e.key] = buildElementOrb(e.key); });
+}
+function updateElementOrbs(dt){
+  if (!playerObj) return;
+  runtime.orbClock = (runtime.orbClock||0) + dt;
+  const unlocked = ELEMENTS.filter(e=>S.elements[e.key].level>0);
+  ELEMENTS.forEach((e,i)=>{
+    const mesh = elementOrbs[e.key];
+    if (!mesh) return;
+    const level = S.elements[e.key].level;
+    if (level<=0){ mesh.visible=false; return; }
+    mesh.visible = true;
+    const def = ORB_DEFS[e.key];
+    const slot = unlocked.indexOf(e);
+    const slotCount = Math.max(1, unlocked.length);
+    const baseAngle = (slot/slotCount)*Math.PI*2;
+    const t = runtime.orbClock;
+    const angle = baseAngle + t*def.speed*(def.jitter? (1+Math.sin(t*17)*0.3) : 1);
+    const radius = 0.95 + (def.jitter? Math.sin(t*23)*0.06 : 0);
+    const bob = def.bobFreq>0 ? Math.sin(t*def.bobFreq+slot)*0.12 : 0;
+    mesh.position.set(
+      playerObj.position.x + Math.cos(angle)*radius,
+      playerObj.position.y + 1.15 + bob,
+      playerObj.position.z + Math.sin(angle)*radius
+    );
+    const growth = 1 + Math.min(level,60)*0.006;
+    mesh.scale.setScalar(growth);
+    if (def.tumble) { mesh.rotation.x += dt*1.4; mesh.rotation.y += dt*1.7; }
+    else if (def.shape==="ring") mesh.rotation.z += dt*3;
+    else mesh.rotation.y += dt*2;
+    mesh.material.emissiveIntensity = 0.75 + Math.sin(t*(def.jitter?14:4)+slot)*0.25;
+  });
+}
+
 function buildPlayerMesh(){
   const g = new THREE.Group();
   const skin = currentWizardSkin();
@@ -1264,21 +1330,35 @@ function buildEnemyMesh(elKey, boss, tier){
   const meta = ELEMENTS.find(e=>e.key===elKey) || ELEMENTS[0];
   const g = new THREE.Group();
   const scale = (boss? 2.1 : 1) * (1 + (boss?0:tier*0.05));
+  // distinct silhouette per element instead of one shape recolored six ways
+  const BODY_SHAPE = {
+    fire:      { geo:new THREE.IcosahedronGeometry(0.56*scale,0), legs:4 },
+    water:     { geo:new THREE.SphereGeometry(0.6*scale,10,8), legs:0, transparent:true, opacity:0.78, squashY:0.7 },
+    earth:     { geo:new THREE.BoxGeometry(0.85*scale,0.85*scale,0.85*scale), legs:4, legR:1.6 },
+    lightning: { geo:new THREE.OctahedronGeometry(0.62*scale,0), legs:2 },
+    wind:      { geo:new THREE.TorusGeometry(0.42*scale,0.2*scale,8,14), legs:0, transparent:true, opacity:0.55 },
+    obsidian:  { geo:new THREE.ConeGeometry(0.5*scale,1.15*scale,6), legs:4 },
+  }[elKey] || { geo:new THREE.DodecahedronGeometry(0.55*scale,0), legs:4 };
   const bodyMat = new THREE.MeshStandardMaterial({
     color:meta.color, emissive:meta.glow, emissiveIntensity:(boss?0.55:0.25)+tier*0.09,
     roughness:0.55-tier*0.1, metalness:tier*0.18,
+    transparent:!!BODY_SHAPE.transparent, opacity:BODY_SHAPE.opacity!=null?BODY_SHAPE.opacity:1,
   });
-  const body = new THREE.Mesh(new THREE.DodecahedronGeometry(0.55*scale,0), bodyMat);
-  body.position.y = 0.9*scale; body.castShadow=true;
+  const body = new THREE.Mesh(BODY_SHAPE.geo, bodyMat);
+  body.position.y = 0.9*scale;
+  if (BODY_SHAPE.squashY) body.scale.y = BODY_SHAPE.squashY;
+  body.castShadow=true;
   g.add(body);
   const eyeMat = new THREE.MeshStandardMaterial({color:0xffffff, emissive:0xff2222, emissiveIntensity:1});
   const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08*scale,6,6), eyeMat); eyeL.position.set(-0.2*scale,1.0*scale,0.42*scale); g.add(eyeL);
   const eyeR = eyeL.clone(); eyeR.position.x = 0.2*scale; g.add(eyeR);
   const legMat = new THREE.MeshStandardMaterial({color:0x1a1a1a});
   const legs = [];
-  for (let i=0;i<4;i++){
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06*scale,0.06*scale,0.5*scale,6), legMat);
-    const ang = (i/4)*Math.PI*2;
+  const legCount = BODY_SHAPE.legs;
+  for (let i=0;i<legCount;i++){
+    const legR = (BODY_SHAPE.legR||1)*0.06*scale;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(legR,legR,0.5*scale,6), legMat);
+    const ang = (i/legCount)*Math.PI*2;
     leg.position.set(Math.cos(ang)*0.35*scale, 0.3*scale, Math.sin(ang)*0.35*scale);
     leg.userData.baseY = leg.position.y; leg.userData.phase = ang;
     g.add(leg);
@@ -2168,6 +2248,7 @@ function updatePlaying(dt){
   if (playerShadowBlob){
     updateShadowBlob(playerShadowBlob, playerObj.position.x, playerObj.position.y, playerObj.position.z, 0.7);
   }
+  updateElementOrbs(dt);
   if (playerObj.userData.orb){
     const pulse = runtime.castAnimT>0 ? 1.6+runtime.castAnimT*1.4 : 1.6;
     playerObj.userData.orb.position.y = 1.78 + Math.sin(performance.now()*0.004)*0.05;
@@ -2800,6 +2881,7 @@ function beginPlaying(isNew){
     playerShadowBlob = makeShadowBlob(0.7);
     scene.add(playerShadowBlob);
   }
+  ensureElementOrbs();
   startSegment();
   updateHud();
   setupTouch();
