@@ -261,6 +261,11 @@
 <!-- ============ SHARED DATA STORE (synced to every viewer) ============ -->
 <div id="data-store">
   <div id="rooms-directory"></div>
+  <div id="social">
+    <div class="known-list"></div>
+    <div class="freq-list"></div>
+    <div class="friendship-list"></div>
+  </div>
 </div>
 
 <script>
@@ -1274,32 +1279,115 @@ function cupsAdvanceIfDone(room, game){
   }
 }
 
-/* ============================== friends (local only) ============================== */
-function getFriends(){ try{ return JSON.parse(localStorage.getItem("pl_friends")||"[]"); }catch(e){ return []; } }
-function saveFriends(f){ localStorage.setItem("pl_friends", JSON.stringify(f)); }
-function addFriend(name){
+/* ============================== friends (real, mutual — lives in the shared store) ============================== */
+function social(){ return document.getElementById("social"); }
+function knownList(){ return social().querySelector(".known-list"); }
+function freqList(){ return social().querySelector(".freq-list"); }
+function friendshipList(){ return social().querySelector(".friendship-list"); }
+function findKnown(id){ return knownList().querySelector('.known[data-id="'+cssesc(id)+'"]'); }
+function knownName(id){ var k = findKnown(id); return k ? k.getAttribute("data-name") : "(unknown)"; }
+function knownAvatar(id){ var k = findKnown(id); return k ? k.getAttribute("data-avatar") : "❔"; }
+function knownOnline(id){ var k = findKnown(id); if(!k) return false; return Date.now() - parseInt(k.getAttribute("data-last-seen")||"0",10) < 40000; }
+
+function registerKnown(){
+  if(!myName) return;
+  commit(function(){
+    var k = findKnown(myId);
+    if(!k){
+      k = document.createElement("div"); k.className="known"; k.setAttribute("data-id", myId);
+      knownList().appendChild(k);
+    }
+    k.setAttribute("data-name", myName);
+    k.setAttribute("data-avatar", myAvatar);
+    k.setAttribute("data-last-seen", String(Date.now()));
+  });
+}
+
+function myFriendships(){
+  return Array.prototype.slice.call(friendshipList().querySelectorAll(".friendship")).filter(function(f){
+    return f.getAttribute("data-a")===myId || f.getAttribute("data-b")===myId;
+  });
+}
+function friendOtherId(f){ return f.getAttribute("data-a")===myId ? f.getAttribute("data-b") : f.getAttribute("data-a"); }
+function areFriends(otherId){
+  return myFriendships().some(function(f){ return friendOtherId(f)===otherId; });
+}
+function myIncomingRequests(){
+  return Array.prototype.slice.call(freqList().querySelectorAll('.freq[data-status="pending"]')).filter(function(r){ return r.getAttribute("data-to")===myId; });
+}
+function myOutgoingRequests(){
+  return Array.prototype.slice.call(freqList().querySelectorAll('.freq[data-status="pending"]')).filter(function(r){ return r.getAttribute("data-from")===myId; });
+}
+
+function sendFriendRequestByName(name){
   name = (name||"").trim();
   if(!name) return;
-  var f = getFriends();
-  if(f.indexOf(name) === -1){ f.push(name); saveFriends(f); bumpStat("friendsAdded",1); }
-  render();
+  if(name.toLowerCase() === myName.toLowerCase()){ toast("That's you!"); return; }
+  var candidates = Array.prototype.slice.call(knownList().querySelectorAll(".known")).filter(function(k){
+    return k.getAttribute("data-name").toLowerCase() === name.toLowerCase() && k.getAttribute("data-id") !== myId;
+  });
+  if(!candidates.length){ toast("No one named \""+name+"\" has opened Party Line yet. Ask them to join a room first, then try again."); return; }
+  var targetId = candidates[candidates.length-1].getAttribute("data-id"); // most-recently-registered match
+  if(areFriends(targetId)){ toast(name+" is already your friend."); return; }
+  var existing = Array.prototype.slice.call(freqList().querySelectorAll('.freq[data-status="pending"]')).filter(function(r){
+    return (r.getAttribute("data-from")===myId && r.getAttribute("data-to")===targetId) ||
+           (r.getAttribute("data-from")===targetId && r.getAttribute("data-to")===myId);
+  });
+  if(existing.length){ toast("There's already a pending request with "+name+"."); return; }
+  audio.sfx.notify();
+  commit(function(){
+    var r = document.createElement("div"); r.className="freq";
+    r.setAttribute("data-id", uid());
+    r.setAttribute("data-from", myId);
+    r.setAttribute("data-to", targetId);
+    r.setAttribute("data-status", "pending");
+    freqList().appendChild(r);
+  });
 }
-function removeFriend(name){
-  saveFriends(getFriends().filter(function(n){return n!==name;}));
-  render();
+function acceptFriendRequest(reqId){
+  var req = freqList().querySelector('.freq[data-id="'+cssesc(reqId)+'"]');
+  if(!req) return;
+  audio.sfx.success();
+  commit(function(){
+    var fs = document.createElement("div"); fs.className="friendship";
+    fs.setAttribute("data-id", uid());
+    fs.setAttribute("data-a", req.getAttribute("data-from"));
+    fs.setAttribute("data-b", req.getAttribute("data-to"));
+    fs.setAttribute("data-since", String(Date.now()));
+    friendshipList().appendChild(fs);
+    req.remove();
+  });
 }
-function isFriendOnline(name){
+function declineFriendRequest(reqId){
+  var req = freqList().querySelector('.freq[data-id="'+cssesc(reqId)+'"]');
+  if(!req) return;
+  commit(function(){ req.remove(); });
+}
+function cancelFriendRequest(reqId){
+  var req = freqList().querySelector('.freq[data-id="'+cssesc(reqId)+'"]');
+  if(!req) return;
+  commit(function(){ req.remove(); });
+}
+function unfriend(otherId){
+  var f = myFriendships().filter(function(x){ return friendOtherId(x)===otherId; })[0];
+  if(!f) return;
+  commit(function(){ f.remove(); });
+}
+function friendCurrentRoom(otherId){
   var rooms = Array.prototype.slice.call(store().querySelectorAll(".room"));
   for(var i=0;i<rooms.length;i++){
-    var ps = roomPlayers(rooms[i]);
-    for(var j=0;j<ps.length;j++){
-      if(ps[j].getAttribute("data-name") === name){
-        var last = parseInt(ps[j].getAttribute("data-online-at")||"0",10);
-        if(Date.now()-last < 40000) return rooms[i].getAttribute("data-id");
-      }
-    }
+    if(findPlayer(rooms[i], otherId)) return rooms[i].getAttribute("data-id");
   }
   return null;
+}
+var prevFriendshipIds = null;
+function checkFriendshipTransitions(){
+  var ids = myFriendships().map(function(f){ return f.getAttribute("data-id"); });
+  if(prevFriendshipIds !== null){
+    var isNew = ids.filter(function(id){ return prevFriendshipIds.indexOf(id) === -1; });
+    if(isNew.length) bumpStat("friendsAdded", isNew.length);
+  }
+  prevFriendshipIds = ids;
 }
 
 /* ======================================================================
@@ -1347,7 +1435,7 @@ function renderNamePrompt(){
     '<h1 class="disp">Welcome to Party Line</h1>'+
     '<p>Pick a name so your friends know it\'s you.</p></div>'+
     '<div class="card" style="max-width:360px;margin:0 auto;">'+
-    '<label class="field">Your name<input type="text" id="name-input" maxlength="18" placeholder="e.g. John"></label>'+
+    '<label class="field">Your name<input type="text" id="name-input" maxlength="18" placeholder="e.g. John" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
     '<button class="btn primary block" style="margin-top:14px;" data-action="set-name">Let\'s play</button>'+
     '</div>';
 }
@@ -1361,30 +1449,48 @@ function renderLanding(){
       '<button class="btn small good" data-action="join-room-code" data-code="'+esc(r.getAttribute("data-id"))+'">Join</button></div>';
   }).join("") : '<div class="empty-note">No rooms open yet — start one!</div>';
 
-  var friends = getFriends();
-  var friendsHtml = friends.length ? friends.map(function(n){
-    var onlineRoom = isFriendOnline(n);
-    return '<div class="friend-row"><span class="status'+(onlineRoom?" online":"")+'"></span><span style="flex:1;">'+esc(n)+'</span>'+
-      (onlineRoom ? '<button class="btn small primary" data-action="join-room-code" data-code="'+esc(onlineRoom)+'">Join</button>' : '<span style="color:var(--muted);font-size:12px;">offline</span>')+
-      '<button class="btn small ghost" data-action="remove-friend" data-name="'+esc(n)+'">✕</button></div>';
-  }).join("") : '<div class="empty-note">No friends added yet.</div>';
+  var incoming = myIncomingRequests();
+  var outgoing = myOutgoingRequests();
+  var friendships = myFriendships();
+
+  var incomingHtml = incoming.map(function(r){
+    var fromId = r.getAttribute("data-from");
+    return '<div class="friend-row"><span class="status"></span><span style="flex:1;">'+esc(knownName(fromId))+' wants to be friends</span>'+
+      '<button class="btn small good" data-action="accept-friend" data-id="'+esc(r.getAttribute("data-id"))+'">Accept</button>'+
+      '<button class="btn small ghost" data-action="decline-friend" data-id="'+esc(r.getAttribute("data-id"))+'">✕</button></div>';
+  }).join("");
+  var outgoingHtml = outgoing.map(function(r){
+    var toId = r.getAttribute("data-to");
+    return '<div class="friend-row"><span class="status"></span><span style="flex:1;color:var(--muted);">Request sent to '+esc(knownName(toId))+'</span>'+
+      '<button class="btn small ghost" data-action="cancel-friend" data-id="'+esc(r.getAttribute("data-id"))+'">Cancel</button></div>';
+  }).join("");
+  var friendsHtml = friendships.length ? friendships.map(function(f){
+    var otherId = friendOtherId(f);
+    var online = knownOnline(otherId);
+    var otherRoom = friendCurrentRoom(otherId);
+    return '<div class="friend-row"><span class="status'+(online?" online":"")+'"></span><span>'+esc(knownAvatar(otherId))+'</span><span style="flex:1;">'+esc(knownName(otherId))+'</span>'+
+      (otherRoom ? '<button class="btn small primary" data-action="join-room-code" data-code="'+esc(otherRoom)+'">Join their game</button>' : '<span style="color:var(--muted);font-size:12px;">'+(online?"online":"offline")+'</span>')+
+      '<button class="btn small ghost" data-action="unfriend" data-id="'+esc(otherId)+'">✕</button></div>';
+  }).join("") : '<div class="empty-note">No friends yet. Ask them to open Party Line and pick a name first, then add them by name below.</div>';
 
   return '<div class="hero"><h1 class="disp">Party Line 🎉</h1>'+
     '<p>Family-friendly party games across every screen. Make a room, invite your crew, and play together.</p></div>'+
     '<div class="landing-grid">'+
       '<div class="card"><h3>Start a room</h3>'+
-        '<label class="field">Room name<input type="text" id="room-name-input" maxlength="24" placeholder="e.g. Friday Game Night"></label>'+
+        '<label class="field">Room name<input type="text" id="room-name-input" maxlength="24" placeholder="e.g. Friday Game Night" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
         '<button class="btn primary block" style="margin-top:12px;" data-action="create-room">Create room</button>'+
       '</div>'+
       '<div class="card"><h3>Join a room</h3>'+
-        '<label class="field">Room code<input type="text" id="join-code-input" maxlength="4" placeholder="e.g. WXYZ" style="text-transform:uppercase;"></label>'+
+        '<label class="field">Room code<input type="text" id="join-code-input" maxlength="4" placeholder="e.g. WXYZ" style="text-transform:uppercase;" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
         '<button class="btn gold block" style="margin-top:12px;" data-action="join-room">Join room</button>'+
         '<div style="margin-top:16px;">'+browseHtml+'</div>'+
       '</div>'+
     '</div>'+
     '<div class="card" style="margin-top:18px;"><h3>Friends</h3>'+
+      (incomingHtml||outgoingHtml ? '<div class="friends-list" style="margin-bottom:10px;">'+incomingHtml+outgoingHtml+'</div>' : '')+
       '<div class="friends-list">'+friendsHtml+'</div>'+
-      '<div class="friend-add"><input type="text" id="friend-name-input" placeholder="Friend\'s name"><button class="btn small ghost" data-action="add-friend">Add</button></div>'+
+      '<div class="friend-add"><input type="text" id="friend-name-input" placeholder="Friend\'s exact name" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore><button class="btn small ghost" data-action="add-friend">Add</button></div>'+
+      '<div class="empty-note" style="padding-top:8px;">They need to have opened Party Line at least once so you can find them by name.</div>'+
     '</div>';
 }
 
@@ -1449,7 +1555,7 @@ function renderLobby(room){
   out += '<div>';
   out += '<div class="card panel"><h3>Players ('+players.length+')</h3>'+rowsHtml+'</div>';
   out += '<div class="card panel"><h3>Chat</h3><div class="chat-box"><div class="chat-log" id="chat-log">'+chatHtml+'</div>'+
-    '<div class="chat-input"><input type="text" id="chat-input" placeholder="Say something nice..." maxlength="300">'+
+    '<div class="chat-input"><input type="text" id="chat-input" placeholder="Say something nice..." maxlength="300" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore>'+
     '<button class="btn primary" data-action="send-chat">Send</button></div></div></div>';
   out += '</div>';
   out += '<div>';
@@ -1741,6 +1847,7 @@ document.addEventListener("click", function(e){
       if(!v) return;
       myName = v; localStorage.setItem("pl_name", v);
       audio.sfx.notify();
+      registerKnown();
       var hash = location.hash;
       if(hash && hash.indexOf("#r=")===0){
         joinRoom(hash.slice(3));
@@ -1760,14 +1867,19 @@ document.addEventListener("click", function(e){
     case "join-room-code": joinRoom(el.getAttribute("data-code")); break;
     case "add-friend": {
       var fn = document.getElementById("friend-name-input").value;
-      addFriend(fn);
+      sendFriendRequestByName(fn);
+      document.getElementById("friend-name-input").value = "";
       break;
     }
-    case "remove-friend": removeFriend(el.getAttribute("data-name")); break;
+    case "accept-friend": acceptFriendRequest(el.getAttribute("data-id")); break;
+    case "decline-friend": declineFriendRequest(el.getAttribute("data-id")); break;
+    case "cancel-friend": cancelFriendRequest(el.getAttribute("data-id")); break;
+    case "unfriend": unfriend(el.getAttribute("data-id")); break;
     case "edit-name": {
       var newName = (window.prompt("Change your name:", myName) || "").trim().slice(0,18);
       if(newName && newName !== myName){
         myName = newName; localStorage.setItem("pl_name", newName);
+        registerKnown();
         var r2 = nav.roomId ? findRoom(nav.roomId) : null;
         if(r2){ var mp = findPlayer(r2, myId); if(mp){ commit(function(){ mp.setAttribute("data-name", newName); }); } }
         else render();
@@ -1858,6 +1970,7 @@ document.addEventListener("claude:sync-off", function(){ readOnly = true; render
 
 /* ============================== boot ============================== */
 artifactReady.then(function(){
+  if(myName) registerKnown();
   if(location.hash && location.hash.indexOf("#r=")===0 && myName){
     joinRoom(location.hash.slice(3));
   } else {
@@ -1869,9 +1982,13 @@ render();
 
 /* periodic tick: presence heartbeat + live game ticks */
 var lastHeartbeat = 0;
+var lastKnownBeat = 0;
 setInterval(function(){
+  var t0 = Date.now();
+  if(t0 - lastKnownBeat > 20000){ lastKnownBeat = t0; registerKnown(); }
+  checkFriendshipTransitions();
   var room = nav.roomId ? findRoom(nav.roomId) : null;
-  if(!room) return;
+  if(!room){ render(); return; }
   var t = Date.now();
   if(t - lastHeartbeat > 20000){ lastHeartbeat = t; heartbeat(); }
   var game = room.querySelector(".game");
