@@ -1,0 +1,1891 @@
+<title>Party Line</title>
+<style>
+  :root{
+    --bg:#eef1fb; --surface:#ffffff; --surface2:#e4e9fb;
+    --ink:#1c2140; --muted:#5c6389;
+    --accent:#ff5c72; --accent-ink:#ffffff;
+    --gold:#ffb648; --good:#2fbf71; --info:#4f7dff;
+    --line: rgba(28,33,64,.12);
+    --shadow: 0 10px 30px -12px rgba(28,33,64,.25);
+    --radius: 18px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12142a; --surface:#1b1e3d; --surface2:#242849;
+      --ink:#eef0fb; --muted:#9aa0c9;
+      --accent:#ff6b81; --accent-ink:#1c2140;
+      --gold:#ffc35e; --good:#3ddc84; --info:#6f93ff;
+      --line: rgba(238,240,251,.14);
+      --shadow: 0 10px 30px -12px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12142a; --surface:#1b1e3d; --surface2:#242849;
+    --ink:#eef0fb; --muted:#9aa0c9;
+    --accent:#ff6b81; --accent-ink:#1c2140;
+    --gold:#ffc35e; --good:#3ddc84; --info:#6f93ff;
+    --line: rgba(238,240,251,.14);
+    --shadow: 0 10px 30px -12px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    min-height:100vh;
+  }
+  #data-store{ display:none; }
+  .disp{
+    font-family:ui-rounded,"SF Pro Rounded","Segoe UI Rounded","Nunito",system-ui,sans-serif;
+    font-weight:800; letter-spacing:-0.01em; text-wrap:balance;
+  }
+  .mono{ font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  button{ font-family:inherit; cursor:pointer; }
+  input,select,textarea{ font-family:inherit; }
+  a{ color:inherit; }
+  ::selection{ background:var(--accent); color:var(--accent-ink); }
+
+  #topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:14px;
+    padding:10px 18px; background:var(--surface);
+    border-bottom:1px solid var(--line);
+  }
+  #topbar .logo{ font-size:20px; display:flex; align-items:center; gap:8px; }
+  #topbar .logo b{ font-size:19px; }
+  #topbar .spacer{ flex:1; }
+  #identity-chip{
+    display:flex; align-items:center; gap:8px; background:var(--surface2);
+    padding:6px 12px 6px 6px; border-radius:999px; font-size:14px; font-weight:600;
+  }
+  .dot{ width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; box-shadow:0 0 0 2px var(--surface); }
+  .dot-admin{ background:var(--accent); }
+  .dot-mod{ background:var(--info); }
+  .iconbtn{
+    background:var(--surface2); border:1px solid var(--line); color:var(--ink);
+    width:36px; height:36px; border-radius:50%; font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .iconbtn:hover{ filter:brightness(1.06); }
+
+  #local-root{ max-width:1100px; margin:0 auto; padding:22px 18px 60px; }
+
+  .btn{
+    border:none; border-radius:12px; padding:12px 20px; font-weight:700; font-size:15px;
+    background:var(--surface2); color:var(--ink); transition:transform .08s ease;
+  }
+  .btn:active{ transform:scale(.96); }
+  .btn.primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn.gold{ background:var(--gold); color:#1c2140; }
+  .btn.good{ background:var(--good); color:#08321a; }
+  .btn.ghost{ background:transparent; border:1px solid var(--line); }
+  .btn.small{ padding:7px 12px; font-size:13px; border-radius:9px; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.block{ width:100%; }
+
+  .card{
+    background:var(--surface); border-radius:var(--radius); padding:20px;
+    box-shadow:var(--shadow); border:1px solid var(--line);
+  }
+  input[type=text], input[type=search]{
+    background:var(--surface2); border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; color:var(--ink); font-size:15px; width:100%;
+  }
+  label.field{ display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--muted); font-weight:600; }
+
+  /* ---- landing ---- */
+  .hero{ text-align:center; padding:38px 10px 26px; }
+  .hero h1{ font-size:44px; margin:0 0 8px; }
+  .hero p{ color:var(--muted); font-size:16px; max-width:480px; margin:0 auto; }
+  .landing-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px; }
+  @media (max-width:720px){ .landing-grid{ grid-template-columns:1fr; } .hero h1{ font-size:32px; } }
+  .landing-grid h3{ margin:0 0 12px; font-size:18px; }
+  .room-browse-item{
+    display:flex; align-items:center; gap:10px; padding:10px; border-radius:12px;
+    background:var(--surface2); margin-bottom:8px;
+  }
+  .room-browse-item .rname{ font-weight:700; flex:1; }
+  .room-browse-item .rcount{ font-size:12px; color:var(--muted); }
+  .empty-note{ color:var(--muted); font-size:14px; padding:10px 2px; }
+
+  /* ---- lobby ---- */
+  .lobby-grid{ display:grid; grid-template-columns:300px 1fr; gap:16px; align-items:start; }
+  @media (max-width:820px){ .lobby-grid{ grid-template-columns:1fr; } }
+  .room-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .room-head h2{ margin:0; font-size:24px; }
+  .code-pill{ background:var(--surface2); padding:4px 10px; border-radius:999px; font-size:13px; font-weight:700; letter-spacing:.06em; }
+  .player-row{ display:flex; align-items:center; gap:8px; padding:8px 6px; border-radius:10px; }
+  .player-row:hover{ background:var(--surface2); }
+  .player-row .pname{ flex:1; font-weight:600; font-size:14px; }
+  .player-row .avatar{ font-size:18px; }
+  .player-row .tools{ display:flex; gap:4px; }
+  .tag{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:2px 6px; border-radius:6px; background:var(--surface2); color:var(--muted); }
+  .tag.you{ background:var(--gold); color:#1c2140; }
+  .tag.timeout{ background:var(--accent); color:var(--accent-ink); }
+
+  .chat-box{ display:flex; flex-direction:column; height:280px; }
+  .chat-log{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:4px 2px; }
+  .chat-msg{ font-size:13.5px; line-height:1.4; }
+  .chat-msg .who{ font-weight:700; margin-right:4px; }
+  .chat-msg.system{ color:var(--muted); font-style:italic; }
+  .chat-input{ display:flex; gap:8px; margin-top:10px; }
+  .chat-input input{ flex:1; }
+
+  .game-pick-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .game-pick{
+    background:var(--surface2); border-radius:14px; padding:16px 12px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:6px; border:2px solid transparent;
+  }
+  .game-pick .emoji{ font-size:32px; }
+  .game-pick .name{ font-weight:700; font-size:14px; }
+  .game-pick.active{ border-color:var(--accent); }
+
+  section.panel{ margin-bottom:18px; }
+  section.panel h3{ margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+
+  .readonly-banner{ background:var(--surface2); border:1px dashed var(--muted); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--muted); margin-bottom:16px; }
+
+  /* ---- games common ---- */
+  .stage{ min-height:360px; }
+  .stage-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .stage-head h2{ margin:0; font-size:22px; }
+  .turn-banner{ text-align:center; font-weight:700; padding:10px; border-radius:12px; background:var(--surface2); margin-bottom:14px; }
+  .spectator-note{ text-align:center; color:var(--muted); font-size:13px; margin-bottom:10px; }
+
+  /* tic tac toe */
+  .ttt-board{ display:grid; grid-template-columns:repeat(3,84px); grid-template-rows:repeat(3,84px); gap:8px; justify-content:center; margin:18px auto; }
+  .ttt-cell{ background:var(--surface2); border-radius:14px; font-size:40px; display:flex; align-items:center; justify-content:center; font-weight:800; }
+  .ttt-cell.playable:hover{ background:var(--gold); cursor:pointer; }
+  .ttt-cell.x{ color:var(--accent); } .ttt-cell.o{ color:var(--info); }
+
+  /* spam */
+  .spam-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-top:12px; }
+  .spam-card{ text-align:center; padding:16px 10px; border-radius:16px; background:var(--surface2); }
+  .spam-card .clicks{ font-size:34px; font-weight:800; }
+  .spam-btn{
+    width:120px; height:120px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+    font-size:16px; font-weight:800; border:none; margin:10px auto 0; display:block;
+    box-shadow:0 8px 0 #b83a4c; user-select:none;
+  }
+  .spam-btn:active{ transform:translateY(6px); box-shadow:0 2px 0 #b83a4c; }
+  .spam-timer{ font-size:30px; font-weight:800; text-align:center; margin-bottom:6px; }
+
+  /* guess who */
+  .gw-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0 16px; }
+  @media (max-width:600px){ .gw-grid{ grid-template-columns:repeat(3,1fr); } }
+  .gw-card{ background:var(--surface2); border-radius:12px; padding:10px 4px; text-align:center; font-size:26px; position:relative; }
+  .gw-card .nm{ font-size:11px; font-weight:700; color:var(--muted); margin-top:2px; }
+  .gw-card.flipped{ opacity:.25; }
+  .gw-card.flipped::after{ content:"✕"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:28px; color:var(--accent); }
+  .gw-log{ max-height:150px; overflow-y:auto; background:var(--surface2); border-radius:12px; padding:10px 12px; font-size:13px; display:flex; flex-direction:column; gap:4px; }
+  .gw-controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .gw-controls select{ flex:1; background:var(--surface2); border:1px solid var(--line); border-radius:10px; padding:10px; color:var(--ink); min-width:180px;}
+
+  /* flappy */
+  .flappy-track{ position:relative; height:380px; background:linear-gradient(#8fd3ff,#c8ecff); border-radius:16px; overflow:hidden; }
+  :root[data-theme="dark"] .flappy-track, @media (prefers-color-scheme:dark){ }
+  .flappy-lane{ position:absolute; top:0; bottom:0; width:60px; border-right:1px dashed rgba(255,255,255,.4); }
+  .flappy-bird{ position:absolute; width:30px; height:24px; border-radius:50% 50% 50% 10%; display:flex; align-items:center; justify-content:center; font-size:16px; transition:top .16s linear; }
+  .flappy-pipe{ position:absolute; width:44px; background:#5cb85c; border:3px solid #3d8b3d; border-radius:6px; }
+  .flappy-name{ position:absolute; top:-18px; font-size:10px; font-weight:700; white-space:nowrap; left:50%; transform:translateX(-50%); }
+  .flappy-scoreboard{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .flappy-score-chip{ background:var(--surface2); border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; }
+  .flappy-crashed{ opacity:.35; filter:grayscale(1); }
+  .flappy-waiting-list{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+
+  /* cups */
+  .cups-stage{ height:130px; position:relative; width:320px; margin:20px auto; }
+  .cup{ position:absolute; bottom:0; width:80px; height:100px; transition:left .42s cubic-bezier(.4,0,.2,1); font-size:0; }
+  .cup .cup-shape{ width:100%; height:100%; background:linear-gradient(#e2725b,#b6543e); border-radius:8px 8px 26px 26px; box-shadow:inset 0 -8px 14px rgba(0,0,0,.25); }
+  .cup.revealed .cup-shape{ transform:translateY(-70px); }
+  .cup .ball{ position:absolute; bottom:6px; left:50%; transform:translateX(-50%); width:26px; height:26px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,var(--gold) 60%,#c98a1f); opacity:0; }
+  .cup.revealed.hasball .ball{ opacity:1; }
+  .cup.clickable{ cursor:pointer; }
+  .cup.clickable:hover .cup-shape{ filter:brightness(1.08); }
+  .cups-scoreboard{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
+
+  .friends-list{ display:flex; flex-direction:column; gap:6px; }
+  .friend-row{ display:flex; align-items:center; gap:8px; font-size:14px; padding:6px; border-radius:8px; background:var(--surface2); }
+  .friend-row .status{ width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .friend-row .status.online{ background:var(--good); }
+  .friend-add{ display:flex; gap:8px; margin-top:8px; }
+
+  .toast-wrap{ position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:50; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .toast{ background:var(--ink); color:var(--bg); padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600; box-shadow:var(--shadow); }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:40; padding:20px; }
+  .modal-backdrop:not([hidden]){ display:flex; }
+  .modal{ background:var(--surface); border-radius:18px; padding:22px; max-width:380px; width:100%; box-shadow:var(--shadow); }
+  .modal h3{ margin-top:0; }
+  .link-box{ background:var(--surface2); border-radius:10px; padding:10px; font-size:13px; word-break:break-all; margin:12px 0; }
+
+  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+
+  /* ---- achievements ---- */
+  .ach-modal{ max-width:640px; max-height:82vh; display:flex; flex-direction:column; padding:0; overflow:hidden; }
+  .ach-head{ padding:20px 22px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:14px; }
+  .ach-head h3{ margin:0; font-size:20px; }
+  .ach-head .ach-total{ color:var(--muted); font-size:13px; }
+  .ach-head .btn{ margin-left:auto; }
+  .ach-overall-bar{ height:8px; border-radius:999px; background:var(--surface2); overflow:hidden; margin-top:8px; }
+  .ach-overall-bar > div{ height:100%; background:var(--gold); }
+  .ach-body{ overflow-y:auto; padding:8px 22px 22px; }
+  .ach-cat{ margin-top:18px; }
+  .ach-cat h4{ margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); display:flex; gap:8px; align-items:center; }
+  .ach-cat h4 .n{ font-weight:400; }
+  .ach-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; }
+  .ach-item{ background:var(--surface2); border-radius:12px; padding:10px 12px; display:flex; gap:10px; align-items:flex-start; }
+  .ach-item.locked{ opacity:.5; }
+  .ach-item .icon{ font-size:22px; line-height:1; }
+  .ach-item .txt{ flex:1; min-width:0; }
+  .ach-item .nm{ font-weight:700; font-size:13px; }
+  .ach-item .ds{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+  .ach-item .bar{ height:5px; border-radius:999px; background:var(--surface); overflow:hidden; margin-top:6px; }
+  .ach-item .bar > div{ height:100%; background:var(--info); }
+</style>
+
+<div id="topbar">
+  <div class="logo disp">🕹️ <b>Party Line</b></div>
+  <div class="spacer"></div>
+  <artifact-local id="topbar-local">
+    <div id="identity-chip-slot"></div>
+    <button class="iconbtn" id="achievements-toggle" data-action="open-achievements" title="Achievements">🏆</button>
+    <button class="iconbtn" id="sound-toggle" title="Toggle sound">🔊</button>
+  </artifact-local>
+</div>
+
+<div id="local-root"><artifact-local id="local-mount"></artifact-local></div>
+<artifact-local id="achievements-mount"></artifact-local>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- ============ SHARED DATA STORE (synced to every viewer) ============ -->
+<div id="data-store">
+  <div id="rooms-directory"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================== constants ============================== */
+var TIMEOUT_MS = 60000;
+var PLAYER_COLORS = ["#2fbf71","#4f7dff","#b98cff","#45d6c0","#ff8ac1","#ffd166","#ff9f45","#6bd1ff"];
+var GAMES = [
+  {type:"tictactoe", name:"Tic Tac Toe", emoji:"⭕"},
+  {type:"spam", name:"Spam Button", emoji:"🔴"},
+  {type:"guesswho", name:"Guess Who", emoji:"🕵️"},
+  {type:"flappy", name:"Flappy Race", emoji:"🐦"},
+  {type:"cups", name:"Cup Shuffle", emoji:"🥤"}
+];
+var CHARACTERS = [
+  {id:"c1",emoji:"👧",name:"Mia",  hat:false,glasses:false,smiling:true, curly:true, beard:false},
+  {id:"c2",emoji:"👦",name:"Leo",  hat:true, glasses:false,smiling:true, curly:false,beard:false},
+  {id:"c3",emoji:"👩",name:"Ana",  hat:false,glasses:true, smiling:false,curly:true, beard:false},
+  {id:"c4",emoji:"👨",name:"Sam",  hat:false,glasses:false,smiling:false,curly:false,beard:true},
+  {id:"c5",emoji:"👵",name:"Rosa", hat:true, glasses:true, smiling:true, curly:false,beard:false},
+  {id:"c6",emoji:"👴",name:"Gus",  hat:false,glasses:true, smiling:false,curly:false,beard:true},
+  {id:"c7",emoji:"🧑‍🦱",name:"Kai", hat:false,glasses:false,smiling:true, curly:true, beard:false},
+  {id:"c8",emoji:"🧑‍🦰",name:"Rey", hat:false,glasses:false,smiling:false,curly:false,beard:false},
+  {id:"c9",emoji:"👱‍♀️",name:"Elle",hat:true, glasses:false,smiling:true, curly:false,beard:false},
+  {id:"c10",emoji:"👱‍♂️",name:"Finn",hat:false,glasses:true, smiling:true, curly:false,beard:false},
+  {id:"c11",emoji:"🧔",name:"Theo",hat:false,glasses:false,smiling:false,curly:true, beard:true},
+  {id:"c12",emoji:"👩‍🦳",name:"Nan", hat:true, glasses:true, smiling:false,curly:true, beard:false}
+];
+var GW_QUESTIONS = [
+  {attr:"hat", text:"Are they wearing a hat?"},
+  {attr:"glasses", text:"Do they wear glasses?"},
+  {attr:"smiling", text:"Are they smiling?"},
+  {attr:"curly", text:"Do they have curly hair?"},
+  {attr:"beard", text:"Do they have a beard?"}
+];
+
+/* ============================== achievements ============================== */
+var MEDALS = ["🔰","🥉","🥈","🥇","🏅","💎","🌟","👑","🏆"];
+var TIER9 = ["Rookie","Bronze","Silver","Gold","Platinum","Diamond","Master","Champion","Legend"];
+var TIER5 = ["Rookie","Bronze","Silver","Gold","Legend"];
+var THRESH_COUNT9   = [1,3,5,10,20,35,50,75,100];
+var THRESH_STREAK9  = [2,3,4,5,6,8,10,15,20];
+var THRESH_CLICKSB9 = [5,10,15,20,30,40,55,70,90];
+var THRESH_CLICKST9 = [25,75,150,300,600,1000,1750,3000,5000];
+var THRESH_QUEST9   = [1,5,10,20,35,50,75,100,150];
+var THRESH_SCORE9   = [1,3,5,10,15,20,30,45,60];
+var THRESH_FLAPS9   = [10,30,60,120,250,450,750,1200,2000];
+var THRESH_COUNT5   = [1,3,5,10,20];
+
+function tierAchievements(idPrefix, category, label, verbTemplate, statKey, thresholds){
+  return thresholds.map(function(n, i){
+    return {
+      id: idPrefix+"_"+i,
+      icon: MEDALS[i],
+      name: TIER9[i]+" "+label,
+      desc: verbTemplate.replace("{n}", n),
+      statKey: statKey,
+      threshold: n,
+      category: category
+    };
+  });
+}
+function tierAchievements5(idPrefix, category, label, verbTemplate, statKey, thresholds){
+  return thresholds.map(function(n, i){
+    return {
+      id: idPrefix+"_"+i,
+      icon: MEDALS[i+2],
+      name: TIER5[i]+" "+label,
+      desc: verbTemplate.replace("{n}", n),
+      statKey: statKey,
+      threshold: n,
+      category: category
+    };
+  });
+}
+
+var ACHIEVEMENTS = [].concat(
+  tierAchievements5("gen_rooms","General","Host","Create {n} room(s).","roomsCreated",THRESH_COUNT5),
+  tierAchievements5("gen_joins","General","Guest","Join {n} room(s).","roomsJoined",THRESH_COUNT5),
+  tierAchievements5("gen_chat","General","Chatterbox","Send {n} chat message(s).","chatSent",THRESH_COUNT5),
+  [
+    {id:"gen_friend1", icon:"🤗", name:"Making Friends", desc:"Add your first friend.", statKey:"friendsAdded", threshold:1, category:"General"},
+    {id:"gen_invite1", icon:"📨", name:"Party Starter", desc:"Send your first invite link.", statKey:"invitesSent", threshold:1, category:"General"},
+    {id:"gen_mod1", icon:"🛡️", name:"Trusted", desc:"Get promoted to moderator by a room host.", statKey:"becameMod", threshold:1, category:"General"},
+    {id:"gen_five", icon:"🎯", name:"Five For Five", desc:"Play all 5 Party Line games at least once.", statKey:"gamesPlayedCount", threshold:5, category:"General"},
+    {id:"gen_timeout1", icon:"🧊", name:"Cool Down", desc:"Get timed out once. It happens to everyone!", statKey:"timedOutCount", threshold:1, category:"General"}
+  ],
+  tierAchievements("ttt_played","Tic Tac Toe","Board Regular","Play {n} Tic-Tac-Toe match(es).","tttPlayed",THRESH_COUNT9),
+  tierAchievements("ttt_wins","Tic Tac Toe","Tic-Tac-Toe Champ","Win {n} Tic-Tac-Toe match(es).","tttWins",THRESH_COUNT9),
+  tierAchievements("ttt_draws","Tic Tac Toe","Stalemate Master","Draw {n} Tic-Tac-Toe match(es).","tttDraws",THRESH_COUNT9),
+  tierAchievements("ttt_streak","Tic Tac Toe","Hot Streak","Win {n} Tic-Tac-Toe match(es) in a row.","tttBestWinStreak",THRESH_STREAK9),
+
+  tierAchievements("spam_rounds","Spam Button","Round Veteran","Play {n} Spam Button round(s).","spamRounds",THRESH_COUNT9),
+  tierAchievements("spam_wins","Spam Button","Spam Champion","Win {n} Spam Button round(s).","spamWins",THRESH_COUNT9),
+  tierAchievements("spam_best","Spam Button","Rapid Fire","Score {n} clicks in a single round.","spamBestRound",THRESH_CLICKSB9),
+  tierAchievements("spam_total","Spam Button","Click Legend","Rack up {n} lifetime clicks.","spamTotalClicks",THRESH_CLICKST9),
+
+  tierAchievements("gw_played","Guess Who","Detective Trainee","Play {n} Guess Who match(es).","gwPlayed",THRESH_COUNT9),
+  tierAchievements("gw_wins","Guess Who","Master Detective","Win {n} Guess Who match(es).","gwWins",THRESH_COUNT9),
+  tierAchievements("gw_quest","Guess Who","Curious Mind","Ask {n} question(s) in Guess Who.","gwQuestionsAsked",THRESH_QUEST9),
+  tierAchievements("gw_streak","Guess Who","Deduction Streak","Win {n} Guess Who match(es) in a row.","gwBestWinStreak",THRESH_STREAK9),
+
+  tierAchievements("fly_played","Flappy Race","Frequent Flyer","Fly in {n} Flappy Race(s).","flappyPlayed",THRESH_COUNT9),
+  tierAchievements("fly_wins","Flappy Race","Race Champion","Win {n} Flappy Race(s).","flappyWins",THRESH_COUNT9),
+  tierAchievements("fly_score","Flappy Race","Pipe Dodger","Score {n} in a single Flappy Race.","flappyBestScore",THRESH_SCORE9),
+  tierAchievements("fly_flaps","Flappy Race","Wing Workout","Flap {n} time(s) total.","flappyTotalFlaps",THRESH_FLAPS9),
+
+  tierAchievements("cup_played","Cup Shuffle","Shell Game Regular","Take {n} Cup Shuffle turn(s).","cupsPlayed",THRESH_COUNT9),
+  tierAchievements("cup_wins","Cup Shuffle","Sharp Eye","Find the ball {n} time(s).","cupsWins",THRESH_COUNT9),
+  tierAchievements("cup_streak","Cup Shuffle","Lucky Streak","Find the ball {n} time(s) in a row.","cupsBestWinStreak",THRESH_STREAK9),
+  tierAchievements("cup_shuffles","Cup Shuffle","Shuffle Master","Start {n} shuffle(s) as the shuffler.","cupsShufflesStarted",THRESH_COUNT9)
+);
+var ACH_CATEGORIES = ["General","Tic Tac Toe","Spam Button","Guess Who","Flappy Race","Cup Shuffle"];
+
+/* ============================== identity ============================== */
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+var myId = localStorage.getItem("pl_id");
+if(!myId){ myId = uid(); localStorage.setItem("pl_id", myId); }
+var myName = localStorage.getItem("pl_name") || "";
+var myAvatar = localStorage.getItem("pl_avatar") || ["🦊","🐼","🐸","🐵","🐨","🐯","🦁","🐰","🐻","🐷"][Math.floor(Math.random()*10)];
+localStorage.setItem("pl_avatar", myAvatar);
+
+/* ============================== nav (local only) ============================== */
+var nav = { screen:"landing", roomId:null, inviteOpen:false, achievementsOpen:false };
+var readOnly = false;
+
+/* ============================== stats & achievements (local, per-player) ============================== */
+var stats = (function(){ try{ return JSON.parse(localStorage.getItem("pl_stats")||"{}"); }catch(e){ return {}; } })();
+var unlocked = (function(){ try{ return JSON.parse(localStorage.getItem("pl_unlocked")||"[]"); }catch(e){ return []; } })();
+var unlockedSet = {}; unlocked.forEach(function(id){ unlockedSet[id]=true; });
+var gamesPlayedSet = {}; (stats.gamesPlayedList||[]).forEach(function(g){ gamesPlayedSet[g]=true; });
+var pendingUnlockToasts = [];
+
+function saveStats(){ localStorage.setItem("pl_stats", JSON.stringify(stats)); }
+function saveUnlocked(){ localStorage.setItem("pl_unlocked", JSON.stringify(Object.keys(unlockedSet))); }
+function bumpStat(key, delta){ stats[key] = (stats[key]||0) + delta; saveStats(); checkAchievements(); }
+function setMaxStat(key, value){ if((stats[key]||0) < value){ stats[key] = value; saveStats(); checkAchievements(); } }
+function markPlayed(type){
+  if(gamesPlayedSet[type]) return;
+  gamesPlayedSet[type] = true;
+  stats.gamesPlayedList = Object.keys(gamesPlayedSet);
+  stats.gamesPlayedCount = stats.gamesPlayedList.length;
+  saveStats(); checkAchievements();
+}
+function checkAchievements(){
+  var newly = [];
+  ACHIEVEMENTS.forEach(function(a){
+    if(unlockedSet[a.id]) return;
+    var val = stats[a.statKey] || 0;
+    if(val >= a.threshold){
+      unlockedSet[a.id] = true;
+      newly.push(a);
+    }
+  });
+  if(newly.length){
+    saveUnlocked();
+    newly.forEach(function(a){
+      toast("🏆 Achievement unlocked: "+a.name);
+    });
+    audio.sfx.win();
+    render();
+  }
+}
+function achProgress(a){ return Math.min(1, (stats[a.statKey]||0) / a.threshold); }
+
+/* per-room transition cache so multi-player outcomes (win/loss/draw) are counted once
+   on every participant's own client, even though only one client's click caused them */
+var statsPrevCache = {};
+function checkStatsTransitions(room, game, type){
+  var roomId = room.getAttribute("data-id");
+  var key = roomId+":"+type;
+  var prev = statsPrevCache[key] || {};
+
+  if(type === "tictactoe"){
+    var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2");
+    var winner = game.getAttribute("data-winner");
+    if(winner && winner !== prev.winner && (myId===p1||myId===p2)){
+      bumpStat("tttPlayed",1);
+      if(winner===myId){ stats.tttWinStreak=(stats.tttWinStreak||0)+1; setMaxStat("tttBestWinStreak", stats.tttWinStreak); bumpStat("tttWins",1); }
+      else if(winner==="draw"){ stats.tttWinStreak=0; saveStats(); bumpStat("tttDraws",1); }
+      else { stats.tttWinStreak=0; saveStats(); }
+    }
+    prev.winner = winner;
+  } else if(type === "spam"){
+    var status = game.getAttribute("data-status");
+    if(status==="ended" && prev.status==="active"){
+      var entry = game.querySelector('.spam-entry[data-id="'+myId+'"]');
+      if(entry){
+        bumpStat("spamRounds",1);
+        var myClicks = parseInt(entry.getAttribute("data-clicks")||"0",10);
+        setMaxStat("spamBestRound", myClicks);
+        var all = Array.prototype.slice.call(game.querySelectorAll(".spam-entry"));
+        var top = all.reduce(function(a,b){ return parseInt(a.getAttribute("data-clicks"))>=parseInt(b.getAttribute("data-clicks"))?a:b; }, all[0]);
+        if(top && top.getAttribute("data-id")===myId) bumpStat("spamWins",1);
+      }
+    }
+    prev.status = status;
+  } else if(type === "guesswho"){
+    var gp1=game.getAttribute("data-p1"), gp2=game.getAttribute("data-p2");
+    var gwWinner = game.getAttribute("data-winner");
+    if(gwWinner && gwWinner !== prev.winner && (myId===gp1||myId===gp2)){
+      bumpStat("gwPlayed",1);
+      if(gwWinner===myId){ stats.gwWinStreak=(stats.gwWinStreak||0)+1; setMaxStat("gwBestWinStreak", stats.gwWinStreak); bumpStat("gwWins",1); }
+      else { stats.gwWinStreak=0; saveStats(); }
+    }
+    prev.winner = gwWinner;
+  } else if(type === "flappy"){
+    var fstatus = game.getAttribute("data-status");
+    if(fstatus==="ended" && prev.status==="active"){
+      var order = (room.getAttribute("data-ready-order")||"").split(",").filter(Boolean);
+      if(order.indexOf(myId)!==-1){
+        var myBird = game.querySelector('.flappy-bird-store[data-id="'+myId+'"]');
+        if(myBird){
+          bumpStat("flappyPlayed",1);
+          setMaxStat("flappyBestScore", parseInt(myBird.getAttribute("data-score")||"0",10));
+          var birds = Array.prototype.slice.call(game.querySelectorAll(".flappy-bird-store"));
+          var ftop = birds.reduce(function(a,b){ return parseInt(a.getAttribute("data-score"))>=parseInt(b.getAttribute("data-score"))?a:b; }, birds[0]);
+          if(ftop && ftop.getAttribute("data-id")===myId) bumpStat("flappyWins",1);
+        }
+      }
+    }
+    prev.status = fstatus;
+  }
+  statsPrevCache[key] = prev;
+}
+function checkPersonalTransitions(room){
+  var roomId = room.getAttribute("data-id");
+  var key = roomId+":personal";
+  var prev = statsPrevCache[key] || {};
+  var role = roleOf(room, myId);
+  if(role === "mod" && !stats.becameMod){ bumpStat("becameMod",1); }
+  var p = me(room);
+  var timedOut = isTimedOut(p);
+  if(timedOut && !prev.timedOut){ bumpStat("timedOutCount",1); }
+  prev.timedOut = timedOut;
+  statsPrevCache[key] = prev;
+}
+
+/* ============================== artifact capability ============================== */
+var artifactAPI = null;
+var artifactReady = (function(){
+  if(!window.claude || !window.claude.use) return Promise.resolve(null);
+  return window.claude.use("artifact").then(function(a){ artifactAPI = a; return a; }).catch(function(){ return null; });
+})();
+
+var commitChain = Promise.resolve();
+var backoff = 0;
+function commit(mutator){
+  commitChain = commitChain.then(function(){
+    return doCommit(mutator);
+  });
+  return commitChain;
+}
+function doCommit(mutator){
+  if(artifactAPI){
+    return artifactAPI.sync(mutator).then(function(){
+      backoff = 0;
+      render();
+    }).catch(function(err){
+      var code = err && err.code;
+      if(code === "not_writer" || code === "not_granted" || code === "consent_required"){
+        readOnly = true;
+        render();
+      } else if(code === "rate_limited"){
+        backoff = Math.min((backoff||150)*2, 4000);
+        render();
+      } else if(code === "conflict"){
+        /* runtime is already reloading this view to the winning version */
+      } else {
+        try{ mutator(); }catch(e){}
+        render();
+      }
+    });
+  } else {
+    try{ mutator(); }catch(e){}
+    render();
+    return Promise.resolve();
+  }
+}
+
+/* ============================== dom helpers (shared store) ============================== */
+function store(){ return document.getElementById("rooms-directory"); }
+function findRoom(id){ return store().querySelector('.room[data-id="'+cssesc(id)+'"]'); }
+function cssesc(s){ return String(s).replace(/["\\]/g,"\\$&"); }
+function roomPlayers(room){ return room ? Array.prototype.slice.call(room.querySelectorAll(".player")) : []; }
+function findPlayer(room, id){ return room ? room.querySelector('.player[data-id="'+cssesc(id)+'"]') : null; }
+function me(room){ return findPlayer(room, myId); }
+function isTimedOut(p){ if(!p) return false; var t = parseInt(p.getAttribute("data-timeout-until")||"0",10); return t > Date.now(); }
+function roleOf(room, id){ var p = findPlayer(room,id); return p ? p.getAttribute("data-role") : null; }
+function playerColor(room, id){
+  var p = findPlayer(room, id);
+  if(!p) return "#5c6389";
+  var role = p.getAttribute("data-role");
+  if(role === "admin") return "var(--accent)";
+  if(role === "mod") return "var(--info)";
+  var players = roomPlayers(room).filter(function(x){ return x.getAttribute("data-role")==="player"; });
+  var idx = players.indexOf(p);
+  return PLAYER_COLORS[idx % PLAYER_COLORS.length] || "#5c6389";
+}
+function playerName(room, id){ var p = findPlayer(room,id); return p ? p.getAttribute("data-name") : "(left)"; }
+
+/* ============================== toast ============================== */
+function toast(msg){
+  var wrap = document.getElementById("toast-wrap");
+  var t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3200);
+}
+
+/* ============================== audio ============================== */
+var audio = (function(){
+  var ctx = null, enabled = localStorage.getItem("pl_sound") !== "off", musicOn = false, musicTimer = null;
+  function ac(){ if(!ctx){ try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return ctx; }
+  function tone(freq, dur, type, gain, delay){
+    if(!enabled) return; var c = ac(); if(!c) return;
+    var t0 = c.currentTime + (delay||0);
+    var osc = c.createOscillator(); var g = c.createGain();
+    osc.type = type||"sine"; osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain||0.14, t0+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(g); g.connect(c.destination);
+    osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  var sfx = {
+    click: function(){ tone(520,0.08,"square",0.1); },
+    flap: function(){ tone(700,0.09,"sine",0.13); },
+    pop: function(){ tone(380,0.12,"triangle",0.15); },
+    success: function(){ tone(523,0.12,"sine",0.15); tone(659,0.12,"sine",0.15,0.09); tone(784,0.18,"sine",0.15,0.18); },
+    fail: function(){ tone(220,0.25,"sawtooth",0.12); tone(160,0.3,"sawtooth",0.12,0.08); },
+    notify: function(){ tone(880,0.08,"sine",0.12); tone(1108,0.1,"sine",0.12,0.09); },
+    win: function(){ [523,659,784,1046].forEach(function(f,i){ tone(f,0.22,"sine",0.16,i*0.11); }); },
+    tick: function(){ tone(1200,0.03,"square",0.05); }
+  };
+  function startMusic(){
+    if(musicOn) return; musicOn = true;
+    var scale = [261.6,293.7,329.6,392.0,440.0,523.3];
+    var i = 0;
+    function loop(){
+      if(!musicOn) return;
+      if(enabled){ tone(scale[i%scale.length], 1.1, "sine", 0.045); tone(scale[(i+2)%scale.length]/2, 1.6, "sine", 0.03, 0.2); }
+      i++;
+      musicTimer = setTimeout(loop, 950);
+    }
+    loop();
+  }
+  function stopMusic(){ musicOn = false; if(musicTimer) clearTimeout(musicTimer); }
+  return {
+    sfx: sfx,
+    isEnabled: function(){ return enabled; },
+    toggle: function(){
+      enabled = !enabled;
+      localStorage.setItem("pl_sound", enabled ? "on" : "off");
+      if(enabled) startMusic(); else stopMusic();
+      return enabled;
+    },
+    initFromPref: function(){ if(enabled) startMusic(); }
+  };
+})();
+document.getElementById("sound-toggle").addEventListener("click", function(){
+  var on = audio.toggle();
+  this.textContent = on ? "🔊" : "🔇";
+});
+document.getElementById("sound-toggle").textContent = audio.isEnabled() ? "🔊" : "🔇";
+
+/* ============================== seeded rng ============================== */
+function mulberry32(seed){
+  var a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seedFromString(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h>>>0; }
+
+/* ============================== escaping ============================== */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+/* ======================================================================
+   SHARED MUTATIONS (all go through commit())
+   ====================================================================== */
+
+function mkRoomCode(){
+  var letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  var s = "";
+  for(var i=0;i<4;i++) s += letters[Math.floor(Math.random()*letters.length)];
+  return s;
+}
+
+function createRoom(roomName){
+  var code = mkRoomCode();
+  while(findRoom(code)) code = mkRoomCode();
+  return commit(function(){
+    var room = document.createElement("div");
+    room.className = "room";
+    room.setAttribute("data-id", code);
+    room.setAttribute("data-name", roomName || "Game Night");
+    room.setAttribute("data-created", String(Date.now()));
+    room.setAttribute("data-game-type", "");
+    room.setAttribute("data-ready-order", "");
+
+    var players = document.createElement("div"); players.className = "players";
+    room.appendChild(players);
+    var chat = document.createElement("div"); chat.className = "chat";
+    room.appendChild(chat);
+    var game = document.createElement("div"); game.className = "game";
+    room.appendChild(game);
+
+    store().appendChild(room);
+
+    var p = document.createElement("div");
+    p.className = "player";
+    p.setAttribute("data-id", myId);
+    p.setAttribute("data-name", myName);
+    p.setAttribute("data-avatar", myAvatar);
+    p.setAttribute("data-role", "admin");
+    p.setAttribute("data-timeout-until", "0");
+    p.setAttribute("data-online-at", String(Date.now()));
+    players.appendChild(p);
+
+    var sys = document.createElement("div"); sys.className = "msg system";
+    sys.setAttribute("data-time", String(Date.now()));
+    sys.textContent = myName + " created the room.";
+    chat.appendChild(sys);
+  }).then(function(){
+    nav.screen = "lobby"; nav.roomId = code;
+    audio.sfx.success();
+    bumpStat("roomsCreated",1);
+    render();
+  }).then(function(){ return code; });
+}
+
+function joinRoom(code){
+  code = (code||"").trim().toUpperCase();
+  var room = findRoom(code);
+  if(!room){ toast("No room with code " + code); return Promise.resolve(false); }
+  var already = findPlayer(room, myId);
+  if(already){
+    nav.screen = "lobby"; nav.roomId = code; render();
+    return Promise.resolve(true);
+  }
+  return commit(function(){
+    var players = room.querySelector(".players");
+    var p = document.createElement("div");
+    p.className = "player";
+    p.setAttribute("data-id", myId);
+    p.setAttribute("data-name", myName);
+    p.setAttribute("data-avatar", myAvatar);
+    p.setAttribute("data-role", "player");
+    p.setAttribute("data-timeout-until", "0");
+    p.setAttribute("data-online-at", String(Date.now()));
+    players.appendChild(p);
+    var chat = room.querySelector(".chat");
+    var sys = document.createElement("div"); sys.className = "msg system";
+    sys.setAttribute("data-time", String(Date.now()));
+    sys.textContent = myName + " joined the room.";
+    chat.appendChild(sys);
+  }).then(function(){
+    nav.screen = "lobby"; nav.roomId = code;
+    audio.sfx.notify();
+    bumpStat("roomsJoined",1);
+    render();
+    return true;
+  });
+}
+
+function leaveRoom(){
+  var room = findRoom(nav.roomId);
+  nav.screen = "landing"; nav.roomId = null;
+  render();
+  if(!room) return;
+  commit(function(){
+    var chat = room.querySelector(".chat");
+    if(chat){
+      var sys = document.createElement("div"); sys.className = "msg system";
+      sys.setAttribute("data-time", String(Date.now()));
+      sys.textContent = myName + " left the room.";
+      chat.appendChild(sys);
+    }
+    var p = findPlayer(room, myId);
+    if(p) p.remove();
+  });
+}
+
+function closeRoom(){
+  var room = findRoom(nav.roomId);
+  if(!room) return;
+  nav.screen = "landing"; nav.roomId = null;
+  render();
+  commit(function(){ room.remove(); });
+}
+
+function sendChat(text){
+  text = (text||"").trim();
+  if(!text) return;
+  var room = findRoom(nav.roomId);
+  if(!room) return;
+  var p = me(room);
+  if(isTimedOut(p)){ toast("You're timed out — can't chat right now."); return; }
+  audio.sfx.click();
+  bumpStat("chatSent",1);
+  commit(function(){
+    var chat = room.querySelector(".chat");
+    var msg = document.createElement("div");
+    msg.className = "msg";
+    msg.setAttribute("data-author", myId);
+    msg.setAttribute("data-name", myName);
+    msg.setAttribute("data-time", String(Date.now()));
+    msg.textContent = text.slice(0,300);
+    chat.appendChild(msg);
+    while(chat.children.length > 80) chat.removeChild(chat.firstChild);
+  });
+}
+
+function heartbeat(){
+  var room = findRoom(nav.roomId);
+  if(!room) return;
+  var p = me(room);
+  if(!p) return;
+  commit(function(){ p.setAttribute("data-online-at", String(Date.now())); });
+}
+
+function setRole(room, targetId, role){
+  return commit(function(){
+    var p = findPlayer(room, targetId);
+    if(p) p.setAttribute("data-role", role);
+  });
+}
+function timeoutPlayer(room, targetId){
+  audio.sfx.fail();
+  return commit(function(){
+    var p = findPlayer(room, targetId);
+    if(p) p.setAttribute("data-timeout-until", String(Date.now()+TIMEOUT_MS));
+  });
+}
+function kickPlayer(room, targetId){
+  audio.sfx.fail();
+  return commit(function(){
+    var p = findPlayer(room, targetId);
+    if(p) p.remove();
+    var chat = room.querySelector(".chat");
+    var sys = document.createElement("div"); sys.className = "msg system";
+    sys.setAttribute("data-time", String(Date.now()));
+    sys.textContent = "A player was removed by the host.";
+    chat.appendChild(sys);
+  });
+}
+
+function pickGame(type){
+  var room = findRoom(nav.roomId);
+  if(!room) return;
+  audio.sfx.click();
+  commit(function(){
+    room.setAttribute("data-game-type", type);
+    var game = room.querySelector(".game");
+    game.innerHTML = "";
+    game.setAttribute("data-type", type);
+    initGameState(game, room, type);
+  });
+}
+
+/* ---------------- per-game init ---------------- */
+function initGameState(game, room, type){
+  if(type === "tictactoe"){
+    game.setAttribute("data-p1",""); game.setAttribute("data-p2","");
+    game.setAttribute("data-turn",""); game.setAttribute("data-winner","");
+    for(var i=0;i<9;i++){
+      var c = document.createElement("div");
+      c.className="cell"; c.setAttribute("data-idx",String(i)); c.setAttribute("data-mark","");
+      game.appendChild(c);
+    }
+  } else if(type === "spam"){
+    game.setAttribute("data-status","idle");
+    game.setAttribute("data-ends-at","0");
+    game.setAttribute("data-duration","10000");
+  } else if(type === "guesswho"){
+    game.setAttribute("data-p1",""); game.setAttribute("data-p2","");
+    game.setAttribute("data-turn",""); game.setAttribute("data-secret1","");
+    game.setAttribute("data-secret2",""); game.setAttribute("data-winner","");
+    game.setAttribute("data-status","waiting");
+    var log = document.createElement("div"); log.className="gw-log-store";
+    game.appendChild(log);
+  } else if(type === "flappy"){
+    game.setAttribute("data-status","waiting");
+    game.setAttribute("data-seed", String(Math.floor(Math.random()*1e9)));
+    game.setAttribute("data-started-at","0");
+    room.setAttribute("data-ready-order","");
+  } else if(type === "cups"){
+    game.setAttribute("data-status","idle");
+    game.setAttribute("data-order","");
+    game.setAttribute("data-current","");
+    game.setAttribute("data-ball-cup","0");
+    game.setAttribute("data-shuffle-seed","0");
+    game.setAttribute("data-shuffle-started-at","0");
+    game.setAttribute("data-swaps","7");
+    game.setAttribute("data-revealed","0");
+    game.setAttribute("data-correct","0");
+  }
+}
+
+/* ================= TIC TAC TOE ================= */
+var TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function tttWinner(cells){
+  for(var i=0;i<TTT_LINES.length;i++){
+    var l = TTT_LINES[i], a=cells[l[0]],b=cells[l[1]],c=cells[l[2]];
+    if(a && a===b && b===c) return a;
+  }
+  if(cells.every(function(x){return x;})) return "draw";
+  return "";
+}
+function tttJoin(room, game){
+  var p1 = game.getAttribute("data-p1"), p2 = game.getAttribute("data-p2");
+  if(p1 === myId || p2 === myId) return;
+  markPlayed("tictactoe");
+  commit(function(){
+    if(!game.getAttribute("data-p1")){ game.setAttribute("data-p1", myId); game.setAttribute("data-turn", myId); }
+    else if(!game.getAttribute("data-p2")){ game.setAttribute("data-p2", myId); }
+  });
+}
+function tttMove(room, game, idx){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2"), turn=game.getAttribute("data-turn");
+  if(turn !== myId) return;
+  var cell = game.querySelector('.cell[data-idx="'+idx+'"]');
+  if(!cell || cell.getAttribute("data-mark")) return;
+  var mark = (myId === p1) ? "X" : "O";
+  audio.sfx.pop();
+  commit(function(){
+    cell.setAttribute("data-mark", mark);
+    var cells = [];
+    for(var i=0;i<9;i++) cells.push(game.querySelector('.cell[data-idx="'+i+'"]').getAttribute("data-mark"));
+    var w = tttWinner(cells);
+    if(w){
+      game.setAttribute("data-winner", w);
+      game.setAttribute("data-turn","");
+    } else {
+      game.setAttribute("data-turn", turn === p1 ? p2 : p1);
+    }
+  }).then(function(){
+    var w = game.getAttribute("data-winner");
+    if(w === myId) audio.sfx.win(); else if(w && w!=="draw") audio.sfx.fail();
+  });
+}
+function tttReset(room, game){
+  commit(function(){
+    for(var i=0;i<9;i++) game.querySelector('.cell[data-idx="'+i+'"]').setAttribute("data-mark","");
+    game.setAttribute("data-winner","");
+    game.setAttribute("data-turn", game.getAttribute("data-p1"));
+  });
+}
+
+/* ================= SPAM BUTTON ================= */
+var spamPending = {}; // local optimistic click buffer per room
+function spamStart(room, game){
+  audio.sfx.click();
+  commit(function(){
+    var players = roomPlayers(room);
+    // rebuild entries
+    Array.prototype.slice.call(game.querySelectorAll(".spam-entry")).forEach(function(e){ e.remove(); });
+    players.forEach(function(p){
+      if(isTimedOut(p)) return;
+      var e = document.createElement("div");
+      e.className = "spam-entry";
+      e.setAttribute("data-id", p.getAttribute("data-id"));
+      e.setAttribute("data-clicks","0");
+      game.appendChild(e);
+    });
+    game.setAttribute("data-status","active");
+    game.setAttribute("data-duration","10000");
+    game.setAttribute("data-ends-at", String(Date.now()+10000));
+  });
+}
+function spamClick(room, game){
+  if(game.getAttribute("data-status") !== "active") return;
+  var entry = game.querySelector('.spam-entry[data-id="'+myId+'"]');
+  if(!entry) return;
+  audio.sfx.tick();
+  markPlayed("spam");
+  bumpStat("spamTotalClicks",1);
+  var key = nav.roomId;
+  spamPending[key] = (spamPending[key]||0) + 1;
+  renderLocalSpamCount();
+  if(!spamPending._flushTimer_ || !spamPending._flushTimer_[key]){
+    spamPending._flushTimer_ = spamPending._flushTimer_ || {};
+    spamPending._flushTimer_[key] = setTimeout(function(){
+      flushSpam(room, game, key);
+    }, 180);
+  }
+}
+function flushSpam(room, game, key){
+  spamPending._flushTimer_[key] = null;
+  var pend = spamPending[key] || 0;
+  spamPending[key] = 0;
+  if(pend <= 0) return;
+  var entry = game.querySelector('.spam-entry[data-id="'+myId+'"]');
+  if(!entry) return;
+  commit(function(){
+    var cur = parseInt(entry.getAttribute("data-clicks")||"0",10);
+    entry.setAttribute("data-clicks", String(cur+pend));
+  });
+}
+function renderLocalSpamCount(){
+  var el = document.querySelector('.spam-card[data-id="'+myId+'"] .clicks');
+  if(!el) return;
+  var base = parseInt(el.getAttribute("data-base")||"0",10);
+  var pend = spamPending[nav.roomId]||0;
+  el.textContent = base + pend;
+}
+function spamCheckEnd(room, game){
+  if(game.getAttribute("data-status") !== "active") return;
+  var endsAt = parseInt(game.getAttribute("data-ends-at")||"0",10);
+  var isAdmin = roleOf(room, myId) === "admin";
+  if(Date.now() >= endsAt && isAdmin){
+    var key = nav.roomId;
+    if(spamPending[key]) flushSpam(room, game, key);
+    commit(function(){
+      if(game.getAttribute("data-status")==="active") game.setAttribute("data-status","ended");
+    }).then(function(){ audio.sfx.win(); });
+  }
+}
+
+/* ================= GUESS WHO ================= */
+function gwJoin(room, game){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2");
+  if(p1===myId||p2===myId) return;
+  markPlayed("guesswho");
+  commit(function(){
+    if(!game.getAttribute("data-p1")){ game.setAttribute("data-p1", myId); }
+    else if(!game.getAttribute("data-p2")){
+      game.setAttribute("data-p2", myId);
+      var c1 = CHARACTERS[Math.floor(Math.random()*CHARACTERS.length)];
+      var c2 = CHARACTERS[Math.floor(Math.random()*CHARACTERS.length)];
+      game.setAttribute("data-secret1", c1.id);
+      game.setAttribute("data-secret2", c2.id);
+      game.setAttribute("data-turn", game.getAttribute("data-p1"));
+      game.setAttribute("data-status","active");
+    }
+  });
+}
+function gwAsk(room, game, attr){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2"), turn=game.getAttribute("data-turn");
+  if(turn !== myId || game.getAttribute("data-status")!=="active") return;
+  var opponentSecret = (myId===p1) ? game.getAttribute("data-secret2") : game.getAttribute("data-secret1");
+  var ch = CHARACTERS.filter(function(c){return c.id===opponentSecret;})[0];
+  var q = GW_QUESTIONS.filter(function(x){return x.attr===attr;})[0];
+  var answer = ch && ch[attr] ? "Yes" : "No";
+  audio.sfx.click();
+  bumpStat("gwQuestionsAsked",1);
+  commit(function(){
+    var log = game.querySelector(".gw-log-store");
+    var e = document.createElement("div"); e.className="gw-entry";
+    e.setAttribute("data-time", String(Date.now()));
+    e.textContent = playerName(room,myId) + " asked: \"" + q.text + "\" — " + answer;
+    log.appendChild(e);
+    game.setAttribute("data-turn", myId===p1?p2:p1);
+  });
+}
+function gwGuess(room, game, charId){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2"), turn=game.getAttribute("data-turn");
+  if(turn !== myId || game.getAttribute("data-status")!=="active") return;
+  var opponentSecret = (myId===p1) ? game.getAttribute("data-secret2") : game.getAttribute("data-secret1");
+  var correct = charId === opponentSecret;
+  commit(function(){
+    var log = game.querySelector(".gw-log-store");
+    var e = document.createElement("div"); e.className="gw-entry";
+    e.setAttribute("data-time", String(Date.now()));
+    var chName = CHARACTERS.filter(function(c){return c.id===charId;})[0].name;
+    if(correct){
+      e.textContent = playerName(room,myId) + " guessed " + chName + " — correct! 🎉";
+      game.setAttribute("data-winner", myId);
+      game.setAttribute("data-status","ended");
+    } else {
+      e.textContent = playerName(room,myId) + " guessed " + chName + " — wrong!";
+      game.setAttribute("data-turn", myId===p1?p2:p1);
+    }
+    log.appendChild(e);
+  }).then(function(){ correct ? audio.sfx.win() : audio.sfx.fail(); });
+}
+function gwReset(room, game){
+  commit(function(){
+    game.setAttribute("data-p1",""); game.setAttribute("data-p2","");
+    game.setAttribute("data-turn",""); game.setAttribute("data-secret1","");
+    game.setAttribute("data-secret2",""); game.setAttribute("data-winner","");
+    game.setAttribute("data-status","waiting");
+    game.querySelector(".gw-log-store").innerHTML = "";
+  });
+}
+var gwFlips = {}; // local-only elimination marks: gwFlips[roomId+charId] = true
+
+/* ================= FLAPPY RACE ================= */
+var flappyLocal = {}; // per-room local physics: {y, vy, flushAt}
+function flappyReady(room, game){
+  var order = room.getAttribute("data-ready-order")||"";
+  var list = order ? order.split(",") : [];
+  if(list.indexOf(myId) !== -1) return;
+  markPlayed("flappy");
+  commit(function(){
+    var order2 = room.getAttribute("data-ready-order")||"";
+    var list2 = order2 ? order2.split(",").filter(Boolean) : [];
+    if(list2.indexOf(myId)===-1) list2.push(myId);
+    room.setAttribute("data-ready-order", list2.join(","));
+    var bird = game.querySelector('.flappy-bird-store[data-id="'+myId+'"]');
+    if(!bird){
+      bird = document.createElement("div");
+      bird.className="flappy-bird-store";
+      bird.setAttribute("data-id", myId);
+      bird.setAttribute("data-y","150");
+      bird.setAttribute("data-score","0");
+      bird.setAttribute("data-alive","1");
+      game.appendChild(bird);
+    }
+  });
+}
+function flappyStart(room, game){
+  audio.sfx.click();
+  commit(function(){
+    game.setAttribute("data-status","active");
+    game.setAttribute("data-started-at", String(Date.now()));
+    game.setAttribute("data-seed", String(Math.floor(Math.random()*1e9)));
+  });
+}
+function flappyFlap(room, game){
+  var st = flappyLocal[nav.roomId];
+  if(!st || !st.alive) return;
+  st.vy = -6.2;
+  audio.sfx.flap();
+  bumpStat("flappyTotalFlaps",1);
+  flushFlappy(room, game, true);
+}
+function pipeGapAt(seed, index){
+  var rnd = mulberry32(seed + index*7919);
+  return 70 + rnd()*180; // gap center Y within track
+}
+function flushFlappy(room, game, force){
+  var st = flappyLocal[nav.roomId];
+  if(!st) return;
+  var nowT = Date.now();
+  if(!force && st.lastFlush && nowT - st.lastFlush < 160) return;
+  st.lastFlush = nowT;
+  commit(function(){
+    var bird = game.querySelector('.flappy-bird-store[data-id="'+myId+'"]');
+    if(!bird) return;
+    bird.setAttribute("data-y", String(Math.round(st.y)));
+    bird.setAttribute("data-score", String(st.score));
+    bird.setAttribute("data-alive", st.alive ? "1" : "0");
+  });
+}
+function flappyTick(room, game){
+  var status = game.getAttribute("data-status");
+  if(status !== "active") return;
+  var order = (room.getAttribute("data-ready-order")||"").split(",").filter(Boolean);
+  var myIdx = order.indexOf(myId);
+  if(myIdx === -1) return;
+  var startedAt = parseInt(game.getAttribute("data-started-at")||"0",10);
+  var myStart = startedAt + myIdx*1000;
+  if(Date.now() < myStart) return; // not my turn to fly yet
+  var seed = parseInt(game.getAttribute("data-seed")||"1",10);
+  var st = flappyLocal[nav.roomId];
+  if(!st){
+    st = flappyLocal[nav.roomId] = { y:150, vy:0, alive:true, score:0, lastFlush:0, elapsedStart: Date.now() };
+  }
+  if(!st.alive) return;
+  st.vy += 0.42;
+  st.y += st.vy;
+  var elapsed = Date.now() - myStart;
+  var speed = 0.09; // px world-units per ms -> pipe index
+  var pipeSpacing = 220;
+  var worldX = elapsed * speed;
+  var pipeIdx = Math.floor(worldX / pipeSpacing);
+  var pipeLocalX = worldX - pipeIdx*pipeSpacing;
+  st.score = pipeIdx;
+  // collision: check pipe near x=40 (bird x)
+  var birdX = 40;
+  var gapCenter = pipeGapAt(seed, pipeIdx);
+  var gapHalf = 55;
+  var pipeScreenX = pipeSpacing - pipeLocalX;
+  if(pipeScreenX > 10 && pipeScreenX < 70){
+    if(st.y < gapCenter-gapHalf || st.y > gapCenter+gapHalf){
+      st.alive = false;
+    }
+  }
+  if(st.y > 340 || st.y < 0) st.alive = false;
+  flushFlappy(room, game, !st.alive);
+}
+function flappyMaybeEnd(room, game){
+  if(roleOf(room, myId) !== "admin") return;
+  if(game.getAttribute("data-status") !== "active") return;
+  var order = (room.getAttribute("data-ready-order")||"").split(",").filter(Boolean);
+  if(!order.length) return;
+  var startedAt = parseInt(game.getAttribute("data-started-at")||"0",10);
+  var allDone = order.every(function(id, i){
+    var myStart = startedAt + i*1000;
+    if(Date.now() < myStart) return false;
+    var bird = game.querySelector('.flappy-bird-store[data-id="'+id+'"]');
+    return bird && bird.getAttribute("data-alive")==="0";
+  });
+  if(allDone){
+    commit(function(){ if(game.getAttribute("data-status")==="active") game.setAttribute("data-status","ended"); })
+      .then(function(){ audio.sfx.win(); });
+  }
+}
+function flappyReset(room, game){
+  commit(function(){
+    Array.prototype.slice.call(game.querySelectorAll(".flappy-bird-store")).forEach(function(b){ b.remove(); });
+    game.setAttribute("data-status","waiting");
+    room.setAttribute("data-ready-order","");
+  });
+  delete flappyLocal[nav.roomId];
+}
+
+/* ================= CUP SHUFFLE ================= */
+function cupsSwapSchedule(seed, count){
+  var rnd = mulberry32(seed);
+  var seq = [];
+  for(var i=0;i<count;i++){
+    var a = Math.floor(rnd()*3), b = Math.floor(rnd()*3);
+    if(a===b) b = (b+1)%3;
+    seq.push([a,b]);
+  }
+  return seq;
+}
+function cupsSlotOrderAt(seed, count, elapsedMs, stepMs){
+  var seq = cupsSwapSchedule(seed, count);
+  var steps = Math.min(count, Math.floor(elapsedMs/stepMs));
+  var order = [0,1,2]; // order[slot] = cup index currently there
+  for(var i=0;i<steps;i++){
+    var s = seq[i];
+    var tmp = order[s[0]]; order[s[0]] = order[s[1]]; order[s[1]] = tmp;
+  }
+  return { order: order, steps: steps, total: count };
+}
+function cupsStartTurn(room, game){
+  var order = (game.getAttribute("data-order")||"").split(",").filter(Boolean);
+  var current = game.getAttribute("data-current");
+  if(current !== myId) return;
+  audio.sfx.click();
+  bumpStat("cupsShufflesStarted",1);
+  commit(function(){
+    game.setAttribute("data-ball-cup", String(Math.floor(Math.random()*3)));
+    game.setAttribute("data-shuffle-seed", String(Math.floor(Math.random()*1e9)));
+    game.setAttribute("data-shuffle-started-at", String(Date.now()));
+    game.setAttribute("data-status","shuffling");
+    game.setAttribute("data-revealed","0");
+  });
+}
+function cupsJoinRotation(room, game){
+  var order = (game.getAttribute("data-order")||"").split(",").filter(Boolean);
+  if(order.indexOf(myId)!==-1) return;
+  markPlayed("cups");
+  commit(function(){
+    var o2 = (game.getAttribute("data-order")||"").split(",").filter(Boolean);
+    if(o2.indexOf(myId)===-1) o2.push(myId);
+    game.setAttribute("data-order", o2.join(","));
+    if(!game.getAttribute("data-current")) game.setAttribute("data-current", myId);
+    var sc = game.querySelector('.cup-score[data-id="'+myId+'"]');
+    if(!sc){
+      sc = document.createElement("div"); sc.className="cup-score";
+      sc.setAttribute("data-id", myId); sc.setAttribute("data-score","0");
+      game.appendChild(sc);
+    }
+  });
+}
+function cupsGuess(room, game, slot){
+  if(game.getAttribute("data-current") !== myId) return;
+  if(game.getAttribute("data-status") !== "guessing") return;
+  var seed = parseInt(game.getAttribute("data-shuffle-seed")||"0",10);
+  var swaps = parseInt(game.getAttribute("data-swaps")||"7",10);
+  var ballCup = parseInt(game.getAttribute("data-ball-cup")||"0",10);
+  var finalOrder = cupsSlotOrderAt(seed, swaps, 999999, 1).order; // fully applied
+  var ballSlot = finalOrder.indexOf(ballCup);
+  var correct = slot === ballSlot;
+  bumpStat("cupsPlayed",1);
+  if(correct){ stats.cupsWinStreak=(stats.cupsWinStreak||0)+1; setMaxStat("cupsBestWinStreak", stats.cupsWinStreak); bumpStat("cupsWins",1); }
+  else { stats.cupsWinStreak=0; saveStats(); }
+  commit(function(){
+    game.setAttribute("data-revealed","1");
+    game.setAttribute("data-guessed-slot", String(slot));
+    game.setAttribute("data-correct", correct ? "1":"0");
+    if(correct){
+      var sc = game.querySelector('.cup-score[data-id="'+myId+'"]');
+      if(sc) sc.setAttribute("data-score", String(parseInt(sc.getAttribute("data-score")||"0",10)+1));
+    }
+    game.setAttribute("data-status","revealed");
+  }).then(function(){ correct ? audio.sfx.success() : audio.sfx.fail(); });
+}
+function cupsNextTurn(room, game){
+  var order = (game.getAttribute("data-order")||"").split(",").filter(Boolean);
+  var current = game.getAttribute("data-current");
+  var idx = order.indexOf(current);
+  var next = order[(idx+1)%order.length] || current;
+  commit(function(){
+    game.setAttribute("data-current", next);
+    game.setAttribute("data-status","idle");
+    game.setAttribute("data-revealed","0");
+  });
+}
+function cupsAdvanceIfDone(room, game){
+  var seed = parseInt(game.getAttribute("data-shuffle-seed")||"0",10);
+  var startedAt = parseInt(game.getAttribute("data-shuffle-started-at")||"0",10);
+  var swaps = parseInt(game.getAttribute("data-swaps")||"7",10);
+  if(game.getAttribute("data-status")==="shuffling"){
+    var elapsed = Date.now()-startedAt;
+    if(elapsed > swaps*450+150 && game.getAttribute("data-current")===myId){
+      commit(function(){ if(game.getAttribute("data-status")==="shuffling") game.setAttribute("data-status","guessing"); });
+    }
+  }
+}
+
+/* ============================== friends (local only) ============================== */
+function getFriends(){ try{ return JSON.parse(localStorage.getItem("pl_friends")||"[]"); }catch(e){ return []; } }
+function saveFriends(f){ localStorage.setItem("pl_friends", JSON.stringify(f)); }
+function addFriend(name){
+  name = (name||"").trim();
+  if(!name) return;
+  var f = getFriends();
+  if(f.indexOf(name) === -1){ f.push(name); saveFriends(f); bumpStat("friendsAdded",1); }
+  render();
+}
+function removeFriend(name){
+  saveFriends(getFriends().filter(function(n){return n!==name;}));
+  render();
+}
+function isFriendOnline(name){
+  var rooms = Array.prototype.slice.call(store().querySelectorAll(".room"));
+  for(var i=0;i<rooms.length;i++){
+    var ps = roomPlayers(rooms[i]);
+    for(var j=0;j<ps.length;j++){
+      if(ps[j].getAttribute("data-name") === name){
+        var last = parseInt(ps[j].getAttribute("data-online-at")||"0",10);
+        if(Date.now()-last < 40000) return rooms[i].getAttribute("data-id");
+      }
+    }
+  }
+  return null;
+}
+
+/* ======================================================================
+   RENDER (local view only — safe to rebuild via innerHTML)
+   ====================================================================== */
+function fmtTime(ms){
+  var d = new Date(ms);
+  var h = d.getHours()%12 || 12, m = ("0"+d.getMinutes()).slice(-2);
+  return h+":"+m;
+}
+
+function renderIdentityChip(){
+  var slot = document.getElementById("identity-chip-slot");
+  var room = nav.roomId ? findRoom(nav.roomId) : null;
+  var role = room ? roleOf(room, myId) : null;
+  var dot = role==="admin" ? '<span class="dot dot-admin"></span>' : role==="mod" ? '<span class="dot dot-mod"></span>' : '';
+  if(!myName){ slot.innerHTML = ""; return; }
+  slot.innerHTML = '<div id="identity-chip" data-action="edit-name" title="Tap to rename yourself" style="cursor:pointer;">'+dot+'<span>'+esc(myAvatar)+' '+esc(myName)+'</span> <span style="opacity:.5;font-size:11px;">✎</span></div>';
+}
+
+function render(){
+  renderIdentityChip();
+  renderAchievementsModal();
+  var mount = document.getElementById("local-mount");
+  if(!myName){ mount.innerHTML = renderNamePrompt(); return; }
+  if(nav.screen === "landing" || !nav.roomId || !findRoom(nav.roomId)){
+    if(nav.roomId && !findRoom(nav.roomId)){ nav.roomId = null; nav.screen="landing"; }
+    mount.innerHTML = renderLanding();
+    return;
+  }
+  var room = findRoom(nav.roomId);
+  var p = me(room);
+  if(!p){ nav.screen="landing"; nav.roomId=null; mount.innerHTML = renderLanding(); return; }
+  mount.innerHTML = renderLobby(room);
+  var gtype = room.getAttribute("data-game-type");
+  if(gtype){
+    var stageSlot = document.getElementById("game-stage-slot");
+    if(stageSlot) stageSlot.innerHTML = renderGame(room, gtype);
+  }
+  renderLocalSpamCount();
+}
+
+function renderNamePrompt(){
+  return '<div class="hero"><div class="disp" style="font-size:52px;">🕹️</div>'+
+    '<h1 class="disp">Welcome to Party Line</h1>'+
+    '<p>Pick a name so your friends know it\'s you.</p></div>'+
+    '<div class="card" style="max-width:360px;margin:0 auto;">'+
+    '<label class="field">Your name<input type="text" id="name-input" maxlength="18" placeholder="e.g. John"></label>'+
+    '<button class="btn primary block" style="margin-top:14px;" data-action="set-name">Let\'s play</button>'+
+    '</div>';
+}
+
+function renderLanding(){
+  var rooms = Array.prototype.slice.call(store().querySelectorAll(".room"));
+  var browseHtml = rooms.length ? rooms.map(function(r){
+    var count = roomPlayers(r).length;
+    return '<div class="room-browse-item"><span class="disp">🎈</span><span class="rname">'+esc(r.getAttribute("data-name"))+'</span>'+
+      '<span class="rcount">'+count+' player'+(count===1?"":"s")+' · '+esc(r.getAttribute("data-id"))+'</span>'+
+      '<button class="btn small good" data-action="join-room-code" data-code="'+esc(r.getAttribute("data-id"))+'">Join</button></div>';
+  }).join("") : '<div class="empty-note">No rooms open yet — start one!</div>';
+
+  var friends = getFriends();
+  var friendsHtml = friends.length ? friends.map(function(n){
+    var onlineRoom = isFriendOnline(n);
+    return '<div class="friend-row"><span class="status'+(onlineRoom?" online":"")+'"></span><span style="flex:1;">'+esc(n)+'</span>'+
+      (onlineRoom ? '<button class="btn small primary" data-action="join-room-code" data-code="'+esc(onlineRoom)+'">Join</button>' : '<span style="color:var(--muted);font-size:12px;">offline</span>')+
+      '<button class="btn small ghost" data-action="remove-friend" data-name="'+esc(n)+'">✕</button></div>';
+  }).join("") : '<div class="empty-note">No friends added yet.</div>';
+
+  return '<div class="hero"><h1 class="disp">Party Line 🎉</h1>'+
+    '<p>Family-friendly party games across every screen. Make a room, invite your crew, and play together.</p></div>'+
+    '<div class="landing-grid">'+
+      '<div class="card"><h3>Start a room</h3>'+
+        '<label class="field">Room name<input type="text" id="room-name-input" maxlength="24" placeholder="e.g. Friday Game Night"></label>'+
+        '<button class="btn primary block" style="margin-top:12px;" data-action="create-room">Create room</button>'+
+      '</div>'+
+      '<div class="card"><h3>Join a room</h3>'+
+        '<label class="field">Room code<input type="text" id="join-code-input" maxlength="4" placeholder="e.g. WXYZ" style="text-transform:uppercase;"></label>'+
+        '<button class="btn gold block" style="margin-top:12px;" data-action="join-room">Join room</button>'+
+        '<div style="margin-top:16px;">'+browseHtml+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card" style="margin-top:18px;"><h3>Friends</h3>'+
+      '<div class="friends-list">'+friendsHtml+'</div>'+
+      '<div class="friend-add"><input type="text" id="friend-name-input" placeholder="Friend\'s name"><button class="btn small ghost" data-action="add-friend">Add</button></div>'+
+    '</div>';
+}
+
+function renderLobby(room){
+  var code = room.getAttribute("data-id");
+  var players = roomPlayers(room);
+  var myRole = roleOf(room, myId);
+  var isAdmin = myRole === "admin";
+  var isMod = myRole === "mod";
+  var canModerate = isAdmin || isMod;
+
+  var rowsHtml = players.map(function(p){
+    var pid = p.getAttribute("data-id");
+    var role = p.getAttribute("data-role");
+    var color = playerColor(room, pid);
+    var timedOut = isTimedOut(p);
+    var tools = "";
+    if(pid !== myId && canModerate){
+      if(isAdmin && role !== "admin"){
+        tools += '<button class="btn small ghost" data-action="make-mod" data-id="'+pid+'" title="Make moderator">🛡️</button>';
+      }
+      if(role !== "admin" && !timedOut){
+        tools += '<button class="btn small ghost" data-action="timeout-player" data-id="'+pid+'" title="Timeout 60s">⏱️</button>';
+      }
+      if(isAdmin && role !== "admin"){
+        tools += '<button class="btn small ghost" data-action="kick-player" data-id="'+pid+'" title="Remove">🚫</button>';
+      }
+    }
+    return '<div class="player-row"><span class="dot" style="background:'+color+';"></span>'+
+      '<span class="avatar">'+esc(p.getAttribute("data-avatar"))+'</span>'+
+      '<span class="pname">'+esc(p.getAttribute("data-name"))+'</span>'+
+      (pid===myId ? '<span class="tag you">you</span>' : '')+
+      (role==="admin" ? '<span class="tag">host</span>' : role==="mod" ? '<span class="tag">mod</span>' : '')+
+      (timedOut ? '<span class="tag timeout">timeout</span>' : '')+
+      '<span class="tools">'+tools+'</span></div>';
+  }).join("");
+
+  var chatMsgs = Array.prototype.slice.call(room.querySelectorAll(".chat > *")).slice(-40);
+  var chatHtml = chatMsgs.map(function(m){
+    if(m.classList.contains("system")){
+      return '<div class="chat-msg system">'+esc(m.textContent)+'</div>';
+    }
+    var color = playerColor(room, m.getAttribute("data-author"));
+    return '<div class="chat-msg"><span class="who" style="color:'+color+';">'+esc(m.getAttribute("data-name"))+':</span>'+esc(m.textContent)+'</div>';
+  }).join("");
+
+  var gtype = room.getAttribute("data-game-type");
+  var gamePicksHtml = GAMES.map(function(g){
+    return '<button class="game-pick'+(gtype===g.type?" active":"")+'" data-action="pick-game" data-type="'+g.type+'" '+(isAdmin?"":"disabled")+'>'+
+      '<span class="emoji">'+g.emoji+'</span><span class="name">'+g.name+'</span></button>';
+  }).join("");
+
+  var inviteLink = location.href.split("#")[0] + "#r=" + code;
+
+  var out = '';
+  if(readOnly) out += '<div class="readonly-banner">👀 You\'re viewing read-only — ask the host to share this room with edit access so you can play.</div>';
+  out += '<div class="back-row"><button class="btn ghost small" data-action="leave-room">← Leave</button>'+
+    (isAdmin ? '<button class="btn ghost small" data-action="close-room">Close room</button>' : '')+
+    '<button class="btn gold small" data-action="open-invite">Invite</button></div>';
+  out += '<div class="room-head"><h2 class="disp">'+esc(room.getAttribute("data-name"))+'</h2><span class="code-pill mono">'+esc(code)+'</span></div>';
+  out += '<div class="lobby-grid">';
+  out += '<div>';
+  out += '<div class="card panel"><h3>Players ('+players.length+')</h3>'+rowsHtml+'</div>';
+  out += '<div class="card panel"><h3>Chat</h3><div class="chat-box"><div class="chat-log" id="chat-log">'+chatHtml+'</div>'+
+    '<div class="chat-input"><input type="text" id="chat-input" placeholder="Say something nice..." maxlength="300">'+
+    '<button class="btn primary" data-action="send-chat">Send</button></div></div></div>';
+  out += '</div>';
+  out += '<div>';
+  out += '<div class="card panel"><h3>Choose a game'+(isAdmin?"":" (host picks)")+'</h3><div class="game-pick-grid">'+gamePicksHtml+'</div></div>';
+  out += '<div class="card panel" id="game-stage-slot">'+(gtype ? renderGame(room, gtype) : '<div class="empty-note">Waiting for the host to start a game.</div>')+'</div>';
+  out += '</div>';
+  out += '</div>';
+
+  out += '<div class="modal-backdrop" id="invite-modal" '+(nav.inviteOpen?'':'hidden')+'><div class="modal"><h3 class="disp">Invite friends 🎉</h3>'+
+    '<p style="color:var(--muted);font-size:14px;">Share this room code or link:</p>'+
+    '<div class="link-box mono">'+esc(inviteLink)+'</div>'+
+    '<button class="btn primary block" data-action="copy-invite" data-link="'+esc(inviteLink)+'">Copy invite link</button>'+
+    '<button class="btn ghost block" style="margin-top:8px;" data-action="close-invite">Close</button></div></div>';
+
+  setTimeout(function(){
+    var log = document.getElementById("chat-log");
+    if(log) log.scrollTop = log.scrollHeight;
+  }, 0);
+
+  return out;
+}
+
+function renderGame(room, type){
+  if(type==="tictactoe") return renderTicTacToe(room, room.querySelector(".game"));
+  if(type==="spam") return renderSpam(room, room.querySelector(".game"));
+  if(type==="guesswho") return renderGuessWho(room, room.querySelector(".game"));
+  if(type==="flappy") return renderFlappy(room, room.querySelector(".game"));
+  if(type==="cups") return renderCups(room, room.querySelector(".game"));
+  return "";
+}
+
+/* ---------- TicTacToe render ---------- */
+function renderTicTacToe(room, game){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2");
+  var turn=game.getAttribute("data-turn"), winner=game.getAttribute("data-winner");
+  var iAmPlaying = myId===p1 || myId===p2;
+  var out = '<div class="stage-head"><h2 class="disp">⭕ Tic Tac Toe</h2></div>';
+  if(!p1 || !p2){
+    out += '<div class="turn-banner">Waiting for players ('+((p1?1:0)+(p2?1:0))+'/2)</div>';
+    if(!iAmPlaying) out += '<button class="btn primary block" data-action="ttt-join">Join as player</button>';
+  } else if(winner){
+    var wname = winner==="draw" ? "It's a draw!" : (playerName(room,winner)+" wins! 🎉");
+    out += '<div class="turn-banner">'+esc(wname)+'</div>';
+  } else {
+    out += '<div class="turn-banner">'+(turn===myId?"Your turn!":(playerName(room,turn)+"\u2019s turn"))+'</div>';
+  }
+  if(!iAmPlaying && (p1&&p2)) out += '<div class="spectator-note">You\'re spectating this match.</div>';
+  out += '<div class="ttt-board">';
+  for(var i=0;i<9;i++){
+    var cell = game.querySelector('.cell[data-idx="'+i+'"]');
+    var mark = cell ? cell.getAttribute("data-mark") : "";
+    var playable = (turn===myId && !mark && !winner);
+    out += '<div class="ttt-cell '+(mark==="X"?"x":mark==="O"?"o":"")+(playable?" playable":"")+'" '+(playable?'data-action="ttt-move" data-idx="'+i+'"':'')+'>'+mark+'</div>';
+  }
+  out += '</div>';
+  if(winner) out += '<button class="btn gold block" data-action="ttt-reset">Play again</button>';
+  out += '<div class="flappy-scoreboard"><span class="flappy-score-chip">X: '+(p1?esc(playerName(room,p1)):"—")+'</span><span class="flappy-score-chip">O: '+(p2?esc(playerName(room,p2)):"—")+'</span></div>';
+  return out;
+}
+
+/* ---------- Spam render ---------- */
+function renderSpam(room, game){
+  var status = game.getAttribute("data-status");
+  var entries = Array.prototype.slice.call(game.querySelectorAll(".spam-entry"));
+  var out = '<div class="stage-head"><h2 class="disp">🔴 Spam Button</h2></div>';
+  if(status==="idle" || !entries.length){
+    out += '<div class="turn-banner">Everyone gets 10 seconds to click as fast as they can!</div>';
+    out += '<button class="btn primary block" data-action="spam-start">Start round</button>';
+    return out;
+  }
+  var endsAt = parseInt(game.getAttribute("data-ends-at")||"0",10);
+  var remain = Math.max(0, Math.ceil((endsAt-Date.now())/1000));
+  if(status==="active"){
+    out += '<div class="spam-timer mono">'+remain+'s</div>';
+  } else {
+    var top = entries.slice().sort(function(a,b){return parseInt(b.getAttribute("data-clicks"))-parseInt(a.getAttribute("data-clicks"));})[0];
+    out += '<div class="turn-banner">'+(top?esc(playerName(room, top.getAttribute("data-id")))+" wins with "+top.getAttribute("data-clicks")+" clicks! 🏆":"Round over")+'</div>';
+  }
+  out += '<div class="spam-grid">';
+  entries.forEach(function(e){
+    var pid = e.getAttribute("data-id");
+    var clicks = e.getAttribute("data-clicks");
+    var color = playerColor(room, pid);
+    var mine = pid===myId;
+    out += '<div class="spam-card" style="border:2px solid '+color+';">'+
+      '<div>'+esc(playerName(room,pid))+'</div>'+
+      '<div class="clicks mono" data-id="'+pid+'" data-base="'+clicks+'">'+clicks+'</div>'+
+      (mine && status==="active" ? '<button class="spam-btn" data-action="spam-click">TAP!</button>' : '')+
+      '</div>';
+  });
+  out += '</div>';
+  if(status==="ended") out += '<button class="btn gold block" style="margin-top:14px;" data-action="spam-start">Play again</button>';
+  return out;
+}
+
+/* ---------- Guess Who render ---------- */
+function renderGuessWho(room, game){
+  var p1=game.getAttribute("data-p1"), p2=game.getAttribute("data-p2");
+  var turn=game.getAttribute("data-turn"), winner=game.getAttribute("data-winner"), status=game.getAttribute("data-status");
+  var iAmPlaying = myId===p1||myId===p2;
+  var mySecretIsMine = myId===p1 ? game.getAttribute("data-secret1") : myId===p2 ? game.getAttribute("data-secret2") : "";
+  var myChar = CHARACTERS.filter(function(c){return c.id===mySecretIsMine;})[0];
+  var out = '<div class="stage-head"><h2 class="disp">🕵️ Guess Who</h2></div>';
+  if(status==="waiting"){
+    out += '<div class="turn-banner">Waiting for players ('+((p1?1:0)+(p2?1:0))+'/2)</div>';
+    if(!iAmPlaying) out += '<button class="btn primary block" data-action="gw-join">Join as player</button>';
+    return out;
+  }
+  if(winner){
+    out += '<div class="turn-banner">'+esc(playerName(room,winner))+' guessed correctly! 🎉</div>';
+  } else {
+    out += '<div class="turn-banner">'+(turn===myId?"Your turn — ask a question or guess!":(playerName(room,turn)+"\u2019s turn"))+'</div>';
+  }
+  if(iAmPlaying && myChar){
+    out += '<div class="spectator-note">Your secret character (opponent is guessing this): '+myChar.emoji+' '+myChar.name+'</div>';
+  } else if(!iAmPlaying){
+    out += '<div class="spectator-note">You\'re spectating this match.</div>';
+  }
+  out += '<div class="gw-grid">';
+  CHARACTERS.forEach(function(c){
+    var flipKey = nav.roomId+"_"+c.id;
+    var flipped = !!gwFlips[flipKey];
+    out += '<div class="gw-card'+(flipped?" flipped":"")+'" data-action="gw-flip-toggle" data-char="'+c.id+'"><div>'+c.emoji+'</div><div class="nm">'+c.name+'</div></div>';
+  });
+  out += '</div>';
+  if(iAmPlaying && turn===myId && !winner){
+    out += '<div class="gw-controls"><select id="gw-question-select">'+GW_QUESTIONS.map(function(q){return '<option value="'+q.attr+'">'+q.text+'</option>';}).join("")+'</select>'+
+      '<button class="btn primary" data-action="gw-ask">Ask</button></div>';
+    out += '<div class="gw-controls"><select id="gw-guess-select">'+CHARACTERS.map(function(c){return '<option value="'+c.id+'">'+c.emoji+' '+c.name+'</option>';}).join("")+'</select>'+
+      '<button class="btn gold" data-action="gw-guess">Guess!</button></div>';
+  }
+  var log = Array.prototype.slice.call(game.querySelectorAll(".gw-entry")).slice(-30);
+  out += '<div class="gw-log" style="margin-top:12px;">'+(log.length?log.map(function(e){return '<div>'+esc(e.textContent)+'</div>';}).join(""):'<div class="empty-note">No questions yet.</div>')+'</div>';
+  if(winner) out += '<button class="btn gold block" style="margin-top:12px;" data-action="gw-reset">Play again</button>';
+  return out;
+}
+
+/* ---------- Flappy render ---------- */
+function renderFlappy(room, game){
+  var status = game.getAttribute("data-status");
+  var order = (room.getAttribute("data-ready-order")||"").split(",").filter(Boolean);
+  var startedAt = parseInt(game.getAttribute("data-started-at")||"0",10);
+  var isAdmin = roleOf(room, myId)==="admin";
+  var out = '<div class="stage-head"><h2 class="disp">🐦 Flappy Race</h2></div>';
+  if(status==="waiting"){
+    out += '<div class="turn-banner">Get ready! Players join one at a time, 1 second apart.</div>';
+    out += '<div class="flappy-waiting-list">'+order.map(function(id){return '<span class="tag">'+esc(playerName(room,id))+'</span>';}).join("")+'</div>';
+    if(order.indexOf(myId)===-1) out += '<button class="btn primary block" data-action="flappy-ready">I\'m ready!</button>';
+    else out += '<div class="empty-note">You\'re in — waiting for the host to start.</div>';
+    if(isAdmin && order.length) out += '<button class="btn gold block" style="margin-top:8px;" data-action="flappy-start">Start race</button>';
+    return out;
+  }
+  var seed = parseInt(game.getAttribute("data-seed")||"1",10);
+  out += '<div class="flappy-track" id="flappy-track">';
+  // pipes based on my own elapsed (visual approximation, one shared track)
+  var refIdx = order.indexOf(myId);
+  var myStart = startedAt + Math.max(0,refIdx)*1000;
+  var elapsed = Math.max(0, Date.now()-myStart);
+  var pipeSpacing = 220, speed = 0.09;
+  var worldX = elapsed*speed;
+  for(var k=-1;k<4;k++){
+    var pIdx = Math.floor(worldX/pipeSpacing)+k;
+    if(pIdx<0) continue;
+    var screenX = (pIdx*pipeSpacing) - worldX + 40;
+    if(screenX < -60 || screenX > 700) continue;
+    var gap = pipeGapAt(seed, pIdx);
+    out += '<div class="flappy-pipe" style="left:'+screenX+'px; top:0; height:'+Math.max(0,gap-55)+'px;"></div>';
+    out += '<div class="flappy-pipe" style="left:'+screenX+'px; top:'+(gap+55)+'px; bottom:0; height:'+Math.max(0,340-(gap+55))+'px;"></div>';
+  }
+  var birds = Array.prototype.slice.call(game.querySelectorAll(".flappy-bird-store"));
+  birds.forEach(function(b, bi){
+    var pid = b.getAttribute("data-id");
+    var y = parseFloat(b.getAttribute("data-y")||"150");
+    var alive = b.getAttribute("data-alive")==="1";
+    var color = playerColor(room, pid);
+    var idx = order.indexOf(pid);
+    var started = Date.now() >= startedAt + Math.max(0,idx)*1000;
+    if(!started) return;
+    out += '<div class="flappy-bird'+(alive?"":" flappy-crashed")+'" style="left:'+(30+ (idx%3)*4)+'px; top:'+y+'px; background:'+color+';">'+
+      '<span class="flappy-name" style="color:'+color+';">'+esc(playerName(room,pid))+(pid===myId?" (you)":"")+'</span>🐤</div>';
+  });
+  out += '</div>';
+  out += '<div class="flappy-scoreboard">'+birds.map(function(b){
+    return '<span class="flappy-score-chip">'+esc(playerName(room,b.getAttribute("data-id")))+': '+b.getAttribute("data-score")+(b.getAttribute("data-alive")==="0"?" 💥":"")+'</span>';
+  }).join("")+'</div>';
+  var myBird = game.querySelector('.flappy-bird-store[data-id="'+myId+'"]');
+  var myIdxInOrder = order.indexOf(myId);
+  var myTurnStarted = myIdxInOrder!==-1 && Date.now() >= startedAt + myIdxInOrder*1000;
+  if(status==="active" && myBird && myTurnStarted && myBird.getAttribute("data-alive")==="1"){
+    out += '<button class="btn primary block" style="margin-top:10px;" data-action="flappy-flap">FLAP! (tap repeatedly)</button>';
+  } else if(status==="active" && myIdxInOrder!==-1 && !myTurnStarted){
+    out += '<div class="spectator-note">Your bird launches in '+Math.ceil((startedAt+myIdxInOrder*1000-Date.now())/1000)+'s...</div>';
+  } else if(status==="active" && myIdxInOrder===-1){
+    out += '<div class="spectator-note">You\'re spectating this race.</div>';
+  }
+  if(status==="ended") out += '<button class="btn gold block" style="margin-top:10px;" data-action="flappy-reset">Race again</button>';
+  return out;
+}
+
+/* ---------- Cups render ---------- */
+function renderCups(room, game){
+  var status = game.getAttribute("data-status");
+  var order = (game.getAttribute("data-order")||"").split(",").filter(Boolean);
+  var current = game.getAttribute("data-current");
+  var out = '<div class="stage-head"><h2 class="disp">🥤 Cup Shuffle</h2></div>';
+  if(!order.length || order.indexOf(myId)===-1){
+    out += '<div class="turn-banner">Take turns finding the ball!</div>';
+    out += '<button class="btn primary block" data-action="cups-join">Join rotation</button>';
+  }
+  if(order.length){
+    out += '<div class="turn-banner">'+(current===myId?"Your turn!":(playerName(room,current)+"\u2019s turn"))+'</div>';
+  }
+  var seed = parseInt(game.getAttribute("data-shuffle-seed")||"0",10);
+  var swaps = parseInt(game.getAttribute("data-swaps")||"7",10);
+  var startedAt = parseInt(game.getAttribute("data-shuffle-started-at")||"0",10);
+  var elapsed = Date.now()-startedAt;
+  var slotInfo = { order:[0,1,2] };
+  if(status==="shuffling" || status==="guessing"){
+    slotInfo = cupsSlotOrderAt(seed, swaps, status==="guessing"?999999:elapsed, 450);
+  } else if(status==="revealed"){
+    slotInfo = cupsSlotOrderAt(seed, swaps, 999999, 450);
+  }
+  var ballCup = parseInt(game.getAttribute("data-ball-cup")||"0",10);
+  var revealed = game.getAttribute("data-revealed")==="1";
+  var guessedSlot = parseInt(game.getAttribute("data-guessed-slot")||"-1",10);
+  out += '<div class="cups-stage">';
+  for(var slot=0; slot<3; slot++){
+    var cupIdx = slotInfo.order[slot];
+    var hasBall = cupIdx === ballCup;
+    var clickable = status==="guessing" && current===myId;
+    out += '<div class="cup'+(revealed?" revealed":"")+(hasBall&&revealed?" hasball":"")+(clickable?" clickable":"")+'" style="left:'+(slot*120)+'px;" '+(clickable?'data-action="cups-guess" data-slot="'+slot+'"':'')+'>'+
+      '<div class="ball"></div><div class="cup-shape"></div></div>';
+  }
+  out += '</div>';
+  if(status==="revealed"){
+    var correct = game.getAttribute("data-correct")==="1";
+    out += '<div class="turn-banner">'+(correct?"Found it! 🎉":"Not quite — better luck next time!")+'</div>';
+    if(current===myId) out += '<button class="btn gold block" data-action="cups-next-turn">Next player\'s turn</button>';
+  } else if(status==="idle" && current===myId){
+    out += '<button class="btn primary block" data-action="cups-start-turn">Shuffle!</button>';
+  } else if(status==="shuffling"){
+    out += '<div class="spectator-note">Shuffling...</div>';
+  }
+  out += '<div class="cups-scoreboard">'+Array.prototype.slice.call(game.querySelectorAll(".cup-score")).map(function(s){
+    return '<span class="flappy-score-chip">'+esc(playerName(room,s.getAttribute("data-id")))+': '+s.getAttribute("data-score")+'</span>';
+  }).join("")+'</div>';
+  return out;
+}
+
+function renderAchievementsModal(){
+  var mount = document.getElementById("achievements-mount");
+  if(!nav.achievementsOpen){ mount.innerHTML = ""; return; }
+  var totalUnlocked = Object.keys(unlockedSet).length;
+  var total = ACHIEVEMENTS.length;
+  var pct = Math.round(100*totalUnlocked/total);
+  var body = ACH_CATEGORIES.map(function(cat){
+    var items = ACHIEVEMENTS.filter(function(a){ return a.category===cat; });
+    var catUnlocked = items.filter(function(a){ return unlockedSet[a.id]; }).length;
+    var itemsHtml = items.map(function(a){
+      var isUnlocked = !!unlockedSet[a.id];
+      var progress = achProgress(a);
+      return '<div class="ach-item'+(isUnlocked?"":" locked")+'"><div class="icon">'+(isUnlocked?a.icon:"🔒")+'</div>'+
+        '<div class="txt"><div class="nm">'+esc(a.name)+'</div><div class="ds">'+esc(a.desc)+'</div>'+
+        (isUnlocked?'':'<div class="bar"><div style="width:'+(progress*100)+'%;"></div></div><div class="ds mono">'+(stats[a.statKey]||0)+' / '+a.threshold+'</div>')+
+        '</div></div>';
+    }).join("");
+    return '<div class="ach-cat"><h4>'+esc(cat)+' <span class="n">('+catUnlocked+'/'+items.length+')</span></h4><div class="ach-grid">'+itemsHtml+'</div></div>';
+  }).join("");
+  mount.innerHTML = '<div class="modal-backdrop"><div class="modal ach-modal">'+
+    '<div class="ach-head"><div><h3 class="disp">🏆 Achievements</h3><div class="ach-total">'+totalUnlocked+' / '+total+' unlocked</div>'+
+    '<div class="ach-overall-bar"><div style="width:'+pct+'%;"></div></div></div>'+
+    '<button class="btn ghost small" data-action="close-achievements">✕ Close</button></div>'+
+    '<div class="ach-body">'+body+'</div></div></div>';
+}
+
+/* ======================================================================
+   EVENT DELEGATION
+   ====================================================================== */
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-action]");
+  if(!el) return;
+  var action = el.getAttribute("data-action");
+  var room = nav.roomId ? findRoom(nav.roomId) : null;
+  var game = room ? room.querySelector(".game") : null;
+
+  switch(action){
+    case "set-name": {
+      var v = (document.getElementById("name-input").value||"").trim().slice(0,18);
+      if(!v) return;
+      myName = v; localStorage.setItem("pl_name", v);
+      audio.sfx.notify();
+      var hash = location.hash;
+      if(hash && hash.indexOf("#r=")===0){
+        joinRoom(hash.slice(3));
+      } else render();
+      break;
+    }
+    case "create-room": {
+      var name = document.getElementById("room-name-input").value;
+      createRoom(name);
+      break;
+    }
+    case "join-room": {
+      var code = document.getElementById("join-code-input").value;
+      joinRoom(code);
+      break;
+    }
+    case "join-room-code": joinRoom(el.getAttribute("data-code")); break;
+    case "add-friend": {
+      var fn = document.getElementById("friend-name-input").value;
+      addFriend(fn);
+      break;
+    }
+    case "remove-friend": removeFriend(el.getAttribute("data-name")); break;
+    case "edit-name": {
+      var newName = (window.prompt("Change your name:", myName) || "").trim().slice(0,18);
+      if(newName && newName !== myName){
+        myName = newName; localStorage.setItem("pl_name", newName);
+        var r2 = nav.roomId ? findRoom(nav.roomId) : null;
+        if(r2){ var mp = findPlayer(r2, myId); if(mp){ commit(function(){ mp.setAttribute("data-name", newName); }); } }
+        else render();
+      }
+      break;
+    }
+    case "leave-room": leaveRoom(); break;
+    case "close-room": closeRoom(); break;
+    case "open-invite": nav.inviteOpen = true; render(); break;
+    case "close-invite": nav.inviteOpen = false; render(); break;
+    case "open-achievements": nav.achievementsOpen = true; render(); break;
+    case "close-achievements": nav.achievementsOpen = false; render(); break;
+    case "copy-invite": {
+      var link = el.getAttribute("data-link");
+      bumpStat("invitesSent",1);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(function(){ toast("Invite link copied!"); }).catch(function(){ toast(link); });
+      } else toast(link);
+      break;
+    }
+    case "send-chat": {
+      var input = document.getElementById("chat-input");
+      sendChat(input.value); input.value="";
+      break;
+    }
+    case "make-mod": if(room) setRole(room, el.getAttribute("data-id"), "mod"); break;
+    case "timeout-player": if(room) timeoutPlayer(room, el.getAttribute("data-id")); break;
+    case "kick-player": if(room) kickPlayer(room, el.getAttribute("data-id")); break;
+    case "pick-game": if(room && roleOf(room,myId)==="admin") pickGame(el.getAttribute("data-type")); break;
+
+    case "ttt-join": if(room&&game) tttJoin(room,game); break;
+    case "ttt-move": if(room&&game) tttMove(room,game,parseInt(el.getAttribute("data-idx"),10)); break;
+    case "ttt-reset": if(room&&game) tttReset(room,game); break;
+
+    case "spam-start": if(room&&game) spamStart(room,game); break;
+    case "spam-click": if(room&&game) spamClick(room,game); break;
+
+    case "gw-join": if(room&&game) gwJoin(room,game); break;
+    case "gw-flip-toggle": {
+      var key = nav.roomId+"_"+el.getAttribute("data-char");
+      gwFlips[key] = !gwFlips[key];
+      render();
+      break;
+    }
+    case "gw-ask": {
+      var sel = document.getElementById("gw-question-select");
+      if(room&&game&&sel) gwAsk(room,game,sel.value);
+      break;
+    }
+    case "gw-guess": {
+      var gsel = document.getElementById("gw-guess-select");
+      if(room&&game&&gsel) gwGuess(room,game,gsel.value);
+      break;
+    }
+    case "gw-reset": if(room&&game) gwReset(room,game); break;
+
+    case "flappy-ready": if(room&&game) flappyReady(room,game); break;
+    case "flappy-start": if(room&&game) flappyStart(room,game); break;
+    case "flappy-flap": if(room&&game) flappyFlap(room,game); break;
+    case "flappy-reset": if(room&&game) flappyReset(room,game); break;
+
+    case "cups-join": if(room&&game) cupsJoinRotation(room,game); break;
+    case "cups-start-turn": if(room&&game) cupsStartTurn(room,game); break;
+    case "cups-guess": if(room&&game) cupsGuess(room,game,parseInt(el.getAttribute("data-slot"),10)); break;
+    case "cups-next-turn": if(room&&game) cupsNextTurn(room,game); break;
+  }
+});
+
+document.addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    if(e.target.id === "name-input"){ document.querySelector('[data-action="set-name"]').click(); }
+    if(e.target.id === "chat-input"){ document.querySelector('[data-action="send-chat"]').click(); }
+    if(e.target.id === "join-code-input"){ document.querySelector('[data-action="join-room"]').click(); }
+  }
+  if(e.code === "Space"){
+    var room = nav.roomId ? findRoom(nav.roomId) : null;
+    var game = room ? room.querySelector(".game") : null;
+    if(room && game && room.getAttribute("data-game-type")==="flappy" && document.activeElement.tagName!=="INPUT"){
+      e.preventDefault();
+      flappyFlap(room, game);
+    }
+  }
+});
+
+/* ============================== live-doc reaction ============================== */
+document.addEventListener("claude:edit", function(){ render(); });
+document.addEventListener("claude:sync-off", function(){ readOnly = true; render(); });
+
+/* ============================== boot ============================== */
+artifactReady.then(function(){
+  if(location.hash && location.hash.indexOf("#r=")===0 && myName){
+    joinRoom(location.hash.slice(3));
+  } else {
+    render();
+  }
+  audio.initFromPref();
+});
+render();
+
+/* periodic tick: presence heartbeat + live game ticks */
+var lastHeartbeat = 0;
+setInterval(function(){
+  var room = nav.roomId ? findRoom(nav.roomId) : null;
+  if(!room) return;
+  var t = Date.now();
+  if(t - lastHeartbeat > 20000){ lastHeartbeat = t; heartbeat(); }
+  var game = room.querySelector(".game");
+  var gtype = room.getAttribute("data-game-type");
+  if(gtype === "spam" && game) spamCheckEnd(room, game);
+  if(gtype === "flappy" && game){
+    flappyTick(room, game);
+    flappyMaybeEnd(room, game);
+  }
+  if(gtype === "cups" && game) cupsAdvanceIfDone(room, game);
+  if(gtype && game) checkStatsTransitions(room, game, gtype);
+  checkPersonalTransitions(room);
+  render();
+}, 200);
+
+})();
+</script>
