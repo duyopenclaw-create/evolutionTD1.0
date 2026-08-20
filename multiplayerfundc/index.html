@@ -649,6 +649,8 @@ function seedFromString(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.char
 
 /* ============================== escaping ============================== */
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+/* strip emoji/unicode/special characters from anything a player TYPES (names, chat, room names) — keep plain printable ASCII only */
+function sanitizeText(s){ return String(s==null?"":s).replace(/[^ -~]/g, "").replace(/\s+/g," ").trim(); }
 
 /* ======================================================================
    SHARED MUTATIONS (all go through commit())
@@ -662,6 +664,7 @@ function mkRoomCode(){
 }
 
 function createRoom(roomName){
+  roomName = sanitizeText(roomName).slice(0,24);
   var code = mkRoomCode();
   while(findRoom(code)) code = mkRoomCode();
   return commit(function(){
@@ -705,7 +708,7 @@ function createRoom(roomName){
 }
 
 function joinRoom(code){
-  code = (code||"").trim().toUpperCase();
+  code = sanitizeText(code).replace(/[^A-Za-z]/g,"").toUpperCase();
   var room = findRoom(code);
   if(!room){ toast("No room with code " + code); return Promise.resolve(false); }
   var already = findPlayer(room, myId);
@@ -765,7 +768,7 @@ function closeRoom(){
 }
 
 function sendChat(text){
-  text = (text||"").trim();
+  text = sanitizeText(text);
   if(!text) return;
   var room = findRoom(nav.roomId);
   if(!room) return;
@@ -1320,7 +1323,7 @@ function myOutgoingRequests(){
 }
 
 function sendFriendRequestByName(name){
-  name = (name||"").trim();
+  name = sanitizeText(name);
   if(!name) return;
   if(name.toLowerCase() === myName.toLowerCase()){ toast("That's you!"); return; }
   var candidates = Array.prototype.slice.call(knownList().querySelectorAll(".known")).filter(function(k){
@@ -1435,7 +1438,7 @@ function renderNamePrompt(){
     '<h1 class="disp">Welcome to Party Line</h1>'+
     '<p>Pick a name so your friends know it\'s you.</p></div>'+
     '<div class="card" style="max-width:360px;margin:0 auto;">'+
-    '<label class="field">Your name<input type="text" id="name-input" maxlength="18" placeholder="e.g. John" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
+    '<label class="field">Your name<input type="text" id="name-input" maxlength="18" placeholder="e.g. John" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore oninput="this.value=this.value.replace(/[^ -~]/g,\'\')"></label>'+
     '<button class="btn primary block" style="margin-top:14px;" data-action="set-name">Let\'s play</button>'+
     '</div>';
 }
@@ -1477,11 +1480,11 @@ function renderLanding(){
     '<p>Family-friendly party games across every screen. Make a room, invite your crew, and play together.</p></div>'+
     '<div class="landing-grid">'+
       '<div class="card"><h3>Start a room</h3>'+
-        '<label class="field">Room name<input type="text" id="room-name-input" maxlength="24" placeholder="e.g. Friday Game Night" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
+        '<label class="field">Room name<input type="text" id="room-name-input" maxlength="24" placeholder="e.g. Friday Game Night" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore oninput="this.value=this.value.replace(/[^ -~]/g,\'\')"></label>'+
         '<button class="btn primary block" style="margin-top:12px;" data-action="create-room">Create room</button>'+
       '</div>'+
       '<div class="card"><h3>Join a room</h3>'+
-        '<label class="field">Room code<input type="text" id="join-code-input" maxlength="4" placeholder="e.g. WXYZ" style="text-transform:uppercase;" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>'+
+        '<label class="field">Room code<input type="text" id="join-code-input" maxlength="4" placeholder="e.g. WXYZ" style="text-transform:uppercase;" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore oninput="this.value=this.value.replace(/[^A-Za-z]/g,\'\').toUpperCase()"></label>'+
         '<button class="btn gold block" style="margin-top:12px;" data-action="join-room">Join room</button>'+
         '<div style="margin-top:16px;">'+browseHtml+'</div>'+
       '</div>'+
@@ -1489,7 +1492,7 @@ function renderLanding(){
     '<div class="card" style="margin-top:18px;"><h3>Friends</h3>'+
       (incomingHtml||outgoingHtml ? '<div class="friends-list" style="margin-bottom:10px;">'+incomingHtml+outgoingHtml+'</div>' : '')+
       '<div class="friends-list">'+friendsHtml+'</div>'+
-      '<div class="friend-add"><input type="text" id="friend-name-input" placeholder="Friend\'s exact name" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore><button class="btn small ghost" data-action="add-friend">Add</button></div>'+
+      '<div class="friend-add"><input type="text" id="friend-name-input" placeholder="Friend\'s exact name" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore oninput="this.value=this.value.replace(/[^ -~]/g,\'\')"><button class="btn small ghost" data-action="add-friend">Add</button></div>'+
       '<div class="empty-note" style="padding-top:8px;">They need to have opened Party Line at least once so you can find them by name.</div>'+
     '</div>';
 }
@@ -1555,7 +1558,7 @@ function renderLobby(room){
   out += '<div>';
   out += '<div class="card panel"><h3>Players ('+players.length+')</h3>'+rowsHtml+'</div>';
   out += '<div class="card panel"><h3>Chat</h3><div class="chat-box"><div class="chat-log" id="chat-log">'+chatHtml+'</div>'+
-    '<div class="chat-input"><input type="text" id="chat-input" placeholder="Say something nice..." maxlength="300" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore>'+
+    '<div class="chat-input"><input type="text" id="chat-input" placeholder="Say something nice..." maxlength="300" autocomplete="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore oninput="this.value=this.value.replace(/[^ -~]/g,\'\')">'+
     '<button class="btn primary" data-action="send-chat">Send</button></div></div></div>';
   out += '</div>';
   out += '<div>';
@@ -1843,7 +1846,7 @@ document.addEventListener("click", function(e){
 
   switch(action){
     case "set-name": {
-      var v = (document.getElementById("name-input").value||"").trim().slice(0,18);
+      var v = sanitizeText(document.getElementById("name-input").value).slice(0,18);
       if(!v) return;
       myName = v; localStorage.setItem("pl_name", v);
       audio.sfx.notify();
@@ -1876,7 +1879,7 @@ document.addEventListener("click", function(e){
     case "cancel-friend": cancelFriendRequest(el.getAttribute("data-id")); break;
     case "unfriend": unfriend(el.getAttribute("data-id")); break;
     case "edit-name": {
-      var newName = (window.prompt("Change your name:", myName) || "").trim().slice(0,18);
+      var newName = sanitizeText(window.prompt("Change your name:", myName) || "").slice(0,18);
       if(newName && newName !== myName){
         myName = newName; localStorage.setItem("pl_name", newName);
         registerKnown();
