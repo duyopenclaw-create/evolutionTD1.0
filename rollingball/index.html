@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Rolling Ball</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #7ec9e8;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+  }
+  canvas { display: block; touch-action: none; }
+
+  #hud {
+    position: fixed;
+    top: 14px; left: 14px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    z-index: 10;
+    pointer-events: none;
+  }
+  #hud .score { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; }
+  #hud .sub { font-size: 15px; font-weight: 700; opacity: 0.92; margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+  #hud .sub .ringIcon {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 3px solid #ffd93d;
+    box-shadow: 0 0 4px rgba(255,217,61,0.7);
+  }
+  #hud .best { font-size: 13px; font-weight: 600; opacity: 0.75; margin-top: 4px; }
+  #hud .diffTag { font-size: 12px; font-weight: 700; opacity: 0.7; margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+  #saveFlash {
+    position: fixed;
+    top: 14px; right: 60px;
+    color: #0d3d1f;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #saveFlash.show { opacity: 1; }
+
+  #muteBtn {
+    position: fixed;
+    top: 12px; right: 14px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    border: 2px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 11;
+    pointer-events: auto;
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 16px; left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    z-index: 10;
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 0.6s ease;
+  }
+
+  #joystick {
+    position: fixed;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.3);
+    display: none;
+    z-index: 10;
+    touch-action: none;
+  }
+  #joystick .stick {
+    position: absolute;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    border: 2px solid rgba(255,255,255,0.55);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  #jumpBtn {
+    position: fixed;
+    right: 24px; bottom: 30px;
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.16);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    touch-action: none;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  #hitFlash {
+    position: fixed;
+    inset: 0;
+    background: rgba(200,30,30,0.35);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9;
+    transition: opacity 0.25s ease;
+  }
+  #hitFlash.show { opacity: 1; transition: none; }
+
+  .popup {
+    position: fixed;
+    pointer-events: none;
+    font-weight: 800;
+    font-size: 16px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    z-index: 8;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,20,10,0.62);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    text-align: center;
+    padding: 20px;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+  .overlay .bigTitle {
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  }
+  #gameOverOverlay .bigTitle { color: #ff5b4d; }
+  #winOverlay .bigTitle { color: #ffd93d; }
+  #leaderboardOverlay .bigTitle { color: #ffd93d; font-size: 36px; }
+  .overlay .goLine {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 10px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .overlay .goHint {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+    margin-top: 22px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .overlay .menuLink {
+    margin-top: 16px;
+    color: #fff;
+    text-decoration: underline;
+    font-size: 13px;
+    opacity: 0.85;
+    cursor: pointer;
+    pointer-events: auto;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+  .overlay .menuLink:hover { opacity: 1; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .lbEntry { display: none; margin-top: 18px; gap: 8px; align-items: center; pointer-events: auto; }
+  .lbEntry input {
+    font-family: inherit; font-size: 14px; padding: 9px 10px; border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.12); color: #fff; width: 140px;
+  }
+  .lbEntry input::placeholder { color: rgba(255,255,255,0.6); }
+  .lbEntry button {
+    font-family: inherit; font-size: 14px; font-weight: 800; padding: 9px 14px; border-radius: 8px;
+    border: 2px solid #ffd93d; background: rgba(255,217,61,0.18); color: #fff; cursor: pointer;
+  }
+  .lbEntry button:hover { background: rgba(255,217,61,0.32); }
+
+  .lbList {
+    width: 100%; max-width: 420px; max-height: 320px; overflow-y: auto;
+    margin-top: 18px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .lbRow {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 14px; color: #fff; font-size: 14px;
+  }
+  .lbRank { font-weight: 900; width: 30px; color: #ffd93d; }
+  .lbName { flex: 1; text-align: left; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lbScore { font-weight: 800; width: 60px; text-align: right; }
+  .lbDiff { font-size: 11px; opacity: 0.7; text-transform: uppercase; width: 56px; text-align: right; }
+  .lbEmpty { color: rgba(255,255,255,0.7); font-size: 14px; padding: 20px; }
+
+  #mainMenu { background: rgba(8,26,14,0.72); }
+  #mainMenu .menuTitle {
+    font-size: 52px; font-weight: 900; color: #fff; letter-spacing: 2px; text-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  }
+  #mainMenu .menuSubtitle {
+    color: rgba(255,255,255,0.85); font-size: 15px; font-weight: 600; margin-top: 10px; margin-bottom: 8px;
+  }
+  .diffRow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; pointer-events: auto; margin-top: 14px; }
+  .diffBtn {
+    font-family: inherit; font-size: 15px; font-weight: 800; padding: 14px 20px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff;
+    cursor: pointer; transition: transform 0.15s ease, background 0.15s ease; text-align: left; min-width: 118px;
+  }
+  .diffBtn .diffDesc { display: block; font-size: 11px; font-weight: 600; opacity: 0.75; margin-top: 3px; text-transform: none; letter-spacing: 0; }
+  .diffBtn:hover { background: rgba(255,255,255,0.24); transform: translateY(-2px); }
+  .diffBtn.easy { border-color: #7fe07f; }
+  .diffBtn.normal { border-color: #6fc4ff; }
+  .diffBtn.hard { border-color: #ffb04d; }
+  .diffBtn.master { border-color: #ff5b4d; }
+  #mainMenu .menuHint { margin-top: 22px; color: rgba(255,255,255,0.7); font-size: 13px; }
+  #viewLbBtn, #shopBtn {
+    font-family: inherit; font-size: 13px; font-weight: 700; color: #ffd93d;
+    background: none; border: none; text-decoration: underline; cursor: pointer; pointer-events: auto;
+  }
+
+  .shopGrid { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 18px; max-width: 520px; pointer-events: auto; }
+  .skinCard { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; width: 130px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .skinSwatch { width: 48px; height: 48px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.4); }
+  .skinName { color: #fff; font-size: 13px; font-weight: 700; text-align: center; }
+  .skinBtn {
+    font-family: inherit; font-size: 12px; font-weight: 800; padding: 7px 12px; border-radius: 8px;
+    border: 2px solid #ffd93d; background: rgba(255,217,61,0.15); color: #fff; cursor: pointer;
+  }
+  .skinBtn:disabled { opacity: 0.5; cursor: default; }
+  .skinBtn.equipped { background: #7fe07f; border-color: #7fe07f; color: #0d3d1f; }
+
+  #loading {
+    position: fixed; inset: 0; background: #7ec9e8; display: flex; align-items: center; justify-content: center;
+    color: #0d3d1f; font-weight: 800; font-size: 16px; z-index: 30;
+  }
+  #loading.hide { display: none; }
+
+  @media (hover: none) and (pointer: coarse) {
+    #jumpBtn { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="loading">Loading…</div>
+
+<div id="hud">
+  <div class="score" id="scoreVal">0</div>
+  <div class="sub"><span class="ringIcon"></span><span id="ringsVal">0</span></div>
+  <div class="sub" id="livesVal">&#x25CF;&#x25CF;&#x25CF;</div>
+  <div class="sub" id="coinsHud">&#x1FA99; 0</div>
+  <div class="sub" id="shardsHud">&#x1F48E; 0/5</div>
+  <div class="best" id="bestVal">Best: 0</div>
+  <div class="diffTag" id="diffTag"></div>
+</div>
+<div id="saveFlash">SAVED</div>
+<div id="muteBtn">🔊</div>
+<div id="hitFlash"></div>
+<div id="hint">WASD / Arrows to move &middot; Space to Jump &middot; hold Shift to Spin Dash</div>
+<div id="joystick"><div class="stick" id="stick"></div></div>
+<div id="jumpBtn">JUMP</div>
+
+<div id="mainMenu" class="overlay show">
+  <div class="menuTitle">ROLLING BALL</div>
+  <div class="menuSubtitle">Choose your difficulty</div>
+  <div class="diffRow">
+    <button class="diffBtn easy" data-diff="easy">Easy<span class="diffDesc">6 lives &middot; slow foes</span></button>
+    <button class="diffBtn normal" data-diff="normal">Normal<span class="diffDesc">3 lives &middot; balanced</span></button>
+    <button class="diffBtn hard" data-diff="hard">Hard<span class="diffDesc">2 lives &middot; fast foes</span></button>
+    <button class="diffBtn master" data-diff="master">Master<span class="diffDesc">1 life &middot; no ring shield</span></button>
+  </div>
+  <div class="diffRow" style="margin-top:8px;">
+    <button id="viewLbBtn">View Leaderboard</button>
+    <button id="shopBtn">Shop</button>
+  </div>
+  <div class="menuHint">WASD / Arrows move &middot; Space jump &middot; hold Shift to Spin Dash</div>
+</div>
+
+<div id="leaderboardOverlay" class="overlay">
+  <div class="bigTitle">LEADERBOARD</div>
+  <div class="lbList" id="lbList"></div>
+  <button class="menuLink" id="lbBackLink">Back to Menu</button>
+</div>
+
+<div id="shopOverlay" class="overlay">
+  <div class="bigTitle">SHOP</div>
+  <div class="goLine" id="coinsLine">Coins: 0</div>
+  <div class="shopGrid" id="shopGrid"></div>
+  <button class="menuLink" id="shopBackLink">Back to Menu</button>
+</div>
+
+<div id="gameOverOverlay" class="overlay">
+  <div class="bigTitle">GAME OVER</div>
+  <div class="goLine" id="goScoreLine">Score: 0</div>
+  <div class="goLine" id="goBestLine">Best: 0</div>
+  <div class="goLine" id="goCoinsLine"></div>
+  <div class="lbEntry" id="goLbEntry">
+    <input id="goNameInput" maxlength="12" placeholder="Your name">
+    <button id="goSaveBtn">Save Score</button>
+  </div>
+  <div class="goHint">Press any key or tap to try again</div>
+  <button class="menuLink" id="goMenuLink">Back to Menu</button>
+</div>
+
+<div id="winOverlay" class="overlay">
+  <div class="bigTitle">LEVEL COMPLETE!</div>
+  <div class="goLine" id="winScoreLine">Score: 0</div>
+  <div class="goLine" id="winBestLine">Best: 0</div>
+  <div class="goLine" id="winCoinsLine"></div>
+  <div class="lbEntry" id="winLbEntry">
+    <input id="winNameInput" maxlength="12" placeholder="Your name">
+    <button id="winSaveBtn">Save Score</button>
+  </div>
+  <div class="goHint">Press any key or tap to play again</div>
+  <button class="menuLink" id="winMenuLink">Back to Menu</button>
+</div>
+
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+const canvas = document.getElementById('game');
+const loadingEl = document.getElementById('loading');
+const scoreEl = document.getElementById('scoreVal');
+const ringsEl = document.getElementById('ringsVal');
+const livesEl = document.getElementById('livesVal');
+const bestEl = document.getElementById('bestVal');
+const diffTagEl = document.getElementById('diffTag');
+const saveFlash = document.getElementById('saveFlash');
+const muteBtn = document.getElementById('muteBtn');
+const hint = document.getElementById('hint');
+const hitFlash = document.getElementById('hitFlash');
+const joystickEl = document.getElementById('joystick');
+const stickEl = document.getElementById('stick');
+const jumpBtn = document.getElementById('jumpBtn');
+const mainMenuEl = document.getElementById('mainMenu');
+const leaderboardOverlayEl = document.getElementById('leaderboardOverlay');
+const shopOverlayEl = document.getElementById('shopOverlay');
+const gameOverEl = document.getElementById('gameOverOverlay');
+const goScoreLine = document.getElementById('goScoreLine');
+const goBestLine = document.getElementById('goBestLine');
+const winEl = document.getElementById('winOverlay');
+const winScoreLine = document.getElementById('winScoreLine');
+const winBestLine = document.getElementById('winBestLine');
+
+// ---------- persistence ----------
+const SAVE_KEY = 'rollingball_save_v4';
+let best = 0;
+let muted = false;
+let coins = 0;
+let ownedSkins = ['red'];
+let equippedSkin = 'red';
+try {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    best = parsed.best || 0;
+    muted = !!parsed.muted;
+    coins = parsed.coins || 0;
+    if (Array.isArray(parsed.ownedSkins) && parsed.ownedSkins.length) ownedSkins = parsed.ownedSkins;
+    if (parsed.equippedSkin) equippedSkin = parsed.equippedSkin;
+  }
+} catch (e) {}
+bestEl.textContent = 'Best: ' + best;
+muteBtn.textContent = muted ? '🔇' : '🔊';
+
+function saveGame(flash) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ best, muted, coins, ownedSkins, equippedSkin })); } catch (e) {}
+  if (flash) {
+    saveFlash.classList.add('show');
+    setTimeout(() => saveFlash.classList.remove('show'), 900);
+  }
+}
+setInterval(() => saveGame(true), 30000);
+window.addEventListener('beforeunload', () => saveGame(false));
+
+// ---------- leaderboard (local top 10) ----------
+const LB_KEY = 'rollingball_leaderboard_v1';
+let leaderboard = [];
+try {
+  const raw = localStorage.getItem(LB_KEY);
+  if (raw) leaderboard = JSON.parse(raw) || [];
+} catch (e) {}
+
+function saveLeaderboard() {
+  try { localStorage.setItem(LB_KEY, JSON.stringify(leaderboard)); } catch (e) {}
+}
+function qualifiesForLeaderboard(s) {
+  return s > 0 && (leaderboard.length < 10 || s > leaderboard[leaderboard.length - 1].score);
+}
+function addLeaderboardEntry(name, s, diffLabel) {
+  leaderboard.push({ name: name || 'Player', score: s, diff: diffLabel });
+  leaderboard.sort((a, b) => b.score - a.score);
+  leaderboard = leaderboard.slice(0, 10);
+  saveLeaderboard();
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function renderLeaderboard() {
+  const lbListEl = document.getElementById('lbList');
+  if (!leaderboard.length) {
+    lbListEl.innerHTML = '<div class="lbEmpty">No scores yet — be the first!</div>';
+    return;
+  }
+  lbListEl.innerHTML = leaderboard.map((e, i) =>
+    `<div class="lbRow"><span class="lbRank">#${i + 1}</span><span class="lbName">${escapeHtml(e.name)}</span><span class="lbScore">${e.score}</span><span class="lbDiff">${escapeHtml(e.diff)}</span></div>`
+  ).join('');
+}
+function maybeShowLeaderboardEntry(prefix) {
+  const entryEl = document.getElementById(prefix + 'LbEntry');
+  const qualifies = qualifiesForLeaderboard(score);
+  entryEl.style.display = qualifies ? 'flex' : 'none';
+  if (qualifies) document.getElementById(prefix + 'NameInput').value = '';
+}
+function saveScoreFromOverlay(prefix) {
+  const input = document.getElementById(prefix + 'NameInput');
+  const name = (input.value || 'Player').trim().slice(0, 12) || 'Player';
+  addLeaderboardEntry(name, score, DIFFICULTIES[currentDifficulty].label);
+  document.getElementById(prefix + 'LbEntry').style.display = 'none';
+  sfxClick();
+}
+document.getElementById('goSaveBtn').addEventListener('click', () => saveScoreFromOverlay('go'));
+document.getElementById('winSaveBtn').addEventListener('click', () => saveScoreFromOverlay('win'));
+document.getElementById('goNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.stopPropagation(); saveScoreFromOverlay('go'); } });
+document.getElementById('winNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.stopPropagation(); saveScoreFromOverlay('win'); } });
+document.getElementById('viewLbBtn').addEventListener('click', () => {
+  ensureAudio(); sfxClick();
+  renderLeaderboard();
+  mainMenuEl.classList.remove('show');
+  leaderboardOverlayEl.classList.add('show');
+});
+document.getElementById('lbBackLink').addEventListener('click', () => {
+  sfxClick();
+  leaderboardOverlayEl.classList.remove('show');
+  mainMenuEl.classList.add('show');
+});
+
+// ---------- coins & skins shop ----------
+const SKINS = [
+  { id: 'red',    name: 'Classic Red', cost: 0,   base: '#e8342a', stripe: 'rgba(0,0,0,0.2)' },
+  { id: 'blue',   name: 'Ocean Blue',  cost: 50,  base: '#2a6fe8', stripe: 'rgba(0,0,0,0.2)' },
+  { id: 'green',  name: 'Emerald',     cost: 75,  base: '#2ae86b', stripe: 'rgba(0,0,0,0.2)' },
+  { id: 'gold',   name: 'Golden',      cost: 100, base: '#e8c02a', stripe: 'rgba(120,70,0,0.35)' },
+  { id: 'shadow', name: 'Shadow',      cost: 150, base: '#2a1f38', stripe: 'rgba(180,120,255,0.35)' },
+];
+function renderShop() {
+  document.getElementById('coinsLine').textContent = 'Coins: ' + coins;
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = SKINS.map(s => {
+    const owned = ownedSkins.includes(s.id);
+    const equipped = equippedSkin === s.id;
+    const label = equipped ? 'Equipped' : owned ? 'Equip' : (coins >= s.cost ? `Buy (${s.cost})` : `Need ${s.cost}`);
+    const disabled = equipped || (!owned && coins < s.cost);
+    return `<div class="skinCard">
+      <div class="skinSwatch" style="background:${s.base}"></div>
+      <div class="skinName">${escapeHtml(s.name)}</div>
+      <button class="skinBtn ${equipped ? 'equipped' : ''}" data-skin="${s.id}" ${disabled ? 'disabled' : ''}>${label}</button>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.skinBtn').forEach(btn => {
+    btn.addEventListener('click', () => handleSkinClick(btn.dataset.skin));
+  });
+}
+function handleSkinClick(id) {
+  const skin = SKINS.find(s => s.id === id);
+  if (!skin) return;
+  if (!ownedSkins.includes(id)) {
+    if (coins < skin.cost) return;
+    coins -= skin.cost;
+    ownedSkins.push(id);
+  }
+  equippedSkin = id;
+  applySkin();
+  saveGame(false);
+  renderShop();
+  sfxClick();
+}
+function applySkin() {
+  const skin = SKINS.find(s => s.id === equippedSkin) || SKINS[0];
+  ballMat.map = makeStripeTexture(skin.base, skin.stripe);
+  ballMat.map.needsUpdate = true;
+  ballMat.needsUpdate = true;
+}
+document.getElementById('shopBtn').addEventListener('click', () => {
+  ensureAudio(); sfxClick();
+  renderShop();
+  mainMenuEl.classList.remove('show');
+  shopOverlayEl.classList.add('show');
+});
+document.getElementById('shopBackLink').addEventListener('click', () => {
+  sfxClick();
+  shopOverlayEl.classList.remove('show');
+  mainMenuEl.classList.add('show');
+});
+
+// ================= AUDIO (fully synthesized — no external files) =================
+let audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
+let musicInterval = null, musicChord = 0, musicStep = 0;
+const CHORDS = [
+  [261.63, 329.63, 392.00, 329.63],  // C major
+  [220.00, 261.63, 329.63, 261.63],  // A minor
+  [174.61, 220.00, 261.63, 220.00],  // F major
+  [196.00, 246.94, 293.66, 246.94],  // G major
+];
+
+function ensureAudio() {
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return;
+  }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  audioCtx = new Ctx();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = muted ? 0 : 0.55;
+  masterGain.connect(audioCtx.destination);
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.32;
+  musicGain.connect(masterGain);
+  sfxGain = audioCtx.createGain();
+  sfxGain.gain.value = 0.7;
+  sfxGain.connect(masterGain);
+  startMusic();
+}
+
+function setMuted(m) {
+  muted = m;
+  muteBtn.textContent = muted ? '🔇' : '🔊';
+  if (masterGain) masterGain.gain.setTargetAtTime(muted ? 0 : 0.55, audioCtx.currentTime, 0.05);
+  saveGame(false);
+}
+muteBtn.addEventListener('click', () => { ensureAudio(); setMuted(!muted); });
+
+function playTone(freq, duration, type, vol, sweepTo) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  if (sweepTo) osc.frequency.exponentialRampToValueAtTime(Math.max(sweepTo, 1), t0 + duration);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(gain); gain.connect(sfxGain);
+  osc.start(t0); osc.stop(t0 + duration + 0.02);
+}
+
+function playNoiseBurst(duration, vol, filterFreq) {
+  if (!audioCtx) return;
+  const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass'; filter.frequency.value = filterFreq;
+  const gain = audioCtx.createGain();
+  const t0 = audioCtx.currentTime;
+  gain.gain.setValueAtTime(vol, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  src.connect(filter); filter.connect(gain); gain.connect(sfxGain);
+  src.start(t0);
+}
+
+function sfxRing() { playTone(1100, 0.12, 'sine', 0.22, 1500); }
+function sfxJump() { playTone(340, 0.15, 'square', 0.18, 640); }
+function sfxSpinLaunch() { playNoiseBurst(0.22, 0.3, 2200); playTone(180, 0.22, 'sawtooth', 0.14, 680); }
+function sfxDestroy() { playNoiseBurst(0.2, 0.32, 900); playTone(140, 0.15, 'square', 0.18, 55); }
+function sfxHit() { playTone(160, 0.25, 'sawtooth', 0.28, 65); playNoiseBurst(0.15, 0.22, 500); }
+function sfxLand() { playTone(120, 0.08, 'sine', 0.12, 80); }
+function sfxClick() { playTone(700, 0.08, 'square', 0.14, 900); }
+function sfxWin() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 0.32, 'triangle', 0.26), i * 140)); }
+function sfxLose() { [400, 340, 280, 220].forEach((f, i) => setTimeout(() => playTone(f, 0.36, 'sawtooth', 0.22), i * 160)); }
+
+function playMusicNote(freq) {
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(freq, t0);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(0.13, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.38);
+  osc.connect(gain); gain.connect(musicGain);
+  osc.start(t0); osc.stop(t0 + 0.4);
+}
+function playBassNote(freq) {
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq / 2, t0);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(0.09, t0 + 0.06);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + 2.8);
+  osc.connect(gain); gain.connect(musicGain);
+  osc.start(t0); osc.stop(t0 + 2.9);
+}
+function musicTick() {
+  if (!audioCtx) return;
+  const chord = CHORDS[musicChord];
+  playMusicNote(chord[musicStep % chord.length]);
+  musicStep++;
+  if (musicStep % 8 === 0) {
+    musicChord = (musicChord + 1) % CHORDS.length;
+    playBassNote(CHORDS[musicChord][0]);
+  }
+}
+function startMusic() {
+  if (musicInterval) return;
+  playBassNote(CHORDS[0][0]);
+  musicInterval = setInterval(musicTick, 360);
+}
+
+// ---------- difficulty ----------
+const DIFFICULTIES = {
+  easy:   { label: 'Easy',   lives: 6, accelMul: 1.15, monsterSpeedMul: 0.5, detectMul: 0.6,  platformFreqMul: 0.6,  invincibleMul: 1.6, ringShield: true },
+  normal: { label: 'Normal', lives: 3, accelMul: 1.0,  monsterSpeedMul: 1.0, detectMul: 1.0,  platformFreqMul: 1.0,  invincibleMul: 1.0, ringShield: true },
+  hard:   { label: 'Hard',   lives: 2, accelMul: 0.92, monsterSpeedMul: 1.4, detectMul: 1.3,  platformFreqMul: 1.35, invincibleMul: 0.75, ringShield: true },
+  master: { label: 'Master', lives: 1, accelMul: 0.85, monsterSpeedMul: 1.8, detectMul: 1.6,  platformFreqMul: 1.6,  invincibleMul: 0.5,  ringShield: false },
+};
+let currentDifficulty = 'normal';
+
+// ================= LEVEL DEFINITION =================
+// A hand-built, fully static level (no infinite streaming) — this is the
+// single source of truth for both the ground meshes and the ground-height
+// physics, so they can never disagree.
+const ZLIM = 300;                 // strafe bounds (dirt walls sit just outside this) — wide enough for branching lanes
+const LEVEL_START = -40;
+const LEVEL_END = 4140;
+const FINISH_X = 4100;
+
+const zones = [
+  { x0: -40,   x1: 560,  y0: 0,   y1: 0   },  // zone 1: flat, coins only
+  { x0: 560,   x1: 940,  y0: 0,   y1: 150 },  // ramp 1 up — long, gentle grade so it's always climbable
+  { x0: 940,   x1: 1380, y0: 150, y1: 150 },  // zone 2: flat, coins only
+  // gap 1 — 1380 to 1780: a big center hub platform + left/right lane platforms
+  { x0: 1780,  x1: 2320, y0: 150, y1: 150 },  // zone 3: monsters + spikes
+  { x0: 2320,  x1: 2700, y0: 150, y1: 300 },  // ramp 2 up
+  { x0: 2700,  x1: 3140, y0: 300, y1: 300 },  // zone 4: flat, coins
+  // gap 2 — 3140 to 3540: second hub + lane crossing
+  { x0: 3540,  x1: 4140, y0: 300, y1: 300 },  // zone 5: the final gauntlet
+];
+
+function staticGroundHeight(x) {
+  for (const z of zones) {
+    if (x >= z.x0 && x <= z.x1) {
+      const t = (x - z.x0) / (z.x1 - z.x0 || 1);
+      return z.y0 + (z.y1 - z.y0) * t;
+    }
+  }
+  return null;
+}
+
+// moving platforms: a big static hub in the center of each gap (always-safe
+// route) plus smaller left/right lane platforms as optional alternate routes
+const movingPlatforms = [
+  // gap 1 (1380 - 1780)
+  { baseX: 1580, baseZ: 0,    y: 150, z: 0,    prevZ: 0,    ampZ: 0,  baseFreq: 0.5,  freq: 0.5,  phase: 0,       halfW: 95, halfD: 115 },
+  { baseX: 1460, baseZ: -200, y: 150, z: -200, prevZ: -200, ampZ: 60, baseFreq: 0.55, freq: 0.55, phase: 0,       halfW: 55, halfD: 60 },
+  { baseX: 1660, baseZ: -200, y: 150, z: -200, prevZ: -200, ampZ: 60, baseFreq: 0.55, freq: 0.55, phase: Math.PI, halfW: 55, halfD: 60 },
+  { baseX: 1460, baseZ: 200,  y: 150, z: 200,  prevZ: 200,  ampZ: 60, baseFreq: 0.55, freq: 0.55, phase: Math.PI, halfW: 55, halfD: 60 },
+  { baseX: 1660, baseZ: 200,  y: 150, z: 200,  prevZ: 200,  ampZ: 60, baseFreq: 0.55, freq: 0.55, phase: 0,       halfW: 55, halfD: 60 },
+  // gap 2 (3140 - 3540)
+  { baseX: 3340, baseZ: 0,    y: 300, z: 0,    prevZ: 0,    ampZ: 0,  baseFreq: 0.5,  freq: 0.5,  phase: 0,       halfW: 95, halfD: 115 },
+  { baseX: 3220, baseZ: -200, y: 300, z: -200, prevZ: -200, ampZ: 60, baseFreq: 0.6,  freq: 0.6,  phase: 0,       halfW: 55, halfD: 60 },
+  { baseX: 3420, baseZ: -200, y: 300, z: -200, prevZ: -200, ampZ: 60, baseFreq: 0.6,  freq: 0.6,  phase: Math.PI, halfW: 55, halfD: 60 },
+  { baseX: 3220, baseZ: 200,  y: 300, z: 200,  prevZ: 200,  ampZ: 60, baseFreq: 0.6,  freq: 0.6,  phase: Math.PI, halfW: 55, halfD: 60 },
+  { baseX: 3420, baseZ: 200,  y: 300, z: 200,  prevZ: 200,  ampZ: 60, baseFreq: 0.6,  freq: 0.6,  phase: 0,       halfW: 55, halfD: 60 },
+];
+
+const levelRings = [];
+function addRingCluster(cx, cz, count, spacing, airborne) {
+  for (let k = 0; k < count; k++) {
+    const rx = cx + (k - (count - 1) / 2) * spacing;
+    const gY = staticGroundHeight(rx);
+    if (gY === null) continue;
+    const ry = airborne ? gY + 95 : gY + 34;
+    levelRings.push({ x: rx, y: ry, z: cz, taken: false, bob: Math.random() * Math.PI * 2 });
+  }
+}
+// zone 1 — flat ground, coins only
+addRingCluster(80, 0, 4, 30, false);
+addRingCluster(220, -70, 3, 28, false);
+addRingCluster(220, 70, 3, 28, false);
+addRingCluster(360, 0, 5, 26, false);
+addRingCluster(500, 0, 4, 26, false);
+// ramp 1
+addRingCluster(660, 0, 3, 44, false);
+addRingCluster(780, 0, 3, 44, false);
+addRingCluster(900, 0, 3, 44, false);
+// zone 2 — flat ground, coins only
+addRingCluster(1020, -60, 4, 28, false);
+addRingCluster(1020, 60, 4, 28, false);
+addRingCluster(1180, 0, 3, 30, true);
+addRingCluster(1300, 0, 4, 26, false);
+// gap 1 — bonus rings floating above the big hub platform
+[1580, 3340].forEach((hx, idx) => {
+  const hy = (idx === 0 ? 150 : 300) + 55;
+  for (let k = -1; k <= 1; k++) levelRings.push({ x: hx + k * 30, y: hy, z: 0, taken: false, bob: Math.random() * Math.PI * 2 });
+});
+// zone 3 — amid the hazards
+addRingCluster(1860, 40, 3, 28, false);
+addRingCluster(2000, -50, 3, 28, false);
+addRingCluster(2140, 20, 3, 28, false);
+addRingCluster(2240, 0, 3, 26, false);
+// ramp 2
+addRingCluster(2400, 0, 3, 44, false);
+addRingCluster(2520, 0, 3, 44, false);
+addRingCluster(2640, 0, 3, 44, false);
+// zone 4 — flat ground, coins
+addRingCluster(2780, -60, 4, 28, false);
+addRingCluster(2780, 60, 4, 28, false);
+addRingCluster(2940, 0, 3, 30, true);
+addRingCluster(3060, 0, 4, 26, false);
+// zone 5 — the final gauntlet
+addRingCluster(3620, 40, 3, 28, false);
+addRingCluster(3760, -50, 3, 28, false);
+addRingCluster(3900, 20, 3, 28, false);
+addRingCluster(4040, 0, 3, 26, false);
+
+// spikes
+// kept off the center lane — the middle of the track always stays a clear,
+// safe path; spikes line the sides where the shard/lane routes tempt you
+const levelSpikes = [
+  { x: 1820, z: -210 }, { x: 1820, z: -240 },
+  { x: 1920, z: 220 },
+  { x: 2020, z: -220 },
+  { x: 2120, z: 230 },
+  { x: 2200, z: -200 },
+  { x: 2260, z: 210 },
+  { x: 3640, z: -210 }, { x: 3640, z: -240 },
+  { x: 3740, z: 220 },
+  { x: 3840, z: -220 },
+  { x: 3940, z: 230 },
+  { x: 4020, z: -200 },
+  { x: 4080, z: 210 },
+];
+
+// chasing monsters (base values scaled by difficulty at run start); each is
+// clamped to stay within its own zone so it can never wander into a gap
+const chaseMonsters = [
+  { x: 1820, z: -90, homeX: 1820, homeZ: -90, minX: 1780, maxX: 2320, zoneY: 150, y: 0, radius: 19, baseSpeed: 120, baseDetectRadius: 330, speed: 120, detectRadius: 330, alive: true },
+  { x: 1970, z: 80,  homeX: 1970, homeZ: 80,  minX: 1780, maxX: 2320, zoneY: 150, y: 0, radius: 19, baseSpeed: 130, baseDetectRadius: 330, speed: 130, detectRadius: 330, alive: true },
+  { x: 2120, z: -50, homeX: 2120, homeZ: -50, minX: 1780, maxX: 2320, zoneY: 150, y: 0, radius: 19, baseSpeed: 125, baseDetectRadius: 330, speed: 125, detectRadius: 330, alive: true },
+  { x: 2240, z: 60,  homeX: 2240, homeZ: 60,  minX: 1780, maxX: 2320, zoneY: 150, y: 0, radius: 19, baseSpeed: 135, baseDetectRadius: 330, speed: 135, detectRadius: 330, alive: true },
+  { x: 3640, z: -90, homeX: 3640, homeZ: -90, minX: 3540, maxX: 4140, zoneY: 300, y: 0, radius: 19, baseSpeed: 140, baseDetectRadius: 350, speed: 140, detectRadius: 350, alive: true },
+  { x: 3790, z: 80,  homeX: 3790, homeZ: 80,  minX: 3540, maxX: 4140, zoneY: 300, y: 0, radius: 19, baseSpeed: 150, baseDetectRadius: 350, speed: 150, detectRadius: 350, alive: true },
+  { x: 3940, z: -50, homeX: 3940, homeZ: -50, minX: 3540, maxX: 4140, zoneY: 300, y: 0, radius: 19, baseSpeed: 145, baseDetectRadius: 350, speed: 145, detectRadius: 350, alive: true },
+  { x: 4060, z: 60,  homeX: 4060, homeZ: 60,  minX: 3540, maxX: 4140, zoneY: 300, y: 0, radius: 19, baseSpeed: 155, baseDetectRadius: 350, speed: 155, detectRadius: 350, alive: true },
+];
+
+// quest objective: 5 Ring Shards scattered around the level, including on the
+// left/right lane platforms — the finish arch stays locked until all 5 are
+// found, so exploring the alternate paths actually matters
+const ringShards = [
+  { x: 520,  y: staticGroundHeight(520) + 60,  z: 0,    taken: false },
+  { x: 1660, y: 150 + 40, z: -200, taken: false },   // gap 1 — left lane platform
+  { x: 2280, y: 150 + 70, z: 0,    taken: false },    // zone 3 — amid the hazards, needs a jump
+  { x: 3420, y: 300 + 40, z: 200,  taken: false },    // gap 2 — right lane platform
+  { x: 4020, y: 300 + 40, z: 0,    taken: false },    // zone 5 — final stretch
+];
+
+// ================= THREE.JS SETUP =================
+let W = window.innerWidth, H = window.innerHeight;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x7ec9e8);
+scene.fog = new THREE.Fog(0x7ec9e8, 600, 1900);
+
+const camera = new THREE.PerspectiveCamera(58, W / H, 0.1, 3000);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(W, H);
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize', resize);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.32);
+scene.add(ambient);
+const hemi = new THREE.HemisphereLight(0xbfe4ff, 0x3d8b3f, 0.55);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -350; sun.shadow.camera.right = 350;
+sun.shadow.camera.top = 350; sun.shadow.camera.bottom = -350;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 1000;
+scene.add(sun);
+scene.add(sun.target);
+
+// ---- materials ----
+function makeGrassTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#3d8b3f'; cx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1400; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256;
+    cx.fillStyle = Math.random() < 0.5 ? 'rgba(25,60,25,0.22)' : 'rgba(130,205,115,0.16)';
+    cx.fillRect(x, y, 2, 5 + Math.random() * 4);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: makeGrassTexture(), roughness: 0.92, side: THREE.DoubleSide });
+const dirtMat = new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.95 });
+const grassCapMat = new THREE.MeshStandardMaterial({ color: 0x7fe07f, roughness: 0.85 });
+const platformMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3f, roughness: 0.8 });
+const hubMat = new THREE.MeshStandardMaterial({ color: 0x9c7a4a, roughness: 0.75 });
+const ringGeo = new THREE.TorusGeometry(11, 4, 10, 20);
+ringGeo.rotateY(Math.PI / 2);
+const ringMat = new THREE.MeshStandardMaterial({ color: 0xffd93d, emissive: 0x996600, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.6 });
+const spikeGeo = new THREE.ConeGeometry(11, 26, 4);
+const spikeMat = new THREE.MeshStandardMaterial({ color: 0x33333a, roughness: 0.7 });
+const monsterBodyGeo = new THREE.SphereGeometry(19, 18, 18);
+const monsterMat = new THREE.MeshStandardMaterial({ color: 0x4a3494, roughness: 0.5, metalness: 0.2 });
+const monsterEyeGeo = new THREE.SphereGeometry(5, 10, 10);
+const monsterEyeMat = new THREE.MeshStandardMaterial({ color: 0xff3b30, emissive: 0xff3b30, emissiveIntensity: 0.7 });
+
+// ---- ground meshes (vertices placed directly in world space — no transforms to get wrong) ----
+function makeGroundQuad(x0, x1, y0, y1) {
+  const halfZ = ZLIM + 10;
+  const verts = new Float32Array([
+    x0, y0, -halfZ,  x0, y0, halfZ,
+    x1, y1, -halfZ,  x1, y1, halfZ,
+  ]);
+  const uScale = Math.abs(x1 - x0) / 90;
+  const vScale = (halfZ * 2) / 90;
+  const uvs = new Float32Array([0, 0, 0, vScale, uScale, 0, uScale, vScale]);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geo.setIndex([0, 1, 2, 1, 3, 2, 0, 2, 1, 1, 2, 3]);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, groundMat);
+  mesh.receiveShadow = true;
+  return mesh;
+}
+zones.forEach(z => scene.add(makeGroundQuad(z.x0, z.x1, z.y0, z.y1)));
+
+// ---- boundary walls (brown dirt, grass cap on top) ----
+function addWallSegment(x0, x1, z, topY) {
+  const len = Math.abs(x1 - x0);
+  const cx = (x0 + x1) / 2;
+  const bottomY = -300;
+  const h = topY - bottomY;
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(len, h, 22), dirtMat);
+  wall.position.set(cx, bottomY + h / 2, z);
+  wall.castShadow = true; wall.receiveShadow = true;
+  scene.add(wall);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(len, 14, 24), grassCapMat);
+  cap.position.set(cx, topY + 7, z);
+  scene.add(cap);
+}
+function addEndWall(x, z0, z1, topY) {
+  const len = Math.abs(z1 - z0);
+  const cz = (z0 + z1) / 2;
+  const bottomY = -300;
+  const h = topY - bottomY;
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(22, h, len), dirtMat);
+  wall.position.set(x, bottomY + h / 2, cz);
+  wall.castShadow = true; wall.receiveShadow = true;
+  scene.add(wall);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(24, 14, len), grassCapMat);
+  cap.position.set(x, topY + 7, cz);
+  scene.add(cap);
+}
+const WZ_LOW = -(ZLIM + 12), WZ_HIGH = ZLIM + 12;
+const WALL_SEGMENTS = [
+  { x0: LEVEL_START, x1: 940,  top: 40 },        // zone 1 + ramp 1
+  { x0: 940,         x1: 2700, top: 190 },       // zone 2 + gap 1 + zone 3 + ramp 2
+  { x0: 2700,        x1: LEVEL_END, top: 340 },  // zone 4 + gap 2 + zone 5
+];
+WALL_SEGMENTS.forEach(seg => {
+  addWallSegment(seg.x0, seg.x1, WZ_LOW, seg.top);
+  addWallSegment(seg.x0, seg.x1, WZ_HIGH, seg.top);
+});
+addEndWall(LEVEL_START, WZ_LOW, WZ_HIGH, 40);
+addEndWall(LEVEL_END, WZ_LOW, WZ_HIGH, 340);
+
+// ---- finish arch ----
+const finishGeo = new THREE.TorusGeometry(140, 8, 12, 32);
+finishGeo.rotateY(Math.PI / 2);
+const finishMat = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0x332200, emissiveIntensity: 0.4, roughness: 0.5, metalness: 0.4 });
+const finishMesh = new THREE.Mesh(finishGeo, finishMat);
+finishMesh.position.set(FINISH_X, 300 + 140, 0);
+scene.add(finishMesh);
+function setFinishUnlocked(unlocked) {
+  if (unlocked) {
+    finishMat.color.set(0xffffff);
+    finishMat.emissive.set(0xffe27a);
+    finishMat.emissiveIntensity = 0.7;
+  } else {
+    finishMat.color.set(0x888888);
+    finishMat.emissive.set(0x332200);
+    finishMat.emissiveIntensity = 0.4;
+  }
+}
+
+// ---- ring shards (quest items) ----
+const shardGeo = new THREE.OctahedronGeometry(13, 0);
+const shardMat = new THREE.MeshStandardMaterial({ color: 0x4de0ff, emissive: 0x4de0ff, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.3 });
+const shardMeshes = ringShards.map(s => {
+  const m = new THREE.Mesh(shardGeo, shardMat);
+  m.position.set(s.x, s.y, s.z);
+  m.castShadow = true;
+  scene.add(m);
+  return m;
+});
+function syncShards(t) {
+  ringShards.forEach((s, idx) => {
+    const m = shardMeshes[idx];
+    m.visible = !s.taken;
+    if (!s.taken) {
+      m.position.y = s.y + Math.sin(t * 2 + idx) * 4;
+      m.rotation.y = t * 1.6 + idx;
+      m.rotation.x = t * 1.1;
+    }
+  });
+}
+
+// ---- moving platforms (the big hub gets its own warmer material) ----
+movingPlatforms.forEach(p => {
+  const isHub = p.halfW > 70;
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.halfW * 2, isHub ? 22 : 16, p.halfD * 2), isHub ? hubMat : platformMat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  scene.add(mesh);
+  p.mesh = mesh;
+});
+
+// ---- rings ----
+const ringMeshes = levelRings.map(() => {
+  const m = new THREE.Mesh(ringGeo, ringMat);
+  m.castShadow = true;
+  scene.add(m);
+  return m;
+});
+
+// ---- spikes ----
+levelSpikes.forEach((s, idx) => {
+  const m = new THREE.Mesh(spikeGeo, spikeMat);
+  m.castShadow = true;
+  m.rotation.y = idx * 1.3;
+  m.position.set(s.x, staticGroundHeight(s.x) + 13, s.z);
+  scene.add(m);
+});
+
+// ---- monsters ----
+chaseMonsters.forEach(m => {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(monsterBodyGeo, monsterMat);
+  body.castShadow = true;
+  const eye = new THREE.Mesh(monsterEyeGeo, monsterEyeMat);
+  eye.position.set(14, 4, 0);
+  g.add(body, eye);
+  scene.add(g);
+  m.mesh = g;
+});
+
+// ---- ball ----
+function makeStripeTexture(baseColor, stripeColor) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const cx = c.getContext('2d');
+  cx.fillStyle = baseColor || '#e8342a'; cx.fillRect(0, 0, 64, 64);
+  cx.strokeStyle = stripeColor || 'rgba(0,0,0,0.2)'; cx.lineWidth = 9;
+  for (let i = -4; i < 64; i += 16) { cx.beginPath(); cx.moveTo(i, 0); cx.lineTo(i, 64); cx.stroke(); }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 1);
+  return tex;
+}
+const BALL_RADIUS = 22;
+const ballGeo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
+const initialSkin = SKINS.find(s => s.id === equippedSkin) || SKINS[0];
+const ballMat = new THREE.MeshStandardMaterial({ map: makeStripeTexture(initialSkin.base, initialSkin.stripe), roughness: 0.45, metalness: 0.08, transparent: true });
+const ballMesh = new THREE.Mesh(ballGeo, ballMat);
+ballMesh.castShadow = true;
+scene.add(ballMesh);
+const ballQuat = new THREE.Quaternion();
+
+const spinRingGeo = new THREE.TorusGeometry(BALL_RADIUS + 8, 3, 8, 28);
+const spinRingMat = new THREE.MeshBasicMaterial({ color: 0xffd93d, transparent: true, opacity: 0 });
+const spinRingMesh = new THREE.Mesh(spinRingGeo, spinRingMat);
+spinRingMesh.rotation.x = Math.PI / 2;
+scene.add(spinRingMesh);
+
+// ---- checkpoint flag — planted at your last safe grounded spot ----
+const flagGroup = new THREE.Group();
+const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 60, 8), new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.5, metalness: 0.3 }));
+flagPole.position.y = 30;
+flagPole.castShadow = true;
+const flagCloth = new THREE.Mesh(new THREE.PlaneGeometry(26, 16), new THREE.MeshStandardMaterial({ color: 0xff5b4d, side: THREE.DoubleSide, roughness: 0.6 }));
+flagCloth.position.set(14, 50, 0);
+flagGroup.add(flagPole, flagCloth);
+scene.add(flagGroup);
+// the flag's position is set only when the checkpoint actually changes (see
+// the checkpoint-assignment code in update()) — this just idles the cloth
+// so it doesn't look like it's dragging along behind the player every frame
+function updateFlag(t) {
+  flagCloth.rotation.y = Math.sin(t * 3) * 0.18;
+}
+
+// ---- decorative trees & rocks along the ridgeline above the walls ----
+function makeTree(x, z, baseY, scale) {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(3, 4, 20, 6), new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.9 }));
+  trunk.position.y = 10; trunk.castShadow = true;
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2d6b34, roughness: 0.85 });
+  const l1 = new THREE.Mesh(new THREE.ConeGeometry(22, 34, 8), leafMat); l1.position.y = 34; l1.castShadow = true;
+  const l2 = new THREE.Mesh(new THREE.ConeGeometry(17, 28, 8), leafMat); l2.position.y = 52; l2.castShadow = true;
+  const l3 = new THREE.Mesh(new THREE.ConeGeometry(12, 22, 8), leafMat); l3.position.y = 68; l3.castShadow = true;
+  g.add(trunk, l1, l2, l3);
+  g.position.set(x, baseY, z);
+  g.scale.setScalar(scale);
+  scene.add(g);
+}
+function makeRock(x, z, baseY, scale) {
+  const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(14, 0), new THREE.MeshStandardMaterial({ color: 0x8a8a86, roughness: 0.95, flatShading: true }));
+  rock.position.set(x, baseY + 6 * scale, z);
+  rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+  rock.scale.setScalar(scale);
+  rock.castShadow = true; rock.receiveShadow = true;
+  scene.add(rock);
+}
+WALL_SEGMENTS.forEach(seg => {
+  const len = seg.x1 - seg.x0;
+  const count = Math.max(4, Math.floor(len / 110));
+  for (let i = 0; i < count; i++) {
+    const x = seg.x0 + ((i + 0.5) / count) * len + (Math.random() * 40 - 20);
+    [-1, 1].forEach(side => {
+      const z = side * (ZLIM + 30 + Math.random() * 50);
+      if (Math.random() < 0.72) makeTree(x, z, seg.top, 0.8 + Math.random() * 0.6);
+      else makeRock(x, z, seg.top, 0.8 + Math.random() * 0.7);
+    });
+  }
+});
+
+// ---- clouds (purely decorative, wraps around the player) ----
+const cloudGroup = new THREE.Group();
+scene.add(cloudGroup);
+const CLOUD_COUNT = 10;
+const clouds = [];
+{
+  const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  const puffGeo = new THREE.SphereGeometry(1, 8, 8);
+  for (let i = 0; i < CLOUD_COUNT; i++) {
+    const g = new THREE.Group();
+    const p1 = new THREE.Mesh(puffGeo, cloudMat); p1.scale.set(46, 20, 30);
+    const p2 = new THREE.Mesh(puffGeo, cloudMat); p2.scale.set(32, 16, 24); p2.position.set(34, 6, 0);
+    const p3 = new THREE.Mesh(puffGeo, cloudMat); p3.scale.set(28, 14, 22); p3.position.set(-30, 8, 0);
+    g.add(p1, p2, p3);
+    cloudGroup.add(g);
+    clouds.push(g);
+  }
+}
+function updateClouds() {
+  const spacing = 480;
+  const range = CLOUD_COUNT * spacing;
+  const baseX = ball.x * 0.3;
+  for (let i = 0; i < clouds.length; i++) {
+    const localX = (((i * spacing - baseX) % range) + range) % range - range / 2;
+    clouds[i].position.set(ball.x + localX, 240 + (i % 3) * 40, -320 - (i % 4) * 70);
+  }
+}
+
+// ================= GAME STATE =================
+const ball = {
+  x: 0, y: staticGroundHeight(0) + BALL_RADIUS, z: 0,
+  vx: 0, vy: 0, vz: 0,
+  radius: BALL_RADIUS,
+  facingX: 1, facingZ: 0
+};
+let grounded = true;
+let wasGrounded = true;
+let standingPlatform = null;
+let checkpoint = { x: ball.x, y: ball.y, z: ball.z };
+
+let score = 0, rings = 0, lives = 3;
+let totalRingsThisRun = 0;
+let shardsCollected = 0;
+let finishWarned = false;
+let paused = true;      // true while a menu (main menu / leaderboard / game over / win) is showing
+let gameOver = false;
+let winState = false;
+let invincibleTimer = 0;
+let currentAccel = 620;
+
+// ---------- particles ----------
+let particles = [];
+function spawnBurst(x, y, z, color) {
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2;
+    const spd = 100 + Math.random() * 120;
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), mat);
+    mesh.scale.setScalar(5);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    particles.push({ mesh, vx: Math.cos(ang) * spd, vy: 140 + Math.random() * 90, vz: Math.sin(ang) * spd, life: 0.5, maxLife: 0.5 });
+  }
+}
+function spawnRingScatter(x, y, z, count) {
+  for (let i = 0; i < count; i++) {
+    const ang = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+    const spd = 110 + Math.random() * 130;
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffd93d, transparent: true, opacity: 1 });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), mat);
+    mesh.scale.setScalar(5);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    particles.push({ mesh, vx: Math.cos(ang) * spd, vy: 160 + Math.random() * 80, vz: Math.sin(ang) * spd, life: 0.6, maxLife: 0.6 });
+  }
+}
+function updateParticles(dt) {
+  for (const p of particles) {
+    p.vy -= 320 * dt;
+    p.mesh.position.x += p.vx * dt;
+    p.mesh.position.y += p.vy * dt;
+    p.mesh.position.z += p.vz * dt;
+    p.vx *= (1 - Math.min(dt * 2, 1));
+    p.vz *= (1 - Math.min(dt * 2, 1));
+    p.life -= dt;
+    const a = Math.max(p.life / p.maxLife, 0);
+    p.mesh.material.opacity = a;
+    p.mesh.scale.setScalar(5 * Math.max(a, 0.15));
+  }
+  for (const p of particles) if (p.life <= 0) { scene.remove(p.mesh); p.mesh.material.dispose(); }
+  particles = particles.filter(p => p.life > 0);
+}
+
+// ---------- popups (DOM, projected from 3D) ----------
+let popups = [];
+function spawnPopup(x, y, z, text, color) {
+  popups.push({ x, y, z, text, color, life: 0.9, maxLife: 0.9, el: null });
+}
+const projectVec = new THREE.Vector3();
+function syncPopups(dt) {
+  for (const pu of popups) {
+    pu.y += 26 * dt;
+    pu.life -= dt;
+    if (!pu.el) {
+      pu.el = document.createElement('div');
+      pu.el.className = 'popup';
+      pu.el.textContent = pu.text;
+      pu.el.style.color = pu.color;
+      document.body.appendChild(pu.el);
+    }
+    projectVec.set(pu.x, pu.y, pu.z).project(camera);
+    pu.el.style.left = ((projectVec.x * 0.5 + 0.5) * W) + 'px';
+    pu.el.style.top = ((1 - (projectVec.y * 0.5 + 0.5)) * H) + 'px';
+    pu.el.style.opacity = Math.max(pu.life / pu.maxLife, 0);
+  }
+  for (const pu of popups) if (pu.life <= 0 && pu.el) pu.el.remove();
+  popups = popups.filter(pu => pu.life > 0);
+}
+
+// ---------- input ----------
+const keys = {};
+let jumpQueued = false;
+let spinCharging = false;
+let spinCharge = 0;
+
+function tryStartSpinCharge() { if (grounded && !spinCharging) { spinCharging = true; spinCharge = 0; } }
+function releaseSpinCharge() {
+  if (spinCharging) {
+    if (grounded && spinCharge > 0.04) {
+      const boost = 620 + spinCharge * 760;
+      ball.vx = ball.facingX * boost;
+      ball.vz = ball.facingZ * boost;
+      spawnBurst(ball.x, ball.y, ball.z, 0xffb84d);
+      sfxSpinLaunch();
+    }
+    spinCharging = false; spinCharge = 0;
+  }
+}
+
+window.addEventListener('keydown', e => {
+  // never intercept typing into a text field (e.g. the leaderboard name entry)
+  if (e.target && e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === ' ' || k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright') e.preventDefault();
+  if (paused) return;
+  if (gameOver || winState) { restartGame(); return; }
+  keys[k] = true;
+  if (k === ' ') jumpQueued = true;
+  if (k === 'shift') tryStartSpinCharge();
+  hint.style.opacity = '0';
+});
+window.addEventListener('keyup', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  keys[k] = false;
+  if (k === 'shift') releaseSpinCharge();
+});
+
+let inputX = 0, inputY = 0;
+let touchId = null, joyOrigin = { x: 0, y: 0 };
+function showJoystick(x, y) {
+  joystickEl.style.left = (x - 60) + 'px';
+  joystickEl.style.top = (y - 60) + 'px';
+  joystickEl.style.display = 'block';
+}
+function hideJoystick() {
+  joystickEl.style.display = 'none';
+  stickEl.style.transform = 'translate(-50%, -50%)';
+  inputX = 0; inputY = 0;
+}
+canvas.addEventListener('touchstart', e => {
+  if (paused) return;
+  if (gameOver || winState) { restartGame(); e.preventDefault(); return; }
+  hint.style.opacity = '0';
+  const t = e.changedTouches[0];
+  touchId = t.identifier;
+  joyOrigin.x = t.clientX; joyOrigin.y = t.clientY;
+  showJoystick(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== touchId) continue;
+    let dx = t.clientX - joyOrigin.x, dy = t.clientY - joyOrigin.y;
+    const max = 46;
+    const dist = Math.min(Math.hypot(dx, dy), max);
+    const angle = Math.atan2(dy, dx);
+    const sx = Math.cos(angle) * dist, sy = Math.sin(angle) * dist;
+    stickEl.style.transform = `translate(${sx - 26}px, ${sy - 26}px)`;
+    inputX = sx / max; inputY = sy / max;
+  }
+  e.preventDefault();
+}, { passive: false });
+function endTouch(e) {
+  for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; hideJoystick(); }
+}
+canvas.addEventListener('touchend', endTouch);
+canvas.addEventListener('touchcancel', endTouch);
+jumpBtn.addEventListener('touchstart', e => {
+  if (paused || gameOver || winState) { e.preventDefault(); return; }
+  jumpQueued = true;
+  e.preventDefault();
+}, { passive: false });
+
+document.querySelectorAll('.diffBtn').forEach(btn => {
+  btn.addEventListener('click', () => { ensureAudio(); sfxClick(); startGameWithDifficulty(btn.dataset.diff); });
+});
+document.getElementById('goMenuLink').addEventListener('click', () => { sfxClick(); returnToMenu(); });
+document.getElementById('winMenuLink').addEventListener('click', () => { sfxClick(); returnToMenu(); });
+
+// ---------- physics constants ----------
+const ACCEL_INPUT = 620;
+const GROUND_FRICTION = 1.1;
+const GRAVITY_SLOPE = 760;    // gentle enough that even the slowest difficulty can always climb the ramps
+const AIR_GRAVITY = 1900;
+const JUMP_VELOCITY = 560;
+const MAX_SPEED = 1300;
+const DESTROY_SPEED = 420;
+
+let shakeTime = 0;
+function triggerHitFlash() {
+  shakeTime = 0.22;
+  hitFlash.classList.add('show');
+  setTimeout(() => hitFlash.classList.remove('show'), 140);
+}
+function updateHud() {
+  scoreEl.textContent = score;
+  ringsEl.textContent = rings;
+  livesEl.textContent = '●'.repeat(Math.max(lives, 0));
+  document.getElementById('coinsHud').textContent = '🪙 ' + coins;
+  document.getElementById('shardsHud').textContent = '💎 ' + shardsCollected + '/' + ringShards.length;
+  bestEl.textContent = 'Best: ' + best;
+  diffTagEl.textContent = DIFFICULTIES[currentDifficulty].label;
+}
+
+function respawnAtCheckpoint() {
+  ball.x = checkpoint.x; ball.y = checkpoint.y; ball.z = checkpoint.z;
+  ball.vx = 0; ball.vz = 0; ball.vy = 0;
+  grounded = true; standingPlatform = null;
+}
+
+function takeDamage(atX, atY, atZ) {
+  const d = DIFFICULTIES[currentDifficulty];
+  if (d.ringShield && rings > 0) {
+    spawnRingScatter(atX, atY, atZ, Math.min(rings, 10));
+    rings = 0;
+  } else {
+    lives--;
+    if (lives <= 0) { triggerGameOver(); return; }
+    respawnAtCheckpoint();
+  }
+  invincibleTimer = 1.3 * d.invincibleMul;
+  sfxHit();
+  updateHud();
+}
+
+function triggerGameOver() {
+  gameOver = true; paused = true;
+  ball.vx = 0; ball.vz = 0;
+  coins += totalRingsThisRun;
+  saveGame(false);
+  goScoreLine.textContent = 'Score: ' + score;
+  goBestLine.textContent = 'Best: ' + best;
+  document.getElementById('goCoinsLine').textContent = '+' + totalRingsThisRun + ' 🪙 earned';
+  gameOverEl.classList.add('show');
+  maybeShowLeaderboardEntry('go');
+  sfxLose();
+}
+
+function triggerWin() {
+  winState = true; paused = true;
+  ball.vx = 0; ball.vz = 0;
+  const earned = totalRingsThisRun + 20;
+  coins += earned;
+  saveGame(false);
+  winScoreLine.textContent = 'Score: ' + score;
+  winBestLine.textContent = 'Best: ' + best;
+  document.getElementById('winCoinsLine').textContent = '+' + earned + ' 🪙 earned (20 bonus)';
+  winEl.classList.add('show');
+  maybeShowLeaderboardEntry('win');
+  sfxWin();
+}
+
+function resetRunState() {
+  const d = DIFFICULTIES[currentDifficulty];
+  currentAccel = ACCEL_INPUT * d.accelMul;
+  chaseMonsters.forEach(m => {
+    m.speed = m.baseSpeed * d.monsterSpeedMul;
+    m.detectRadius = m.baseDetectRadius * d.detectMul;
+    m.alive = true; m.x = m.homeX; m.z = m.homeZ;
+    m.mesh.visible = true;
+  });
+  movingPlatforms.forEach(p => { p.freq = p.baseFreq * d.platformFreqMul; });
+  levelRings.forEach((r, idx) => { r.taken = false; ringMeshes[idx].visible = true; });
+  ringShards.forEach((s, idx) => { s.taken = false; shardMeshes[idx].visible = true; });
+  shardsCollected = 0;
+  finishWarned = false;
+  setFinishUnlocked(false);
+
+  score = 0; rings = 0; lives = d.lives; totalRingsThisRun = 0;
+  checkpoint = { x: 0, y: staticGroundHeight(0) + BALL_RADIUS, z: 0 };
+  respawnAtCheckpoint();
+  flagGroup.position.set(checkpoint.x, checkpoint.y - BALL_RADIUS, checkpoint.z);
+  ball.facingX = 1; ball.facingZ = 0;
+  ballQuat.identity();
+  camDir.x = 1; camDir.z = 0;
+  invincibleTimer = 1.5;
+  gameOver = false; winState = false;
+  spinCharging = false; spinCharge = 0;
+
+  particles.forEach(p => { scene.remove(p.mesh); p.mesh.material.dispose(); });
+  particles = [];
+  popups.forEach(pu => { if (pu.el) pu.el.remove(); });
+  popups = [];
+  trailPoints = [];
+
+  gameOverEl.classList.remove('show');
+  winEl.classList.remove('show');
+  updateHud();
+}
+
+function startGameWithDifficulty(diffKey) {
+  currentDifficulty = diffKey;
+  resetRunState();
+  paused = false;
+  mainMenuEl.classList.remove('show');
+}
+
+function restartGame() {
+  resetRunState();
+  paused = false;
+}
+
+function returnToMenu() {
+  paused = true;
+  gameOverEl.classList.remove('show');
+  winEl.classList.remove('show');
+  mainMenuEl.classList.add('show');
+}
+
+function pushAway(ex, ez) {
+  const dx = ball.x - ex, dz = ball.z - ez;
+  const len = Math.hypot(dx, dz) || 1;
+  const spd = Math.max(Math.hypot(ball.vx, ball.vz) * 0.4, 160);
+  ball.vx = (dx / len) * spd;
+  ball.vz = (dz / len) * spd;
+}
+
+// ---------- trail ----------
+const TRAIL_COUNT = 8;
+const trailMeshes = Array.from({ length: TRAIL_COUNT }, () => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 10), new THREE.MeshBasicMaterial({ color: 0xe8342a, transparent: true, opacity: 0 }));
+  scene.add(m);
+  return m;
+});
+let trailPoints = [];
+function syncTrail() {
+  for (let i = 0; i < TRAIL_COUNT; i++) {
+    const mesh = trailMeshes[i];
+    if (i < trailPoints.length) {
+      const tp = trailPoints[i];
+      const a = (i / trailPoints.length) * 0.32;
+      mesh.position.set(tp.x, tp.y, tp.z);
+      mesh.scale.setScalar(ball.radius * (0.5 + 0.4 * (i / trailPoints.length)));
+      mesh.material.opacity = a;
+    } else {
+      mesh.material.opacity = 0;
+    }
+  }
+}
+
+function updatePlatforms(t) {
+  for (const p of movingPlatforms) {
+    p.prevZ = p.z;
+    p.z = p.baseZ + Math.sin(t * p.freq * Math.PI * 2 + p.phase) * p.ampZ;
+    p.mesh.position.set(p.baseX, p.y, p.z);
+  }
+}
+
+function platformAt(x, z) {
+  for (const p of movingPlatforms) {
+    if (x > p.baseX - p.halfW && x < p.baseX + p.halfW && z > p.z - p.halfD && z < p.z + p.halfD) return p;
+  }
+  return null;
+}
+
+// solid side collision for platforms — without this the ball could just fly
+// straight through a platform's body if it approached from the side instead
+// of landing on top (landing itself is handled separately, by the grounding
+// logic below; this only pushes the ball back out when it's genuinely
+// overlapping a platform's body, not resting on its surface)
+function resolvePlatformCollisions() {
+  for (const p of movingPlatforms) {
+    const halfT = p.halfW > 70 ? 11 : 8;
+    const topY = p.y + halfT, botY = p.y - halfT;
+    if (ball.y + ball.radius * 0.4 < topY && ball.y - ball.radius * 0.4 > botY) {
+      const xMin = p.baseX - p.halfW - ball.radius, xMax = p.baseX + p.halfW + ball.radius;
+      const zMin = p.z - p.halfD - ball.radius, zMax = p.z + p.halfD + ball.radius;
+      if (ball.x > xMin && ball.x < xMax && ball.z > zMin && ball.z < zMax) {
+        const pushXNeg = ball.x - xMin, pushXPos = xMax - ball.x;
+        const pushZNeg = ball.z - zMin, pushZPos = zMax - ball.z;
+        if (Math.min(pushXNeg, pushXPos) < Math.min(pushZNeg, pushZPos)) {
+          ball.x = pushXNeg < pushXPos ? xMin : xMax; ball.vx = 0;
+        } else {
+          ball.z = pushZNeg < pushZPos ? zMin : zMax; ball.vz = 0;
+        }
+      }
+    }
+  }
+}
+
+function updateMonsters(dt) {
+  for (const m of chaseMonsters) {
+    if (!m.alive) { m.mesh.visible = false; continue; }
+    m.mesh.visible = true;
+    const dx = ball.x - m.x, dz = ball.z - m.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < m.detectRadius && dist > 1) {
+      m.x += (dx / dist) * m.speed * dt;
+      m.z += (dz / dist) * m.speed * dt;
+    }
+    m.x = Math.max(m.minX, Math.min(m.maxX, m.x));
+    m.z = Math.max(-ZLIM + 30, Math.min(ZLIM - 30, m.z));
+    const gY = staticGroundHeight(m.x);
+    m.y = (gY === null ? m.zoneY : gY) + m.radius;
+    m.mesh.position.set(m.x, m.y, m.z);
+    if (Math.abs(dx) + Math.abs(dz) > 0.01) m.mesh.rotation.y = Math.atan2(dz, dx) * -1 + Math.PI / 2;
+  }
+}
+
+// ---------- main physics update ----------
+function update(dt, t) {
+  if (paused || gameOver || winState) return;
+
+  updatePlatforms(t);
+  if (standingPlatform) ball.z += (standingPlatform.z - standingPlatform.prevZ);
+
+  let forwardDir = 0, strafeDir = 0;
+  if (keys['arrowup'] || keys['w']) forwardDir += 1;
+  if (keys['arrowdown'] || keys['s']) forwardDir -= 1;
+  if (keys['arrowleft'] || keys['a']) strafeDir -= 1;
+  if (keys['arrowright'] || keys['d']) strafeDir += 1;
+  if (forwardDir === 0 && Math.abs(inputY) > 0.15) forwardDir = inputY < 0 ? 1 : -1;
+  if (strafeDir === 0 && Math.abs(inputX) > 0.15) strafeDir = inputX > 0 ? 1 : -1;
+
+  if (spinCharging) {
+    const spd = Math.hypot(ball.vx, ball.vz);
+    if (grounded && spd < 40) { spinCharge = Math.min(1, spinCharge + dt / 0.8); forwardDir = 0; strafeDir = 0; }
+    else { spinCharging = false; spinCharge = 0; }
+  }
+
+  // movement is relative to the camera's current facing (camDir), not fixed
+  // world axes — so "forward" always means "away from camera" on screen,
+  // even after the camera has swung around to follow a new heading
+  {
+    const fwdX = camDir.x, fwdZ = camDir.z;
+    const rightX = -camDir.z, rightZ = camDir.x;
+    ball.vx += (forwardDir * fwdX + strafeDir * rightX) * currentAccel * dt;
+    ball.vz += (forwardDir * fwdZ + strafeDir * rightZ) * currentAccel * dt;
+  }
+
+  if (grounded && !standingPlatform) {
+    const hxp = staticGroundHeight(ball.x + 1), hxm = staticGroundHeight(ball.x - 1);
+    if (hxp !== null && hxm !== null) {
+      const slope = (hxp - hxm) / 2;
+      ball.vx += GRAVITY_SLOPE * (-slope) * dt;
+    }
+  }
+
+  {
+    const spd = Math.hypot(ball.vx, ball.vz);
+    if (spd > 0) {
+      const drop = GROUND_FRICTION * spd * dt;
+      const scale = Math.max(0, spd - drop) / spd;
+      ball.vx *= scale; ball.vz *= scale;
+    }
+  }
+
+  let curSpeed = Math.hypot(ball.vx, ball.vz);
+  if (curSpeed > MAX_SPEED) { const s = MAX_SPEED / curSpeed; ball.vx *= s; ball.vz *= s; curSpeed = MAX_SPEED; }
+  if (curSpeed > 2) { ball.facingX = ball.vx / curSpeed; ball.facingZ = ball.vz / curSpeed; }
+
+  if (!spinCharging) { ball.x += ball.vx * dt; ball.z += ball.vz * dt; }
+
+  ball.x = Math.max(LEVEL_START + ball.radius + 4, Math.min(LEVEL_END - ball.radius - 4, ball.x));
+  if (ball.z > ZLIM) { ball.z = ZLIM; if (ball.vz > 0) ball.vz = 0; }
+  if (ball.z < -ZLIM) { ball.z = -ZLIM; if (ball.vz < 0) ball.vz = 0; }
+
+  resolvePlatformCollisions();
+
+  if (jumpQueued) {
+    jumpQueued = false;
+    if (grounded) { ball.vy = JUMP_VELOCITY; grounded = false; standingPlatform = null; sfxJump(); }
+  }
+
+  wasGrounded = grounded;
+  const staticY = staticGroundHeight(ball.x);
+  const platformHere = platformAt(ball.x, ball.z);
+  const supportY = staticY !== null ? staticY : (platformHere ? platformHere.y : null);
+
+  if (grounded) {
+    if (supportY !== null) {
+      ball.y = supportY + ball.radius;
+      ball.vy = 0;
+      standingPlatform = platformHere;
+    } else {
+      grounded = false;
+      standingPlatform = null;
+    }
+  } else {
+    const yBefore = ball.y;
+    ball.vy -= AIR_GRAVITY * dt;
+    ball.y += ball.vy * dt;
+    // only snap onto a surface we actually crossed THIS frame while falling —
+    // never snap up to a platform found far below where the ball already was
+    // (this is what caused the ball to "teleport" onto moving platforms)
+    if (supportY !== null && ball.vy <= 0 && yBefore >= supportY + ball.radius && ball.y <= supportY + ball.radius) {
+      ball.y = supportY + ball.radius; ball.vy = 0; grounded = true; standingPlatform = platformHere;
+    }
+  }
+  if (grounded && !wasGrounded) sfxLand();
+
+  // only plant a new checkpoint (and move the flag) once you've put real
+  // distance behind you — not every single frame, or the flag would look
+  // like it's glued to the ball instead of marking a specific spot
+  if (grounded && staticY !== null && !platformHere &&
+      Math.hypot(ball.x - checkpoint.x, ball.z - checkpoint.z) > 60) {
+    checkpoint = { x: ball.x, y: ball.y, z: ball.z };
+    flagGroup.position.set(checkpoint.x, checkpoint.y - BALL_RADIUS, checkpoint.z);
+  }
+
+  if (ball.y < -250) {
+    takeDamage(ball.x, checkpoint.y, ball.z);
+    respawnAtCheckpoint();
+  }
+
+  for (const shard of ringShards) {
+    if (shard.taken) continue;
+    const d = Math.hypot(shard.x - ball.x, shard.y - ball.y, shard.z - ball.z);
+    if (d < ball.radius + 14) {
+      shard.taken = true;
+      shardsCollected++;
+      score += 30;
+      if (score > best) best = score;
+      spawnBurst(shard.x, shard.y, shard.z, 0x4de0ff);
+      spawnPopup(shard.x, shard.y + 20, shard.z, 'Shard!', '#4de0ff');
+      sfxDestroy();
+      if (shardsCollected >= ringShards.length) setFinishUnlocked(true);
+      updateHud();
+    }
+  }
+
+  if (!gameOver && !winState && ball.x > FINISH_X) {
+    if (shardsCollected >= ringShards.length) {
+      triggerWin();
+      return;
+    } else if (!finishWarned) {
+      spawnPopup(ball.x, ball.y + 40, ball.z, 'Find all Ring Shards first!', '#ff5b4d');
+      finishWarned = true;
+    }
+  } else if (ball.x < FINISH_X - 60) {
+    finishWarned = false;
+  }
+
+  if (curSpeed > 1) {
+    const axisX = ball.vz / curSpeed, axisZ = -ball.vx / curSpeed;
+    const angle = (curSpeed * dt) / ball.radius;
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(axisX, 0, axisZ), angle);
+    ballQuat.premultiply(q);
+    ballQuat.normalize();
+  }
+
+  if (curSpeed > 260 && grounded) {
+    trailPoints.push({ x: ball.x, y: ball.y, z: ball.z });
+    if (trailPoints.length > TRAIL_COUNT) trailPoints.shift();
+  } else if (trailPoints.length) {
+    trailPoints.shift();
+  }
+
+  if (invincibleTimer > 0) invincibleTimer -= dt;
+
+  updateMonsters(dt);
+
+  for (const ring of levelRings) {
+    if (ring.taken) continue;
+    const d = Math.hypot(ring.x - ball.x, ring.y - ball.y, ring.z - ball.z);
+    if (d < ball.radius + 12) {
+      ring.taken = true;
+      score += 10; rings += 1; totalRingsThisRun += 1;
+      if (score > best) best = score;
+      sfxRing();
+      updateHud();
+    }
+  }
+
+  if (invincibleTimer <= 0) {
+    for (const spike of levelSpikes) {
+      const sy = staticGroundHeight(spike.x) + 13;
+      const d = Math.hypot(spike.x - ball.x, sy - ball.y, spike.z - ball.z);
+      if (d < ball.radius + 12) {
+        pushAway(spike.x, spike.z);
+        takeDamage(spike.x, sy, spike.z);
+        triggerHitFlash();
+        break;
+      }
+    }
+  }
+
+  for (const m of chaseMonsters) {
+    if (!m.alive) continue;
+    const d = Math.hypot(ball.x - m.x, ball.y - m.y, ball.z - m.z);
+    const minD = ball.radius + m.radius;
+    if (d < minD) {
+      const stomp = !grounded && ball.vy < -40 && (ball.y - m.y) > m.radius * 0.15;
+      const spinKill = grounded && curSpeed > DESTROY_SPEED;
+      if (stomp || spinKill || invincibleTimer > 0) {
+        m.alive = false;
+        score += 50;
+        if (score > best) best = score;
+        spawnBurst(m.x, m.y, m.z, 0xb26bff);
+        spawnPopup(m.x, m.y + 24, m.z, '+50', '#ffd93d');
+        sfxDestroy();
+        if (stomp) { ball.vy = JUMP_VELOCITY * 0.55; grounded = false; standingPlatform = null; }
+        updateHud();
+      } else if (invincibleTimer <= 0) {
+        pushAway(m.x, m.z);
+        takeDamage(m.x, m.y, m.z);
+        triggerHitFlash();
+      }
+    }
+  }
+
+  if (shakeTime > 0) shakeTime -= dt;
+}
+
+// ---------- camera ----------
+const camDir = { x: 1, z: 0 };
+camera.position.set(ball.x - 230, ball.y + 150, ball.z);
+camera.lookAt(ball.x + 90, ball.y + 10, ball.z);
+
+function updateCamera(dt) {
+  const spd = Math.hypot(ball.vx, ball.vz);
+  if (spd > 20) {
+    const nx = ball.vx / spd, nz = ball.vz / spd;
+    camDir.x += (nx - camDir.x) * Math.min(1, dt * 3);
+    camDir.z += (nz - camDir.z) * Math.min(1, dt * 3);
+    const len = Math.hypot(camDir.x, camDir.z) || 1;
+    camDir.x /= len; camDir.z /= len;
+  }
+  const targetX = ball.x - camDir.x * 230;
+  const targetZ = ball.z - camDir.z * 230;
+  const targetY = ball.y + 150;
+  camera.position.x += (targetX - camera.position.x) * Math.min(1, dt * 6);
+  camera.position.z += (targetZ - camera.position.z) * Math.min(1, dt * 6);
+  camera.position.y += (targetY - camera.position.y) * Math.min(1, dt * 5);
+
+  if (shakeTime > 0) {
+    const s = shakeTime / 0.22;
+    camera.position.x += (Math.random() - 0.5) * 6 * s;
+    camera.position.y += (Math.random() - 0.5) * 6 * s;
+  }
+  camera.lookAt(ball.x + camDir.x * 90, ball.y + 10, ball.z + camDir.z * 90);
+}
+
+function updateBallMesh(t) {
+  ballMesh.position.set(ball.x, ball.y, ball.z);
+  ballMesh.quaternion.copy(ballQuat);
+  const flashing = invincibleTimer > 0 && Math.sin(t * 24) > 0;
+  ballMat.opacity = flashing ? 0.35 : 1;
+
+  spinRingMesh.position.set(ball.x, ball.y, ball.z);
+  spinRingMesh.visible = spinCharging && spinCharge > 0.02;
+  spinRingMat.opacity = spinCharge * 0.85;
+  spinRingMesh.rotation.z += 0.12;
+
+  finishMesh.rotation.x += 0.01;
+}
+
+function syncRings(t) {
+  levelRings.forEach((r, idx) => {
+    const m = ringMeshes[idx];
+    m.visible = !r.taken;
+    if (!r.taken) {
+      const bobY = Math.sin(t * 3 + r.bob) * 3;
+      m.position.set(r.x, r.y + bobY, r.z);
+      m.rotation.y = t * 1.4 + r.bob;
+    }
+  });
+}
+
+// ---------- main loop ----------
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min((now - lastT) / 1000, 1 / 30);
+  lastT = now;
+  const t = now / 1000;
+
+  update(dt, t);
+
+  syncRings(t);
+  syncShards(t);
+  syncTrail();
+  updateParticles(dt);
+  updateClouds();
+  updateBallMesh(t);
+  updateFlag(t);
+  updateCamera(dt);
+
+  sun.position.set(ball.x - 150, ball.y + 320, ball.z + 220);
+  sun.target.position.set(ball.x, ball.y, ball.z);
+  sun.target.updateMatrixWorld();
+
+  syncPopups(dt);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+updateHud();
+loadingEl.classList.add('hide');
+requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
