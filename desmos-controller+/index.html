@@ -1,0 +1,2671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Desmos Controller+</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #10131a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+  }
+  canvas { display: block; touch-action: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---------- Main Menu ---------- */
+  #menuScreen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    background: radial-gradient(circle at 50% 0%, #1c2440 0%, #0c0e16 70%);
+    color: #fff;
+    overflow-y: auto;
+    padding: 60px 20px 40px;
+    z-index: 20;
+  }
+  #menuScreen.hidden { display: none; }
+  .logo {
+    font-size: 42px; font-weight: 800; letter-spacing: -1px;
+    background: linear-gradient(90deg,#4d7cff,#3ddc97);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .logo .plus { color: #3ddc97; }
+  .tagline { color: #8992ab; font-size: 14px; margin-top: 6px; margin-bottom: 28px; text-align: center; max-width: 420px; }
+  .menuBtn {
+    background: linear-gradient(135deg,#4d7cff,#3b64d6);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 14px 34px; font-size: 17px; font-weight: 700;
+    box-shadow: 0 6px 18px rgba(77,124,255,0.35);
+    margin-bottom: 30px;
+    transition: transform 0.15s ease;
+  }
+  .menuBtn:hover { transform: translateY(-2px); }
+  .menuBtn:active { transform: translateY(0); }
+  .menuRow2 { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
+  .menuBtn2 {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #cfd4e6; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 700;
+  }
+  .menuBtn2:hover { background: rgba(255,255,255,0.15); }
+  #leaderboardBtn { color: #ffffff; }
+  #savedList {
+    width: 100%; max-width: 480px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .sectionLabel { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b7390; margin-bottom: 10px; align-self: flex-start; }
+  .emptyMsg { color: #59617e; font-size: 14px; text-align: center; padding: 30px 0; }
+  .saveRow {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .saveRow .info { flex: 1; min-width: 0; }
+  .saveRow .name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saveRow .meta { font-size: 11px; color: #6b7390; margin-top: 2px; }
+  .rowBtn {
+    border: none; border-radius: 7px; padding: 7px 10px; font-size: 13px; font-weight: 700;
+    background: rgba(255,255,255,0.08); color: #cfd4e6;
+  }
+  .rowBtn.play { background: #3ddc97; color: #04331f; }
+  .rowBtn.edit { background: #4d7cff; color: #fff; }
+  .rowBtn.del { background: rgba(255,90,90,0.15); color: #ff8080; }
+  .rowBtn:hover { filter: brightness(1.1); }
+  .controlsHint { margin-top: 34px; color: #59617e; font-size: 12px; text-align: center; line-height: 1.7; max-width: 420px; }
+  .controlsHint b { color: #98a2c0; }
+
+  /* ---------- Modal ---------- */
+  #nameModal, #hostModal, #joinModal, #lobbyScreen, #leaderboardModal, #winOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 40;
+  }
+  #nameModal.hidden, #hostModal.hidden, #joinModal.hidden, #lobbyScreen.hidden, #leaderboardModal.hidden, #winOverlay.hidden { display: none; }
+  #hostLevelSelect {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: #10131f; color: #fff; font-size: 14px; margin-bottom: 8px;
+  }
+  #lobbyPlayers { margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+  .lobbyPlayerRow {
+    display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #cfd4e6;
+  }
+  .lobbyPlayerRow .hostTag { color: #3ddc97; font-weight: 700; font-size: 11px; }
+  #leaderboardList { max-height: 320px; overflow-y: auto; margin: 8px 0; }
+  .lbRow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 13px; color: #cfd4e6; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .lbRow .rank { width: 26px; color: #6b7390; font-weight: 700; }
+  .lbRow .lbName { flex: 1; }
+  .lbRow .lbScore { font-weight: 700; color: #fff; }
+  .modalBox {
+    background: #1b2136; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 26px; width: 320px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modalBox h3 { color: #fff; font-size: 17px; margin-bottom: 14px; }
+  .modalBox input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: #10131f; color: #fff; font-size: 15px; margin-bottom: 8px;
+  }
+  .modalBox input:focus { outline: 2px solid #4d7cff; }
+  .modalWarn { color: #ff8080; font-size: 12px; min-height: 16px; margin-bottom: 6px; }
+  .modalActions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .modalActions button { border: none; border-radius: 8px; padding: 9px 16px; font-size: 14px; font-weight: 700; }
+  .modalActions .cancelBtn { background: rgba(255,255,255,0.08); color: #cfd4e6; }
+  .modalActions .okBtn { background: #4d7cff; color: #fff; }
+
+  /* ---------- Game container ---------- */
+  #gameContainer { position: fixed; inset: 0; z-index: 5; display: none; }
+  #gameContainer.active { display: block; }
+
+  #topBar {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; z-index: 10;
+    background: linear-gradient(rgba(10,12,20,0.65), transparent);
+    pointer-events: none;
+    flex-wrap: wrap;
+  }
+  #topBar > * { pointer-events: auto; }
+  .levelName { color: #fff; font-weight: 800; font-size: 15px; margin-right: 6px; text-shadow: 0 2px 6px rgba(0,0,0,0.5); white-space: nowrap; }
+  .toolBtn {
+    border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700;
+    background: rgba(255,255,255,0.14); color: #fff; backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .toolBtn:hover { background: rgba(255,255,255,0.22); }
+  .toolBtn.active { background: #4d7cff; border-color: #4d7cff; }
+  .toolBtn.eraser.active { background: #ff5a5a; border-color: #ff5a5a; }
+  .toolGroup { display: flex; gap: 4px; background: rgba(0,0,0,0.25); padding: 3px; border-radius: 10px; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 520px) {
+    .toolBtn { padding: 7px 9px; font-size: 12px; white-space: nowrap; }
+    .levelName { font-size: 13px; }
+    #propsPanel, #boardPanel, #playerPanel { width: 168px; padding: 12px; }
+  }
+  .spacer { flex: 1; }
+  .toolBtn.hbOn { background: #3ddc97; color: #04331f; border-color: #3ddc97; }
+  .toolBtn.playBtn { background: #3ddc97; color: #04331f; }
+  .toolBtn.editBtn { background: #ffb84d; color: #3a2400; }
+
+  #propsPanel {
+    position: fixed; top: 62px; right: 12px; z-index: 10;
+    background: rgba(15,18,30,0.85); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px; width: 190px; color: #fff;
+    backdrop-filter: blur(6px);
+    display: none;
+  }
+  #propsPanel.show { display: block; }
+  #propsPanel h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8992ab; margin-bottom: 10px; }
+  #boardPanel {
+    position: fixed; top: 62px; left: 12px; z-index: 10;
+    background: rgba(15,18,30,0.85); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px; width: 190px; color: #fff;
+    backdrop-filter: blur(6px);
+    display: none;
+  }
+  #boardPanel.show { display: block; }
+  #boardPanel h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8992ab; margin-bottom: 10px; }
+  #playerPanel {
+    position: fixed; top: 62px; left: 12px; z-index: 10;
+    background: rgba(15,18,30,0.85); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px; width: 190px; color: #fff;
+    backdrop-filter: blur(6px);
+    display: none;
+  }
+  #playerPanel.show { display: block; }
+  #playerPanel h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8992ab; margin-bottom: 10px; }
+  #settingsPanel {
+    position: fixed; top: 62px; right: 12px; z-index: 10;
+    background: rgba(15,18,30,0.85); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 14px; width: 200px; color: #fff;
+    backdrop-filter: blur(6px);
+    display: none;
+  }
+  #settingsPanel.show { display: block; }
+  #settingsPanel h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8992ab; margin-bottom: 10px; }
+  .wideBtn { width: 100%; margin-bottom: 8px; text-align: left; }
+  #invincibleBtn.on { background: #ffb84d; color: #3a2400; }
+  #verifyModeBtn.on { background: #3ddc97; color: #04331f; }
+  .verifiedBadge { color: #3ddc97; font-weight: 800; font-size: 11px; margin-left: 6px; }
+
+  #chatPanel {
+    position: fixed; top: 100px; right: 12px; z-index: 13;
+    width: 240px; max-height: 340px;
+    background: rgba(15,18,30,0.88); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px; backdrop-filter: blur(6px);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  #chatPanel.show { display: flex; }
+  #chatHeader {
+    padding: 8px 12px; font-size: 12px; font-weight: 700; color: #cfd4e6;
+    background: rgba(255,255,255,0.06); cursor: grab; user-select: none;
+  }
+  #chatHeader:active { cursor: grabbing; }
+  #chatMessages { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; color: #cfd4e6; display: flex; flex-direction: column; gap: 4px; max-height: 220px; }
+  #chatMessages .chatMsg b { color: #8ab4ff; }
+  #chatInputRow { display: flex; gap: 6px; padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+  #chatInputRow input { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #10131f; color: #fff; font-size: 12px; }
+  #chatInputRow button { border: none; border-radius: 6px; padding: 6px 10px; background: #4d7cff; color: #fff; font-weight: 700; }
+  #kindPicker {
+    position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 10;
+    display: flex; gap: 6px;
+  }
+  .propRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; gap: 6px; }
+  .propRow label { color: #cfd4e6; }
+  .propRow input[type=number] { width: 64px; padding: 4px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #10131f; color: #fff; }
+  .propRow input[type=color] { width: 44px; height: 26px; padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #10131f; cursor: pointer; }
+  #propsPanel .delBtn { width: 100%; margin-top: 6px; background: rgba(255,90,90,0.2); color: #ff8080; border: none; border-radius: 7px; padding: 8px; font-weight: 700; font-size: 12px; }
+  .axisTabs { display: flex; gap: 4px; margin-bottom: 6px; }
+  .axisTab { flex: 1; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #cfd4e6; border-radius: 6px; padding: 5px 0; font-size: 12px; font-weight: 700; }
+  .axisTab.active { background: #4d7cff; border-color: #4d7cff; color: #fff; }
+  .axisStepper { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .axisBtn { flex: 0 0 auto; width: 32px; height: 28px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #fff; border-radius: 7px; font-size: 14px; font-weight: 700; }
+  .axisBtn:hover { background: rgba(255,255,255,0.18); }
+  .axisValue { flex: 1; text-align: center; font-size: 13px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+  .miniStepper { display: flex; align-items: center; gap: 4px; }
+  .miniBtn, .plainStepBtn { width: 22px; height: 22px; padding: 0; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #fff; border-radius: 5px; font-size: 11px; font-weight: 700; }
+  .miniBtn:hover, .plainStepBtn:hover { background: rgba(255,255,255,0.18); }
+  .miniVal { min-width: 34px; text-align: center; font-size: 12px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+
+  #palette {
+    position: fixed; left: 12px; bottom: 12px; z-index: 10;
+    display: flex; gap: 6px; flex-wrap: wrap; max-width: 90vw;
+  }
+
+  #playtestHud {
+    position: fixed; left: 14px; bottom: 14px; z-index: 10;
+    color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    pointer-events: none; display: none;
+  }
+  #playtestHud.show { display: block; }
+  #playtestHud .score { font-size: 22px; font-weight: 800; }
+  #playtestHud .hpLine { font-size: 14px; font-weight: 700; margin-top: 3px; opacity: 0.95; }
+  #playtestHud .hint { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+  /* touch controls: only shown on touch-capable devices during Playtest */
+  #mobileControls { display: none; }
+  #mobileControls.show { display: block; }
+  #joystickBase {
+    position: fixed; left: 26px; bottom: 26px; z-index: 12;
+    width: 116px; height: 116px; border-radius: 50%;
+    background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.3);
+    touch-action: none;
+  }
+  #joystickKnob {
+    position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
+    margin: -26px 0 0 -26px; border-radius: 50%;
+    background: rgba(255,255,255,0.55); border: 2px solid rgba(255,255,255,0.7);
+    pointer-events: none;
+  }
+  #mobileActionBtns {
+    position: fixed; right: 22px; bottom: 26px; z-index: 12;
+    display: flex; align-items: flex-end; gap: 14px;
+  }
+  #mobileActionBtns button {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4);
+    font-size: 26px; color: #fff; touch-action: none;
+  }
+  #mobileActionBtns button:active { background: rgba(255,255,255,0.4); }
+
+  #saveFlash {
+    position: fixed; top: 56px; right: 14px;
+    color: #3ddc97; font-size: 12px; font-weight: 800; letter-spacing: 1.5px;
+    opacity: 0; transition: opacity 0.4s ease; z-index: 10; pointer-events: none;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  }
+  #saveFlash.show { opacity: 1; }
+
+  #hazardFlash {
+    position: fixed; inset: 0; background: #ff2b2b; opacity: 0; pointer-events: none; z-index: 15;
+    transition: opacity 0.15s ease;
+  }
+  #hazardFlash.show { opacity: 0.28; }
+</style>
+</head>
+<body>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="menuScreen">
+  <div class="logo">Desmos Controller<span class="plus">+</span></div>
+  <div class="tagline">Build your own 3D checkerboard world, then hop in and play it — dodge the track cube, place platforms and hazards, and shoot some arrows.</div>
+  <button class="menuBtn" id="createBtn">+ Create New Game</button>
+  <div class="menuRow2">
+    <button class="menuBtn2" id="hostRoomBtn">🌐 Host Multiplayer</button>
+    <button class="menuBtn2" id="joinRoomBtn">🔑 Join Room</button>
+    <button class="menuBtn2" id="leaderboardBtn">🏆 Leaderboard</button>
+  </div>
+
+  <div class="sectionLabel">Your Games</div>
+  <div id="savedList"></div>
+
+  <div class="controlsHint">
+    <b>Create mode:</b> click the palette to place stuff, click an object to select &amp; edit it.<br>
+    <b>Playtest mode:</b> <b>WASD</b> move · <b>Space</b> double jump · <b>Click / F</b> shoot arrows.<br>
+    Toggle <b>Hitboxes</b> anytime to see collision boxes.
+  </div>
+</div>
+
+<!-- ============ NAME MODAL ============ -->
+<div id="nameModal" class="hidden">
+  <div class="modalBox">
+    <h3 id="modalTitle">New Game</h3>
+    <input type="text" id="nameInput" maxlength="28" placeholder="Game name...">
+    <div class="modalWarn" id="modalWarn"></div>
+    <div class="modalActions">
+      <button class="cancelBtn" id="modalCancel">Cancel</button>
+      <button class="okBtn" id="modalOk">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MULTIPLAYER: HOST / JOIN / LOBBY / LEADERBOARD ============ -->
+<div id="hostModal" class="hidden">
+  <div class="modalBox">
+    <h3>Host Multiplayer Room</h3>
+    <select id="hostLevelSelect"></select>
+    <input type="text" id="hostNameInput" maxlength="16" placeholder="Your name...">
+    <div class="modalWarn" id="hostWarn"></div>
+    <div class="modalActions">
+      <button class="cancelBtn" id="hostCancel">Cancel</button>
+      <button class="okBtn" id="hostGoBtn">Host</button>
+    </div>
+  </div>
+</div>
+
+<div id="joinModal" class="hidden">
+  <div class="modalBox">
+    <h3>Join Multiplayer Room</h3>
+    <input type="text" id="joinCodeInput" maxlength="4" placeholder="Room code" style="text-transform:uppercase;">
+    <input type="text" id="joinNameInput" maxlength="16" placeholder="Your name...">
+    <div class="modalWarn" id="joinWarn"></div>
+    <div class="modalActions">
+      <button class="cancelBtn" id="joinCancel">Cancel</button>
+      <button class="okBtn" id="joinGoBtn">Join</button>
+    </div>
+  </div>
+</div>
+
+<div id="lobbyScreen" class="hidden">
+  <div class="modalBox">
+    <h3>Room <span id="lobbyCode">----</span></h3>
+    <div id="lobbyPlayers"></div>
+    <div class="modalWarn" id="lobbyWarn"></div>
+    <button class="menuBtn" id="lobbyStartBtn" style="display:none; width:100%;">▶ Start Game</button>
+    <div style="opacity:.7; font-size:12px; margin-top:8px;" id="lobbyWaitMsg">Waiting for the host to start...</div>
+    <button class="cancelBtn" id="lobbyLeaveBtn" style="margin-top:12px; width:100%;">Leave Room</button>
+  </div>
+</div>
+
+<div id="leaderboardModal" class="hidden">
+  <div class="modalBox" style="width:320px;">
+    <h3>🏆 World Leaderboard</h3>
+    <div id="leaderboardList"></div>
+    <div class="modalActions"><button class="cancelBtn" id="leaderboardCloseBtn">Close</button></div>
+  </div>
+</div>
+
+<div id="chatPanel" class="hidden">
+  <div id="chatHeader">💬 Chat</div>
+  <div id="chatMessages"></div>
+  <div id="chatInputRow">
+    <input type="text" id="chatInput" maxlength="240" placeholder="Message...">
+    <button id="chatSendBtn">➤</button>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div id="gameContainer">
+  <div id="topBar">
+    <span class="levelName" id="levelNameLabel">Untitled</span>
+    <div class="toolGroup" id="paletteTop">
+      <button class="toolBtn active" data-tool="select" title="Select">🖱 Select</button>
+      <button class="toolBtn" data-tool="player" title="Move player start">🧍 Player</button>
+      <button class="toolBtn" data-tool="platform" title="Platform">▭ Platform</button>
+      <button class="toolBtn" data-tool="wall" title="Wall">▮ Wall</button>
+      <button class="toolBtn" data-tool="spike" title="Spike">▲ Spike</button>
+      <button class="toolBtn" data-tool="coin" title="Coin">● Coin</button>
+      <button class="toolBtn" data-tool="enemy" title="Enemy">■ Enemy</button>
+      <button class="toolBtn" data-tool="shape" title="Shape">◆ Shape</button>
+      <button class="toolBtn" data-tool="weapon" title="Weapon pickup">🔫 Weapon</button>
+      <button class="toolBtn" data-tool="endpoint" title="Goal — reach it to win">✵ Goal</button>
+      <button class="toolBtn eraser" data-tool="eraser" title="Eraser">✕ Erase</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="toolBtn" id="boardBtn">⚙ Board</button>
+    <button class="toolBtn" id="playerBtn">🧑 Player</button>
+    <button class="toolBtn" id="undoBtn" title="Undo (Ctrl+Z)">↶ Undo</button>
+    <button class="toolBtn" id="redoBtn" title="Redo (Ctrl+Y)">↷ Redo</button>
+    <button class="toolBtn" id="hitboxBtn">☐ Hitboxes</button>
+    <button class="toolBtn" id="saveBtn">💾 Save</button>
+    <button class="toolBtn playBtn" id="modeToggleBtn">▶ Playtest</button>
+    <button class="toolBtn" id="menuBtn">⌂ Menu</button>
+    <button class="toolBtn" id="settingsBtn">⚙️ Settings</button>
+  </div>
+
+  <div id="settingsPanel">
+    <h4>Settings</h4>
+    <button class="rowBtn wideBtn" id="selectAllBtn">Select All Objects</button>
+    <button class="rowBtn wideBtn" id="invincibleBtn">Invincibility: Off</button>
+    <div style="opacity:.6; font-size:11px; margin:2px 0 8px;" id="invincibleNote">Using invincibility blocks score submission for this playtest.</div>
+    <button class="rowBtn wideBtn" id="verifyModeBtn">Verify Mode: Off</button>
+    <div style="opacity:.6; font-size:11px; margin:2px 0 8px;">Win a Verify Mode run (no invincibility) to mark this game ✓ Verified.</div>
+    <button class="rowBtn wideBtn" id="settingsMenuBtn">⌂ Main Menu</button>
+    <button class="rowBtn wideBtn" id="settingsSaveExitBtn">💾 Save &amp; Exit</button>
+  </div>
+
+  <div id="kindPicker">
+    <div class="toolGroup" id="shapeKindRow" style="display:none;">
+      <button class="toolBtn kindBtn active" data-shape="sphere">● Sphere</button>
+      <button class="toolBtn kindBtn" data-shape="box">▭ Box</button>
+      <button class="toolBtn kindBtn" data-shape="cylinder">▮ Cylinder</button>
+      <button class="toolBtn kindBtn" data-shape="cone">▲ Cone</button>
+      <button class="toolBtn kindBtn" data-shape="torus">◎ Torus</button>
+    </div>
+    <div class="toolGroup" id="weaponKindRow" style="display:none;">
+      <button class="toolBtn kindBtn active" data-weapon="knife">🔪 Knife (2 dmg)</button>
+      <button class="toolBtn kindBtn" data-weapon="rifle">🔫 Rifle (5 dmg)</button>
+      <button class="toolBtn kindBtn" data-weapon="machinegun">💥 Machine Gun (1 dmg, fast)</button>
+    </div>
+  </div>
+
+  <div id="playerPanel">
+    <h4>Player</h4>
+    <div class="propRow"><label>Max HP</label>
+      <div class="miniStepper"><button class="plainStepBtn" id="playerHpLeft">◀</button><span class="miniVal" id="playerHpVal">25</span><button class="plainStepBtn" id="playerHpRight">▶</button></div>
+    </div>
+    <div class="propRow"><label>Color</label><input type="color" id="playerColorInput"></div>
+    <div class="propRow"><label>Weapon</label></div>
+    <div class="axisTabs" id="playerWeaponTabs">
+      <button class="axisTab active" data-weapon="bow">Bow</button>
+      <button class="axisTab" data-weapon="knife">Knife</button>
+      <button class="axisTab" data-weapon="rifle">Rifle</button>
+      <button class="axisTab" data-weapon="machinegun">MG</button>
+    </div>
+  </div>
+
+  <div id="boardPanel">
+    <h4>Board &amp; Path</h4>
+    <div class="propRow"><label>Board Size</label><input type="number" id="boardSize" step="2" min="12" max="48"></div>
+    <div class="propRow"><label>Path Position</label><input type="number" id="boardPathZ" step="0.5"></div>
+    <div class="propRow"><label>Path Width</label><input type="number" id="boardPathWidth" step="0.5" min="1" max="10"></div>
+    <div class="propRow"><label>Sky Color</label><input type="color" id="boardSkyColor"></div>
+    <div class="propRow"><label>Board Color</label><input type="color" id="boardColorInput"></div>
+  </div>
+
+  <div id="propsPanel">
+    <h4>Selected Object</h4>
+    <div class="axisTabs" id="axisTabs">
+      <button class="axisTab active" data-axis="x">X</button>
+      <button class="axisTab" data-axis="y">Y</button>
+      <button class="axisTab" data-axis="z">Z</button>
+    </div>
+    <div class="axisStepper">
+      <button class="axisBtn" id="axisLeftBtn">◀</button>
+      <span class="axisValue" id="axisValueEl">0</span>
+      <button class="axisBtn" id="axisRightBtn">▶</button>
+    </div>
+    <div class="propRow" id="rotRow"><label>Rotation°</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="rot" data-dir="-1">◀</button><span class="miniVal" id="rotValueEl">0</span><button class="miniBtn" data-key="rot" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="scaleRow"><label>Scale</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="scale" data-dir="-1">◀</button><span class="miniVal" id="scaleValueEl">1</span><button class="miniBtn" data-key="scale" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow"><label>Color</label><input type="color" id="propColor"></div>
+    <div class="propRow" id="animRow"><label>Animation</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="anim" data-dir="-1">◀</button><span class="miniVal" id="animValueEl">None</span><button class="miniBtn" data-key="anim" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="patrolRangeRow"><label>Patrol Range</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="patrolRange" data-dir="-1">◀</button><span class="miniVal" id="patrolRangeValueEl">1.8</span><button class="miniBtn" data-key="patrolRange" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="patrolSpeedRow"><label>Patrol Speed</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="patrolSpeed" data-dir="-1">◀</button><span class="miniVal" id="patrolSpeedValueEl">1.5</span><button class="miniBtn" data-key="patrolSpeed" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="hpRow"><label>Enemy HP</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="hp" data-dir="-1">◀</button><span class="miniVal" id="hpValueEl">3</span><button class="miniBtn" data-key="hp" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="damageRow"><label>Contact Damage</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="damage" data-dir="-1">◀</button><span class="miniVal" id="damageValueEl">10</span><button class="miniBtn" data-key="damage" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="coinValueRow"><label>Coin Value</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="coinValue" data-dir="-1">◀</button><span class="miniVal" id="coinValueValueEl">1</span><button class="miniBtn" data-key="coinValue" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" id="noRespawnRow"><label>No Respawn</label>
+      <div class="miniStepper"><button class="miniBtn" data-key="noRespawn" data-dir="-1">◀</button><span class="miniVal" id="noRespawnValueEl">Yes</span><button class="miniBtn" data-key="noRespawn" data-dir="1">▶</button></div>
+    </div>
+    <div class="propRow" style="opacity:.6; font-size:11px; justify-content:center;">Drag objects in the scene to move them</div>
+    <div class="propRow" style="gap:6px;">
+      <button class="rowBtn" id="copyBtn" style="flex:1;">📋 Copy</button>
+      <button class="rowBtn" id="pasteBtn" style="flex:1;">📄 Paste</button>
+    </div>
+    <button class="rowBtn" id="dupBtn" style="width:100%; margin-bottom:8px;">⧉ Copy &amp; Paste</button>
+    <button class="delBtn" id="propDelBtn">🗑 Delete Object</button>
+  </div>
+
+  <div id="playtestHud">
+    <div class="score">⭐ Score: <span id="scoreVal">0</span></div>
+    <div class="hpLine">❤ HP: <span id="hpVal">25 / 25</span> &nbsp; 🗡 <span id="weaponVal">Knife</span></div>
+    <div class="hint">WASD move · Space double jump · Click / F shoot</div>
+  </div>
+
+  <div id="mobileControls">
+    <div id="joystickBase"><div id="joystickKnob"></div></div>
+    <div id="mobileActionBtns">
+      <button id="mobileShootBtn">🏹</button>
+      <button id="mobileJumpBtn">⤴</button>
+    </div>
+  </div>
+
+  <div id="saveFlash">SAVED</div>
+  <div id="hazardFlash"></div>
+
+  <div id="winOverlay" class="hidden">
+    <div class="modalBox" style="text-align:center;">
+      <h3 id="winTitle">🏆 You Win!</h3>
+      <div id="winSubtitle" style="color:#8992ab; font-size:13px; margin-bottom:10px;"></div>
+      <button class="okBtn" id="winCloseBtn" style="width:100%;">Continue Playing</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const SAVE_KEY = 'desmosControllerPlusSaves';
+const DEFAULT_BOARD = { size: 24, pathZ: 0, pathWidth: 3, skyColor: '#aee2f7', boardColor: '#ffffff' };
+let BOARD = DEFAULT_BOARD.size;   // checkerboard world size (per-level, set by applyBoardSettings)
+let HALF = BOARD / 2;
+let PATH_Z = DEFAULT_BOARD.pathZ;
+let PATH_WIDTH = DEFAULT_BOARD.pathWidth;
+const AUTOSAVE_MS = 30000;
+
+const EDIT_PAN_SPEED = 14;
+const MOVE_SPEED = 6.5;
+const JUMP_SPEED = 7.5;
+const GRAVITY = 20;
+const PLAYER_RADIUS = 0.5;
+const PLAYER_HEIGHT = 1.4;
+
+const ARROW_SPEED = 17;
+const ARROW_LIFETIME = 2.2;
+
+const HAZARD_R = 0.5;    // spike collision radius
+const COLLECT_R = 0.55;  // coin collision radius
+const ENEMY_R = 0.55;    // enemy collision radius
+const TRACKCUBE_R = 0.9; // red track cube collision radius
+const VBAND = 1;         // vertical hit tolerance (+/-) for circular hazards
+
+const TYPE_SIZE = {
+  platform: [2, 0.5, 2],
+  wall: [1, 2.5, 1],
+};
+const TYPE_DEFAULT_Y = {
+  platform: 0.25,
+  wall: 1.25,
+  spike: 0.4,
+  coin: 0.55,
+  enemy: 0.4,
+  shape: 0.5,
+  weapon: 0.5,
+  endpoint: 0.6,
+};
+const SHAPE_KINDS = ['sphere', 'box', 'cylinder', 'cone', 'torus'];
+const WEAPONS = {
+  bow: { label: 'Bow', damage: 3, cooldown: 0.4, color: 0x8a5a2b },
+  knife: { label: 'Knife', damage: 2, cooldown: 0.35, color: 0xd0d4db },
+  rifle: { label: 'Rifle', damage: 5, cooldown: 0.55, color: 0x4a4a4a },
+  machinegun: { label: 'Machine Gun', damage: 1, cooldown: 0.1, color: 0x2b2b2b },
+};
+// Bow is the player's innate weapon (always available, used automatically with
+// F/Click/the shoot button); Knife/Rifle/Machine Gun are pickups found in-level.
+const DEFAULT_PLAYER = { hp: 25, color: '#3d6cff', weapon: 'bow' };
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let currentLevel = null;     // { name, objects: [...], updatedAt }
+let mode = null;             // 'editor' | 'playtest'
+let currentTool = 'select';
+let currentShapeKind = 'sphere';
+let currentWeaponKind = 'knife';
+let selectedObj = null;
+let hitboxMode = false;
+
+let editorEntries = [];      // { obj, mesh } while in editor
+let playtestState = null;    // built fresh each playtest entry
+
+let lastAutosave = 0;
+let sceneReady = false;
+
+const keys = {};
+
+/* ============================================================
+   DOM
+   ============================================================ */
+const menuScreen = document.getElementById('menuScreen');
+const savedListEl = document.getElementById('savedList');
+const createBtn = document.getElementById('createBtn');
+
+const nameModal = document.getElementById('nameModal');
+const modalTitle = document.getElementById('modalTitle');
+const nameInput = document.getElementById('nameInput');
+const modalWarn = document.getElementById('modalWarn');
+const modalOk = document.getElementById('modalOk');
+const modalCancel = document.getElementById('modalCancel');
+
+const gameContainer = document.getElementById('gameContainer');
+const levelNameLabel = document.getElementById('levelNameLabel');
+const paletteTop = document.getElementById('paletteTop');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const hitboxBtn = document.getElementById('hitboxBtn');
+const boardBtn = document.getElementById('boardBtn');
+const boardPanel = document.getElementById('boardPanel');
+const boardSizeInput = document.getElementById('boardSize');
+const boardPathZInput = document.getElementById('boardPathZ');
+const boardPathWidthInput = document.getElementById('boardPathWidth');
+const boardSkyColorInput = document.getElementById('boardSkyColor');
+const boardColorInputEl = document.getElementById('boardColorInput');
+const shapeKindRow = document.getElementById('shapeKindRow');
+const weaponKindRow = document.getElementById('weaponKindRow');
+const playerBtn = document.getElementById('playerBtn');
+const playerPanel = document.getElementById('playerPanel');
+const playerHpLeft = document.getElementById('playerHpLeft');
+const playerHpRight = document.getElementById('playerHpRight');
+const playerHpVal = document.getElementById('playerHpVal');
+const playerColorInput = document.getElementById('playerColorInput');
+const playerWeaponTabs = document.getElementById('playerWeaponTabs');
+const saveBtn = document.getElementById('saveBtn');
+const modeToggleBtn = document.getElementById('modeToggleBtn');
+const menuBtnGame = document.getElementById('menuBtn');
+const propsPanel = document.getElementById('propsPanel');
+const axisTabs = document.getElementById('axisTabs');
+const axisLeftBtn = document.getElementById('axisLeftBtn');
+const axisRightBtn = document.getElementById('axisRightBtn');
+const axisValueEl = document.getElementById('axisValueEl');
+let activeAxis = 'x';
+const propColor = document.getElementById('propColor');
+const propDelBtn = document.getElementById('propDelBtn');
+const copyBtn = document.getElementById('copyBtn');
+const pasteBtn = document.getElementById('pasteBtn');
+const dupBtn = document.getElementById('dupBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const invincibleBtn = document.getElementById('invincibleBtn');
+const verifyModeBtn = document.getElementById('verifyModeBtn');
+let verifyMode = false;
+const settingsMenuBtn = document.getElementById('settingsMenuBtn');
+const settingsSaveExitBtn = document.getElementById('settingsSaveExitBtn');
+const playtestHud = document.getElementById('playtestHud');
+const scoreVal = document.getElementById('scoreVal');
+const hpVal = document.getElementById('hpVal');
+const weaponVal = document.getElementById('weaponVal');
+const saveFlash = document.getElementById('saveFlash');
+const hazardFlash = document.getElementById('hazardFlash');
+const winOverlay = document.getElementById('winOverlay');
+const winTitle = document.getElementById('winTitle');
+const winSubtitle = document.getElementById('winSubtitle');
+const winCloseBtn = document.getElementById('winCloseBtn');
+winCloseBtn.addEventListener('click', () => winOverlay.classList.add('hidden'));
+let invincible = false;
+let invincibleUsedThisSession = false;
+const mobileControls = document.getElementById('mobileControls');
+const joystickBase = document.getElementById('joystickBase');
+const joystickKnob = document.getElementById('joystickKnob');
+const mobileJumpBtn = document.getElementById('mobileJumpBtn');
+const mobileShootBtn = document.getElementById('mobileShootBtn');
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+let touchMoveX = 0, touchMoveZ = 0;
+
+/* ============================================================
+   SAVE / LOAD
+   ============================================================ */
+function loadAllSaves() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function writeAllSaves(all) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(all)); } catch (e) {}
+}
+function flashSaved() {
+  saveFlash.classList.add('show');
+  setTimeout(() => saveFlash.classList.remove('show'), 900);
+}
+function saveCurrentLevel(silent) {
+  if (!currentLevel) return;
+  currentLevel.updatedAt = Date.now();
+  const all = loadAllSaves();
+  all[currentLevel.name] = currentLevel;
+  writeAllSaves(all);
+  if (!silent) flashSaved();
+}
+function deleteSave(name) {
+  const all = loadAllSaves();
+  delete all[name];
+  writeAllSaves(all);
+}
+
+/* ============================================================
+   MENU RENDERING
+   ============================================================ */
+function renderMenu() {
+  const all = loadAllSaves();
+  const names = Object.keys(all).sort((a, b) => (all[b].updatedAt || 0) - (all[a].updatedAt || 0));
+  savedListEl.innerHTML = '';
+  if (names.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'emptyMsg';
+    empty.textContent = 'No games yet — create one!';
+    savedListEl.appendChild(empty);
+    return;
+  }
+  for (const name of names) {
+    const lvl = all[name];
+    const row = document.createElement('div');
+    row.className = 'saveRow';
+
+    const info = document.createElement('div');
+    info.className = 'info';
+    const nm = document.createElement('div');
+    nm.className = 'name';
+    nm.textContent = name;
+    if (lvl.verified) {
+      const badge = document.createElement('span');
+      badge.className = 'verifiedBadge';
+      badge.textContent = '✓ Verified';
+      nm.appendChild(badge);
+    }
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const d = lvl.updatedAt ? new Date(lvl.updatedAt) : null;
+    meta.textContent = (lvl.objects ? lvl.objects.length : 0) + ' objects' + (d ? ' · ' + d.toLocaleDateString() : '');
+    info.appendChild(nm); info.appendChild(meta);
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'rowBtn play'; playBtn.textContent = '▶ Play';
+    playBtn.onclick = () => enterLevel(lvl, 'playtest');
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'rowBtn edit'; editBtn.textContent = '✏ Edit';
+    editBtn.onclick = () => enterLevel(lvl, 'editor');
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'rowBtn del'; delBtn.textContent = '🗑';
+    delBtn.onclick = () => {
+      if (confirm('Delete "' + name + '"? This cannot be undone.')) {
+        deleteSave(name);
+        renderMenu();
+      }
+    };
+
+    row.appendChild(info); row.appendChild(playBtn); row.appendChild(editBtn); row.appendChild(delBtn);
+    savedListEl.appendChild(row);
+  }
+}
+
+/* ---- new game modal ---- */
+function openNameModal() {
+  nameModal.classList.remove('hidden');
+  modalTitle.textContent = 'New Game';
+  nameInput.value = '';
+  modalWarn.textContent = '';
+  setTimeout(() => nameInput.focus(), 30);
+}
+function closeNameModal() { nameModal.classList.add('hidden'); }
+createBtn.onclick = openNameModal;
+modalCancel.onclick = closeNameModal;
+modalOk.onclick = confirmCreateGame;
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmCreateGame();
+  if (e.key === 'Escape') closeNameModal();
+});
+function confirmCreateGame() {
+  const name = nameInput.value.trim();
+  if (!name) { modalWarn.textContent = 'Please enter a name.'; return; }
+  const all = loadAllSaves();
+  if (all[name]) { modalWarn.textContent = 'A game with that name already exists.'; return; }
+  const level = { name, objects: [], updatedAt: Date.now() };
+  all[name] = level;
+  writeAllSaves(all);
+  closeNameModal();
+  enterLevel(level, 'editor');
+}
+
+/* ============================================================
+   THREE.JS SCENE (created once, reused across levels)
+   ============================================================ */
+let renderer, scene, camera, controls, clock;
+let groundMesh, pathMesh, trackCube, spawnMarker;
+let raycaster, mouse;
+let hitboxGroup = null;
+let trackBroken = false;
+const cubeFragments = [];
+const TRACK_RESPAWN_MS = 1600;
+
+function initScene() {
+  if (sceneReady) return;
+  sceneReady = true;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  gameContainer.insertBefore(renderer.domElement, gameContainer.firstChild);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xaee2f7);
+  scene.fog = new THREE.Fog(0xaee2f7, 30, 65);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 18, 20);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x9aa5b5, 1.0);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir.position.set(10, 20, 8);
+  dir.castShadow = true;
+  dir.shadow.mapSize.set(1024, 1024);
+  dir.shadow.camera.left = -30; dir.shadow.camera.right = 30;
+  dir.shadow.camera.top = 30; dir.shadow.camera.bottom = -30;
+  dir.shadow.camera.near = 1; dir.shadow.camera.far = 60;
+  dir.shadow.bias = -0.0015;
+  scene.add(dir);
+
+  // checkerboard ground
+  const tex = makeCheckerTexture(BOARD, 512);
+  const groundGeo = new THREE.PlaneGeometry(BOARD, BOARD);
+  groundGeo.rotateX(-Math.PI / 2);
+  const groundMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 });
+  groundMesh = new THREE.Mesh(groundGeo, groundMat);
+  groundMesh.receiveShadow = true;
+  scene.add(groundMesh);
+
+  // gray path, edge to edge
+  const pathGeo = new THREE.BoxGeometry(BOARD, 0.05, 3);
+  const pathMat = new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.95 });
+  pathMesh = new THREE.Mesh(pathGeo, pathMat);
+  pathMesh.position.y = 0.03;
+  pathMesh.receiveShadow = true;
+  scene.add(pathMesh);
+
+  // moving red track cube
+  const cubeGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+  const cubeMat = new THREE.MeshStandardMaterial({ color: 0xe03131, roughness: 0.5 });
+  trackCube = new THREE.Mesh(cubeGeo, cubeMat);
+  trackCube.castShadow = true;
+  trackCube.receiveShadow = true;
+  trackCube.position.set(-HALF + 1, 0.66, 0);
+  scene.add(trackCube);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0, 0);
+  controls.maxPolarAngle = Math.PI / 2 - 0.05;
+  controls.minDistance = 6;
+  controls.maxDistance = 42;
+  controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  // one-finger touch stays free for tap-to-place/select/drag, same as LEFT mouse;
+  // two fingers pinch-zoom and pan the camera
+  controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.update();
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+  clock = new THREE.Clock();
+
+  // translucent ghost marker showing where the player spawns, editable in Create mode
+  spawnMarker = buildPlayerMesh();
+  spawnMarker.traverse(o => {
+    if (o.material) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.55; }
+  });
+  scene.add(spawnMarker);
+
+  window.addEventListener('resize', onResize);
+  renderer.domElement.addEventListener('click', onCanvasClick);
+  renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
+  renderer.domElement.addEventListener('pointermove', onCanvasPointerMove);
+  window.addEventListener('pointerup', onCanvasPointerUp);
+
+  animate();
+}
+function onResize() {
+  if (!renderer) return;
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+function applyBoardSettings() {
+  const b = Object.assign({}, DEFAULT_BOARD, (currentLevel && currentLevel.board) || {});
+  BOARD = b.size;
+  HALF = BOARD / 2;
+  PATH_Z = b.pathZ;
+  PATH_WIDTH = b.pathWidth;
+
+  groundMesh.geometry.dispose();
+  groundMesh.geometry = new THREE.PlaneGeometry(BOARD, BOARD).rotateX(-Math.PI / 2);
+  groundMesh.material.map.dispose();
+  groundMesh.material.map = makeCheckerTexture(BOARD, 512, b.boardColor);
+  groundMesh.material.needsUpdate = true;
+
+  pathMesh.geometry.dispose();
+  pathMesh.geometry = new THREE.BoxGeometry(BOARD, 0.05, PATH_WIDTH);
+  pathMesh.position.set(0, 0.03, PATH_Z);
+
+  scene.background = new THREE.Color(b.skyColor);
+  scene.fog.color.set(b.skyColor);
+}
+function shadeHex(hex, factor) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 255) * factor)));
+  const g = Math.max(0, Math.min(255, Math.round(((n >> 8) & 255) * factor)));
+  const b = Math.max(0, Math.min(255, Math.round((n & 255) * factor)));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function makeCheckerTexture(cells, size, baseColor) {
+  const c1 = baseColor || '#ffffff';
+  const c2 = shadeHex(c1, 0.865);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const cell = size / cells;
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      ctx.fillStyle = (i + j) % 2 === 0 ? c1 : c2;
+      ctx.fillRect(i * cell, j * cell, cell, cell);
+    }
+  }
+  const t = new THREE.CanvasTexture(canvas);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestFilter;
+  return t;
+}
+
+/* ============================================================
+   OBJECT MESH FACTORY (shared editor + playtest)
+   ============================================================ */
+function createMeshForType(type, obj) {
+  let mesh;
+  switch (type) {
+    case 'platform': {
+      const g = new THREE.BoxGeometry(...TYPE_SIZE.platform);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xf1f3f5, roughness: 0.8 }));
+      break;
+    }
+    case 'wall': {
+      const g = new THREE.BoxGeometry(...TYPE_SIZE.wall);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x868e96, roughness: 0.8 }));
+      break;
+    }
+    case 'spike': {
+      const g = new THREE.ConeGeometry(0.42, 0.85, 4);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xff6b6b, roughness: 0.5 }));
+      mesh.rotation.y = Math.PI / 4;
+      break;
+    }
+    case 'coin': {
+      const g = new THREE.TorusGeometry(0.35, 0.13, 10, 18);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xffd43b, roughness: 0.3, metalness: 0.3 }));
+      mesh.rotation.x = Math.PI / 2;
+      break;
+    }
+    case 'enemy': {
+      const g = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xe8590c, roughness: 0.5 }));
+      break;
+    }
+    case 'shape': {
+      const kind = (obj && obj.shapeKind) || 'sphere';
+      let g;
+      if (kind === 'box') g = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      else if (kind === 'cylinder') g = new THREE.CylinderGeometry(0.45, 0.45, 0.9, 20);
+      else if (kind === 'cone') g = new THREE.ConeGeometry(0.5, 0.9, 20);
+      else if (kind === 'torus') g = new THREE.TorusGeometry(0.4, 0.15, 12, 24);
+      else g = new THREE.SphereGeometry(0.5, 20, 16);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x9c7bff, roughness: 0.4, metalness: 0.15 }));
+      break;
+    }
+    case 'weapon': {
+      const kind = (obj && obj.weaponKind) || 'knife';
+      const w = WEAPONS[kind] || WEAPONS.knife;
+      const g = new THREE.OctahedronGeometry(0.35, 0);
+      mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.35, metalness: 0.4 }));
+      break;
+    }
+    case 'endpoint': {
+      const group = new THREE.Group();
+      const core = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.5, 0),
+        new THREE.MeshStandardMaterial({ color: 0x9aa0aa, roughness: 0.25, metalness: 0.6, emissive: 0x556170, emissiveIntensity: 0.5 })
+      );
+      core.castShadow = true;
+      group.add(core);
+      const particles = [];
+      for (let i = 0; i < 8; i++) {
+        const p = new THREE.Mesh(
+          new THREE.SphereGeometry(0.055, 6, 6),
+          new THREE.MeshStandardMaterial({ color: 0xdde1e6, emissive: 0xaeb6c0, emissiveIntensity: 0.7 })
+        );
+        const ang = (i / 8) * Math.PI * 2;
+        p.userData.ang = ang;
+        p.position.set(Math.cos(ang) * 0.75, Math.sin(ang * 2) * 0.25, Math.sin(ang) * 0.75);
+        group.add(p);
+        particles.push(p);
+      }
+      group.userData.core = core;
+      group.userData.particles = particles;
+      mesh = group;
+      break;
+    }
+    default: {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    }
+  }
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+function applyTransform(mesh, obj) {
+  mesh.position.set(obj.x, obj.y, obj.z);
+  mesh.rotation.y = obj.ry || 0;
+  mesh.scale.setScalar(obj.scale || 1);
+  if (obj.color && mesh.material) mesh.material.color.set(obj.color);
+}
+// Optional per-object idle animation, selectable in the properties panel.
+// Runs every frame as an absolute function of time so it never drifts or
+// fights with applyTransform (only called on discrete edits).
+function applyObjectAnim(mesh, obj, t) {
+  const anim = obj.anim;
+  if (!anim || anim === 'none') return;
+  const phase = obj.x + obj.z;
+  if (anim === 'spin') {
+    mesh.rotation.y = (obj.ry || 0) + t * 2;
+  } else if (anim === 'bob') {
+    mesh.position.y = obj.y + Math.sin(t * 3 + phase) * 0.15;
+  } else if (anim === 'pulse') {
+    mesh.scale.setScalar((obj.scale || 1) * (1 + Math.sin(t * 4 + phase) * 0.08));
+  }
+}
+
+/* ============================================================
+   ENTER LEVEL / MODE SWITCHING
+   ============================================================ */
+function enterLevel(level, targetMode) {
+  currentLevel = level;
+  if (!level.objects) level.objects = [];
+  if (!level.board) level.board = Object.assign({}, DEFAULT_BOARD);
+  if (!level.player) level.player = Object.assign({}, DEFAULT_PLAYER);
+  undoStack = [];
+  redoStack = [];
+  initScene();
+  applyBoardSettings();
+  menuScreen.classList.add('hidden');
+  gameContainer.classList.add('active');
+  levelNameLabel.textContent = level.name;
+  lastAutosave = performance.now();
+
+  camera.position.set(0, 18, 20);
+  controls.target.set(0, 0, 0);
+  controls.update();
+
+  const spawn = level.spawn || { x: -HALF + 4, z: 4 };
+  spawnMarker.position.set(spawn.x, 0, spawn.z);
+  spawnMarker.userData.body.material.color.set(level.player.color || DEFAULT_PLAYER.color);
+
+  if (targetMode === 'editor') enterEditor();
+  else enterPlaytest();
+}
+
+function exitToMenu() {
+  if (mp) {
+    for (const id of [...mp.remotePlayers.keys()]) mpRemoveRemote(id);
+    try { mp.ws && mp.ws.close(); } catch (e) {}
+    mp = null;
+    chatPanel.classList.remove('show');
+    modeToggleBtn.style.display = '';
+  }
+  if (mode === 'editor') saveCurrentLevel(true);
+  clearEditorScene();
+  clearPlaytestScene();
+  propsPanel.classList.remove('show');
+  boardPanel.classList.remove('show');
+  playerPanel.classList.remove('show');
+  settingsPanel.classList.remove('show');
+  playtestHud.classList.remove('show');
+  mobileControls.classList.remove('show');
+  gameContainer.classList.remove('active');
+  menuScreen.classList.remove('hidden');
+  renderMenu();
+  mode = null;
+}
+
+/* ---------------- EDITOR ---------------- */
+function clearEditorScene() {
+  for (const e of editorEntries) scene.remove(e.mesh);
+  editorEntries = [];
+  selectedObj = null;
+}
+function enterEditor() {
+  clearPlaytestScene();
+  mode = 'editor';
+  controls.enabled = true;
+  spawnMarker.visible = true;
+  boardSizeInput.value = currentLevel.board.size;
+  boardPathZInput.value = currentLevel.board.pathZ;
+  boardPathWidthInput.value = currentLevel.board.pathWidth;
+  boardSkyColorInput.value = currentLevel.board.skyColor || DEFAULT_BOARD.skyColor;
+  boardColorInputEl.value = currentLevel.board.boardColor || DEFAULT_BOARD.boardColor;
+  boardPanel.classList.remove('show');
+  playerHpVal.textContent = currentLevel.player.hp || DEFAULT_PLAYER.hp;
+  playerColorInput.value = currentLevel.player.color || DEFAULT_PLAYER.color;
+  playerWeaponTabs.querySelectorAll('.axisTab').forEach(b => b.classList.toggle('active', b.dataset.weapon === (currentLevel.player.weapon || DEFAULT_PLAYER.weapon)));
+  playerPanel.classList.remove('show');
+  settingsPanel.classList.remove('show');
+  playtestHud.classList.remove('show');
+  mobileControls.classList.remove('show');
+  paletteTop.style.display = 'flex';
+  modeToggleBtn.textContent = '▶ Playtest';
+  modeToggleBtn.classList.remove('editBtn');
+  modeToggleBtn.classList.add('playBtn');
+
+  rebuildEditorMeshes();
+  setTool('select');
+  deselectObject();
+}
+function rebuildEditorMeshes() {
+  multiGlowMeshes = [];
+  multiSelectActive = false;
+  clearEditorScene();
+  for (const obj of currentLevel.objects) {
+    const mesh = createMeshForType(obj.type, obj);
+    applyTransform(mesh, obj);
+    scene.add(mesh);
+    editorEntries.push({ obj, mesh });
+  }
+  if (currentLevel.spawn) spawnMarker.position.set(currentLevel.spawn.x, 0, currentLevel.spawn.z);
+}
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('#paletteTop .toolBtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tool === tool);
+  });
+  shapeKindRow.style.display = tool === 'shape' ? 'flex' : 'none';
+  weaponKindRow.style.display = tool === 'weapon' ? 'flex' : 'none';
+  if (tool !== 'select') deselectObject();
+}
+paletteTop.addEventListener('click', e => {
+  const btn = e.target.closest('.toolBtn');
+  if (btn && btn.dataset.tool) setTool(btn.dataset.tool);
+});
+
+const OBJECT_WARN_TIERS = [100, 250, 1000, 5000];
+const OBJECT_MAX = 10000;
+function checkObjectBudget() {
+  const newCount = currentLevel.objects.length + 1;
+  if (newCount > OBJECT_MAX) {
+    alert('This level has hit the maximum of ' + OBJECT_MAX.toLocaleString() + ' objects.');
+    return false;
+  }
+  if (OBJECT_WARN_TIERS.includes(newCount)) {
+    return confirm('This level will have ' + newCount.toLocaleString() + ' objects. Are you sure you want more? (Large levels can lag, especially on mobile devices.)');
+  }
+  return true;
+}
+
+function addObject(type, x, z) {
+  if (!checkObjectBudget()) return;
+  snapshotUndo();
+  const y = TYPE_DEFAULT_Y[type] !== undefined ? TYPE_DEFAULT_Y[type] : 0.5;
+  const obj = { id: 'o' + Math.floor(performance.now() * 1000 + Math.random() * 1000), type, x, y, z, ry: 0, scale: 1 };
+  if (type === 'enemy') { obj.patrolRange = 1.8; obj.patrolSpeed = 1.5; obj.hp = 3; }
+  if (type === 'coin') { obj.coinValue = 1; }
+  if (type === 'shape') { obj.shapeKind = currentShapeKind; }
+  if (type === 'weapon') { obj.weaponKind = currentWeaponKind; }
+  currentLevel.objects.push(obj);
+  const mesh = createMeshForType(type, obj);
+  applyTransform(mesh, obj);
+  scene.add(mesh);
+  editorEntries.push({ obj, mesh });
+  selectObject(obj);
+}
+function deleteObjectEntry(entry) {
+  snapshotUndo();
+  scene.remove(entry.mesh);
+  editorEntries = editorEntries.filter(e => e !== entry);
+  currentLevel.objects = currentLevel.objects.filter(o => o !== entry.obj);
+  if (selectedObj === entry.obj) deselectObject();
+}
+function updateAxisUI() {
+  if (!selectedObj) return;
+  document.querySelectorAll('.axisTab').forEach(b => b.classList.toggle('active', b.dataset.axis === activeAxis));
+  axisValueEl.textContent = selectedObj[activeAxis].toFixed(2);
+}
+function axisStep(axis) { return axis === 'y' ? 0.25 : 0.5; }
+axisTabs.addEventListener('click', e => {
+  const btn = e.target.closest('.axisTab');
+  if (!btn || !selectedObj) return;
+  activeAxis = btn.dataset.axis;
+  updateAxisUI();
+});
+function adjustAxis(dir) {
+  if (!selectedObj) return;
+  snapshotUndo();
+  selectedObj[activeAxis] = Math.round((selectedObj[activeAxis] + dir * axisStep(activeAxis)) * 100) / 100;
+  const entry = findEntry(selectedObj);
+  if (entry) applyTransform(entry.mesh, selectedObj);
+  updateAxisUI();
+}
+axisLeftBtn.addEventListener('click', () => adjustAxis(-1));
+axisRightBtn.addEventListener('click', () => adjustAxis(1));
+
+let selectionGlow = null;
+function addSelectionGlow(mesh) {
+  clearSelectionGlow();
+  if (!mesh.geometry) return; // group-based meshes (e.g. the endpoint) skip the halo
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.85, depthWrite: false });
+  const glow = new THREE.Mesh(mesh.geometry, glowMat);
+  glow.scale.setScalar(1.18);
+  mesh.add(glow);
+  selectionGlow = glow;
+}
+function clearSelectionGlow() {
+  if (selectionGlow) {
+    if (selectionGlow.parent) selectionGlow.parent.remove(selectionGlow);
+    selectionGlow.material.dispose();
+    selectionGlow = null;
+  }
+}
+
+// Rotation/scale/patrol fields are stepper controls (no typing) — each entry
+// works in "display units" so the UI can just show get()'s return value directly.
+const ANIM_KINDS = ['none', 'spin', 'bob', 'pulse'];
+const ANIM_LABELS = { none: 'None', spin: 'Spin', bob: 'Bob', pulse: 'Pulse' };
+const STEPPERS = [
+  { key: 'rot', step: 15, min: -180, max: 180, wrap: true, decimals: 0,
+    get: o => Math.round((o.ry || 0) * 180 / Math.PI), set: (o, v) => { o.ry = v * Math.PI / 180; } },
+  { key: 'scale', step: 0.1, min: 0.3, max: 4, decimals: 1,
+    get: o => o.scale || 1, set: (o, v) => { o.scale = v; } },
+  { key: 'anim', values: ANIM_KINDS, labels: ANIM_LABELS,
+    get: o => o.anim || 'none', set: (o, v) => { o.anim = v; } },
+  { key: 'patrolRange', step: 0.5, min: 0.5, max: 8, decimals: 1, showFor: ['enemy'],
+    get: o => o.patrolRange || 1.8, set: (o, v) => { o.patrolRange = v; } },
+  { key: 'patrolSpeed', step: 0.25, min: 0.25, max: 6, decimals: 2, showFor: ['enemy'],
+    get: o => o.patrolSpeed || 1.5, set: (o, v) => { o.patrolSpeed = v; } },
+  { key: 'hp', step: 1, min: 1, max: 50, decimals: 0, showFor: ['enemy'],
+    get: o => o.hp || 3, set: (o, v) => { o.hp = v; } },
+  { key: 'damage', step: 1, min: 1, max: 50, decimals: 0, showFor: ['enemy', 'spike'],
+    get: o => o.damage || (o.type === 'spike' ? 15 : 10), set: (o, v) => { o.damage = v; } },
+  { key: 'coinValue', step: 1, min: 1, max: 20, decimals: 0, showFor: ['coin'],
+    get: o => o.coinValue || 1, set: (o, v) => { o.coinValue = v; } },
+  { key: 'noRespawn', values: [true, false], labels: { true: 'Yes', false: 'No, respawns' }, showFor: ['enemy'],
+    get: o => o.noRespawn !== false, set: (o, v) => { o.noRespawn = v; } },
+];
+function stepperDisplay(s, obj) {
+  return s.values ? s.labels[s.get(obj)] : s.get(obj).toFixed(s.decimals);
+}
+function updateStepperUI(obj) {
+  for (const s of STEPPERS) {
+    const row = document.getElementById(s.key + 'Row');
+    if (row) row.style.display = (!s.showFor || s.showFor.includes(obj.type)) ? 'flex' : 'none';
+    document.getElementById(s.key + 'ValueEl').textContent = stepperDisplay(s, obj);
+  }
+}
+document.querySelectorAll('.miniBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!selectedObj) return;
+    const s = STEPPERS.find(c => c.key === btn.dataset.key);
+    if (!s) return;
+    const dir = parseFloat(btn.dataset.dir);
+    let val;
+    if (s.values) {
+      const idx = (s.values.indexOf(s.get(selectedObj)) + dir + s.values.length) % s.values.length;
+      val = s.values[idx];
+    } else {
+      val = s.get(selectedObj) + dir * s.step;
+      if (s.wrap) {
+        if (val > s.max) val = s.min;
+        if (val < s.min) val = s.max;
+      } else {
+        val = Math.max(s.min, Math.min(s.max, val));
+      }
+      val = Math.round(val * 100) / 100;
+    }
+    snapshotUndo();
+    s.set(selectedObj, val);
+    document.getElementById(s.key + 'ValueEl').textContent = stepperDisplay(s, selectedObj);
+    const entry = findEntry(selectedObj);
+    if (entry) applyTransform(entry.mesh, selectedObj);
+  });
+});
+
+function selectObject(obj) {
+  clearMultiSelect();
+  selectedObj = obj;
+  propsPanel.classList.add('show');
+  updateAxisUI();
+  updateStepperUI(obj);
+  const entry = findEntry(obj);
+  propColor.value = obj.color || (entry && entry.mesh.material ? '#' + entry.mesh.material.color.getHexString() : '#ffffff');
+  if (entry) addSelectionGlow(entry.mesh);
+  colorDragSnapshotted = false;
+}
+function deselectObject() {
+  selectedObj = null;
+  propsPanel.classList.remove('show');
+  clearSelectionGlow();
+  clearMultiSelect();
+}
+function findEntry(obj) { return editorEntries.find(e => e.obj === obj); }
+let colorDragSnapshotted = false;
+propColor.addEventListener('input', () => {
+  if (!selectedObj) return;
+  if (!colorDragSnapshotted) { snapshotUndo(); colorDragSnapshotted = true; }
+  selectedObj.color = propColor.value;
+  const entry = findEntry(selectedObj);
+  if (entry) applyTransform(entry.mesh, selectedObj);
+});
+propColor.addEventListener('change', () => { colorDragSnapshotted = false; });
+
+/* ---- select all / delete all ---- */
+let multiSelectActive = false;
+let multiGlowMeshes = [];
+function clearMultiSelect() {
+  for (const g of multiGlowMeshes) { if (g.parent) g.parent.remove(g); g.material.dispose(); }
+  multiGlowMeshes = [];
+  if (multiSelectActive) {
+    multiSelectActive = false;
+    propsPanel.querySelectorAll('.propRow, .axisTabs, .axisStepper').forEach(el => el.style.display = '');
+    propDelBtn.textContent = '🗑 Delete Object';
+    propsPanel.classList.remove('show');
+  }
+}
+selectAllBtn.addEventListener('click', () => {
+  if (mode !== 'editor' || !editorEntries.length) return;
+  deselectObject();
+  multiSelectActive = true;
+  for (const e of editorEntries) {
+    if (!e.mesh.geometry) continue; // group-based meshes (e.g. the goal) skip the halo
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide, transparent: true, opacity: 0.7, depthWrite: false });
+    const glow = new THREE.Mesh(e.mesh.geometry, glowMat);
+    glow.scale.setScalar(1.18);
+    e.mesh.add(glow);
+    multiGlowMeshes.push(glow);
+  }
+  propsPanel.classList.add('show');
+  propsPanel.querySelectorAll('.propRow, .axisTabs, .axisStepper').forEach(el => el.style.display = 'none');
+  propDelBtn.style.display = 'block';
+  propDelBtn.textContent = '🗑 Delete All (' + editorEntries.length + ')';
+  settingsPanel.classList.remove('show');
+});
+propDelBtn.addEventListener('click', () => {
+  if (multiSelectActive) {
+    snapshotUndo();
+    clearMultiSelect();
+    for (const e of editorEntries) scene.remove(e.mesh);
+    currentLevel.objects = [];
+    editorEntries = [];
+    return;
+  }
+  if (!selectedObj) return;
+  const entry = findEntry(selectedObj);
+  if (entry) deleteObjectEntry(entry);
+});
+
+/* ---- settings panel: toggle, invincibility, menu, save & exit ---- */
+settingsBtn.addEventListener('click', () => settingsPanel.classList.toggle('show'));
+function updateInvincibleBtn() {
+  invincibleBtn.textContent = 'Invincibility: ' + (invincible ? 'On' : 'Off');
+  invincibleBtn.classList.toggle('on', invincible);
+}
+invincibleBtn.addEventListener('click', () => {
+  invincible = !invincible;
+  if (invincible) invincibleUsedThisSession = true;
+  updateInvincibleBtn();
+});
+function updateVerifyModeBtn() {
+  verifyModeBtn.textContent = 'Verify Mode: ' + (verifyMode ? 'On' : 'Off');
+  verifyModeBtn.classList.toggle('on', verifyMode);
+}
+verifyModeBtn.addEventListener('click', () => {
+  if (mode !== 'playtest') return;
+  verifyMode = !verifyMode;
+  updateVerifyModeBtn();
+});
+settingsMenuBtn.addEventListener('click', () => { settingsPanel.classList.remove('show'); exitToMenu(); });
+settingsSaveExitBtn.addEventListener('click', () => {
+  settingsPanel.classList.remove('show');
+  if (mode === 'editor') saveCurrentLevel(false);
+  exitToMenu();
+});
+
+let clipboardObj = null;
+function createObjectFromData(data, x, z) {
+  if (!checkObjectBudget()) return null;
+  snapshotUndo();
+  const obj = Object.assign({}, data, { id: 'o' + Math.floor(performance.now() * 1000 + Math.random() * 1000), x, z });
+  currentLevel.objects.push(obj);
+  const mesh = createMeshForType(obj.type, obj);
+  applyTransform(mesh, obj);
+  scene.add(mesh);
+  editorEntries.push({ obj, mesh });
+  selectObject(obj);
+  return obj;
+}
+copyBtn.addEventListener('click', () => {
+  if (!selectedObj) return;
+  clipboardObj = Object.assign({}, selectedObj);
+  delete clipboardObj.id;
+});
+// Pastes land exactly on top of the copied position (drag them apart afterward
+// with the Select tool, which works anytime in Create mode).
+pasteBtn.addEventListener('click', () => {
+  if (!clipboardObj) return;
+  createObjectFromData(clipboardObj, clipboardObj.x, clipboardObj.z);
+});
+dupBtn.addEventListener('click', () => {
+  if (!selectedObj) return;
+  const data = Object.assign({}, selectedObj);
+  delete data.id;
+  createObjectFromData(data, selectedObj.x, selectedObj.z);
+});
+
+function setMouseFromEvent(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+}
+
+/* ---- undo / redo (object add/delete/move/edit) ---- */
+let undoStack = [];
+let redoStack = [];
+function snapshotForUndo() {
+  return JSON.stringify({ objects: currentLevel.objects, spawn: currentLevel.spawn || null });
+}
+function snapshotUndo() {
+  if (!currentLevel) return;
+  undoStack.push(snapshotForUndo());
+  if (undoStack.length > 60) undoStack.shift();
+  redoStack = [];
+}
+function undo() {
+  if (!currentLevel || !undoStack.length || mode !== 'editor') return;
+  redoStack.push(snapshotForUndo());
+  const prev = JSON.parse(undoStack.pop());
+  currentLevel.objects = prev.objects;
+  currentLevel.spawn = prev.spawn;
+  rebuildEditorMeshes();
+  deselectObject();
+}
+function redo() {
+  if (!currentLevel || !redoStack.length || mode !== 'editor') return;
+  undoStack.push(snapshotForUndo());
+  const next = JSON.parse(redoStack.pop());
+  currentLevel.objects = next.objects;
+  currentLevel.spawn = next.spawn;
+  rebuildEditorMeshes();
+  deselectObject();
+}
+
+let dragEntry = null;
+function onCanvasPointerDown(e) {
+  if (mode !== 'editor' || e.button !== 0) return;
+  if (currentTool !== 'select' && currentTool !== 'eraser') return;
+  setMouseFromEvent(e);
+  const hits = raycaster.intersectObjects(editorEntries.map(en => en.mesh));
+  if (hits.length) {
+    const entry = editorEntries.find(en => en.mesh === hits[0].object);
+    if (currentTool === 'eraser') {
+      deleteObjectEntry(entry);
+    } else {
+      selectObject(entry.obj);
+      snapshotUndo(); // one undo step per drag gesture, not per pointermove frame
+      dragEntry = entry; // drag on the ground plane while the button is held
+    }
+  } else if (currentTool === 'select') {
+    deselectObject();
+  }
+}
+function onCanvasPointerMove(e) {
+  if (!dragEntry) return;
+  setMouseFromEvent(e);
+  const hits = raycaster.intersectObjects([groundMesh, pathMesh]);
+  if (!hits.length) return;
+  let x = Math.round(hits[0].point.x * 2) / 2;
+  let z = Math.round(hits[0].point.z * 2) / 2;
+  x = Math.max(-HALF, Math.min(HALF, x));
+  z = Math.max(-HALF, Math.min(HALF, z));
+  dragEntry.obj.x = x;
+  dragEntry.obj.z = z;
+  applyTransform(dragEntry.mesh, dragEntry.obj);
+  if (activeAxis === 'x' || activeAxis === 'z') updateAxisUI();
+}
+function onCanvasPointerUp() { dragEntry = null; }
+
+function onCanvasClick(e) {
+  if (mode !== 'editor') return;
+  if (currentTool === 'select' || currentTool === 'eraser') return;
+  setMouseFromEvent(e);
+  const hits = raycaster.intersectObjects([groundMesh, pathMesh]);
+  if (hits.length) {
+    let x = Math.round(hits[0].point.x * 2) / 2;
+    let z = Math.round(hits[0].point.z * 2) / 2;
+    x = Math.max(-HALF, Math.min(HALF, x));
+    z = Math.max(-HALF, Math.min(HALF, z));
+    if (currentTool === 'player') {
+      snapshotUndo();
+      currentLevel.spawn = { x, z };
+      spawnMarker.position.set(x, 0, z);
+      return;
+    }
+    addObject(currentTool, x, z);
+  }
+}
+
+saveBtn.addEventListener('click', () => saveCurrentLevel(false));
+boardBtn.addEventListener('click', () => { boardPanel.classList.toggle('show'); playerPanel.classList.remove('show'); });
+playerBtn.addEventListener('click', () => { playerPanel.classList.toggle('show'); boardPanel.classList.remove('show'); });
+shapeKindRow.addEventListener('click', e => {
+  const btn = e.target.closest('[data-shape]');
+  if (!btn) return;
+  currentShapeKind = btn.dataset.shape;
+  shapeKindRow.querySelectorAll('.kindBtn').forEach(b => b.classList.toggle('active', b === btn));
+});
+weaponKindRow.addEventListener('click', e => {
+  const btn = e.target.closest('[data-weapon]');
+  if (!btn) return;
+  currentWeaponKind = btn.dataset.weapon;
+  weaponKindRow.querySelectorAll('.kindBtn').forEach(b => b.classList.toggle('active', b === btn));
+});
+function syncPlayerFromPanel() {
+  if (!currentLevel) return;
+  currentLevel.player.color = playerColorInput.value || DEFAULT_PLAYER.color;
+  spawnMarker.userData.body.material.color.set(currentLevel.player.color);
+}
+playerColorInput.addEventListener('input', syncPlayerFromPanel);
+playerHpLeft.addEventListener('click', () => {
+  if (!currentLevel) return;
+  currentLevel.player.hp = Math.max(1, (currentLevel.player.hp || DEFAULT_PLAYER.hp) - 1);
+  playerHpVal.textContent = currentLevel.player.hp;
+});
+playerHpRight.addEventListener('click', () => {
+  if (!currentLevel) return;
+  currentLevel.player.hp = Math.min(100, (currentLevel.player.hp || DEFAULT_PLAYER.hp) + 1);
+  playerHpVal.textContent = currentLevel.player.hp;
+});
+playerWeaponTabs.addEventListener('click', e => {
+  const btn = e.target.closest('[data-weapon]');
+  if (!btn || !currentLevel) return;
+  currentLevel.player.weapon = btn.dataset.weapon;
+  playerWeaponTabs.querySelectorAll('.axisTab').forEach(b => b.classList.toggle('active', b === btn));
+});
+function syncBoardFromPanel() {
+  if (!currentLevel) return;
+  let size = Math.round((parseFloat(boardSizeInput.value) || DEFAULT_BOARD.size) / 2) * 2;
+  size = Math.max(12, Math.min(48, size));
+  const pathZ = parseFloat(boardPathZInput.value) || 0;
+  const pathWidth = Math.max(1, Math.min(10, parseFloat(boardPathWidthInput.value) || DEFAULT_BOARD.pathWidth));
+  const skyColor = boardSkyColorInput.value || DEFAULT_BOARD.skyColor;
+  const boardColor = boardColorInputEl.value || DEFAULT_BOARD.boardColor;
+  currentLevel.board = { size, pathZ, pathWidth, skyColor, boardColor };
+  boardSizeInput.value = size;
+  boardPathWidthInput.value = pathWidth;
+  applyBoardSettings();
+}
+[boardSizeInput, boardPathZInput, boardPathWidthInput, boardSkyColorInput, boardColorInputEl].forEach(inp => inp.addEventListener('input', syncBoardFromPanel));
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
+hitboxBtn.addEventListener('click', () => {
+  hitboxMode = !hitboxMode;
+  hitboxBtn.classList.toggle('hbOn', hitboxMode);
+  hitboxBtn.textContent = hitboxMode ? '☑ Hitboxes' : '☐ Hitboxes';
+  if (!hitboxMode && hitboxGroup) {
+    scene.remove(hitboxGroup);
+    hitboxGroup.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
+    hitboxGroup = null;
+  }
+});
+modeToggleBtn.addEventListener('click', () => {
+  if (mode === 'editor') { saveCurrentLevel(true); enterPlaytest(); }
+  else enterEditor();
+});
+menuBtnGame.addEventListener('click', exitToMenu);
+
+/* ---------------- PLAYTEST ---------------- */
+function clearPlaytestScene() {
+  if (!playtestState) return;
+  const g = playtestState.group;
+  scene.remove(g);
+  playtestState = null;
+}
+function buildPlayerMesh(colorHex) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.5, PLAYER_HEIGHT, 18),
+    new THREE.MeshStandardMaterial({ color: colorHex || DEFAULT_PLAYER.color, roughness: 0.4 })
+  );
+  body.position.y = PLAYER_HEIGHT / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  group.add(body);
+  group.userData.body = body;
+
+  function makeEye(xOff) {
+    const eyeGroup = new THREE.Group();
+    const white = new THREE.Mesh(
+      new THREE.SphereGeometry(0.17, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    eyeGroup.add(white);
+    const pupil = new THREE.Mesh(
+      new THREE.SphereGeometry(0.085, 10, 10),
+      new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    pupil.position.set(0, 0, 0.1);
+    eyeGroup.add(pupil);
+    eyeGroup.position.set(xOff, PLAYER_HEIGHT - 0.35, 0.45);
+    eyeGroup.userData.pupil = pupil;
+    return eyeGroup;
+  }
+  const eyeL = makeEye(-0.19);
+  const eyeR = makeEye(0.19);
+  group.add(eyeL, eyeR);
+  group.userData.pupils = [eyeL.userData.pupil, eyeR.userData.pupil];
+  return group;
+}
+function buildArrowMesh() {
+  const group = new THREE.Group();
+  const shaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.04, 0.6, 6),
+    new THREE.MeshStandardMaterial({ color: 0x6b4423 })
+  );
+  shaft.rotation.x = Math.PI / 2;
+  shaft.castShadow = true;
+  group.add(shaft);
+  const head = new THREE.Mesh(
+    new THREE.ConeGeometry(0.09, 0.22, 6),
+    new THREE.MeshStandardMaterial({ color: 0x333333 })
+  );
+  head.rotation.x = Math.PI / 2;
+  head.position.z = 0.4;
+  head.castShadow = true;
+  group.add(head);
+  return group;
+}
+function buildHeldWeaponMesh(weaponKey) {
+  const w = WEAPONS[weaponKey] || WEAPONS.bow;
+  let mesh;
+  if (weaponKey === 'bow') {
+    mesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.22, 0.028, 6, 12, Math.PI * 1.3),
+      new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.6 })
+    );
+  } else if (weaponKey === 'knife') {
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.32, 0.04),
+      new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.3, metalness: 0.5 })
+    );
+  } else if (weaponKey === 'rifle') {
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.08, 0.55),
+      new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.4, metalness: 0.4 })
+    );
+  } else {
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.12, 0.5),
+      new THREE.MeshStandardMaterial({ color: w.color, roughness: 0.4, metalness: 0.5 })
+    );
+  }
+  mesh.position.set(0.36, 0.55, 0.22);
+  mesh.rotation.y = 0.3;
+  mesh.castShadow = true;
+  return mesh;
+}
+function equipWeapon(ps, weaponKey) {
+  ps.weaponKey = weaponKey;
+  if (ps.heldWeaponMesh) ps.player.remove(ps.heldWeaponMesh);
+  ps.heldWeaponMesh = buildHeldWeaponMesh(weaponKey);
+  ps.player.add(ps.heldWeaponMesh);
+  updateHudStats();
+}
+
+function enterPlaytest() {
+  clearEditorScene();
+  mode = 'playtest';
+  controls.enabled = false;
+  spawnMarker.visible = false;
+  boardPanel.classList.remove('show');
+  playerPanel.classList.remove('show');
+  settingsPanel.classList.remove('show');
+  invincible = false;
+  invincibleUsedThisSession = false;
+  verifyMode = false;
+  updateInvincibleBtn();
+  updateVerifyModeBtn();
+  deselectObject();
+  paletteTop.style.display = 'none';
+  playtestHud.classList.add('show');
+  if (IS_TOUCH) mobileControls.classList.add('show');
+  modeToggleBtn.textContent = '🛠 Edit';
+  modeToggleBtn.classList.remove('playBtn');
+  modeToggleBtn.classList.add('editBtn');
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const spawn = currentLevel.spawn ? { x: currentLevel.spawn.x, y: 0, z: currentLevel.spawn.z } : { x: -HALF + 4, y: 0, z: 4 };
+  const player = buildPlayerMesh(currentLevel.player.color || DEFAULT_PLAYER.color);
+  player.position.set(spawn.x, spawn.y, spawn.z);
+  group.add(player);
+
+  const solids = [];
+  const hazards = [];
+  const collectibles = [];
+  const enemies = [];
+  const weaponPickups = [];
+  const endpoints = [];
+
+  for (const obj of currentLevel.objects) {
+    const mesh = createMeshForType(obj.type, obj);
+    applyTransform(mesh, obj);
+    group.add(mesh);
+    if (obj.type === 'platform' || obj.type === 'wall') {
+      const [sx, sy, sz] = TYPE_SIZE[obj.type];
+      const hx = sx / 2 * (obj.scale || 1), hy = sy / 2 * (obj.scale || 1), hz = sz / 2 * (obj.scale || 1);
+      solids.push({ mesh, minX: obj.x - hx, maxX: obj.x + hx, minY: obj.y - hy, maxY: obj.y + hy, minZ: obj.z - hz, maxZ: obj.z + hz });
+    } else if (obj.type === 'spike') {
+      hazards.push({ mesh, obj, r: HAZARD_R * (obj.scale || 1), damage: obj.damage || 15 });
+    } else if (obj.type === 'coin') {
+      collectibles.push({ mesh, obj, r: COLLECT_R * (obj.scale || 1), alive: true, value: obj.coinValue || 1 });
+    } else if (obj.type === 'enemy') {
+      enemies.push({ mesh, obj, r: ENEMY_R * (obj.scale || 1), baseX: obj.x, baseZ: obj.z, alive: true, dir: 1, speed: obj.patrolSpeed || 1.5, range: obj.patrolRange || 1.8, hp: obj.hp || 3, damage: obj.damage || 10, noRespawn: obj.noRespawn !== false, respawnAt: null });
+    } else if (obj.type === 'weapon') {
+      weaponPickups.push({ mesh, obj, r: 0.5 * (obj.scale || 1), alive: true, weaponKind: obj.weaponKind || 'knife' });
+    } else if (obj.type === 'endpoint') {
+      endpoints.push({ mesh, obj, r: 0.7 * (obj.scale || 1) });
+    }
+  }
+
+  playtestState = {
+    group, player, spawn,
+    velocity: new THREE.Vector3(0, 0, 0),
+    facing: 0,
+    grounded: false,
+    jumpsUsed: 0,
+    spaceWasDown: false,
+    solids, hazards, collectibles, enemies, weaponPickups, endpoints,
+    arrows: [],
+    score: 0,
+    won: false,
+    hp: currentLevel.player.hp || DEFAULT_PLAYER.hp,
+    maxHp: currentLevel.player.hp || DEFAULT_PLAYER.hp,
+    weaponKey: DEFAULT_PLAYER.weapon,
+    heldWeaponMesh: null,
+    shootCooldownLeft: 0,
+    invulnLeft: 0,
+    tmpQuat: new THREE.Quaternion(),
+  };
+  scoreVal.textContent = '0';
+  equipWeapon(playtestState, currentLevel.player.weapon || DEFAULT_PLAYER.weapon);
+
+  camera.position.set(spawn.x, spawn.y + 6, spawn.z + 9);
+}
+function updateHudStats() {
+  if (!playtestState) return;
+  hpVal.textContent = Math.max(0, Math.round(playtestState.hp)) + ' / ' + playtestState.maxHp;
+  weaponVal.textContent = WEAPONS[playtestState.weaponKey].label;
+}
+
+function getGroundHeightAt(x, z, solids) {
+  let best = null;
+  if (x >= -HALF && x <= HALF && z >= -HALF && z <= HALF) best = 0;
+  for (const s of solids) {
+    if (x > s.minX && x < s.maxX && z > s.minZ && z < s.maxZ) {
+      if (best === null || s.maxY > best) best = s.maxY;
+    }
+  }
+  return best;
+}
+function resolveHorizontal(pos, radius, solids) {
+  for (const s of solids) {
+    if (pos.y + 0.05 < s.maxY - 0.15 && pos.y + PLAYER_HEIGHT * 0.6 > s.minY) {
+      const cx = Math.max(s.minX, Math.min(pos.x, s.maxX));
+      const cz = Math.max(s.minZ, Math.min(pos.z, s.maxZ));
+      const dx = pos.x - cx, dz = pos.z - cz;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < radius * radius) {
+        const dist = Math.sqrt(distSq) || 0.0001;
+        const push = radius - dist;
+        pos.x += (dx / dist) * push;
+        pos.z += (dz / dist) * push;
+      }
+    }
+  }
+}
+
+function respawnPlayer(ps) {
+  ps.player.position.set(ps.spawn.x, ps.spawn.y, ps.spawn.z);
+  ps.velocity.set(0, 0, 0);
+  ps.jumpsUsed = 0;
+  ps.hp = ps.maxHp;
+  ps.invulnLeft = 1.0;
+  updateHudStats();
+  hazardFlash.classList.add('show');
+  setTimeout(() => hazardFlash.classList.remove('show'), 180);
+}
+function damagePlayer(ps, amount) {
+  if (invincible) return;
+  if (ps.invulnLeft > 0) return;
+  ps.hp -= amount;
+  ps.invulnLeft = 0.8;
+  updateHudStats();
+  hazardFlash.classList.add('show');
+  setTimeout(() => hazardFlash.classList.remove('show'), 180);
+  if (ps.hp <= 0) respawnPlayer(ps);
+}
+
+const ENEMY_RESPAWN_DELAY = 6; // seconds, for enemies with No Respawn = No
+function addScore(ps, amount) {
+  ps.score += amount;
+  scoreVal.textContent = ps.score;
+}
+function allEnemiesDefeated(ps) {
+  return ps.enemies.length > 0 && ps.enemies.every(en => !en.alive && en.respawnAt === null);
+}
+function triggerWin(ps, title, subtitle) {
+  if (ps.won) return;
+  ps.won = true;
+  winTitle.textContent = title;
+  if (verifyMode && !invincibleUsedThisSession && !mp) {
+    currentLevel.verified = true;
+    saveCurrentLevel(true);
+    subtitle += ' ✓ Verified — this game is now marked as beatable.';
+  } else if (verifyMode && invincibleUsedThisSession) {
+    subtitle += ' (Not verified — invincibility was used this run.)';
+  }
+  winSubtitle.textContent = subtitle;
+  winOverlay.classList.remove('hidden');
+  mpMaybeSubmitScore(ps);
+}
+
+function shootArrow(ps) {
+  if (ps.shootCooldownLeft > 0) return;
+  const weapon = WEAPONS[ps.weaponKey] || WEAPONS.knife;
+  ps.shootCooldownLeft = weapon.cooldown;
+  const mesh = buildArrowMesh();
+  const dirX = Math.sin(ps.facing), dirZ = Math.cos(ps.facing);
+  mesh.rotation.y = ps.facing;
+  mesh.position.set(
+    ps.player.position.x + dirX * 0.8,
+    ps.player.position.y + 0.9,
+    ps.player.position.z + dirZ * 0.8
+  );
+  ps.group.add(mesh);
+  ps.arrows.push({ mesh, dir: new THREE.Vector3(dirX, 0, dirZ), t: 0, damage: weapon.damage });
+}
+
+function breakTrackCube() {
+  if (trackBroken) return;
+  trackBroken = true;
+  trackCube.visible = false;
+  const origin = trackCube.position;
+  for (let i = 0; i < 8; i++) {
+    const frag = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.4, 0.4),
+      new THREE.MeshStandardMaterial({ color: 0xe03131, roughness: 0.5 })
+    );
+    frag.position.copy(origin);
+    const ang = Math.random() * Math.PI * 2;
+    const speed = 2.5 + Math.random() * 3.5;
+    const vel = new THREE.Vector3(Math.cos(ang) * speed, 4 + Math.random() * 3, Math.sin(ang) * speed);
+    const spin = new THREE.Vector3((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8);
+    scene.add(frag);
+    cubeFragments.push({ mesh: frag, vel, spin, t: 0 });
+  }
+  setTimeout(() => {
+    trackCube.visible = true;
+    trackBroken = false;
+  }, TRACK_RESPAWN_MS);
+}
+
+function updateCubeFragments(dt) {
+  for (let i = cubeFragments.length - 1; i >= 0; i--) {
+    const f = cubeFragments[i];
+    f.t += dt;
+    f.vel.y -= GRAVITY * dt;
+    f.mesh.position.x += f.vel.x * dt;
+    f.mesh.position.y += f.vel.y * dt;
+    f.mesh.position.z += f.vel.z * dt;
+    f.mesh.rotation.x += f.spin.x * dt;
+    f.mesh.rotation.y += f.spin.y * dt;
+    f.mesh.rotation.z += f.spin.z * dt;
+    const lifeLeft = 1 - f.t / 1.4;
+    if (lifeLeft < 0.3) f.mesh.scale.setScalar(Math.max(0, lifeLeft / 0.3));
+    if (f.t > 1.4 || f.mesh.position.y < -10) {
+      scene.remove(f.mesh);
+      f.mesh.geometry.dispose();
+      f.mesh.material.dispose();
+      cubeFragments.splice(i, 1);
+    }
+  }
+}
+
+function updatePlaytest(dt, ps) {
+  if (ps.shootCooldownLeft > 0) ps.shootCooldownLeft -= dt;
+  if (ps.invulnLeft > 0) ps.invulnLeft -= dt;
+
+  let moveX = touchMoveX, moveZ = touchMoveZ;
+  if (keys['w']) moveZ -= 1;
+  if (keys['s']) moveZ += 1;
+  if (keys['a']) moveX -= 1;
+  if (keys['d']) moveX += 1;
+  const len = Math.hypot(moveX, moveZ);
+  if (len > 0) {
+    moveX /= Math.max(len, 1); moveZ /= Math.max(len, 1);
+    ps.facing = Math.atan2(moveX, moveZ);
+  }
+  ps.velocity.x = moveX * MOVE_SPEED;
+  ps.velocity.z = moveZ * MOVE_SPEED;
+
+  const spaceDown = !!keys[' '];
+  if (spaceDown && !ps.spaceWasDown && ps.jumpsUsed < 2) {
+    ps.velocity.y = ps.jumpsUsed === 0 ? JUMP_SPEED : JUMP_SPEED * 0.85;
+    ps.jumpsUsed++;
+    ps.grounded = false;
+  }
+  ps.spaceWasDown = spaceDown;
+  ps.velocity.y -= GRAVITY * dt;
+
+  const pos = ps.player.position;
+  pos.x += ps.velocity.x * dt;
+  pos.z += ps.velocity.z * dt;
+  resolveHorizontal(pos, PLAYER_RADIUS, ps.solids);
+  pos.x = Math.max(-HALF - 6, Math.min(HALF + 6, pos.x));
+  pos.z = Math.max(-HALF - 6, Math.min(HALF + 6, pos.z));
+
+  pos.y += ps.velocity.y * dt;
+  const groundY = getGroundHeightAt(pos.x, pos.z, ps.solids);
+  if (groundY !== null && pos.y <= groundY) {
+    pos.y = groundY;
+    ps.velocity.y = 0;
+    ps.grounded = true;
+    ps.jumpsUsed = 0;
+  } else {
+    ps.grounded = false;
+  }
+  if (pos.y < -12) respawnPlayer(ps);
+
+  const targetQuat = ps.tmpQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), ps.facing);
+  ps.player.quaternion.slerp(targetQuat, Math.min(1, dt * 10));
+
+  // googly eyes wobble
+  const t = clock.elapsedTime;
+  const pupils = ps.player.userData.pupils;
+  if (pupils) {
+    pupils[0].position.x = Math.sin(t * 9 + 1) * 0.03;
+    pupils[0].position.y = Math.cos(t * 6.3) * 0.03;
+    pupils[1].position.x = Math.sin(t * 8.3 + 2) * 0.03;
+    pupils[1].position.y = Math.cos(t * 7.1 + 1) * 0.03;
+  }
+
+  // camera chase
+  camera.position.x += (pos.x - camera.position.x) * Math.min(1, dt * 4);
+  camera.position.z += (pos.z + 9 - camera.position.z) * Math.min(1, dt * 4);
+  camera.position.y += (pos.y + 6 - camera.position.y) * Math.min(1, dt * 4);
+  camera.lookAt(pos.x, pos.y + 0.8, pos.z);
+
+  if (mp && mp.active) {
+    mpSendState(ps, dt);
+    mpUpdateRemotes(dt);
+  }
+
+  // enemies patrol (+ respawn timer for enemies with No Respawn = No)
+  for (const en of ps.enemies) {
+    if (!en.alive) {
+      if (en.respawnAt !== null && clock.elapsedTime >= en.respawnAt) {
+        en.alive = true;
+        en.respawnAt = null;
+        en.hp = en.obj.hp || 3;
+        en.mesh.position.set(en.baseX, en.obj.y, en.baseZ);
+        ps.group.add(en.mesh);
+      }
+      continue;
+    }
+    en.mesh.position.x += en.dir * en.speed * dt;
+    if (en.mesh.position.x > en.baseX + en.range) en.dir = -1;
+    if (en.mesh.position.x < en.baseX - en.range) en.dir = 1;
+    en.mesh.rotation.y += dt * 2;
+  }
+  // endpoint goal: slow spin + bobbing particles, and the win check
+  for (const g of ps.endpoints) {
+    g.mesh.rotation.y += dt * 0.6;
+    if (g.mesh.userData.core) g.mesh.userData.core.position.y = Math.sin(clock.elapsedTime * 2) * 0.1;
+    if (!ps.won) {
+      const dx = pos.x - g.mesh.position.x, dz = pos.z - g.mesh.position.z;
+      if (Math.hypot(dx, dz) < g.r + PLAYER_RADIUS && Math.abs(pos.y - g.mesh.position.y) < 1.2) {
+        triggerWin(ps, '🏆 You Win!', 'You reached the goal.');
+      }
+    }
+  }
+  // coins + weapon pickups spin
+  for (const c of ps.collectibles) {
+    if (c.alive) c.mesh.rotation.z += dt * 3;
+  }
+  for (const w of ps.weaponPickups) {
+    if (w.alive) w.mesh.rotation.y += dt * 2.5;
+  }
+
+  // hazard / collectible checks
+  for (const h of ps.hazards) {
+    const dx = pos.x - h.mesh.position.x, dz = pos.z - h.mesh.position.z;
+    if (Math.hypot(dx, dz) < h.r + PLAYER_RADIUS && Math.abs(pos.y - h.mesh.position.y) < 1) {
+      damagePlayer(ps, h.damage);
+      break;
+    }
+  }
+  for (const en of ps.enemies) {
+    if (!en.alive) continue;
+    const dx = pos.x - en.mesh.position.x, dz = pos.z - en.mesh.position.z;
+    if (Math.hypot(dx, dz) < en.r + PLAYER_RADIUS && Math.abs(pos.y - en.mesh.position.y) < 1) {
+      damagePlayer(ps, en.damage);
+    }
+  }
+  for (const c of ps.collectibles) {
+    if (!c.alive) continue;
+    const dx = pos.x - c.mesh.position.x, dz = pos.z - c.mesh.position.z;
+    if (Math.hypot(dx, dz) < c.r + PLAYER_RADIUS && Math.abs(pos.y - c.mesh.position.y) < 1) {
+      c.alive = false;
+      ps.group.remove(c.mesh);
+      addScore(ps, c.value);
+    }
+  }
+  for (const w of ps.weaponPickups) {
+    if (!w.alive) continue;
+    const dx = pos.x - w.mesh.position.x, dz = pos.z - w.mesh.position.z;
+    if (Math.hypot(dx, dz) < w.r + PLAYER_RADIUS && Math.abs(pos.y - w.mesh.position.y) < 1) {
+      w.alive = false;
+      ps.group.remove(w.mesh);
+      equipWeapon(ps, w.weaponKind);
+    }
+  }
+
+  // main track cube collision (bump = damage, it's a hazard on the path)
+  if (!trackBroken) {
+    const dx = pos.x - trackCube.position.x, dz = pos.z - trackCube.position.z;
+    if (Math.hypot(dx, dz) < TRACKCUBE_R + PLAYER_RADIUS && Math.abs(pos.y - trackCube.position.y) < VBAND) {
+      damagePlayer(ps, 20);
+    }
+  }
+
+  // arrows
+  for (let i = ps.arrows.length - 1; i >= 0; i--) {
+    const a = ps.arrows[i];
+    a.t += dt;
+    a.mesh.position.x += a.dir.x * ARROW_SPEED * dt;
+    a.mesh.position.z += a.dir.z * ARROW_SPEED * dt;
+    let remove = a.t > ARROW_LIFETIME;
+
+    if (!remove) {
+      for (const en of ps.enemies) {
+        if (!en.alive) continue;
+        const dx = a.mesh.position.x - en.mesh.position.x, dz = a.mesh.position.z - en.mesh.position.z;
+        if (Math.hypot(dx, dz) < 0.6) {
+          en.hp -= a.damage;
+          if (en.hp <= 0) {
+            en.alive = false;
+            ps.group.remove(en.mesh);
+            addScore(ps, 2);
+            if (en.noRespawn) {
+              if (allEnemiesDefeated(ps)) triggerWin(ps, '🏆 You Win!', 'All enemies defeated.');
+            } else {
+              en.respawnAt = clock.elapsedTime + ENEMY_RESPAWN_DELAY;
+            }
+          }
+          remove = true;
+          break;
+        }
+      }
+    }
+    if (!remove && !trackBroken) {
+      const dx = a.mesh.position.x - trackCube.position.x, dz = a.mesh.position.z - trackCube.position.z;
+      if (Math.hypot(dx, dz) < TRACKCUBE_R && Math.abs(a.mesh.position.y - trackCube.position.y) < VBAND) {
+        addScore(ps, 1);
+        breakTrackCube();
+        remove = true;
+      }
+    }
+    if (!remove && mp && mp.active) {
+      for (const [rid, entry] of mp.remotePlayers) {
+        if (!entry.alive) continue;
+        const dx = a.mesh.position.x - entry.group.position.x, dz = a.mesh.position.z - entry.group.position.z;
+        if (Math.hypot(dx, dz) < 0.6 && Math.abs(a.mesh.position.y - entry.group.position.y - PLAYER_HEIGHT / 2) < 1) {
+          if (mp.ws && mp.ws.readyState === WebSocket.OPEN) mp.ws.send(JSON.stringify({ type: 'shootHit', targetId: rid, damage: a.damage }));
+          remove = true;
+          break;
+        }
+      }
+    }
+    if (!remove) {
+      for (const s of ps.solids) {
+        if (a.mesh.position.x > s.minX && a.mesh.position.x < s.maxX &&
+            a.mesh.position.z > s.minZ && a.mesh.position.z < s.maxZ &&
+            a.mesh.position.y > s.minY && a.mesh.position.y < s.maxY) {
+          remove = true;
+          break;
+        }
+      }
+    }
+    if (remove) { ps.group.remove(a.mesh); ps.arrows.splice(i, 1); }
+  }
+}
+
+function onShootInput() {
+  if (mode === 'playtest' && playtestState) shootArrow(playtestState);
+}
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+    if (e.key === 'Escape') document.activeElement.blur();
+    return;
+  }
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === 'f') onShootInput();
+  if (e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    redo();
+  }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('mousedown', e => {
+  if (mode === 'playtest' && e.button === 0) onShootInput();
+});
+
+/* ---- touch controls (virtual joystick + jump/shoot) ---- */
+let joystickPointerId = null;
+const JOYSTICK_RADIUS = 46;
+joystickBase.addEventListener('pointerdown', e => {
+  joystickPointerId = e.pointerId;
+  joystickBase.setPointerCapture(e.pointerId);
+  updateJoystick(e);
+});
+joystickBase.addEventListener('pointermove', e => {
+  if (e.pointerId !== joystickPointerId) return;
+  updateJoystick(e);
+});
+function endJoystick(e) {
+  if (e.pointerId !== joystickPointerId) return;
+  joystickPointerId = null;
+  touchMoveX = 0; touchMoveZ = 0;
+  joystickKnob.style.transform = 'translate(0px, 0px)';
+}
+joystickBase.addEventListener('pointerup', endJoystick);
+joystickBase.addEventListener('pointercancel', endJoystick);
+function updateJoystick(e) {
+  const rect = joystickBase.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+  let dx = e.clientX - cx, dy = e.clientY - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist > JOYSTICK_RADIUS) { dx = dx / dist * JOYSTICK_RADIUS; dy = dy / dist * JOYSTICK_RADIUS; }
+  joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  touchMoveX = dx / JOYSTICK_RADIUS;
+  touchMoveZ = dy / JOYSTICK_RADIUS;
+}
+mobileJumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); keys[' '] = true; });
+mobileJumpBtn.addEventListener('pointerup', e => { e.preventDefault(); keys[' '] = false; });
+mobileJumpBtn.addEventListener('pointercancel', () => { keys[' '] = false; });
+mobileShootBtn.addEventListener('pointerdown', e => { e.preventDefault(); onShootInput(); });
+
+/* ============================================================
+   HITBOX VISUALIZATION
+   ============================================================ */
+/* Hitboxes are drawn to match the ACTUAL collision volumes used by the
+   physics/collision code above (a slim circular cylinder for the player and
+   every circular hazard, an exact AABB for solids) rather than each mesh's
+   full decorative bounding box — so what you see is what actually hits. */
+const HB_COLOR = { solid: 0x39ff14, hazard: 0xff3b3b, enemy: 0xff9900, coin: 0xffe14d, player: 0x39c5ff, arrow: 0x8ad1ff };
+
+function makeBoxHitbox(minX, minY, minZ, maxX, maxY, maxZ, color) {
+  const box = new THREE.Box3(new THREE.Vector3(minX, minY, minZ), new THREE.Vector3(maxX, maxY, maxZ));
+  return new THREE.Box3Helper(box, color);
+}
+function makeCylinderHitbox(cx, cyBottom, cz, radius, height, color) {
+  const segs = 20, struts = 4, pts = [];
+  for (let i = 0; i < segs; i++) {
+    const a0 = (i / segs) * Math.PI * 2, a1 = ((i + 1) / segs) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a0) * radius, 0, Math.sin(a0) * radius), new THREE.Vector3(Math.cos(a1) * radius, 0, Math.sin(a1) * radius));
+    pts.push(new THREE.Vector3(Math.cos(a0) * radius, height, Math.sin(a0) * radius), new THREE.Vector3(Math.cos(a1) * radius, height, Math.sin(a1) * radius));
+  }
+  for (let i = 0; i < struts; i++) {
+    const a = (i / struts) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius), new THREE.Vector3(Math.cos(a) * radius, height, Math.sin(a) * radius));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const line = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color }));
+  line.position.set(cx, cyBottom, cz);
+  return line;
+}
+function solidBoxFor(obj) {
+  const [sx, sy, sz] = TYPE_SIZE[obj.type];
+  const hx = sx / 2 * (obj.scale || 1), hy = sy / 2 * (obj.scale || 1), hz = sz / 2 * (obj.scale || 1);
+  return { minX: obj.x - hx, maxX: obj.x + hx, minY: obj.y - hy, maxY: obj.y + hy, minZ: obj.z - hz, maxZ: obj.z + hz };
+}
+function addHitboxForObj(obj) {
+  const scale = obj.scale || 1;
+  if (obj.type === 'platform' || obj.type === 'wall') {
+    const b = solidBoxFor(obj);
+    hitboxGroup.add(makeBoxHitbox(b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ, HB_COLOR.solid));
+  } else if (obj.type === 'spike') {
+    hitboxGroup.add(makeCylinderHitbox(obj.x, obj.y - VBAND, obj.z, HAZARD_R * scale, VBAND * 2, HB_COLOR.hazard));
+  } else if (obj.type === 'coin') {
+    hitboxGroup.add(makeCylinderHitbox(obj.x, obj.y - VBAND, obj.z, COLLECT_R * scale, VBAND * 2, HB_COLOR.coin));
+  } else if (obj.type === 'enemy') {
+    hitboxGroup.add(makeCylinderHitbox(obj.x, obj.y - VBAND, obj.z, ENEMY_R * scale, VBAND * 2, HB_COLOR.enemy));
+  }
+}
+
+function updateHitboxVisuals() {
+  if (!hitboxMode) return;
+  if (hitboxGroup) {
+    scene.remove(hitboxGroup);
+    hitboxGroup.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
+  }
+  hitboxGroup = new THREE.Group();
+
+  if (mode === 'editor') {
+    for (const e of editorEntries) addHitboxForObj(e.obj);
+  } else if (mode === 'playtest' && playtestState) {
+    const p = playtestState.player.position;
+    hitboxGroup.add(makeCylinderHitbox(p.x, p.y, p.z, PLAYER_RADIUS, PLAYER_HEIGHT, HB_COLOR.player));
+    for (const s of playtestState.solids) {
+      hitboxGroup.add(makeBoxHitbox(s.minX, s.minY, s.minZ, s.maxX, s.maxY, s.maxZ, HB_COLOR.solid));
+    }
+    for (const h of playtestState.hazards) {
+      hitboxGroup.add(makeCylinderHitbox(h.mesh.position.x, h.mesh.position.y - VBAND, h.mesh.position.z, h.r, VBAND * 2, HB_COLOR.hazard));
+    }
+    for (const c of playtestState.collectibles) {
+      if (c.alive) hitboxGroup.add(makeCylinderHitbox(c.mesh.position.x, c.mesh.position.y - VBAND, c.mesh.position.z, c.r, VBAND * 2, HB_COLOR.coin));
+    }
+    for (const en of playtestState.enemies) {
+      if (en.alive) hitboxGroup.add(makeCylinderHitbox(en.mesh.position.x, en.mesh.position.y - VBAND, en.mesh.position.z, en.r, VBAND * 2, HB_COLOR.enemy));
+    }
+    for (const a of playtestState.arrows) {
+      const box = new THREE.Box3().setFromObject(a.mesh);
+      hitboxGroup.add(makeBoxHitbox(box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z, HB_COLOR.arrow));
+    }
+  }
+  if (!trackBroken) {
+    hitboxGroup.add(makeCylinderHitbox(trackCube.position.x, trackCube.position.y - VBAND, trackCube.position.z, TRACKCUBE_R, VBAND * 2, HB_COLOR.hazard));
+  }
+  scene.add(hitboxGroup);
+}
+
+/* ============================================================
+   ANIMATION LOOP
+   ============================================================ */
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  if (trackCube && !trackBroken) {
+    trackCube.position.x = Math.sin(t * 0.6) * (HALF - 1);
+    trackCube.rotation.y += dt * 1.2;
+  }
+  updateCubeFragments(dt);
+
+  if (selectionGlow) {
+    selectionGlow.scale.setScalar(1.18 + Math.sin(t * 4) * 0.04);
+  }
+
+  if (mode === 'editor') {
+    for (const e of editorEntries) applyObjectAnim(e.mesh, e.obj, t);
+  } else if (mode === 'playtest' && playtestState) {
+    const ps = playtestState;
+    for (const e of ps.solids) applyObjectAnim(e.mesh, e.obj, t);
+    for (const e of ps.hazards) applyObjectAnim(e.mesh, e.obj, t);
+    for (const e of ps.collectibles) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
+    for (const e of ps.enemies) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
+    for (const e of ps.weaponPickups) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
+  }
+
+  if (mode === 'editor') {
+    let mx = 0, mz = 0, vy = 0;
+    if (keys['w']) mz -= 1;
+    if (keys['s']) mz += 1;
+    if (keys['a']) mx -= 1;
+    if (keys['d']) mx += 1;
+    if (keys['arrowleft']) mx -= 1;
+    if (keys['arrowright']) mx += 1;
+    if (keys['arrowup']) vy += 1;
+    if (keys['arrowdown']) vy -= 1;
+    if (mx || mz) {
+      const forward = new THREE.Vector3().subVectors(controls.target, camera.position);
+      forward.y = 0; forward.normalize();
+      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+      const pan = new THREE.Vector3()
+        .addScaledVector(forward, -mz)
+        .addScaledVector(right, mx)
+        .multiplyScalar(EDIT_PAN_SPEED * dt);
+      camera.position.add(pan);
+      controls.target.add(pan);
+    }
+    if (vy) {
+      const dy = vy * EDIT_PAN_SPEED * dt;
+      camera.position.y += dy;
+      controls.target.y += dy;
+    }
+    controls.update();
+    if (currentLevel && performance.now() - lastAutosave > AUTOSAVE_MS) {
+      saveCurrentLevel(false);
+      lastAutosave = performance.now();
+    }
+  } else if (mode === 'playtest' && playtestState) {
+    updatePlaytest(dt, playtestState);
+  }
+
+  updateHitboxVisuals();
+  if (renderer) renderer.render(scene, camera);
+}
+
+/* ============================================================
+   MULTIPLAYER (rooms, PvP, chat, world leaderboard)
+   ============================================================ */
+const hostRoomBtn = document.getElementById('hostRoomBtn');
+const joinRoomBtn = document.getElementById('joinRoomBtn');
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+const hostModal = document.getElementById('hostModal');
+const hostLevelSelect = document.getElementById('hostLevelSelect');
+const hostNameInput = document.getElementById('hostNameInput');
+const hostWarn = document.getElementById('hostWarn');
+const hostCancel = document.getElementById('hostCancel');
+const hostGoBtn = document.getElementById('hostGoBtn');
+const joinModal = document.getElementById('joinModal');
+const joinCodeInput = document.getElementById('joinCodeInput');
+const joinNameInput = document.getElementById('joinNameInput');
+const joinWarn = document.getElementById('joinWarn');
+const joinCancel = document.getElementById('joinCancel');
+const joinGoBtn = document.getElementById('joinGoBtn');
+const lobbyScreen = document.getElementById('lobbyScreen');
+const lobbyCodeEl = document.getElementById('lobbyCode');
+const lobbyPlayersEl = document.getElementById('lobbyPlayers');
+const lobbyWarn = document.getElementById('lobbyWarn');
+const lobbyStartBtn = document.getElementById('lobbyStartBtn');
+const lobbyWaitMsg = document.getElementById('lobbyWaitMsg');
+const lobbyLeaveBtn = document.getElementById('lobbyLeaveBtn');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const leaderboardListEl = document.getElementById('leaderboardList');
+const leaderboardCloseBtn = document.getElementById('leaderboardCloseBtn');
+const chatPanel = document.getElementById('chatPanel');
+const chatHeader = document.getElementById('chatHeader');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatSendBtn = document.getElementById('chatSendBtn');
+
+let mp = null; // active multiplayer session state, or null when playing solo
+
+function mpWsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return proto + '//' + location.host + '/mpws';
+}
+function mpFetchLeaderboard(cb) {
+  fetch('/leaderboard').then(r => r.json()).then(cb).catch(() => cb([]));
+}
+function renderLeaderboard(list) {
+  leaderboardListEl.innerHTML = '';
+  if (!list.length) {
+    const p = document.createElement('div');
+    p.style.cssText = 'opacity:.6; font-size:13px; text-align:center; padding:16px 0;';
+    p.textContent = 'No scores yet — be the first to win a multiplayer round!';
+    leaderboardListEl.appendChild(p);
+    return;
+  }
+  list.forEach((row, i) => {
+    const r = document.createElement('div');
+    r.className = 'lbRow';
+    r.innerHTML = `<span class="rank">#${i + 1}</span><span class="lbName"></span><span class="lbScore">${row.score}</span>`;
+    r.querySelector('.lbName').textContent = row.name;
+    leaderboardListEl.appendChild(r);
+  });
+}
+leaderboardBtn.addEventListener('click', () => {
+  leaderboardModal.classList.remove('hidden');
+  mpFetchLeaderboard(renderLeaderboard);
+});
+leaderboardCloseBtn.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+function openHostModal() {
+  const all = loadAllSaves();
+  const names = Object.keys(all).sort((a, b) => (all[b].updatedAt || 0) - (all[a].updatedAt || 0));
+  hostLevelSelect.innerHTML = '';
+  for (const n of names) {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    hostLevelSelect.appendChild(opt);
+  }
+  hostNameInput.value = '';
+  hostWarn.textContent = names.length ? '' : 'Create a game first, then come back to host it.';
+  hostModal.classList.remove('hidden');
+  setTimeout(() => hostNameInput.focus(), 30);
+}
+hostRoomBtn.addEventListener('click', openHostModal);
+hostCancel.addEventListener('click', () => hostModal.classList.add('hidden'));
+joinRoomBtn.addEventListener('click', () => {
+  joinCodeInput.value = ''; joinNameInput.value = ''; joinWarn.textContent = '';
+  joinModal.classList.remove('hidden');
+  setTimeout(() => joinCodeInput.focus(), 30);
+});
+joinCancel.addEventListener('click', () => joinModal.classList.add('hidden'));
+
+function mpConnect(initMsg, errEl) {
+  let ws;
+  try { ws = new WebSocket(mpWsUrl()); }
+  catch (e) { errEl.textContent = 'Could not reach the multiplayer server.'; return null; }
+  ws.addEventListener('open', () => ws.send(JSON.stringify(initMsg)));
+  ws.addEventListener('error', () => { errEl.textContent = 'Could not reach the multiplayer server. Is it running?'; });
+  ws.addEventListener('message', mpHandleMessage);
+  ws.addEventListener('close', () => { if (mp && mp.ws === ws && !mp.active) errEl.textContent = 'Connection closed.'; });
+  return ws;
+}
+hostGoBtn.addEventListener('click', () => {
+  const levelName = hostLevelSelect.value;
+  const all = loadAllSaves();
+  const level = all[levelName];
+  const name = hostNameInput.value.trim();
+  if (!level) { hostWarn.textContent = 'Pick a game to host.'; return; }
+  if (!name) { hostWarn.textContent = 'Enter your name.'; return; }
+  hostWarn.textContent = 'Connecting...';
+  mp = { ws: null, name, color: DEFAULT_PLAYER.color, isHost: true, code: null, playerId: null,
+    levelData: level, playersMeta: new Map(), remotePlayers: new Map(), sendTimer: 0, active: false };
+  mp.ws = mpConnect({ type: 'host', name, color: mp.color, levelData: level }, hostWarn);
+});
+joinGoBtn.addEventListener('click', () => {
+  const code = joinCodeInput.value.trim().toUpperCase();
+  const name = joinNameInput.value.trim();
+  if (!code) { joinWarn.textContent = 'Enter a room code.'; return; }
+  if (!name) { joinWarn.textContent = 'Enter your name.'; return; }
+  joinWarn.textContent = 'Connecting...';
+  mp = { ws: null, name, color: DEFAULT_PLAYER.color, isHost: false, code, playerId: null,
+    levelData: null, playersMeta: new Map(), remotePlayers: new Map(), sendTimer: 0, active: false };
+  mp.ws = mpConnect({ type: 'join', code, name, color: mp.color }, joinWarn);
+});
+
+function renderLobby() {
+  lobbyCodeEl.textContent = mp.code || '----';
+  lobbyPlayersEl.innerHTML = '';
+  for (const p of mp.playersMeta.values()) {
+    const row = document.createElement('div');
+    row.className = 'lobbyPlayerRow';
+    row.innerHTML = `<span></span>` + (p.isHost ? '<span class="hostTag">HOST</span>' : '');
+    row.querySelector('span').textContent = p.name;
+    lobbyPlayersEl.appendChild(row);
+  }
+  lobbyStartBtn.style.display = mp.isHost ? 'block' : 'none';
+  lobbyWaitMsg.style.display = mp.isHost ? 'none' : 'block';
+}
+lobbyStartBtn.addEventListener('click', () => {
+  if (!mp || !mp.isHost) return;
+  mp.ws.send(JSON.stringify({ type: 'start' }));
+});
+lobbyLeaveBtn.addEventListener('click', () => mpTeardown(null));
+
+function mpHandleMessage(ev) {
+  let msg;
+  try { msg = JSON.parse(ev.data); } catch (e) { return; }
+  if (!mp) return;
+  if (msg.type === 'hosted' || msg.type === 'joined') {
+    mp.code = msg.code;
+    mp.playerId = msg.playerId;
+    mp.isHost = msg.isHost;
+    if (msg.type === 'joined') mp.levelData = msg.levelData;
+    mp.playersMeta.clear();
+    mp.playersMeta.set(mp.playerId, { name: mp.name, color: mp.color, isHost: mp.isHost });
+    for (const p of msg.players) {
+      if (p.id === mp.playerId) continue;
+      mp.playersMeta.set(p.id, { name: p.name, color: p.color || DEFAULT_PLAYER.color, isHost: p.isHost });
+    }
+    hostModal.classList.add('hidden');
+    joinModal.classList.add('hidden');
+    renderLobby();
+    lobbyScreen.classList.remove('hidden');
+  } else if (msg.type === 'error') {
+    (hostModal.classList.contains('hidden') ? joinWarn : hostWarn).textContent = msg.message;
+    mp = null;
+  } else if (msg.type === 'playerJoined') {
+    mp.playersMeta.set(msg.playerId, { name: msg.name, color: msg.color || DEFAULT_PLAYER.color, isHost: false });
+    renderLobby();
+  } else if (msg.type === 'playerLeft') {
+    mp.playersMeta.delete(msg.playerId);
+    mpRemoveRemote(msg.playerId);
+    renderLobby();
+  } else if (msg.type === 'roomClosed') {
+    mpTeardown(msg.reason === 'host_left' ? 'The host ended the room.' : 'The multiplayer room closed.');
+  } else if (msg.type === 'gameStarted') {
+    mpBeginGame();
+  } else if (msg.type === 'playerState') {
+    mpApplyRemoteState(msg);
+  } else if (msg.type === 'hit') {
+    if (playtestState) damagePlayer(playtestState, msg.damage);
+  } else if (msg.type === 'chat') {
+    if (msg.playerId !== mp.playerId) mpAppendChat(msg.name, msg.text);
+  } else if (msg.type === 'leaderboard') {
+    renderLeaderboard(msg.list);
+  }
+}
+
+function mpTeardown(message) {
+  if (mp) {
+    for (const id of [...mp.remotePlayers.keys()]) mpRemoveRemote(id);
+    try { mp.ws && mp.ws.close(); } catch (e) {}
+  }
+  mp = null;
+  chatPanel.classList.remove('show');
+  modeToggleBtn.style.display = '';
+  lobbyScreen.classList.add('hidden');
+  if (message) alert(message);
+  if (mode) exitToMenu();
+}
+
+/* ---- remote players: translucent (40% opacity), name label, PvP ---- */
+function makeNameSprite(name) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(10,12,20,0.55)';
+  ctx.fillRect(0, 14, 256, 36);
+  ctx.font = 'bold 28px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(String(name || 'Player').slice(0, 16), 128, 32);
+  const tex = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  sprite.scale.set(1.5, 0.38, 1);
+  sprite.position.y = PLAYER_HEIGHT + 0.5;
+  return sprite;
+}
+function mpEnsureRemote(id) {
+  let entry = mp.remotePlayers.get(id);
+  if (entry) return entry;
+  const meta = mp.playersMeta.get(id) || { name: 'Player', color: DEFAULT_PLAYER.color };
+  const group = buildPlayerMesh(meta.color);
+  group.traverse(o => { if (o.material) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.4; o.material.depthWrite = false; } });
+  group.add(makeNameSprite(meta.name));
+  scene.add(group);
+  entry = { group, target: { x: 0, y: 0, z: 0, ry: 0 }, alive: true };
+  mp.remotePlayers.set(id, entry);
+  return entry;
+}
+function mpRemoveRemote(id) {
+  const entry = mp.remotePlayers.get(id);
+  if (!entry) return;
+  scene.remove(entry.group);
+  mp.remotePlayers.delete(id);
+}
+function mpApplyRemoteState(msg) {
+  if (!mp) return;
+  const entry = mpEnsureRemote(msg.playerId);
+  entry.target.x = msg.x; entry.target.y = msg.y; entry.target.z = msg.z; entry.target.ry = msg.ry;
+  entry.alive = msg.alive !== false;
+  entry.group.visible = entry.alive;
+}
+function mpUpdateRemotes(dt) {
+  for (const entry of mp.remotePlayers.values()) {
+    const g = entry.group;
+    const lerp = Math.min(1, dt * 10);
+    g.position.x += (entry.target.x - g.position.x) * lerp;
+    g.position.y += (entry.target.y - g.position.y) * lerp;
+    g.position.z += (entry.target.z - g.position.z) * lerp;
+    mpTmpQuat.setFromAxisAngle(Y_AXIS, entry.target.ry);
+    g.quaternion.slerp(mpTmpQuat, lerp);
+  }
+}
+const mpTmpQuat = new THREE.Quaternion();
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+function mpSendState(ps, dt) {
+  if (!mp || !mp.active || !mp.ws || mp.ws.readyState !== WebSocket.OPEN) return;
+  mp.sendTimer -= dt;
+  if (mp.sendTimer > 0) return;
+  mp.sendTimer = 0.1;
+  mp.ws.send(JSON.stringify({
+    type: 'state', x: ps.player.position.x, y: ps.player.position.y, z: ps.player.position.z,
+    ry: ps.player.rotation.y, hp: ps.hp, maxHp: ps.maxHp, score: ps.score, weaponKey: ps.weaponKey, alive: ps.hp > 0,
+  }));
+}
+function mpMaybeSubmitScore(ps) {
+  if (!mp || !mp.active || invincibleUsedThisSession) return;
+  if (mp.ws && mp.ws.readyState === WebSocket.OPEN) mp.ws.send(JSON.stringify({ type: 'submitScore', name: mp.name, score: ps.score }));
+}
+
+/* ---- draggable chat panel ---- */
+function mpAppendChat(name, text) {
+  const row = document.createElement('div');
+  row.className = 'chatMsg';
+  row.innerHTML = `<b></b>: <span></span>`;
+  row.querySelector('b').textContent = name;
+  row.querySelector('span').textContent = text;
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+function mpSendChat() {
+  const text = chatInput.value.trim();
+  if (!text || !mp) return;
+  mpAppendChat(mp.name + ' (you)', text);
+  if (mp.ws && mp.ws.readyState === WebSocket.OPEN) mp.ws.send(JSON.stringify({ type: 'chat', text }));
+  chatInput.value = '';
+}
+chatSendBtn.addEventListener('click', mpSendChat);
+chatInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') mpSendChat(); });
+chatInput.addEventListener('keyup', e => e.stopPropagation());
+(function makeChatDraggable() {
+  let dragging = false, offX = 0, offY = 0;
+  chatHeader.addEventListener('pointerdown', e => {
+    dragging = true;
+    chatHeader.setPointerCapture(e.pointerId);
+    const rect = chatPanel.getBoundingClientRect();
+    offX = e.clientX - rect.left; offY = e.clientY - rect.top;
+  });
+  chatHeader.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    chatPanel.style.left = Math.max(0, Math.min(window.innerWidth - chatPanel.offsetWidth, e.clientX - offX)) + 'px';
+    chatPanel.style.top = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - offY)) + 'px';
+    chatPanel.style.right = 'auto';
+  });
+  chatHeader.addEventListener('pointerup', () => { dragging = false; });
+  chatHeader.addEventListener('pointercancel', () => { dragging = false; });
+})();
+
+function mpBeginGame() {
+  lobbyScreen.classList.add('hidden');
+  mp.active = true;
+  mp.sendTimer = 0;
+  const localLevel = JSON.parse(JSON.stringify(mp.levelData));
+  localLevel.name = localLevel.name || 'Multiplayer';
+  enterLevel(localLevel, 'playtest');
+  modeToggleBtn.style.display = mp.isHost ? '' : 'none';
+  chatMessages.innerHTML = '';
+  chatPanel.classList.add('show');
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderMenu();
+</script>
+</body>
+</html>

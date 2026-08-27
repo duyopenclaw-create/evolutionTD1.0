@@ -1,0 +1,4 @@
+node_modules/
+leaderboard.json
+*.zip
+.DS_Store
