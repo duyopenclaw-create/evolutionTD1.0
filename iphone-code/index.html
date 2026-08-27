@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>iPhone Code</title>
+<style>
+  :root{
+    --accent:#0a84ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:#000;
+    overflow:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Arial, sans-serif;
+    touch-action:none;
+  }
+  #app{ position:fixed; inset:0; }
+
+  /* ===================== MAIN MENU ===================== */
+  #menu{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:50; transition:opacity .5s ease, transform .5s ease;
+    background: radial-gradient(ellipse at 50% 20%, #2b2d33 0%, #101114 65%, #050506 100%);
+  }
+  #menu.hidden{ opacity:0; transform:scale(1.05); pointer-events:none; }
+  .menu-title{
+    font-size:clamp(24px,5.5vw,34px); font-weight:800; letter-spacing:-.5px; color:#fff;
+    text-shadow:0 0 30px rgba(10,132,255,.5), 0 2px 0 rgba(0,0,0,.4);
+    margin:0 0 4px 0;
+  }
+  .menu-title span{ color:var(--accent); }
+  .menu-sub{ color:#9a9ea6; font-size:11px; margin-bottom:26px; letter-spacing:.4px; }
+  .menu-phone-preview{
+    width:80px; height:150px; border-radius:20px; background:linear-gradient(155deg,#3a3c41,#101114);
+    border:2px solid #4a4c52; margin-bottom:26px; position:relative; box-shadow:0 16px 44px rgba(0,0,0,.6);
+    animation: floaty 3.2s ease-in-out infinite;
+  }
+  .menu-phone-preview:before{ content:''; position:absolute; inset:6px; border-radius:14px; background:#000; }
+  .menu-phone-preview:after{
+    content:''; position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:24px; height:6px; border-radius:5px; background:#1a1b1d;
+  }
+  @keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(-1deg);} 50%{ transform:translateY(-8px) rotate(1deg);} }
+  .btn{
+    appearance:none; border:none; cursor:pointer; font-family:inherit;
+    padding:11px 34px; font-size:13px; font-weight:600; border-radius:24px; color:#fff;
+    background:linear-gradient(180deg,#1791ff,#0a6ede);
+    box-shadow:0 6px 18px rgba(10,132,255,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    margin-bottom:10px; letter-spacing:.2px; transition:transform .12s ease, box-shadow .12s ease;
+    min-width:160px;
+  }
+  .btn:active{ transform:scale(.95); box-shadow:0 3px 10px rgba(10,132,255,.35); }
+  .btn.secondary{
+    background:rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); color:#c7c9cf;
+    font-weight:500; font-size:11px; padding:8px 22px; min-width:auto;
+  }
+  .menu-stats{ color:#6d7178; font-size:10px; margin-top:4px; letter-spacing:.3px; text-align:center; line-height:1.7;}
+  .menu-stats b{ color:#c7c9cf; }
+
+  #soundToggleMenu{
+    position:absolute; top:16px; right:16px; width:34px; height:34px; border-radius:50%;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); color:#e5e7ea;
+    display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer;
+  }
+  #fullscreenBtnMenu{
+    position:absolute; top:16px; right:58px; width:34px; height:34px; border-radius:50%;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); color:#e5e7ea;
+    display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer;
+  }
+
+  /* ===================== GAME SCENE ===================== */
+  #scene{
+    position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .5s ease;
+  }
+  #scene.active{ opacity:1; pointer-events:auto; }
+
+  /* ---- subway train interior background ---- */
+  .train-bg{ position:absolute; inset:0; overflow:hidden; background:linear-gradient(180deg,#1b1d22 0%,#232529 38%,#2c2e33 62%,#17181b 100%); }
+  .train-ceiling{
+    position:absolute; top:0; left:0; right:0; height:14%;
+    background:linear-gradient(180deg,#3a3c42,#26282c);
+    box-shadow:0 6px 18px rgba(0,0,0,.45);
+  }
+  .train-ceiling .light{
+    position:absolute; top:38%; width:9%; height:5px; border-radius:3px;
+    background:#dfe8ff; box-shadow:0 0 14px 4px rgba(210,225,255,.55);
+    animation: flicker 3.6s ease-in-out infinite;
+  }
+  @keyframes flicker{ 0%,100%{opacity:1;} 47%{opacity:1;} 48%{opacity:.4;} 49%{opacity:1;} 76%{opacity:1;} 77%{opacity:.5;} 78%{opacity:1;} }
+
+  .train-floor{
+    position:absolute; bottom:0; left:0; right:0; height:16%;
+    background:linear-gradient(180deg,#111214,#08090a);
+  }
+  .train-floor:before{
+    content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 2px, transparent 2px 34px);
+  }
+
+  .window-row{ position:absolute; left:0; right:0; top:16%; height:34%; }
+  .window{
+    position:absolute; top:0; height:100%; width:15%;
+    border-radius:6px; overflow:hidden; background:#05070c;
+    box-shadow:inset 0 0 0 3px #34363c, inset 0 0 14px rgba(0,0,0,.7);
+  }
+  .window .tunnel{ position:absolute; inset:0; overflow:hidden; }
+  /* individual blurred point-lights streaking past, like tunnel lights seen from a moving
+     train — not a repeating striped pattern (which read as cables/ropes strung outside) */
+  .window .tlight{
+    position:absolute; left:-18%; width:16px; height:3px; border-radius:50%;
+    background:rgba(255,205,130,.95); filter:blur(1.5px);
+    box-shadow:0 0 7px 2px rgba(255,185,105,.65);
+    animation: lightpass linear infinite;
+  }
+  .window .glow{
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 30% 50%, rgba(120,150,220,.18), transparent 65%);
+  }
+  @keyframes lightpass{
+    0%{ transform:translateX(0) scaleX(.6); opacity:0; }
+    12%{ opacity:1; }
+    85%{ opacity:1; }
+    100%{ transform:translateX(720%) scaleX(1.6); opacity:0; }
+  }
+
+  .train-pole{
+    position:absolute; top:14%; bottom:16%; width:6px; border-radius:3px;
+    background:linear-gradient(90deg,#8a8d93,#c9ccd1 40%,#8a8d93 60%,#6c6e73);
+    box-shadow:0 0 6px rgba(0,0,0,.5);
+  }
+  .passenger{
+    position:absolute; bottom:16%; width:11%; height:30%; border-radius:40% 40% 0 0;
+    background:linear-gradient(180deg,#3a3c41,#202226);
+    filter:blur(1.5px); opacity:.55;
+  }
+
+  /* stays fixed, does not sway with the train */
+  #topbar{
+    position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px; z-index:40; pointer-events:none;
+  }
+  #topbar button{ pointer-events:auto; }
+  .topbar-right{ display:flex; gap:8px; }
+  .icon-btn{
+    width:32px; height:32px; border-radius:50%; background:rgba(20,20,22,.55); backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.1); color:#e5e7ea; display:flex; align-items:center; justify-content:center;
+    font-size:13px; cursor:pointer; flex-shrink:0;
+  }
+  #attemptsLabel{
+    color:#c7c9cf; font-size:10.5px; letter-spacing:.4px; background:rgba(20,20,22,.55); backdrop-filter:blur(6px);
+    padding:6px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.08);
+  }
+
+  /* sways as if standing on a moving train — everything inside rocks together, topbar excluded.
+     Motion is driven by a JS spring/inertia simulation (see physics loop below), not a fixed loop,
+     so it never repeats identically and responds to random lean/jolt impulses like a real body would. */
+  .train-sway{
+    position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center;
+    transform-origin:50% 100%; will-change:transform;
+  }
+
+  .stage{
+    position:relative; width:min(280px,80vw); height:min(560px,84vh);
+    display:flex; align-items:flex-end; justify-content:center; z-index:10;
+    padding-bottom:3vh; transition:transform .38s ease;
+  }
+
+  /* ---- hands: back layer (palm+fingers) sits BEHIND the phone; the thumb is a separate
+     layer positioned identically but drawn IN FRONT of the phone, so it visibly overlaps
+     the edge — that overlap is what actually reads as "gripping" the device. ---- */
+  .hand-back, .hand-thumb{
+    position:absolute; bottom:-3%; width:42%; height:68%; pointer-events:none;
+    /* the WHOLE hand can shift/rotate too (not just the thumb inside it) — used for the
+       tap-follow reach and for the hands visibly letting go when the phone gets dropped */
+    --hx:0px; --hy:0px; --hrot:0deg; transition:transform .18s ease-out;
+  }
+  .hand-back.left, .hand-thumb.left{ left:2%; transform: translate(var(--hx),var(--hy)) rotate(var(--hrot)); }
+  .hand-back.right, .hand-thumb.right{ right:2%; transform: scaleX(-1) translate(var(--hx),var(--hy)) rotate(var(--hrot)); }
+  .hand-back{ z-index:5; }
+  .hand-back svg{ width:100%; height:100%; filter:drop-shadow(0 8px 16px rgba(0,0,0,.5)); }
+  .hand-thumb{ z-index:20; --tap-dx:0px; --tap-dy:0px; --grip-scale:1; --grip-rot:0deg; }
+  .hand-thumb svg{
+    width:100%; height:100%; filter:drop-shadow(0 3px 7px rgba(0,0,0,.4));
+    transform-origin:26% 68%; transition:transform .16s ease-out;
+    /* one formula drives both effects: a jolt nudges --grip-scale/--grip-rot, a tap on the
+       screen nudges --tap-dx/--tap-dy toward the tapped spot — they compose naturally */
+    transform: translate(var(--tap-dx), var(--tap-dy)) scale(var(--grip-scale)) rotate(var(--grip-rot));
+  }
+  .hand-thumb.tapping svg{ transition:transform .1s ease-out; }
+  .hand-back.letgo, .hand-thumb.letgo{ transition:transform .5s cubic-bezier(.34,1.1,.64,1); }
+
+  .phone-wrap{
+    position:relative; width:60%; max-width:190px; aspect-ratio: 9/19.5;
+    z-index:15; transition:transform .68s cubic-bezier(.55,.06,.68,.19);
+  }
+  /* fumbled after too many wrong guesses — tumbles down out of your hands, gravity-accelerated,
+     and shrinks a lot: it's now down on the floor, far below eye level while you're standing */
+  .phone-wrap.dropping{ transform: translateY(230px) rotate(-410deg) scale(.42); }
+
+  /* the two halves of a snapped phone, shown only for the brief "it broke apart" beat —
+     the real phone-wrap hides while these fly off, then fades back in already damaged.
+     The top piece is deliberately the SMALL one and the bottom is the BIG one: on the final
+     break the small piece is the one that's lost for good, and you only pick the big piece
+     back up (see .lost below). */
+  .phone-half{
+    position:absolute; left:50%; bottom:8%; width:60%; max-width:114px;
+    background:linear-gradient(135deg,#5b5d63 0%,#2b2c30 18%,#111214 45%,#2b2c30 78%,#5b5d63 100%);
+    box-shadow:0 10px 24px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08);
+    z-index:25; opacity:0; pointer-events:none;
+    transition:transform .55s cubic-bezier(.4,0,.6,1), opacity .3s ease;
+  }
+  .phone-half.top{ height:28%; border-radius:19% 19% 3px 3px / 15% 15% 3px 3px; transform:translate(-50%,-82%); }
+  .phone-half.bottom{ height:56%; border-radius:3px 3px 19% 19% / 3px 3px 8% 8%; transform:translate(-50%,-2%); }
+  .phone-half.snap-show{ opacity:1; }
+  .phone-half.top.snap-fly{ transform:translate(-135%,-210%) rotate(-95deg); }
+  .phone-half.bottom.snap-fly{ transform:translate(35%,60%) rotate(80deg); }
+  /* the small piece on the final break: keeps tumbling away and shrinks into the distance
+     instead of ever coming back — it's genuinely gone */
+  .phone-half.top.lost{ transition:transform .8s cubic-bezier(.4,0,.6,1), opacity 1s ease .35s; }
+  .phone-half.top.lost.snap-fly{ transform:translate(-190%,-330%) rotate(-150deg) scale(.35); opacity:0; }
+
+  /* prompt shown while the phone is down, waiting for the player to pick it back up */
+  .drop-prompt{
+    position:absolute; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:opacity .3s ease; cursor:pointer;
+  }
+  .drop-prompt.show{ opacity:1; pointer-events:auto; }
+  .drop-prompt-inner{ text-align:center; color:#fff; animation:hintPulse 1.4s ease-in-out infinite; }
+  .drop-icon{ font-size:34px; margin-bottom:6px; }
+  .drop-text{ font-size:13px; font-weight:700; margin-bottom:3px; }
+  .drop-sub{ font-size:9.5px; color:#d8d8de; }
+
+  /* permanent crack left on the glass after a drop — sits above everything, even the
+     powered-off overlay, since a physical crack stays visible whether the screen is on or not */
+  .crack-overlay{ position:absolute; inset:0; width:100%; height:100%; z-index:41; opacity:0; pointer-events:none; transition:opacity .25s ease; }
+  #screen.cracked .crack-overlay{ opacity:1; }
+
+  /* damaged-screen glitch: true red/green/blue channel split + scanline static, flickered on
+     briefly right after the crack happens and now and then afterward as a lingering symptom */
+  .glitch-overlay{ position:absolute; inset:0; z-index:42; pointer-events:none; opacity:0; overflow:hidden; }
+  .glitch-overlay .chan{ position:absolute; inset:0; mix-blend-mode:screen; opacity:0; }
+  .glitch-overlay .chan-r{ background:rgba(255,25,25,.55); }
+  .glitch-overlay .chan-g{ background:rgba(25,255,90,.42); }
+  .glitch-overlay .chan-b{ background:rgba(30,110,255,.55); }
+  .glitch-overlay .static{
+    position:absolute; inset:0; mix-blend-mode:overlay; opacity:0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.5) 0 1px, transparent 1px 3px);
+  }
+  #screen.glitch-burst .glitch-overlay{ opacity:1; animation: glitchFlicker .38s steps(3,end) 2; }
+  #screen.glitch-burst .glitch-overlay .chan-r{ opacity:.6; animation: glitchShiftR .38s steps(6,end) 2; }
+  #screen.glitch-burst .glitch-overlay .chan-g{ opacity:.5; animation: glitchShiftG .38s steps(6,end) 2; }
+  #screen.glitch-burst .glitch-overlay .chan-b{ opacity:.55; animation: glitchShiftB .38s steps(6,end) 2; }
+  #screen.glitch-burst .glitch-overlay .static{ opacity:.5; animation: staticJitter .09s steps(1) infinite; }
+  @keyframes glitchFlicker{ 0%,100%{opacity:.2;} 25%{opacity:.6;} 50%{opacity:0;} 75%{opacity:.4;} }
+  @keyframes glitchShiftR{
+    0%{transform:translate(0,0);} 20%{transform:translate(-6px,2px);} 40%{transform:translate(4px,-2px);}
+    60%{transform:translate(-3px,1px);} 80%{transform:translate(5px,-1px);} 100%{transform:translate(0,0);}
+  }
+  @keyframes glitchShiftG{
+    0%{transform:translate(0,0);} 20%{transform:translate(2px,-3px);} 40%{transform:translate(-3px,2px);}
+    60%{transform:translate(4px,3px);} 80%{transform:translate(-2px,-2px);} 100%{transform:translate(0,0);}
+  }
+  @keyframes glitchShiftB{
+    0%{transform:translate(0,0);} 20%{transform:translate(5px,-2px);} 40%{transform:translate(-4px,2px);}
+    60%{transform:translate(4px,-1px);} 80%{transform:translate(-5px,1px);} 100%{transform:translate(0,0);}
+  }
+  @keyframes staticJitter{ 0%{transform:translateY(0);} 50%{transform:translateY(2px);} 100%{transform:translateY(-2px);} }
+
+  /* brief downward dip of the whole hand-holding scene while picking the phone up off the
+     floor — reads as the player glancing down to grab it */
+  .stage.look-down{ transform: translateY(34px) scale(1.06); }
+
+  /* ---- realistic titanium-frame phone ---- */
+  .phone{
+    position:relative; width:100%; height:100%; border-radius:19% / 8.4%;
+    background:linear-gradient(135deg,#5b5d63 0%,#2b2c30 18%,#111214 45%,#2b2c30 78%,#5b5d63 100%);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.08),
+      0 18px 40px rgba(0,0,0,.6),
+      inset 0 0 0 1px rgba(255,255,255,.06);
+    padding:3% 2.4%;
+    display:flex;
+  }
+  .phone:before{
+    /* brushed-metal frame highlight ring */
+    content:''; position:absolute; inset:0; border-radius:19% / 8.4%;
+    box-shadow: inset 0 0 0 2.5px rgba(255,255,255,.12), inset 0 0 0 3px rgba(0,0,0,.5);
+    pointer-events:none; transition:opacity .3s ease;
+  }
+  /* case damage after repeated drops. This is an ACTUAL split, not a decal: the case is
+     rendered as two independent pieces (case-half.top / case-half.bottom) that no longer sit
+     flush — each has its own jagged inner edge and a small offset + rotation, so the phone's
+     outline visibly kinks instead of staying one smooth rounded rectangle. The gap is kept
+     TIGHT on purpose: this is a hairline break exposing a sliver of screen, not the screen
+     floating disconnected in open air. The wires sit exactly in that sliver so both ends
+     visibly touch the case pieces on either side, bridging the break rather than the screen. */
+  .phone.snapped-tier, .phone.trashed-tier{ background:#08090a; }
+  .phone.snapped-tier:before, .phone.trashed-tier:before{ opacity:.35; }
+  .case-half{
+    position:absolute; left:-4%; right:-4%; height:53%; z-index:44; pointer-events:none;
+    background:linear-gradient(135deg,#5b5d63 0%,#2b2c30 18%,#111214 45%,#2b2c30 78%,#5b5d63 100%);
+    box-shadow:0 3px 8px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.07);
+    opacity:0; transition:opacity .3s ease, transform .3s ease;
+  }
+  .case-half.top{
+    top:-3%; border-radius:20% 20% 4% 4% / 9% 9% 3% 3%;
+    clip-path: polygon(0 0,100% 0,100% 90%,85% 85%,70% 95%,55% 84%,42% 97%,28% 86%,14% 94%,0 88%);
+  }
+  .case-half.bottom{
+    bottom:-3%; border-radius:4% 4% 20% 20% / 3% 3% 9% 9%;
+    clip-path: polygon(0 12%,14% 6%,28% 14%,42% 3%,55% 16%,70% 5%,85% 15%,100% 10%,100% 100%,0 100%);
+  }
+  .phone.snapped-tier .case-half, .phone.trashed-tier .case-half{ opacity:1; }
+  .phone.snapped-tier .case-half.top, .phone.trashed-tier .case-half.top{ transform:translate(-1%,-1.6%) rotate(-1.4deg); }
+  .phone.snapped-tier .case-half.bottom, .phone.trashed-tier .case-half.bottom{ transform:translate(.8%,1.3%) rotate(1deg); }
+  .phone.snapped-tier .screen, .phone.trashed-tier .screen{ transform: rotate(-.5deg) translateX(-1px); }
+  .frame-wires{
+    position:absolute; left:-4%; right:-4%; top:45%; height:9%; z-index:46; pointer-events:none;
+    opacity:0; transition:opacity .3s ease;
+  }
+  .phone.trashed-tier .frame-wires{ opacity:1; animation: wireSway 1.7s ease-in-out infinite; }
+  @keyframes wireSway{
+    0%,100%{ transform:translateY(0) scaleY(1); }
+    35%{ transform:translateY(1.5px) scaleY(1.04); }
+    60%{ transform:translateY(-1px) scaleY(.98); }
+  }
+  @keyframes wireSway{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(1.5px); } }
+  /* side buttons: real <button>s with a generous invisible hit area around a thin visible bar,
+     so power/volume are actually clickable without looking like fat plastic nubs */
+  .side-btn{
+    position:absolute; width:16px; padding:0; margin:0; border:none; background:transparent;
+    cursor:pointer; display:flex; align-items:stretch; justify-content:center;
+    -webkit-appearance:none; appearance:none;
+  }
+  .side-btn .bar{
+    width:2.5px; border-radius:2px; background:linear-gradient(90deg,#1c1d1f,#3a3b3e,#1c1d1f);
+    box-shadow:0 0 1px rgba(0,0,0,.6); transition:background .08s ease, width .08s ease;
+  }
+  .side-btn:active .bar, .side-btn.pressed .bar{
+    background:linear-gradient(90deg,#4a4c52,#7a7d84,#4a4c52); width:3.4px;
+  }
+  .side-btn.power{ right:-10px; top:20%; height:8%; }
+  .side-btn.action{ left:-10px; top:13%; height:4%; }
+  .side-btn.action .bar{ background:linear-gradient(90deg,#ff7a1a,#c9560a); }
+  .side-btn.action:active .bar, .side-btn.action.pressed .bar{ background:linear-gradient(90deg,#ff9a4a,#e06a1a); }
+  .side-btn.volUp{ left:-10px; top:19%; height:6%; }
+  .side-btn.volDown{ left:-10px; top:26%; height:6%; }
+
+  .screen{
+    position:relative; width:100%; height:100%; border-radius:16% / 7%;
+    background:#000; overflow:hidden; box-shadow: inset 0 0 0 1px #000;
+  }
+  /* glass reflection for realism */
+  .screen:after{
+    content:''; position:absolute; inset:0; z-index:35; pointer-events:none;
+    background:linear-gradient(115deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 16%, rgba(255,255,255,0) 78%, rgba(255,255,255,.05) 100%);
+  }
+  .dynamic-island{
+    position:absolute; top:3.4%; left:50%; transform:translateX(-50%);
+    width:26%; height:3%; background:#000; border-radius:50px; z-index:36;
+    box-shadow:0 0 0 1px rgba(255,255,255,.04);
+  }
+
+  /* iOS-style volume HUD that pops up when the side volume buttons are pressed */
+  .volume-hud{
+    position:absolute; top:9%; left:50%; transform:translateX(-50%) scale(.9); z-index:38;
+    display:flex; align-items:center; gap:6px; padding:5px 10px; border-radius:10px;
+    background:rgba(30,30,34,.6); backdrop-filter:blur(6px); pointer-events:none;
+    opacity:0; transition:opacity .18s ease, transform .18s ease;
+  }
+  .volume-hud.show{ opacity:1; transform:translateX(-50%) scale(1); }
+  .volume-hud .vol-icon{ font-size:9px; }
+  .volume-hud .vol-track{ width:52px; height:3px; border-radius:2px; background:rgba(255,255,255,.25); overflow:hidden; }
+  .volume-hud .vol-fill{ height:100%; width:70%; background:#fff; border-radius:2px; transition:width .12s ease; }
+
+  /* full black overlay when the phone is switched off — fades like an OLED panel losing power */
+  .screen-off{
+    position:absolute; inset:0; z-index:39; background:#000; opacity:0; pointer-events:none;
+    transition:opacity .5s cubic-bezier(.4,0,.2,1);
+  }
+  .screen-off.on{ opacity:1; pointer-events:auto; transition-duration:.35s; }
+
+  /* ---- Lock screen ---- */
+  .lockscreen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    background: linear-gradient(160deg,#2b2f77 0%, #1b1c40 45%, #0a0b1c 100%);
+    color:#fff; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease;
+    touch-action:none;
+  }
+  .clock-time{ font-size:30px; font-weight:200; margin-top:34px; letter-spacing:.5px; }
+  .clock-date{ font-size:10px; opacity:.85; margin-top:3px; font-weight:500; }
+  .lock-icon{ margin-top:auto; margin-bottom:22px; font-size:14px; opacity:.9; }
+  .swipe-hint{ margin-bottom:16px; display:flex; flex-direction:column; align-items:center; gap:4px; animation:hintPulse 1.6s ease-in-out infinite; }
+  .swipe-hint .chev{ width:18px; height:10px; opacity:.85; }
+  .swipe-hint span{ font-size:9px; letter-spacing:.4px; opacity:.85; font-weight:500; }
+  @keyframes hintPulse{ 0%,100%{ transform:translateY(0); opacity:.55;} 50%{ transform:translateY(-6px); opacity:1;} }
+
+  .home-indicator{
+    position:absolute; bottom:1.4%; left:50%; transform:translateX(-50%);
+    width:30%; height:3px; border-radius:3px; background:rgba(255,255,255,.75); z-index:37;
+    cursor:pointer;
+  }
+  /* small invisible hit-area padding around the thin visual bar — kept tight so it doesn't
+     creep up into the dock icons sitting just above it */
+  .home-indicator:before{
+    content:''; position:absolute; left:50%; bottom:-4px; transform:translateX(-50%);
+    width:60px; height:11px;
+  }
+
+  /* ---- Passcode screen ---- */
+  .passscreen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    background:linear-gradient(160deg,#232529 0%, #131417 60%, #0a0a0c 100%);
+    color:#fff; transform:translateY(100%); transition: transform .45s cubic-bezier(.2,.8,.2,1);
+    padding-top:14%;
+  }
+  .passscreen.show{ transform:translateY(0); }
+  .pass-title{ font-size:12px; font-weight:600; margin-bottom:2px; }
+  .pass-sub{ font-size:8px; color:#9a9ea6; margin-bottom:16px; text-align:center; padding:0 12%; line-height:1.4; }
+
+  .dots{ display:flex; gap:10px; margin-bottom:18px; }
+  .dot{
+    width:9px; height:9px; border-radius:50%; border:1.2px solid #9a9ea6; background:transparent;
+    transition: background .15s ease, transform .15s ease, border-color .15s ease;
+  }
+  .dot.filled{ background:#fff; border-color:#fff; transform:scale(1.12); }
+  .dots.error .dot{ border-color:#ff453a; }
+  .dots.error{ animation:shake .38s ease; }
+  .dots.success .dot{ background:#32d74b; border-color:#32d74b; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0);} 20%{transform:translateX(-7px);} 40%{transform:translateX(6px);}
+    60%{transform:translateX(-5px);} 80%{transform:translateX(3px);}
+  }
+
+  .keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px 16px; width:80%; }
+  .key{
+    aspect-ratio:1/1; border-radius:50%; background:rgba(255,255,255,.09);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border:1px solid rgba(255,255,255,.06); cursor:pointer; color:#fff;
+    transition: background .08s ease, transform .08s ease;
+  }
+  .key:active, .key.pressed{ background:rgba(255,255,255,.28); transform:scale(.94); }
+  .key .num{ font-size:14px; font-weight:400; }
+  .key .letters{ font-size:5px; letter-spacing:1px; color:#c7c9cf; margin-top:1px; }
+  .key.ghost{ background:transparent; border:none; cursor:default; }
+  .key.del{ font-size:12px; color:#e5e7ea; }
+
+  .cancel-link{ margin-top:16px; color:var(--accent); font-size:9.5px; }
+
+  /* ---- Home / success screen ---- */
+  .homescreen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:linear-gradient(160deg,#0d3b2a 0%, #0a1f1a 60%, #050807 100%);
+    color:#fff; opacity:0; pointer-events:none; transition:opacity .5s ease; text-align:center; padding:0 8%;
+  }
+  .homescreen.show{ opacity:1; pointer-events:auto; }
+  .home-check{ font-size:38px; margin-bottom:10px; filter:drop-shadow(0 0 16px rgba(50,215,75,.6)); }
+  .home-msg{ font-size:13px; font-weight:700; margin-bottom:4px; }
+  .home-time{ font-size:9px; color:#9adfae; }
+
+  /* ---- iOS-style Home Screen ---- */
+  .ioshome{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    background: linear-gradient(165deg,#1b2a6b 0%, #2b1b57 45%, #120f2e 100%);
+    color:#fff; opacity:0; pointer-events:none; transition:opacity .4s ease;
+    padding-top:11%; touch-action:none;
+  }
+  .ioshome.show{ opacity:1; pointer-events:auto; }
+  .lock-pill{
+    position:absolute; top:3.5%; right:5%; background:rgba(255,255,255,.14); border:none; color:#fff;
+    font-size:9px; padding:5px 9px; border-radius:20px; cursor:pointer; backdrop-filter:blur(6px);
+  }
+  .app-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px 6px; width:88%; }
+  .app-icon{ display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+  .app-icon span{ font-size:6.5px; text-shadow:0 1px 2px rgba(0,0,0,.5); color:#f1f1f4; }
+  .icon-glyph{
+    width:100%; aspect-ratio:1; border-radius:22%; display:flex; align-items:center; justify-content:center;
+    font-size:14px; box-shadow:0 2px 5px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.22);
+    color:#fff; font-weight:800;
+  }
+  .app-icon.bounce .icon-glyph{ animation: iconBounce .22s ease; }
+  @keyframes iconBounce{ 0%{transform:scale(1);} 40%{transform:scale(.8);} 100%{transform:scale(1);} }
+  .icon-glyph.messages{ background:linear-gradient(160deg,#6bea66,#28c93f); }
+  .icon-glyph.mail{ background:linear-gradient(160deg,#79c8ff,#0a84ff); }
+  .icon-glyph.settings{ background:linear-gradient(160deg,#9a9aa2,#5c5c60); font-size:13px; }
+  .icon-glyph.appstore{ background:linear-gradient(160deg,#4cadff,#0a5fd6); }
+  .icon-glyph.photos{ background:conic-gradient(from 200deg,#ff5f6d,#ffc371,#3ad6b0,#5b8dff,#ff5f6d); }
+  .icon-glyph.music{ background:linear-gradient(160deg,#fd77c0,#c81e6a); }
+  .icon-glyph.maps{ background:linear-gradient(160deg,#93e08a,#2f9e42); }
+  .icon-glyph.calendar{ background:#fff; color:#ff3b30; }
+  .icon-glyph.phone{ background:linear-gradient(160deg,#7bec83,#28c840); }
+  .icon-glyph.safari{ background:radial-gradient(circle,#eaf6ff 40%,#0a84ff 100%); }
+  .icon-glyph.camera{ background:linear-gradient(160deg,#5a5a5e,#232326); }
+  .icon-glyph.clock{ background:#232326; }
+  .home-swipe-hint{
+    margin-top:auto; margin-bottom:5%; font-size:8px; color:rgba(255,255,255,.5); letter-spacing:.3px;
+    animation:hintPulse 1.8s ease-in-out infinite;
+  }
+  .dock{
+    display:flex; gap:16px; padding:8px 14px; border-radius:22px; background:rgba(255,255,255,.12);
+    backdrop-filter:blur(10px); margin-bottom:6%;
+  }
+  .dock .icon-glyph{ width:28px; height:28px; }
+
+  /* ---- App Switcher ---- */
+  .switcher{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:linear-gradient(165deg,#101114 0%,#0a0a0c 100%);
+    opacity:0; pointer-events:none; transition:opacity .35s ease; touch-action:none; overflow:hidden;
+  }
+  .switcher.show{ opacity:1; pointer-events:auto; }
+  .switcher-track{
+    display:flex; width:300%; height:76%;
+    transition:transform .32s cubic-bezier(.2,.8,.2,1); touch-action:none;
+  }
+  .switcher-track.dragging{ transition:none; }
+  .card-slot{ flex:0 0 33.3333%; width:33.3333%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:0 9%; }
+  .app-card{
+    width:100%; height:92%; border-radius:16px; overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .card-app{ width:100%; height:100%; display:flex; flex-direction:column; box-sizing:border-box; }
+
+  .app-titlebar{ font-size:12px; font-weight:700; margin-bottom:8px; }
+  .settings-app{ background:#1c1c1e; padding:8% 6% 0; color:#fff; }
+  .set-row{ display:flex; align-items:center; gap:6px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-size:8px; }
+  .set-ic{ width:15px; height:15px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:7.5px; flex-shrink:0; }
+  .set-val{ margin-left:auto; color:#8e8e93; font-size:7.5px; }
+
+  .safari-app{ background:#eeeef2; }
+  .safari-bar{ background:#e0e0e6; color:#333; font-size:7.5px; text-align:center; padding:6px; margin:5% 6% 0; border-radius:8px; }
+  .safari-page{ flex:1; padding:5% 8%; display:flex; flex-direction:column; gap:7px; }
+  .skel-line{ height:5px; border-radius:3px; background:#d5d5db; }
+  .skel-line.w70{ width:70%; } .skel-line.w90{ width:90%; } .skel-line.w60{ width:60%; } .skel-line.w80{ width:80%; }
+  .skel-block{ height:42px; border-radius:8px; background:linear-gradient(120deg,#dcdce2,#cfcfd6,#dcdce2); }
+  .safari-toolbar{ display:flex; justify-content:space-around; padding:7px 6%; background:#e6e6ea; font-size:10px; color:#0a84ff; }
+
+  .appstore-app{ background:#fff; color:#000; padding:8% 6% 0; }
+  .appstore-app .app-titlebar{ color:#000; }
+  .as-feature{ display:flex; align-items:center; gap:7px; background:linear-gradient(135deg,#2c2c54,#474787); border-radius:12px; padding:8px; margin-bottom:10px; }
+  .as-feature-icon{ width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .as-feature-text{ flex:1; min-width:0; }
+  .as-feature-title{ font-size:8px; font-weight:700; color:#fff; }
+  .as-feature-sub{ font-size:6.5px; color:#cfcfe6; }
+  .as-get{ background:#e5e5ea; color:#0a84ff; border:none; border-radius:12px; font-size:7px; font-weight:700; padding:4px 9px; flex-shrink:0; }
+  .as-row{ display:flex; gap:7px; }
+  .as-tile{ flex:1; aspect-ratio:1; border-radius:10px; background:linear-gradient(135deg,#f0f0f4,#dcdce4); }
+
+  .switcher-dots{ display:flex; gap:5px; margin-top:10px; }
+  .sdot{ width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.3); cursor:pointer; }
+  .sdot.active{ background:#fff; }
+  .switcher-hint{ font-size:7.5px; color:rgba(255,255,255,.4); margin-top:8px; }
+
+  #toast{
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px);
+    background:rgba(30,30,34,.92); color:#fff; padding:8px 16px; border-radius:10px; font-size:11px;
+    opacity:0; transition:opacity .25s ease, transform .25s ease; z-index:100; pointer-events:none;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  #saveFlash{
+    position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-10px); opacity:0;
+    background:rgba(50,215,75,.15); color:#32d74b; border:1px solid rgba(50,215,75,.35);
+    padding:5px 12px; border-radius:9px; font-size:10px; letter-spacing:.4px; font-weight:600;
+    transition:opacity .3s ease, transform .3s ease; z-index:200; pointer-events:none;
+  }
+  #saveFlash.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== MAIN MENU ===================== -->
+  <div id="menu">
+    <button id="soundToggleMenu" title="Toggle sound">🔊</button>
+    <button id="fullscreenBtnMenu" title="Fullscreen">⛶</button>
+    <div class="menu-phone-preview"></div>
+    <h1 class="menu-title">iPhone<span>Code</span></h1>
+    <div class="menu-sub">swipe up. crack the code.</div>
+    <button class="btn" id="startBtn">Play</button>
+    <button class="btn secondary" id="howToBtn">How to Play</button>
+    <div class="menu-stats">
+      Best time: <b id="bestTimeLabel">--</b> &nbsp;•&nbsp; Fewest attempts: <b id="bestAttemptsLabel">--</b>
+    </div>
+  </div>
+
+  <!-- ===================== GAME SCENE ===================== -->
+  <div id="scene">
+
+    <!-- subway train interior, animated -->
+    <div class="train-bg" id="trainBg">
+      <div class="train-ceiling">
+        <div class="light" style="left:14%"></div>
+        <div class="light" style="left:44%"></div>
+        <div class="light" style="left:74%"></div>
+      </div>
+      <div class="window-row" id="windowRow"></div>
+      <div class="train-pole" style="left:9%"></div>
+      <div class="train-pole" style="right:9%"></div>
+      <div class="passenger" style="left:1%"></div>
+      <div class="passenger" style="right:1%"></div>
+      <div class="train-floor"></div>
+    </div>
+
+    <div id="topbar">
+      <button class="icon-btn" id="menuBtn">☰</button>
+      <div id="attemptsLabel">Attempts: 0</div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="soundToggleGame">🔊</button>
+        <button class="icon-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+      </div>
+    </div>
+
+    <div class="drop-prompt" id="dropPrompt">
+      <div class="drop-prompt-inner">
+        <div class="drop-icon" id="dropIcon">💥</div>
+        <div class="drop-text" id="dropText">You dropped your phone!</div>
+        <div class="drop-sub" id="dropSub">tap to pick it up</div>
+      </div>
+    </div>
+
+    <!-- the two halves shown flying apart at the moment the phone snaps -->
+    <div class="phone-half top" id="phoneHalfTop"></div>
+    <div class="phone-half bottom" id="phoneHalfBottom"></div>
+
+    <div class="train-sway" id="trainSway">
+      <div class="stage" id="stage">
+        <!-- Left hand (back layer): palm + four tapered fingers wrapping BEHIND the phone.
+             The thumb is a separate layer drawn later so it can render IN FRONT of the phone,
+             which is what actually reads as "gripping" it rather than floating beside it. -->
+        <div class="hand-back left" id="handBackLeft">
+          <svg viewBox="0 0 220 420" preserveAspectRatio="xMidYMax meet">
+            <defs>
+              <linearGradient id="skinGradL" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0c79a"/>
+                <stop offset="55%" stop-color="#dba873"/>
+                <stop offset="100%" stop-color="#a97540"/>
+              </linearGradient>
+              <radialGradient id="palmShadeL" cx="48%" cy="30%" r="68%">
+                <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+                <stop offset="100%" stop-color="#000" stop-opacity=".3"/>
+              </radialGradient>
+              <linearGradient id="nailGradL" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fbe6cf"/>
+                <stop offset="100%" stop-color="#e3bd91"/>
+              </linearGradient>
+            </defs>
+
+            <!-- palm / wrist mass -->
+            <path d="M15,420 C10,358 20,300 45,270 C60,253 88,255 110,255 C132,255 160,253 175,270
+                     C200,300 210,358 205,420 Z" fill="url(#skinGradL)"/>
+            <ellipse cx="110" cy="345" rx="92" ry="112" fill="url(#palmShadeL)"/>
+
+            <!-- pinky: tapered organic silhouette (base wider than tip, rounded fingertip cap)
+                 instead of a uniform-width rounded rect, plus two knuckle creases -->
+            <g transform="rotate(-26 70 258)">
+              <path d="M57,258 C57,188 62,128.4 62,126 A8,8 0 0 1 78,126 C78,128.4 83,188 83,258 Z" fill="url(#skinGradL)"/>
+              <path d="M60.5,160 Q70,164 79.5,160" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M58.9,205 Q70,209 81.1,205" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="70" cy="130" rx="6.5" ry="8.5" fill="url(#nailGradL)" opacity=".85"/>
+            </g>
+            <!-- ring -->
+            <g transform="rotate(-10 100 256)">
+              <path d="M86,256 C86,178 91.5,111.1 91.5,108.5 A8.5,8.5 0 0 1 108.5,108.5 C108.5,111.1 114,178 114,256 Z" fill="url(#skinGradL)"/>
+              <path d="M90,144 Q100,148 110,144" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M88.2,194 Q100,198 111.8,194" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="100" cy="112.5" rx="7" ry="9" fill="url(#nailGradL)" opacity=".85"/>
+            </g>
+            <!-- middle -->
+            <g transform="rotate(4 132 256)">
+              <path d="M118,256 C118,175 123.5,105.1 123.5,102.5 A8.5,8.5 0 0 1 140.5,102.5 C140.5,105.1 146,175 146,256 Z" fill="url(#skinGradL)"/>
+              <path d="M122,138 Q132,142 142,138" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M120.3,188 Q132,192 143.7,188" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="132" cy="106.5" rx="7" ry="9" fill="url(#nailGradL)" opacity=".85"/>
+            </g>
+            <!-- index -->
+            <g transform="rotate(17 162 258)">
+              <path d="M149,258 C149,183 154,118.4 154,116 A8,8 0 0 1 170,116 C170,118.4 175,183 175,258 Z" fill="url(#skinGradL)"/>
+              <path d="M152.5,152 Q162,156 171.5,152" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M151,198 Q162,202 173,198" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="162" cy="120" rx="6.7" ry="8.7" fill="url(#nailGradL)" opacity=".85"/>
+            </g>
+
+            <!-- soft contact shadow where the hand meets the phone edge -->
+            <ellipse cx="200" cy="250" rx="18" ry="60" fill="#000" opacity=".18"/>
+          </svg>
+        </div>
+
+        <!-- Right hand (back layer), mirrored via CSS scaleX(-1) -->
+        <div class="hand-back right" id="handBackRight">
+          <svg viewBox="0 0 220 420" preserveAspectRatio="xMidYMax meet">
+            <defs>
+              <linearGradient id="skinGradR" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0c79a"/>
+                <stop offset="55%" stop-color="#dba873"/>
+                <stop offset="100%" stop-color="#a97540"/>
+              </linearGradient>
+              <radialGradient id="palmShadeR" cx="48%" cy="30%" r="68%">
+                <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+                <stop offset="100%" stop-color="#000" stop-opacity=".3"/>
+              </radialGradient>
+              <linearGradient id="nailGradR" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fbe6cf"/>
+                <stop offset="100%" stop-color="#e3bd91"/>
+              </linearGradient>
+            </defs>
+
+            <path d="M15,420 C10,358 20,300 45,270 C60,253 88,255 110,255 C132,255 160,253 175,270
+                     C200,300 210,358 205,420 Z" fill="url(#skinGradR)"/>
+            <ellipse cx="110" cy="345" rx="92" ry="112" fill="url(#palmShadeR)"/>
+
+            <g transform="rotate(-26 70 258)">
+              <path d="M57,258 C57,188 62,128.4 62,126 A8,8 0 0 1 78,126 C78,128.4 83,188 83,258 Z" fill="url(#skinGradR)"/>
+              <path d="M60.5,160 Q70,164 79.5,160" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M58.9,205 Q70,209 81.1,205" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="70" cy="130" rx="6.5" ry="8.5" fill="url(#nailGradR)" opacity=".85"/>
+            </g>
+            <g transform="rotate(-10 100 256)">
+              <path d="M86,256 C86,178 91.5,111.1 91.5,108.5 A8.5,8.5 0 0 1 108.5,108.5 C108.5,111.1 114,178 114,256 Z" fill="url(#skinGradR)"/>
+              <path d="M90,144 Q100,148 110,144" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M88.2,194 Q100,198 111.8,194" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="100" cy="112.5" rx="7" ry="9" fill="url(#nailGradR)" opacity=".85"/>
+            </g>
+            <g transform="rotate(4 132 256)">
+              <path d="M118,256 C118,175 123.5,105.1 123.5,102.5 A8.5,8.5 0 0 1 140.5,102.5 C140.5,105.1 146,175 146,256 Z" fill="url(#skinGradR)"/>
+              <path d="M122,138 Q132,142 142,138" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M120.3,188 Q132,192 143.7,188" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="132" cy="106.5" rx="7" ry="9" fill="url(#nailGradR)" opacity=".85"/>
+            </g>
+            <g transform="rotate(17 162 258)">
+              <path d="M149,258 C149,183 154,118.4 154,116 A8,8 0 0 1 170,116 C170,118.4 175,183 175,258 Z" fill="url(#skinGradR)"/>
+              <path d="M152.5,152 Q162,156 171.5,152" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <path d="M151,198 Q162,202 173,198" stroke="rgba(0,0,0,.14)" stroke-width="1.6" fill="none"/>
+              <ellipse cx="162" cy="120" rx="6.7" ry="8.7" fill="url(#nailGradR)" opacity=".85"/>
+            </g>
+
+            <ellipse cx="200" cy="250" rx="18" ry="60" fill="#000" opacity=".18"/>
+          </svg>
+        </div>
+
+        <!-- Phone -->
+        <div class="phone-wrap" id="phoneWrap">
+          <div class="phone" id="phone">
+            <!-- the case as two ACTUALLY separate, independently offset/rotated pieces once
+                 snapped (2nd drop on) — not a decal, the phone's outline itself now kinks.
+                 Bent wires bridging the two pieces are added after the 3rd drop. -->
+            <div class="case-half top"></div>
+            <div class="case-half bottom"></div>
+            <svg class="frame-wires" viewBox="0 0 200 26" preserveAspectRatio="none">
+              <path d="M16,6 Q55,22 95,8 Q135,23 184,10" stroke="#c41e14" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+              <path d="M16,6 Q55,22 95,8 Q135,23 184,10" stroke="#ff3b30" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+              <path d="M12,12 Q51,25 91,14 Q131,26 180,16" stroke="#1f8a3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+              <path d="M12,12 Q51,25 91,14 Q131,26 180,16" stroke="#34c759" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+              <path d="M20,17 Q59,2 99,16 Q139,1 188,18" stroke="#0a5fc4" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+              <path d="M20,17 Q59,2 99,16 Q139,1 188,18" stroke="#0a84ff" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+            </svg>
+            <button type="button" class="side-btn power" id="powerBtn" title="Power" aria-label="Power"><span class="bar"></span></button>
+            <button type="button" class="side-btn action" id="actionBtn" title="Action button" aria-label="Action button"><span class="bar"></span></button>
+            <button type="button" class="side-btn volUp" id="volUpBtn" title="Volume up" aria-label="Volume up"><span class="bar"></span></button>
+            <button type="button" class="side-btn volDown" id="volDownBtn" title="Volume down" aria-label="Volume down"><span class="bar"></span></button>
+            <div class="screen" id="screen">
+              <div class="dynamic-island"></div>
+
+              <!-- permanent crack, shown once the phone has been dropped -->
+              <svg class="crack-overlay" viewBox="0 0 100 200" preserveAspectRatio="none">
+                <g stroke="rgba(0,0,0,.28)" stroke-width="0.5" fill="none">
+                  <path d="M46,86 L20,40 M46,86 L60,25 M46,86 L15,70 M46,86 L10,110 M46,86 L35,150 M46,86 L70,140 M46,86 L85,95 M46,86 L78,50 M46,86 L60,110"/>
+                  <path d="M30,60 L38,72 L34,90 M55,55 L48,75 L58,95 M20,95 L34,100 L28,120 M60,105 L50,115 L65,125"/>
+                </g>
+                <g stroke="rgba(255,255,255,.6)" stroke-width="0.6" fill="none">
+                  <path d="M46,86 L20,40 M46,86 L60,25 M46,86 L15,70 M46,86 L10,110 M46,86 L35,150 M46,86 L70,140 M46,86 L85,95 M46,86 L78,50 M46,86 L60,110"/>
+                  <path d="M30,60 L38,72 L34,90 M55,55 L48,75 L58,95 M20,95 L34,100 L28,120 M60,105 L50,115 L65,125"/>
+                </g>
+              </svg>
+
+              <!-- glitch flicker, triggered right when the crack happens and now and then after -->
+              <div class="glitch-overlay">
+                <div class="chan chan-r"></div><div class="chan chan-g"></div><div class="chan chan-b"></div>
+                <div class="static"></div>
+              </div>
+
+              <div class="volume-hud" id="volumeHud">
+                <span class="vol-icon" id="volIcon">🔊</span>
+                <div class="vol-track"><div class="vol-fill" id="volFill"></div></div>
+              </div>
+
+              <!-- Lock screen -->
+              <div class="lockscreen" id="lockscreen">
+                <div class="clock-time" id="clockTime">9:41</div>
+                <div class="clock-date" id="clockDate">Wednesday, August 26</div>
+                <div class="lock-icon">🔒</div>
+                <div class="swipe-hint" id="swipeHint">
+                  <svg class="chev" viewBox="0 0 26 14"><path d="M2 12 L13 2 L24 12" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>swipe up to unlock</span>
+                </div>
+              </div>
+
+              <!-- Passcode screen -->
+              <div class="passscreen" id="passscreen">
+                <div class="pass-title" id="passTitle">Enter Passcode</div>
+                <div class="pass-sub">you can also type it on your keyboard</div>
+                <div class="dots" id="dots">
+                  <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                </div>
+                <div class="keypad" id="keypad">
+                  <div class="key" data-k="1"><span class="num">1</span></div>
+                  <div class="key" data-k="2"><span class="num">2</span><span class="letters">ABC</span></div>
+                  <div class="key" data-k="3"><span class="num">3</span><span class="letters">DEF</span></div>
+                  <div class="key" data-k="4"><span class="num">4</span><span class="letters">GHI</span></div>
+                  <div class="key" data-k="5"><span class="num">5</span><span class="letters">JKL</span></div>
+                  <div class="key" data-k="6"><span class="num">6</span><span class="letters">MNO</span></div>
+                  <div class="key" data-k="7"><span class="num">7</span><span class="letters">PQRS</span></div>
+                  <div class="key" data-k="8"><span class="num">8</span><span class="letters">TUV</span></div>
+                  <div class="key" data-k="9"><span class="num">9</span><span class="letters">WXYZ</span></div>
+                  <div class="key ghost"></div>
+                  <div class="key" data-k="0"><span class="num">0</span></div>
+                  <div class="key del" data-k="del">⌫</div>
+                </div>
+                <div class="cancel-link" id="cancelLink">Cancel</div>
+              </div>
+
+              <!-- Home / success screen -->
+              <div class="homescreen" id="homescreen">
+                <div class="home-check">✅</div>
+                <div class="home-msg">Unlocked!</div>
+                <div class="home-time" id="resultLine">4 attempts • 3.2s</div>
+              </div>
+
+              <!-- iOS-style Home Screen: lands here immediately after a correct passcode -->
+              <div class="ioshome" id="iosHome">
+                <button class="lock-pill" id="lockPill" title="Lock &amp; play again">🔒 Lock</button>
+                <div class="app-grid">
+                  <div class="app-icon" data-app="messages"><div class="icon-glyph messages">💬</div><span>Messages</span></div>
+                  <div class="app-icon" data-app="mail"><div class="icon-glyph mail">✉️</div><span>Mail</span></div>
+                  <div class="app-icon" data-app="settings"><div class="icon-glyph settings">⚙️</div><span>Settings</span></div>
+                  <div class="app-icon" data-app="appstore"><div class="icon-glyph appstore">A</div><span>App Store</span></div>
+                  <div class="app-icon" data-app="photos"><div class="icon-glyph photos"></div><span>Photos</span></div>
+                  <div class="app-icon" data-app="music"><div class="icon-glyph music">🎵</div><span>Music</span></div>
+                  <div class="app-icon" data-app="maps"><div class="icon-glyph maps">🗺️</div><span>Maps</span></div>
+                  <div class="app-icon" data-app="calendar"><div class="icon-glyph calendar">📅</div><span>Calendar</span></div>
+                </div>
+                <div class="home-swipe-hint">swipe up for app switcher</div>
+                <div class="dock">
+                  <div class="app-icon dock-icon" data-app="phone"><div class="icon-glyph phone">📞</div></div>
+                  <div class="app-icon dock-icon" data-app="safari"><div class="icon-glyph safari">🧭</div></div>
+                  <div class="app-icon dock-icon" data-app="camera"><div class="icon-glyph camera">📷</div></div>
+                  <div class="app-icon dock-icon" data-app="clock"><div class="icon-glyph clock">⏰</div></div>
+                </div>
+              </div>
+
+              <!-- App Switcher: swipeable cards previewing Settings / Safari / App Store -->
+              <div class="switcher" id="switcherScreen">
+                <div class="switcher-track" id="switcherTrack">
+                  <div class="card-slot">
+                    <div class="app-card">
+                      <div class="card-app settings-app">
+                        <div class="app-titlebar">Settings</div>
+                        <div class="set-row"><span class="set-ic" style="background:#8e8e93">📶</span>Wi-Fi<span class="set-val">Home 5G ›</span></div>
+                        <div class="set-row"><span class="set-ic" style="background:#007aff">🔵</span>Bluetooth<span class="set-val">On ›</span></div>
+                        <div class="set-row"><span class="set-ic" style="background:#34c759">📱</span>Cellular<span class="set-val">›</span></div>
+                        <div class="set-row"><span class="set-ic" style="background:#ff3b30">🔔</span>Notifications<span class="set-val">›</span></div>
+                        <div class="set-row"><span class="set-ic" style="background:#ff2d55">🔊</span>Sounds &amp; Haptics<span class="set-val">›</span></div>
+                        <div class="set-row"><span class="set-ic" style="background:#5856d6">🖥️</span>Display &amp; Brightness<span class="set-val">›</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-slot">
+                    <div class="app-card">
+                      <div class="card-app safari-app">
+                        <div class="safari-bar">🔒 apple.com</div>
+                        <div class="safari-page">
+                          <div class="skel-line w70"></div>
+                          <div class="skel-block"></div>
+                          <div class="skel-line w90"></div>
+                          <div class="skel-line w60"></div>
+                          <div class="skel-line w80"></div>
+                        </div>
+                        <div class="safari-toolbar"><span>◀</span><span>▶</span><span>⬆️</span><span>📑</span><span>▢</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-slot">
+                    <div class="app-card">
+                      <div class="card-app appstore-app">
+                        <div class="app-titlebar">Today</div>
+                        <div class="as-feature">
+                          <div class="as-feature-icon">🎮</div>
+                          <div class="as-feature-text">
+                            <div class="as-feature-title">Editor's Choice</div>
+                            <div class="as-feature-sub">A puzzle worth your time</div>
+                          </div>
+                          <button class="as-get">GET</button>
+                        </div>
+                        <div class="as-row">
+                          <div class="as-tile"></div><div class="as-tile"></div><div class="as-tile"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="switcher-dots" id="switcherDots">
+                  <span class="sdot" data-i="0"></span><span class="sdot" data-i="1"></span><span class="sdot" data-i="2"></span>
+                </div>
+                <div class="switcher-hint">swipe to switch • swipe up for home</div>
+              </div>
+
+              <div class="home-indicator" id="homeIndicatorBtn"></div>
+              <div class="screen-off" id="screenOff"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thumbs, drawn in front of the phone so they visibly grip/overlap its edge instead
+             of disappearing behind it like the rest of the hand does. -->
+        <div class="hand-thumb left" id="thumbLeft">
+          <svg viewBox="0 0 220 420" preserveAspectRatio="xMidYMax meet">
+            <defs>
+              <linearGradient id="skinGradTL" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0c79a"/>
+                <stop offset="55%" stop-color="#dba873"/>
+                <stop offset="100%" stop-color="#a97540"/>
+              </linearGradient>
+              <linearGradient id="nailGradTL" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fbe6cf"/>
+                <stop offset="100%" stop-color="#e3bd91"/>
+              </linearGradient>
+            </defs>
+            <g transform="rotate(67 58 300)">
+              <path d="M39,302 C39,221 46,155.6 46,152 A12,12 0 0 1 70,152 C70,155.6 77,221 77,302 Z" fill="url(#skinGradTL)"/>
+              <path d="M43.9,189 Q58,194 72.1,189" stroke="rgba(0,0,0,.15)" stroke-width="1.8" fill="none"/>
+              <path d="M41.7,240 Q58,245 74.3,240" stroke="rgba(0,0,0,.15)" stroke-width="1.8" fill="none"/>
+              <ellipse cx="58" cy="157" rx="10" ry="12.5" fill="url(#nailGradTL)" opacity=".85"/>
+            </g>
+          </svg>
+        </div>
+        <div class="hand-thumb right" id="thumbRight">
+          <svg viewBox="0 0 220 420" preserveAspectRatio="xMidYMax meet">
+            <defs>
+              <linearGradient id="skinGradTR" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f0c79a"/>
+                <stop offset="55%" stop-color="#dba873"/>
+                <stop offset="100%" stop-color="#a97540"/>
+              </linearGradient>
+              <linearGradient id="nailGradTR" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#fbe6cf"/>
+                <stop offset="100%" stop-color="#e3bd91"/>
+              </linearGradient>
+            </defs>
+            <g transform="rotate(67 58 300)">
+              <path d="M39,302 C39,221 46,155.6 46,152 A12,12 0 0 1 70,152 C70,155.6 77,221 77,302 Z" fill="url(#skinGradTR)"/>
+              <path d="M43.9,189 Q58,194 72.1,189" stroke="rgba(0,0,0,.15)" stroke-width="1.8" fill="none"/>
+              <path d="M41.7,240 Q58,245 74.3,240" stroke="rgba(0,0,0,.15)" stroke-width="1.8" fill="none"/>
+              <ellipse cx="58" cy="157" rx="10" ry="12.5" fill="url(#nailGradTR)" opacity=".85"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="saveFlash">SAVED</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============== AUDIO ENGINE (all synthesized, no external files) ============== */
+  const AudioEngine = (function(){
+    let ctx = null;
+    let musicTimer = null;
+    let enabled = true;
+    let unlocked = false;
+    let masterVolume = 0.7; // driven by the phone's physical side volume buttons
+
+    function ensureCtx(){
+      if(!ctx){ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      if(ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    /* a short, minimal "tock" — layers a tiny filtered noise transient under a very brief
+       sine blip with a near-instant decay, which reads much closer to Apple's system click
+       sounds than a plain tonal beep does */
+    function tock(freq, dur, vol, when){
+      if(!enabled || masterVolume<=0) return;
+      const c = ensureCtx();
+      const t0 = (when||0) + c.currentTime;
+      const v = (vol||0.16) * masterVolume;
+
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      osc.frequency.exponentialRampToValueAtTime(freq*0.86, t0+dur);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(v, t0+0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t0); osc.stop(t0+dur+0.01);
+
+      // click transient
+      const nDur = 0.006;
+      const buffer = c.createBuffer(1, Math.max(1,Math.floor(c.sampleRate*nDur)), c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * (1-i/data.length); }
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      const ng = c.createGain();
+      ng.gain.setValueAtTime(v*0.5, t0);
+      const filt = c.createBiquadFilter();
+      filt.type='highpass'; filt.frequency.value=2200;
+      src.connect(filt).connect(ng).connect(c.destination);
+      src.start(t0);
+    }
+
+    function tone(freq, dur, type, vol, when){
+      if(!enabled || masterVolume<=0) return;
+      const c = ensureCtx();
+      const t0 = (when||0) + c.currentTime;
+      const v = (vol||0.18) * masterVolume;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(v, t0+0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t0); osc.stop(t0+dur+0.02);
+    }
+
+    function noiseSweep(dur, vol, from, to){
+      if(!enabled || masterVolume<=0) return;
+      const c = ensureCtx();
+      const t0 = c.currentTime;
+      const buffer = c.createBuffer(1, Math.floor(c.sampleRate*dur), c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * (1 - i/data.length); }
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      const gain = c.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime((vol||0.1)*masterVolume, t0+dur*0.3);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      const filt = c.createBiquadFilter();
+      filt.type='bandpass'; filt.Q.value=0.7;
+      filt.frequency.setValueAtTime(from, t0);
+      filt.frequency.exponentialRampToValueAtTime(to, t0+dur);
+      src.connect(filt).connect(gain).connect(c.destination);
+      src.start(t0);
+    }
+
+    function rumble(dur, vol){
+      if(!enabled || masterVolume<=0) return;
+      const c = ensureCtx();
+      const t0 = c.currentTime;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(55,t0);
+      gain.gain.setValueAtTime(0.0001,t0);
+      gain.gain.exponentialRampToValueAtTime((vol||0.03)*masterVolume,t0+0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+      const filt = c.createBiquadFilter();
+      filt.type='lowpass'; filt.frequency.value=180;
+      osc.connect(filt).connect(gain).connect(c.destination);
+      osc.start(t0); osc.stop(t0+dur+0.05);
+    }
+
+    return {
+      init(){ if(unlocked) return; unlocked = true; ensureCtx(); },
+      setEnabled(v){ enabled = v; if(!enabled) this.stopMusic(); },
+      isEnabled(){ return enabled; },
+      setVolume(v){ masterVolume = Math.max(0, Math.min(1, v)); },
+      getVolume(){ return masterVolume; },
+
+      // iOS-style keyboard "tock" — short, dry, percussive
+      keyTap(){ tock(760, 0.032, 0.15); },
+      del(){ tock(430, 0.045, 0.14); },
+
+      // soft swipe whoosh, closer to a breathy air sound than a sci-fi sweep
+      swipe(){ noiseSweep(0.22, 0.09, 300, 1600); },
+
+      // restrained double-buzz, closer to how iOS pairs a subtle tone with the vibration
+      // on a failed passcode rather than a harsh arcade "wrong" sound
+      error(){ tone(180,0.11,'triangle',0.11); tone(160,0.13,'triangle',0.10,0.1); },
+
+      // clean two-note chime, in the spirit of Apple's minimal confirmation tones
+      success(){ tone(1318.5,0.5,'sine',0.15); tone(1760,0.6,'sine',0.14,0.12); },
+
+      pickup(){ tock(600,0.03,0.09); },
+
+      // soft click when a side button is pressed
+      sideClick(){ tock(1000,0.02,0.1); },
+
+      // short descending tone for power-off, ascending for power-on — echoes the
+      // sleep/wake tones on Apple hardware without copying them verbatim
+      powerDown(){ tone(880,0.22,'sine',0.14); tone(440,0.3,'sine',0.12,0.09); },
+      powerUp(){ tone(440,0.16,'sine',0.12); tone(880,0.28,'sine',0.14,0.09); },
+
+      jolt(){ rumble(0.4, 0.05); },
+
+      // quick fumbling "uh-oh" as the phone slips out of your hands
+      fumble(){ tone(340,0.1,'triangle',0.13); tone(240,0.12,'triangle',0.12,0.09); tone(160,0.16,'triangle',0.11,0.18); },
+      // glass-shatter impact: a bright noise burst, a few high tinkling clicks, and a low thud
+      shatter(){
+        noiseSweep(0.22, 0.16, 3200, 500);
+        [1900,2500,3200,2100].forEach((f,i)=> tock(f, 0.05, 0.12, i*0.025));
+        tone(85,0.28,'sine',0.18,0.03);
+      },
+      // digital zap/static for the screen-damage glitch
+      glitchZap(){
+        noiseSweep(0.14, 0.09, 4200, 300);
+        tone(1400,0.05,'square',0.05);
+        tone(700,0.05,'square',0.04,0.06);
+      },
+      // harsh dry crack for the case snapping in half — sharper and more percussive than the shatter
+      snap(){
+        noiseSweep(0.1, 0.2, 3800, 900);
+        tone(130,0.14,'square',0.18);
+        tone(95,0.22,'square',0.16,0.05);
+      },
+      // heaviest impact: a crunch of debris plus a spark for the exposed wires
+      crunch(){
+        noiseSweep(0.3, 0.22, 2200, 250);
+        tone(70,0.32,'sawtooth',0.2,0.05);
+        [2600,3400,1800].forEach((f,i)=> tock(f, 0.04, 0.1, 0.2+i*0.03));
+      },
+      startMusic(){
+        if(!enabled || musicTimer) return;
+        const c = ensureCtx();
+        const scale = [261.63,293.66,329.63,392.00,440.00,523.25];
+        const playNote = ()=>{
+          if(!enabled) return;
+          const f = scale[Math.floor(Math.random()*scale.length)] / 2;
+          const t0 = c.currentTime;
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          osc.type='sine';
+          osc.frequency.setValueAtTime(f,t0);
+          gain.gain.setValueAtTime(0.0001,t0);
+          gain.gain.exponentialRampToValueAtTime(0.045*masterVolume,t0+0.4);
+          gain.gain.exponentialRampToValueAtTime(0.0001,t0+2.2);
+          osc.connect(gain).connect(c.destination);
+          osc.start(t0); osc.stop(t0+2.3);
+        };
+        playNote();
+        musicTimer = setInterval(playNote, 2200);
+      },
+      stopMusic(){ if(musicTimer){ clearInterval(musicTimer); musicTimer=null; } }
+    };
+  })();
+
+  function haptic(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+
+  /* ============== STORAGE / STATS ============== */
+  const STORE_KEY = 'iphoneCode.stats.v1';
+  function loadStats(){
+    try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+    return { bestTime:null, bestAttempts:null };
+  }
+  function saveStats(s){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); flashSaved(); }catch(e){} }
+  let stats = loadStats();
+  let autosaveTimer = null;
+  function scheduleAutosave(){
+    if(autosaveTimer) return;
+    autosaveTimer = setInterval(()=>{ saveStats(stats); }, 30000);
+  }
+  function flashSaved(){
+    const el = document.getElementById('saveFlash');
+    el.classList.add('show');
+    setTimeout(()=> el.classList.remove('show'), 1200);
+  }
+  function refreshStatsLabels(){
+    document.getElementById('bestTimeLabel').textContent = stats.bestTime!=null ? stats.bestTime.toFixed(1)+'s' : '--';
+    document.getElementById('bestAttemptsLabel').textContent = stats.bestAttempts!=null ? stats.bestAttempts : '--';
+  }
+  function toast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> el.classList.remove('show'), 1800);
+  }
+
+  /* ============== CLOCK ============== */
+  function updateClock(){
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes();
+    h = h % 12; if(h===0) h=12;
+    document.getElementById('clockTime').textContent = h + ':' + String(m).padStart(2,'0');
+    const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('clockDate').textContent = days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate();
+  }
+  updateClock();
+  setInterval(updateClock, 15000);
+
+  /* ============== TUNNEL WINDOWS (built in JS so each light streak is independently
+     randomized — synced/identical streaks across windows is what read as rigid "ropes") */
+  (function buildWindows(){
+    const row = document.getElementById('windowRow');
+    const positions = [2, 19, 64, 81];
+    positions.forEach(left=>{
+      const win = document.createElement('div');
+      win.className = 'window';
+      win.style.left = left + '%';
+      const tunnel = document.createElement('div');
+      tunnel.className = 'tunnel';
+      const lightCount = 2 + Math.floor(Math.random()*2);
+      for(let i=0;i<lightCount;i++){
+        const l = document.createElement('span');
+        l.className = 'tlight';
+        l.style.top = (15 + Math.random()*65) + '%';
+        l.style.animationDuration = (0.7 + Math.random()*0.9).toFixed(2) + 's';
+        l.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
+        tunnel.appendChild(l);
+      }
+      const glow = document.createElement('div');
+      glow.className = 'glow';
+      win.appendChild(tunnel);
+      win.appendChild(glow);
+      row.appendChild(win);
+    });
+  })();
+
+  /* ============== TRAIN PHYSICS (inertia-based sway, not a looped animation) ==============
+     A damped spring chases a randomly-changing "lean" target (like the train easing through
+     curves/braking), plus a separate vertical spring that gets kicked by jolts (rail joints).
+     Because it's simulated frame-by-frame with random targets/impulses, the motion never
+     repeats identically the way a fixed CSS @keyframes loop does. */
+  const trainSway = document.getElementById('trainSway');
+  const ceilingLights = document.querySelectorAll('.train-ceiling .light');
+  const physState = { angle:-1, angVel:0, targetLean:-1, y:0, yVel:0, bumpPhase:0 };
+
+  function pickNewLean(){
+    physState.targetLean = (Math.random()*5.2 - 2.6);
+    setTimeout(pickNewLean, 1700 + Math.random()*2600);
+  }
+  pickNewLean();
+
+  let physLastT = null;
+  function physicsLoop(t){
+    if(physLastT === null) physLastT = t;
+    const dt = Math.min(0.05, (t - physLastT)/1000);
+    physLastT = t;
+
+    // angular spring chasing the current target lean (body weight shifting with the train)
+    const angAccel = (physState.targetLean - physState.angle)*3.2 - physState.angVel*2.6;
+    physState.angVel += angAccel*dt;
+    physState.angle += physState.angVel*dt;
+
+    // vertical spring, mostly at rest but kicked by jolts (rail joints / braking)
+    const yAccel = (0 - physState.y)*46 - physState.yVel*9;
+    physState.yVel += yAccel*dt;
+    physState.y += physState.yVel*dt;
+
+    // tiny continuous track-joint bump so standing never looks perfectly still
+    physState.bumpPhase += dt * (1.15 + Math.sin(t/4100)*0.12);
+    const microBump = Math.sin(physState.bumpPhase*6.283)*0.3;
+
+    const translateX = physState.angle*2.6;
+    const translateY = physState.y + microBump;
+    trainSway.style.transform = 'translate('+translateX.toFixed(2)+'px,'+translateY.toFixed(2)+'px) rotate('+physState.angle.toFixed(3)+'deg)';
+
+    requestAnimationFrame(physicsLoop);
+  }
+  requestAnimationFrame(physicsLoop);
+
+  function flickerLights(){
+    ceilingLights.forEach((l,i)=>{
+      setTimeout(()=>{
+        l.style.transition = 'opacity .06s ease';
+        l.style.opacity = '0.15';
+        setTimeout(()=>{ l.style.opacity = ''; l.style.transition=''; }, 90 + i*20);
+      }, i*25);
+    });
+  }
+
+  const thumbLeft = document.getElementById('thumbLeft');
+  const thumbRight = document.getElementById('thumbRight');
+  const handBackLeft = document.getElementById('handBackLeft');
+  const handBackRight = document.getElementById('handBackRight');
+  const screenEl = document.getElementById('screen');
+
+  function setHandVars(el, hx, hy, hrot){
+    el.style.setProperty('--hx', hx);
+    el.style.setProperty('--hy', hy);
+    el.style.setProperty('--hrot', hrot);
+  }
+
+  function squeezeGrip(){
+    [thumbLeft, thumbRight].forEach(t=>{
+      t.style.setProperty('--grip-scale', '1.05');
+      t.style.setProperty('--grip-rot', '-2deg');
+    });
+    setTimeout(()=>{
+      [thumbLeft, thumbRight].forEach(t=>{
+        t.style.setProperty('--grip-scale', '1');
+        t.style.setProperty('--grip-rot', '0deg');
+      });
+    }, 260);
+  }
+
+  /* whichever hand is nearer reaches toward wherever the player actually taps on the screen —
+     the thumb bends the most, but the whole hand (palm + fingers together) shifts along with
+     it too, like a real hand actually moving to tap something instead of just the thumb alone */
+  function tapThumbAt(targetEl){
+    if(!targetEl || !screenEl) return;
+    const screenRect = screenEl.getBoundingClientRect();
+    const r = targetEl.getBoundingClientRect();
+    if(!screenRect.width || !screenRect.height) return;
+    const relX = ((r.left + r.width/2) - screenRect.left) / screenRect.width;   // 0..1 across the screen
+    const relY = ((r.top + r.height/2) - screenRect.top) / screenRect.height;   // 0..1 down the screen
+    const isRight = relX >= 0.5;
+    const thumb = isRight ? thumbRight : thumbLeft;
+    const handBack = isRight ? handBackRight : handBackLeft;
+    // modest reach so it stays a natural-looking thumb stretch, not a huge slide
+    const dxScreen = (relX - 0.5) * 42;
+    const dyScreen = (relY - 0.6) * 30;
+    // the right side's container is mirrored (scaleX(-1)), so its local dx must be inverted
+    // for the rendered/on-screen motion to still point toward the actual tap
+    const dxLocal = isRight ? -dxScreen : dxScreen;
+    thumb.classList.add('tapping');
+    thumb.style.setProperty('--tap-dx', dxLocal.toFixed(1) + 'px');
+    thumb.style.setProperty('--tap-dy', dyScreen.toFixed(1) + 'px');
+    // the whole hand follows at a smaller scale, with a slight wrist-rotation cue
+    const hx = (dxLocal*0.4).toFixed(1) + 'px';
+    const hy = (dyScreen*0.35).toFixed(1) + 'px';
+    const hrot = (dxLocal*0.09).toFixed(1) + 'deg';
+    setHandVars(thumb, hx, hy, hrot);
+    setHandVars(handBack, hx, hy, hrot);
+    clearTimeout(thumb._tapTimer);
+    thumb._tapTimer = setTimeout(()=>{
+      thumb.style.setProperty('--tap-dx', '0px');
+      thumb.style.setProperty('--tap-dy', '0px');
+      thumb.classList.remove('tapping');
+      setHandVars(thumb, '0px', '0px', '0deg');
+      setHandVars(handBack, '0px', '0px', '0deg');
+    }, 180);
+  }
+
+  let joltTimer = null;
+  function scheduleJolt(){
+    const delay = 3500 + Math.random()*4500;
+    joltTimer = setTimeout(()=>{
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      physState.angVel += dir * (3.2 + Math.random()*2.2);
+      physState.yVel += -13 - Math.random()*6;
+      if(gameActive){ AudioEngine.jolt(); flickerLights(); squeezeGrip(); }
+      scheduleJolt();
+    }, delay);
+  }
+
+  /* ============== GAME STATE ============== */
+  const CODE = '1111';
+  const DROP_THRESHOLD = 10;
+  let entered = '';
+  let attempts = 0;
+  let startTime = null;
+  let locked = true;
+  let gameActive = false;
+  let poweredOn = true;
+  let wrongStreak = 0;
+  let phoneAirborne = false;
+  let dropCount = 0;
+
+  const lockscreen = document.getElementById('lockscreen');
+  const passscreen = document.getElementById('passscreen');
+  const homescreen = document.getElementById('homescreen');
+  const iosHome = document.getElementById('iosHome');
+  const switcherScreen = document.getElementById('switcherScreen');
+  const switcherTrack = document.getElementById('switcherTrack');
+  const dotsEl = document.getElementById('dots');
+  const phoneWrap = document.getElementById('phoneWrap');
+  const phoneEl = document.getElementById('phone');
+  const dropPrompt = document.getElementById('dropPrompt');
+  const dropIcon = document.getElementById('dropIcon');
+  const dropText = document.getElementById('dropText');
+  const dropSub = document.getElementById('dropSub');
+  const phoneHalfTop = document.getElementById('phoneHalfTop');
+  const phoneHalfBottom = document.getElementById('phoneHalfBottom');
+  const stageEl = document.getElementById('stage');
+  const attemptsLabel = document.getElementById('attemptsLabel');
+  const screenOff = document.getElementById('screenOff');
+  const volumeHud = document.getElementById('volumeHud');
+  const volIcon = document.getElementById('volIcon');
+  const volFill = document.getElementById('volFill');
+
+  function resetPhoneState(){
+    entered = ''; attempts = 0; startTime = null; locked = true;
+    lockscreen.style.transform = 'translateY(0)';
+    lockscreen.style.opacity = '1';
+    passscreen.classList.remove('show');
+    homescreen.classList.remove('show');
+    iosHome.classList.remove('show');
+    switcherScreen.classList.remove('show');
+    updateDots();
+    attemptsLabel.textContent = 'Attempts: 0';
+    // a fresh phone: clear the crack, glitching, damage tier, and the wrong-guess streak
+    wrongStreak = 0;
+    phoneAirborne = false;
+    dropCount = 0;
+    screenEl.classList.remove('cracked', 'glitch-burst');
+    phoneEl.classList.remove('snapped-tier', 'trashed-tier');
+    dropPrompt.classList.remove('show');
+    stageEl.classList.remove('look-down');
+    phoneWrap.style.transition = '';
+    phoneWrap.style.opacity = '';
+    phoneWrap.classList.remove('dropping');
+    phoneHalfTop.classList.remove('snap-show', 'snap-fly', 'lost');
+    phoneHalfBottom.classList.remove('snap-show', 'snap-fly');
+    [handBackLeft, handBackRight, thumbLeft, thumbRight].forEach(el=>{
+      el.classList.remove('letgo');
+      el.style.transition = '';
+      setHandVars(el, '0px', '0px', '0deg');
+    });
+  }
+
+  /* lighter reset used after waking the phone back up — a real iPhone drops any
+     in-progress passcode entry (and any app you had open) and returns you to the
+     lock screen, but doesn't erase attempts you'd already made */
+  function returnToLockScreen(){
+    entered = ''; startTime = null; locked = true;
+    lockscreen.style.transform = 'translateY(0)';
+    lockscreen.style.opacity = '1';
+    passscreen.classList.remove('show');
+    homescreen.classList.remove('show');
+    iosHome.classList.remove('show');
+    switcherScreen.classList.remove('show');
+    updateDots();
+  }
+
+  function pressSideBtn(el){
+    el.classList.add('pressed');
+    setTimeout(()=> el.classList.remove('pressed'), 140);
+  }
+
+  function showVolumeHud(v){
+    volFill.style.width = Math.round(v*100) + '%';
+    volIcon.textContent = v<=0 ? '🔇' : (v<0.4 ? '🔉' : '🔊');
+    volumeHud.classList.add('show');
+    clearTimeout(showVolumeHud._t);
+    showVolumeHud._t = setTimeout(()=> volumeHud.classList.remove('show'), 1300);
+  }
+
+  function powerOff(){
+    if(!poweredOn) return;
+    poweredOn = false;
+    screenOff.classList.add('on');
+    AudioEngine.powerDown();
+    haptic(18);
+  }
+
+  function powerOn(){
+    if(poweredOn) return;
+    poweredOn = true;
+    screenOff.classList.remove('on');
+    AudioEngine.powerUp();
+    haptic(18);
+    returnToLockScreen();
+  }
+
+  function updateDots(){
+    const dots = dotsEl.querySelectorAll('.dot');
+    dots.forEach((d,i)=> d.classList.toggle('filled', i < entered.length));
+    dotsEl.classList.remove('error','success');
+  }
+
+  function unlockToPasscode(){
+    if(!locked || !poweredOn || phoneAirborne) return;
+    locked = false;
+    AudioEngine.swipe();
+    haptic(15);
+    lockscreen.style.transform = 'translateY(-100%)';
+    lockscreen.style.opacity = '0.3';
+    setTimeout(()=>{
+      passscreen.classList.add('show');
+      startTime = performance.now();
+    }, 120);
+  }
+
+  function pressKey(k){
+    if(locked || !gameActive || !poweredOn || phoneAirborne) return;
+    if(entered.length >= 4) return;
+    entered += k;
+    updateDots();
+    AudioEngine.keyTap();
+    haptic(8);
+    if(entered.length === 4) setTimeout(checkCode, 180);
+  }
+
+  function delKey(){
+    if(locked || !gameActive || !poweredOn || phoneAirborne || entered.length===0) return;
+    entered = entered.slice(0,-1);
+    updateDots();
+    AudioEngine.del();
+    haptic(6);
+  }
+
+  function checkCode(){
+    attempts++;
+    attemptsLabel.textContent = 'Attempts: ' + attempts;
+    if(entered === CODE){
+      wrongStreak = 0;
+      const elapsed = (performance.now() - startTime)/1000;
+      dotsEl.classList.add('success');
+      AudioEngine.success();
+      haptic([10,40,10,40,20]);
+      let improved = false;
+      if(stats.bestTime===null || elapsed < stats.bestTime){ stats.bestTime = elapsed; improved = true; }
+      if(stats.bestAttempts===null || attempts < stats.bestAttempts){ stats.bestAttempts = attempts; improved = true; }
+      if(improved){ saveStats(stats); refreshStatsLabels(); }
+      setTimeout(()=>{
+        document.getElementById('resultLine').textContent = attempts + (attempts===1?' attempt':' attempts') + ' • ' + elapsed.toFixed(1) + 's';
+        passscreen.classList.remove('show');
+        homescreen.classList.add('show');
+        // land on the phone immediately — a quick "Unlocked!" flash, then straight to the Home Screen
+        setTimeout(()=>{
+          homescreen.classList.remove('show');
+          iosHome.classList.add('show');
+        }, 1000);
+      }, 550);
+    }else{
+      dotsEl.classList.add('error');
+      AudioEngine.error();
+      haptic([30,20,30]);
+      wrongStreak++;
+      // first drop takes 10 wrong in a row (as asked) — every drop after that only needs 3,
+      // since grinding out another full 10 just to see the next damage tier is punishing
+      const threshold = dropCount === 0 ? DROP_THRESHOLD : 3;
+      if(wrongStreak >= threshold){
+        setTimeout(()=>{ entered = ''; updateDots(); dropPhone(); }, 420);
+      }else{
+        setTimeout(()=>{ entered = ''; updateDots(); }, 420);
+      }
+    }
+  }
+
+  /* ============== SCREEN GLITCH (symptom of the crack) ============== */
+  function triggerGlitch(duration){
+    screenEl.classList.add('glitch-burst');
+    AudioEngine.glitchZap();
+    setTimeout(()=> screenEl.classList.remove('glitch-burst'), duration || 380);
+  }
+  let glitchTimer = null;
+  function scheduleGlitch(){
+    const delay = 4500 + Math.random()*7500;
+    glitchTimer = setTimeout(()=>{
+      if(screenEl.classList.contains('cracked') && poweredOn && gameActive) triggerGlitch(300);
+      scheduleGlitch();
+    }, delay);
+  }
+
+  /* ============== DROP THE PHONE (10 wrong guesses in a row) ==============
+     Damage escalates across drops within a session (dropCount doesn't reset until a fresh
+     phone via resetPhoneState): 1st = crack + glitch, 2nd = case snaps in half (stays visibly
+     fractured after), 3rd+ = barely holding together, exposed red/green/blue wires visible. */
+  function dropPhone(){
+    if(phoneAirborne) return;
+    phoneAirborne = true;
+    dropCount++;
+    const tier = Math.min(dropCount, 3);
+    passscreen.classList.remove('show');
+    AudioEngine.fumble();
+    haptic([15,30,15,30,60]);
+
+    // hands let go — critically, the THUMB peels away much further than the rest of the
+    // hand, so the hand visibly opens up as it releases instead of sliding off as one
+    // rigid block (which is what made the motion look like nothing was really changing)
+    [handBackLeft, handBackRight].forEach(el=>{
+      el.classList.add('letgo');
+      setHandVars(el, '-22px', '54px', '15deg');
+    });
+    [thumbLeft, thumbRight].forEach(el=>{
+      el.classList.add('letgo');
+      setHandVars(el, '-42px', '80px', '30deg');
+    });
+
+    phoneWrap.style.transition = '';
+    phoneWrap.classList.add('dropping');
+
+    setTimeout(()=>{
+      if(tier >= 2){
+        // it snaps apart on impact — the small (top) piece and big (bottom) piece fly off
+        // separately. On the final break the small piece is marked 'lost': it keeps tumbling
+        // away and shrinks into nothing instead of ever settling — it's gone for good.
+        phoneWrap.style.opacity = '0';
+        if(tier >= 3) phoneHalfTop.classList.add('lost');
+        phoneHalfTop.classList.add('snap-show');
+        phoneHalfBottom.classList.add('snap-show');
+        requestAnimationFrame(()=>{
+          phoneHalfTop.classList.add('snap-fly');
+          phoneHalfBottom.classList.add('snap-fly');
+        });
+      }
+      if(tier === 1){
+        AudioEngine.shatter();
+        dropIcon.textContent = '💥';
+        dropText.textContent = 'You dropped your phone!';
+        dropSub.textContent = 'tap to pick it up';
+      }else if(tier === 2){
+        AudioEngine.snap();
+        dropIcon.textContent = '💔';
+        dropText.textContent = 'Your phone snapped in half!';
+        dropSub.textContent = 'tap to pick up the pieces';
+      }else{
+        AudioEngine.crunch();
+        dropIcon.textContent = '⚡';
+        dropText.textContent = 'A piece broke off and is gone for good!';
+        dropSub.textContent = 'tap to pick up the big piece';
+      }
+      haptic(tier >= 2 ? [50,30,50,30,80] : [40,20,40]);
+      dropPrompt.classList.add('show');
+    }, 650);
+  }
+
+  function pickUpPhone(){
+    if(!phoneAirborne) return;
+    const tier = Math.min(dropCount, 3);
+    dropPrompt.classList.remove('show');
+    AudioEngine.pickup();
+    haptic(12);
+
+    // if it snapped apart, the flying halves fade out and the real phone (now permanently
+    // showing that damage tier) fades back in before the hands reach for it — on the final
+    // break the small piece was already lost, so only the big piece's flight resets here
+    if(tier >= 2){
+      phoneHalfTop.classList.remove('snap-show', 'snap-fly', 'lost');
+      phoneHalfBottom.classList.remove('snap-show', 'snap-fly');
+      phoneWrap.style.opacity = '1';
+      phoneEl.classList.add(tier >= 3 ? 'trashed-tier' : 'snapped-tier');
+    }
+
+    // phase 1: look down and reach — again the thumb stretches out well ahead of the rest
+    // of the hand, like it's actually reaching for something on the floor, not just the
+    // whole hand shifting downward as a single unit
+    stageEl.classList.add('look-down');
+    [handBackLeft, handBackRight].forEach(el=>{
+      el.style.transition = 'transform .24s ease-in';
+      setHandVars(el, '-14px', '70px', '10deg');
+    });
+    [thumbLeft, thumbRight].forEach(el=>{
+      el.style.transition = 'transform .24s ease-in';
+      setHandVars(el, '-6px', '88px', '4deg');
+    });
+
+    setTimeout(()=>{
+      // phase 2: grab it — thumb and hand converge back together as they rise, which is
+      // what reads as the grip actually closing around the phone again
+      AudioEngine.pickup();
+      haptic(14);
+      stageEl.classList.remove('look-down');
+      phoneWrap.style.transition = 'transform .45s cubic-bezier(.34,1.56,.64,1)';
+      phoneWrap.classList.remove('dropping');
+      [handBackLeft, handBackRight, thumbLeft, thumbRight].forEach(el=>{
+        el.style.transition = 'transform .42s cubic-bezier(.34,1.56,.64,1)';
+        setHandVars(el, '0px', '0px', '0deg');
+      });
+
+      setTimeout(()=>{
+        phoneWrap.style.transition = '';
+        [handBackLeft, handBackRight, thumbLeft, thumbRight].forEach(el=>{
+          el.classList.remove('letgo');
+          el.style.transition = '';
+        });
+        screenEl.classList.add('cracked');
+        triggerGlitch(tier >= 3 ? 950 : 750);
+        if(!glitchTimer) scheduleGlitch();
+        wrongStreak = 0;
+        phoneAirborne = false;
+        returnToLockScreen();
+      }, 470);
+    }, 260);
+  }
+
+  dropPrompt.addEventListener('click', pickUpPhone);
+
+  document.getElementById('keypad').addEventListener('click', (e)=>{
+    const key = e.target.closest('.key');
+    if(!key || key.classList.contains('ghost')) return;
+    key.classList.add('pressed');
+    setTimeout(()=>key.classList.remove('pressed'), 120);
+    tapThumbAt(key);
+    const k = key.getAttribute('data-k');
+    if(k === 'del') delKey(); else pressKey(k);
+  });
+
+  document.getElementById('cancelLink').addEventListener('click', (e)=>{
+    tapThumbAt(e.currentTarget);
+    entered = '';
+    updateDots();
+    passscreen.classList.remove('show');
+    setTimeout(()=>{ resetPhoneState(); }, 450);
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    if(!gameActive || !poweredOn || phoneAirborne) return;
+    if(locked){
+      if(e.key === 'ArrowUp' || e.key === ' ' || e.key === 'Enter'){ unlockToPasscode(); }
+      return;
+    }
+    if(homescreen.classList.contains('show') || iosHome.classList.contains('show') || switcherScreen.classList.contains('show')) return;
+    if(e.key >= '0' && e.key <= '9'){
+      pressKey(e.key);
+      const btn = document.querySelector('.key[data-k="'+e.key+'"]');
+      if(btn){ btn.classList.add('pressed'); setTimeout(()=>btn.classList.remove('pressed'),120); tapThumbAt(btn); }
+    }else if(e.key === 'Backspace'){
+      delKey();
+      const delBtn = document.querySelector('.key[data-k="del"]');
+      if(delBtn) tapThumbAt(delBtn);
+    }
+    else if(e.key === 'Escape'){ document.getElementById('cancelLink').click(); }
+  });
+
+  /* ---- swipe up gesture (touch + mouse drag) on lockscreen ---- */
+  (function(){
+    let startY = null, dragging = false;
+    const target = lockscreen;
+    function onStart(y){ if(!locked || !poweredOn || phoneAirborne) return; startY = y; dragging = true; target.style.transition = 'none'; }
+    function onMove(y){
+      if(!dragging || startY===null) return;
+      const dy = Math.min(0, y - startY);
+      target.style.transform = 'translateY(' + dy + 'px)';
+      target.style.opacity = String(Math.max(0.3, 1 + dy/300));
+    }
+    function onEnd(y){
+      if(!dragging) return;
+      dragging = false;
+      target.style.transition = '';
+      const dy = startY!==null ? (y - startY) : 0;
+      if(dy < -60){ unlockToPasscode(); }
+      else{ target.style.transform = 'translateY(0)'; target.style.opacity = '1'; }
+      startY = null;
+    }
+    target.addEventListener('touchstart', (e)=>{ onStart(e.touches[0].clientY); }, {passive:true});
+    target.addEventListener('touchmove', (e)=>{ onMove(e.touches[0].clientY); }, {passive:true});
+    target.addEventListener('touchend', (e)=>{ onEnd(e.changedTouches[0].clientY); });
+    let mouseDown = false;
+    target.addEventListener('mousedown', (e)=>{ mouseDown=true; onStart(e.clientY); });
+    window.addEventListener('mousemove', (e)=>{ if(mouseDown) onMove(e.clientY); });
+    window.addEventListener('mouseup', (e)=>{ if(mouseDown){ mouseDown=false; onEnd(e.clientY); } });
+  })();
+
+  /* ---- physical side buttons: power (sleep/wake), action (silent mode), volume ---- */
+  document.getElementById('powerBtn').addEventListener('click', (e)=>{
+    pressSideBtn(e.currentTarget);
+    if(poweredOn) powerOff(); else powerOn();
+  });
+
+  document.getElementById('actionBtn').addEventListener('click', (e)=>{
+    pressSideBtn(e.currentTarget);
+    AudioEngine.init();
+    toggleSound();
+    toast(AudioEngine.isEnabled() ? 'Silent mode off' : 'Silent mode on');
+  });
+
+  document.getElementById('volUpBtn').addEventListener('click', (e)=>{
+    pressSideBtn(e.currentTarget);
+    const v = Math.max(0, Math.min(1, AudioEngine.getVolume() + 0.125));
+    AudioEngine.setVolume(v);
+    AudioEngine.sideClick();
+    haptic(4);
+    showVolumeHud(v);
+  });
+
+  document.getElementById('volDownBtn').addEventListener('click', (e)=>{
+    pressSideBtn(e.currentTarget);
+    const v = Math.max(0, Math.min(1, AudioEngine.getVolume() - 0.125));
+    AudioEngine.setVolume(v);
+    AudioEngine.sideClick();
+    haptic(4);
+    showVolumeHud(v);
+  });
+
+  /* ============== HOME SCREEN + APP SWITCHER ============== */
+  let switcherIndex = 0;
+  const SWITCHER_APPS = ['settings','safari','appstore'];
+
+  function setSwitcherTransform(extraPercent){
+    switcherTrack.style.transform = 'translateX(' + (-switcherIndex*(100/3) + (extraPercent||0)) + '%)';
+  }
+  function updateSwitcherDots(){
+    document.querySelectorAll('#switcherDots .sdot').forEach((d,i)=> d.classList.toggle('active', i===switcherIndex));
+  }
+  function openSwitcher(idx){
+    switcherIndex = (typeof idx === 'number') ? idx : 0;
+    switcherTrack.classList.remove('dragging');
+    setSwitcherTransform(0);
+    updateSwitcherDots();
+    iosHome.classList.remove('show');
+    switcherScreen.classList.add('show');
+    AudioEngine.swipe();
+    haptic(10);
+  }
+  function closeSwitcher(){
+    switcherScreen.style.transition = '';
+    switcherScreen.style.transform = '';
+    switcherScreen.classList.remove('show');
+    iosHome.classList.add('show');
+    haptic(8);
+  }
+
+  document.getElementById('lockPill').addEventListener('click', (e)=>{
+    tapThumbAt(e.currentTarget);
+    iosHome.classList.remove('show');
+    switcherScreen.classList.remove('show');
+    setTimeout(()=>{ resetPhoneState(); AudioEngine.pickup(); }, 250);
+  });
+
+  document.getElementById('homeIndicatorBtn').addEventListener('click', ()=>{
+    if(!gameActive || !poweredOn) return;
+    if(switcherScreen.classList.contains('show')) closeSwitcher();
+    else if(iosHome.classList.contains('show')) openSwitcher(switcherIndex);
+  });
+
+  document.querySelectorAll('.app-icon').forEach(icon=>{
+    icon.addEventListener('click', ()=>{
+      icon.classList.add('bounce');
+      setTimeout(()=> icon.classList.remove('bounce'), 220);
+      haptic(6);
+      AudioEngine.sideClick();
+      tapThumbAt(icon);
+      const app = icon.getAttribute('data-app');
+      const idx = SWITCHER_APPS.indexOf(app);
+      if(idx !== -1) openSwitcher(idx);
+    });
+  });
+
+  document.querySelectorAll('#switcherDots .sdot').forEach(dot=>{
+    dot.addEventListener('click', ()=>{
+      switcherIndex = parseInt(dot.getAttribute('data-i'), 10);
+      switcherTrack.classList.remove('dragging');
+      setSwitcherTransform(0);
+      updateSwitcherDots();
+      AudioEngine.sideClick();
+    });
+  });
+
+  /* swipe up from the Home Screen opens the App Switcher (starting on Settings, like a
+     freshly-backgrounded app), matching how a real iPhone's app switcher gesture works.
+     Two things matter for taps on app icons to keep working on a real touchscreen:
+     1) a touch that starts ON an icon must never begin this drag at all (mousedown already
+        excluded icons/lockPill — touchstart didn't, which is the actual bug: real Safari
+        cancels the synthesized click on an element once ANY touchmove fires on it first)
+     2) even for touches that don't start on an icon, don't apply any visual transform until
+        movement clears a small dead-zone, so ordinary finger jitter during a tap can't be
+        mistaken for the start of a swipe */
+  (function(){
+    let startY = null, dragging = false, moved = false;
+    function onStart(y, targetEl){
+      if(!iosHome.classList.contains('show') || !poweredOn) return;
+      if(targetEl && targetEl.closest && targetEl.closest('.app-icon, #lockPill')) return;
+      startY = y; dragging = true; moved = false;
+    }
+    function onMove(y){
+      if(!dragging || startY===null) return;
+      const dy = Math.min(0, y - startY);
+      if(!moved && Math.abs(dy) < 10) return;
+      moved = true;
+      iosHome.style.transform = 'translateY(' + dy + 'px)';
+    }
+    function onEnd(y){
+      if(!dragging) return;
+      dragging = false;
+      const dy = startY!==null ? (y - startY) : 0;
+      if(moved) iosHome.style.transform = '';
+      if(dy < -50) openSwitcher(0);
+      startY = null; moved = false;
+    }
+    iosHome.addEventListener('touchstart', (e)=>{ onStart(e.touches[0].clientY, e.target); }, {passive:true});
+    iosHome.addEventListener('touchmove', (e)=>{ onMove(e.touches[0].clientY); }, {passive:true});
+    iosHome.addEventListener('touchend', (e)=>{ onEnd(e.changedTouches[0].clientY); });
+    let mouseDown = false;
+    iosHome.addEventListener('mousedown', (e)=>{ if(e.target.closest('.app-icon, #lockPill')) return; mouseDown=true; onStart(e.clientY); });
+    window.addEventListener('mousemove', (e)=>{ if(mouseDown) onMove(e.clientY); });
+    window.addEventListener('mouseup', (e)=>{ if(mouseDown){ mouseDown=false; onEnd(e.clientY); } });
+  })();
+
+  /* inside the App Switcher: drag horizontally to page between cards, swipe up to go home —
+     the gesture direction is locked in once the drag clears a small dead-zone */
+  (function(){
+    let startX=null, startY=null, dragging=false, axis=null;
+    function onStart(x,y,targetEl){
+      if(!switcherScreen.classList.contains('show') || !poweredOn) return;
+      if(targetEl && targetEl.closest && targetEl.closest('.sdot, .as-get')) return;
+      startX=x; startY=y; dragging=true; axis=null;
+      switcherTrack.classList.add('dragging');
+    }
+    function onMove(x,y){
+      if(!dragging) return;
+      const dx = x-startX, dy = y-startY;
+      if(!axis && (Math.abs(dx)>8 || Math.abs(dy)>8)){ axis = Math.abs(dx)>Math.abs(dy) ? 'x' : 'y'; }
+      if(axis==='x'){
+        const trackWidth = switcherTrack.clientWidth || 1;
+        setSwitcherTransform((dx/trackWidth)*100);
+      }else if(axis==='y'){
+        const upDy = Math.min(0, dy);
+        switcherScreen.style.transform = 'translateY(' + upDy + 'px)';
+      }
+    }
+    function onEnd(x,y){
+      if(!dragging) return;
+      dragging = false;
+      switcherTrack.classList.remove('dragging');
+      const dx = x-startX, dy = y-startY;
+      if(axis==='x'){
+        if(dx < -40 && switcherIndex < SWITCHER_APPS.length-1) switcherIndex++;
+        else if(dx > 40 && switcherIndex > 0) switcherIndex--;
+        setSwitcherTransform(0);
+        updateSwitcherDots();
+      }else if(axis==='y'){
+        if(dy < -50){
+          closeSwitcher();
+        }else{
+          switcherScreen.style.transition = 'transform .2s ease';
+          switcherScreen.style.transform = '';
+          setTimeout(()=>{ switcherScreen.style.transition = ''; }, 220);
+        }
+      }
+      axis = null; startX=null; startY=null;
+    }
+    switcherScreen.addEventListener('touchstart', (e)=>{ onStart(e.touches[0].clientX, e.touches[0].clientY, e.target); }, {passive:true});
+    switcherScreen.addEventListener('touchmove', (e)=>{ onMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+    switcherScreen.addEventListener('touchend', (e)=>{ onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
+    let mouseDown=false;
+    switcherScreen.addEventListener('mousedown', (e)=>{ if(e.target.closest('.sdot, .as-get')) return; mouseDown=true; onStart(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', (e)=>{ if(mouseDown) onMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', (e)=>{ if(mouseDown){ mouseDown=false; onEnd(e.clientX, e.clientY); } });
+  })();
+
+  /* ============== MENU / SCENE SWITCHING ============== */
+  const menuEl = document.getElementById('menu');
+  const sceneEl = document.getElementById('scene');
+
+  function startGame(){
+    AudioEngine.init();
+    AudioEngine.startMusic();
+    gameActive = true;
+    poweredOn = true;
+    screenOff.classList.remove('on');
+    menuEl.classList.add('hidden');
+    sceneEl.classList.add('active');
+    resetPhoneState();
+    scheduleAutosave();
+    if(!joltTimer) scheduleJolt();
+  }
+
+  function backToMenu(){
+    gameActive = false;
+    sceneEl.classList.remove('active');
+    menuEl.classList.remove('hidden');
+    saveStats(stats);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('menuBtn').addEventListener('click', backToMenu);
+  document.getElementById('howToBtn').addEventListener('click', ()=>{
+    toast('Swipe up on the lock screen, then type 1111');
+  });
+
+  function syncSoundIcons(){
+    const icon = AudioEngine.isEnabled() ? '🔊' : '🔇';
+    document.getElementById('soundToggleMenu').textContent = icon;
+    document.getElementById('soundToggleGame').textContent = icon;
+  }
+  function toggleSound(){
+    AudioEngine.init();
+    AudioEngine.setEnabled(!AudioEngine.isEnabled());
+    syncSoundIcons();
+    if(AudioEngine.isEnabled() && gameActive) AudioEngine.startMusic();
+  }
+  document.getElementById('soundToggleMenu').addEventListener('click', toggleSound);
+  document.getElementById('soundToggleGame').addEventListener('click', toggleSound);
+
+  /* ---- fullscreen: fills the whole screen, mainly useful on mobile where the browser's
+     own address bar otherwise eats into the phone's already-small viewport ---- */
+  function isFullscreenSupported(){
+    return !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  }
+  async function toggleFullscreen(){
+    try{
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if(!fsEl){
+        if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+        else if(document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
+      }else{
+        if(document.exitFullscreen) await document.exitFullscreen();
+        else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    }catch(err){
+      toast('Fullscreen not available here');
+    }
+  }
+  function syncFullscreenIcons(){
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const icon = isFs ? '⤢' : '⛶';
+    const menuBtn2 = document.getElementById('fullscreenBtnMenu');
+    const gameBtn2 = document.getElementById('fullscreenBtn');
+    if(menuBtn2) menuBtn2.textContent = icon;
+    if(gameBtn2) gameBtn2.textContent = icon;
+  }
+  if(isFullscreenSupported()){
+    document.getElementById('fullscreenBtnMenu').addEventListener('click', toggleFullscreen);
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  }else{
+    document.getElementById('fullscreenBtnMenu').style.display = 'none';
+    document.getElementById('fullscreenBtn').style.display = 'none';
+  }
+  document.addEventListener('fullscreenchange', syncFullscreenIcons);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenIcons);
+
+  ['click','touchstart','keydown'].forEach(evt=>{
+    document.addEventListener(evt, ()=>AudioEngine.init(), {once:true, passive:true});
+  });
+
+  refreshStatsLabels();
+
+  window.addEventListener('beforeunload', ()=> saveStats(stats));
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveStats(stats); });
+
+})();
+</script>
+</body>
+</html>
