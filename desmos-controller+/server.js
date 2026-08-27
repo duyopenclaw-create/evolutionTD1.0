@@ -12,6 +12,10 @@ const ROOT = __dirname;
 const LEADERBOARD_FILE = path.join(ROOT, 'leaderboard.json');
 const MAX_PLAYERS = 4;
 const MAX_NAME_LEN = 16;
+// mirrors the client's WEAPONS damage values — caps a claimed hit at the
+// strongest legitimate weapon so a modified client can't spoof huge damage
+const WEAPONS = { bow: 3, knife: 2, rifle: 5, machinegun: 1 };
+function finiteNum(v, fallback) { return Number.isFinite(v) ? v : (Number.isFinite(fallback) ? fallback : 0); }
 
 /* ---------------- leaderboard (simple JSON file, global/world-wide) ---------------- */
 function loadLeaderboard() {
@@ -68,7 +72,7 @@ function roomSummary(room) {
   return {
     code: room.code,
     hostId: room.hostId,
-    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, isHost: p.id === room.hostId })),
+    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, color: p.color, isHost: p.id === room.hostId })),
   };
 }
 function broadcast(room, msg, exceptId) {
@@ -107,10 +111,12 @@ wss.on('connection', ws => {
     if (!msg || typeof msg.type !== 'string') return;
 
     if (msg.type === 'host') {
+      if (ws._mp) return; // already hosting/joined on this connection — ignore to avoid an orphaned room
       const code = makeRoomCode();
       const playerId = crypto.randomUUID();
       const player = { id: playerId, ws, name: String(msg.name || 'Host').slice(0, MAX_NAME_LEN), x: 0, y: 0, z: 0, ry: 0, hp: 25, maxHp: 25, score: 0, weaponKey: 'bow', alive: true, color: msg.color || '#3d6cff' };
-      const room = { code, hostId: playerId, levelData: msg.levelData, players: new Map([[playerId, player]]), createdAt: Date.now() };
+      const levelData = msg.levelData && typeof msg.levelData === 'object' ? msg.levelData : { name: 'Untitled', objects: [] };
+      const room = { code, hostId: playerId, levelData, players: new Map([[playerId, player]]), createdAt: Date.now() };
       rooms.set(code, room);
       ws._mp = { roomCode: code, playerId };
       send(ws, { type: 'hosted', code, playerId, isHost: true, levelData: room.levelData, players: roomSummary(room).players });
@@ -118,6 +124,7 @@ wss.on('connection', ws => {
     }
 
     if (msg.type === 'join') {
+      if (ws._mp) return; // already hosting/joined on this connection
       const code = String(msg.code || '').toUpperCase();
       const room = rooms.get(code);
       if (!room) { send(ws, { type: 'error', message: 'Room not found.' }); return; }
@@ -143,13 +150,18 @@ wss.on('connection', ws => {
     if (!player) return;
 
     if (msg.type === 'state') {
-      player.x = msg.x; player.y = msg.y; player.z = msg.z; player.ry = msg.ry;
-      player.hp = msg.hp; player.maxHp = msg.maxHp; player.score = msg.score;
-      player.weaponKey = msg.weaponKey; player.alive = msg.alive;
-      broadcast(room, { type: 'playerState', playerId: player.id, x: msg.x, y: msg.y, z: msg.z, ry: msg.ry, hp: msg.hp, maxHp: msg.maxHp, score: msg.score, weaponKey: msg.weaponKey, alive: msg.alive }, player.id);
+      const x = finiteNum(msg.x, player.x), y = finiteNum(msg.y, player.y), z = finiteNum(msg.z, player.z), ry = finiteNum(msg.ry, player.ry);
+      const hp = finiteNum(msg.hp, player.hp), maxHp = finiteNum(msg.maxHp, player.maxHp), score = finiteNum(msg.score, player.score);
+      const weaponKey = WEAPONS[msg.weaponKey] ? msg.weaponKey : player.weaponKey;
+      const alive = msg.alive !== false;
+      player.x = x; player.y = y; player.z = z; player.ry = ry;
+      player.hp = hp; player.maxHp = maxHp; player.score = score;
+      player.weaponKey = weaponKey; player.alive = alive;
+      broadcast(room, { type: 'playerState', playerId: player.id, x, y, z, ry, hp, maxHp, score, weaponKey, alive }, player.id);
     } else if (msg.type === 'shootHit') {
       const target = room.players.get(msg.targetId);
-      if (target) send(target.ws, { type: 'hit', fromId: player.id, fromName: player.name, damage: Math.max(0, Math.min(100, Number(msg.damage) || 0)) });
+      const maxDamage = WEAPONS[player.weaponKey] || 5;
+      if (target) send(target.ws, { type: 'hit', fromId: player.id, fromName: player.name, damage: Math.max(0, Math.min(maxDamage, Number(msg.damage) || 0)) });
     } else if (msg.type === 'chat') {
       const text = String(msg.text || '').slice(0, 240);
       if (text.trim()) broadcast(room, { type: 'chat', playerId: player.id, name: player.name, text });

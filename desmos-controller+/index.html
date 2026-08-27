@@ -187,6 +187,7 @@
   .wideBtn { width: 100%; margin-bottom: 8px; text-align: left; }
   #invincibleBtn.on { background: #ffb84d; color: #3a2400; }
   #verifyModeBtn.on { background: #3ddc97; color: #04331f; }
+  #borderToggleBtn.on { background: #3ddc97; color: #04331f; }
   .verifiedBadge { color: #3ddc97; font-weight: 800; font-size: 11px; margin-left: 6px; }
 
   #chatPanel {
@@ -276,6 +277,7 @@
     text-shadow: 0 2px 6px rgba(0,0,0,0.6);
   }
   #saveFlash.show { opacity: 1; }
+  #saveFlash.fail { color: #ff6b6b; }
 
   #hazardFlash {
     position: fixed; inset: 0; background: #ff2b2b; opacity: 0; pointer-events: none; z-index: 15;
@@ -452,6 +454,11 @@
     <div class="propRow"><label>Path Width</label><input type="number" id="boardPathWidth" step="0.5" min="1" max="10"></div>
     <div class="propRow"><label>Sky Color</label><input type="color" id="boardSkyColor"></div>
     <div class="propRow"><label>Board Color</label><input type="color" id="boardColorInput"></div>
+    <div class="propRow"><label>Path Color</label><input type="color" id="pathColorInput"></div>
+    <div class="propRow"><label>Border Walls</label>
+      <button class="rowBtn" id="borderToggleBtn" style="width:70px;">Off</button>
+    </div>
+    <div class="propRow"><label>Border Color</label><input type="color" id="borderColorInput"></div>
   </div>
 
   <div id="propsPanel">
@@ -544,7 +551,7 @@ import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/cont
    CONSTANTS
    ============================================================ */
 const SAVE_KEY = 'desmosControllerPlusSaves';
-const DEFAULT_BOARD = { size: 24, pathZ: 0, pathWidth: 3, skyColor: '#aee2f7', boardColor: '#ffffff' };
+const DEFAULT_BOARD = { size: 24, pathZ: 0, pathWidth: 3, skyColor: '#aee2f7', boardColor: '#ffffff', pathColor: '#9aa0aa', borderEnabled: false, borderColor: '#9aa0aa' };
 let BOARD = DEFAULT_BOARD.size;   // checkerboard world size (per-level, set by applyBoardSettings)
 let HALF = BOARD / 2;
 let PATH_Z = DEFAULT_BOARD.pathZ;
@@ -638,6 +645,9 @@ const boardPathZInput = document.getElementById('boardPathZ');
 const boardPathWidthInput = document.getElementById('boardPathWidth');
 const boardSkyColorInput = document.getElementById('boardSkyColor');
 const boardColorInputEl = document.getElementById('boardColorInput');
+const pathColorInput = document.getElementById('pathColorInput');
+const borderToggleBtn = document.getElementById('borderToggleBtn');
+const borderColorInput = document.getElementById('borderColorInput');
 const shapeKindRow = document.getElementById('shapeKindRow');
 const weaponKindRow = document.getElementById('weaponKindRow');
 const playerBtn = document.getElementById('playerBtn');
@@ -698,19 +708,23 @@ function loadAllSaves() {
   catch (e) { return {}; }
 }
 function writeAllSaves(all) {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(all)); } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(all)); return true; }
+  catch (e) { return false; }
 }
-function flashSaved() {
+function flashSaved(failed) {
+  saveFlash.textContent = failed ? 'SAVE FAILED' : 'SAVED';
+  saveFlash.classList.toggle('fail', !!failed);
   saveFlash.classList.add('show');
-  setTimeout(() => saveFlash.classList.remove('show'), 900);
+  setTimeout(() => saveFlash.classList.remove('show'), failed ? 2200 : 900);
 }
 function saveCurrentLevel(silent) {
   if (!currentLevel) return;
   currentLevel.updatedAt = Date.now();
   const all = loadAllSaves();
   all[currentLevel.name] = currentLevel;
-  writeAllSaves(all);
-  if (!silent) flashSaved();
+  const ok = writeAllSaves(all);
+  if (!ok) { flashSaved(true); return; } // storage full/blocked — always surface this, even on "silent" autosaves
+  if (!silent) flashSaved(false);
 }
 function deleteSave(name) {
   const all = loadAllSaves();
@@ -811,6 +825,7 @@ let renderer, scene, camera, controls, clock;
 let groundMesh, pathMesh, trackCube, spawnMarker;
 let raycaster, mouse;
 let hitboxGroup = null;
+let hitboxFrameCounter = 0;
 let trackBroken = false;
 const cubeFragments = [];
 const TRACK_RESPAWN_MS = 1600;
@@ -923,9 +938,44 @@ function applyBoardSettings() {
   pathMesh.geometry.dispose();
   pathMesh.geometry = new THREE.BoxGeometry(BOARD, 0.05, PATH_WIDTH);
   pathMesh.position.set(0, 0.03, PATH_Z);
+  pathMesh.material.color.set(b.pathColor || DEFAULT_BOARD.pathColor);
 
   scene.background = new THREE.Color(b.skyColor);
   scene.fog.color.set(b.skyColor);
+
+  rebuildBorderWalls(b);
+}
+
+const BORDER_THICKNESS = 1, BORDER_HEIGHT = 3;
+let borderWalls = null;      // THREE.Group of the 4 perimeter wall meshes, or null when disabled
+let borderSolidsInfo = [];   // matching {minX,maxX,minY,maxY,minZ,maxZ} per wall, for collision
+function rebuildBorderWalls(b) {
+  if (borderWalls) {
+    scene.remove(borderWalls);
+    borderWalls.children.forEach(m => { m.geometry.dispose(); m.material.dispose(); });
+    borderWalls = null;
+  }
+  borderSolidsInfo = [];
+  if (!b.borderEnabled) return;
+  const mat = new THREE.MeshStandardMaterial({ color: b.borderColor || DEFAULT_BOARD.borderColor, roughness: 0.85 });
+  const group = new THREE.Group();
+  const half = BOARD / 2, t = BORDER_THICKNESS, h = BORDER_HEIGHT;
+  const specs = [
+    [BOARD + t * 2, h, t, 0, h / 2, half + t / 2],   // +Z side (also covers both corners)
+    [BOARD + t * 2, h, t, 0, h / 2, -half - t / 2],  // -Z side
+    [t, h, BOARD, half + t / 2, h / 2, 0],            // +X side
+    [t, h, BOARD, -half - t / 2, h / 2, 0],           // -X side
+  ];
+  for (const [w, hh, d, x, y, z] of specs) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), mat);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    borderSolidsInfo.push({ mesh, minX: x - w / 2, maxX: x + w / 2, minY: y - hh / 2, maxY: y + hh / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+  }
+  scene.add(group);
+  borderWalls = group;
 }
 function shadeHex(hex, factor) {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -1127,6 +1177,11 @@ function enterEditor() {
   boardPathWidthInput.value = currentLevel.board.pathWidth;
   boardSkyColorInput.value = currentLevel.board.skyColor || DEFAULT_BOARD.skyColor;
   boardColorInputEl.value = currentLevel.board.boardColor || DEFAULT_BOARD.boardColor;
+  pathColorInput.value = currentLevel.board.pathColor || DEFAULT_BOARD.pathColor;
+  borderColorInput.value = currentLevel.board.borderColor || DEFAULT_BOARD.borderColor;
+  borderEnabledState = !!currentLevel.board.borderEnabled;
+  borderToggleBtn.textContent = borderEnabledState ? 'On' : 'Off';
+  borderToggleBtn.classList.toggle('on', borderEnabledState);
   boardPanel.classList.remove('show');
   playerHpVal.textContent = currentLevel.player.hp || DEFAULT_PLAYER.hp;
   playerColorInput.value = currentLevel.player.color || DEFAULT_PLAYER.color;
@@ -1147,6 +1202,7 @@ function enterEditor() {
 function rebuildEditorMeshes() {
   multiGlowMeshes = [];
   multiSelectActive = false;
+  dragEntry = null; // undo/redo replaces obj/mesh references — a drag in progress must not keep touching stale ones
   clearEditorScene();
   for (const obj of currentLevel.objects) {
     const mesh = createMeshForType(obj.type, obj);
@@ -1571,6 +1627,7 @@ playerWeaponTabs.addEventListener('click', e => {
   currentLevel.player.weapon = btn.dataset.weapon;
   playerWeaponTabs.querySelectorAll('.axisTab').forEach(b => b.classList.toggle('active', b === btn));
 });
+let borderEnabledState = false;
 function syncBoardFromPanel() {
   if (!currentLevel) return;
   let size = Math.round((parseFloat(boardSizeInput.value) || DEFAULT_BOARD.size) / 2) * 2;
@@ -1579,12 +1636,20 @@ function syncBoardFromPanel() {
   const pathWidth = Math.max(1, Math.min(10, parseFloat(boardPathWidthInput.value) || DEFAULT_BOARD.pathWidth));
   const skyColor = boardSkyColorInput.value || DEFAULT_BOARD.skyColor;
   const boardColor = boardColorInputEl.value || DEFAULT_BOARD.boardColor;
-  currentLevel.board = { size, pathZ, pathWidth, skyColor, boardColor };
+  const pathColor = pathColorInput.value || DEFAULT_BOARD.pathColor;
+  const borderColor = borderColorInput.value || DEFAULT_BOARD.borderColor;
+  currentLevel.board = { size, pathZ, pathWidth, skyColor, boardColor, pathColor, borderEnabled: borderEnabledState, borderColor };
   boardSizeInput.value = size;
   boardPathWidthInput.value = pathWidth;
   applyBoardSettings();
 }
-[boardSizeInput, boardPathZInput, boardPathWidthInput, boardSkyColorInput, boardColorInputEl].forEach(inp => inp.addEventListener('input', syncBoardFromPanel));
+[boardSizeInput, boardPathZInput, boardPathWidthInput, boardSkyColorInput, boardColorInputEl, pathColorInput, borderColorInput].forEach(inp => inp.addEventListener('input', syncBoardFromPanel));
+borderToggleBtn.addEventListener('click', () => {
+  borderEnabledState = !borderEnabledState;
+  borderToggleBtn.textContent = borderEnabledState ? 'On' : 'Off';
+  borderToggleBtn.classList.toggle('on', borderEnabledState);
+  syncBoardFromPanel();
+});
 undoBtn.addEventListener('click', undo);
 redoBtn.addEventListener('click', redo);
 hitboxBtn.addEventListener('click', () => {
@@ -1736,6 +1801,10 @@ function enterPlaytest() {
   const enemies = [];
   const weaponPickups = [];
   const endpoints = [];
+
+  if (currentLevel.board.borderEnabled) {
+    for (const info of borderSolidsInfo) solids.push(Object.assign({ obj: {} }, info));
+  }
 
   for (const obj of currentLevel.objects) {
     const mesh = createMeshForType(obj.type, obj);
@@ -2006,11 +2075,11 @@ function updatePlaytest(dt, ps) {
     en.mesh.position.x += en.dir * en.speed * dt;
     if (en.mesh.position.x > en.baseX + en.range) en.dir = -1;
     if (en.mesh.position.x < en.baseX - en.range) en.dir = 1;
-    en.mesh.rotation.y += dt * 2;
+    if (en.obj.anim !== 'spin') en.mesh.rotation.y += dt * 2; // avoid fighting a user-chosen spin animation
   }
   // endpoint goal: slow spin + bobbing particles, and the win check
   for (const g of ps.endpoints) {
-    g.mesh.rotation.y += dt * 0.6;
+    if (g.obj.anim !== 'spin') g.mesh.rotation.y += dt * 0.6;
     if (g.mesh.userData.core) g.mesh.userData.core.position.y = Math.sin(clock.elapsedTime * 2) * 0.1;
     if (!ps.won) {
       const dx = pos.x - g.mesh.position.x, dz = pos.z - g.mesh.position.z;
@@ -2024,7 +2093,7 @@ function updatePlaytest(dt, ps) {
     if (c.alive) c.mesh.rotation.z += dt * 3;
   }
   for (const w of ps.weaponPickups) {
-    if (w.alive) w.mesh.rotation.y += dt * 2.5;
+    if (w.alive && w.obj.anim !== 'spin') w.mesh.rotation.y += dt * 2.5;
   }
 
   // hazard / collectible checks
@@ -2249,6 +2318,7 @@ function updateHitboxVisuals() {
 
   if (mode === 'editor') {
     for (const e of editorEntries) addHitboxForObj(e.obj);
+    for (const s of borderSolidsInfo) hitboxGroup.add(makeBoxHitbox(s.minX, s.minY, s.minZ, s.maxX, s.maxY, s.maxZ, HB_COLOR.solid));
   } else if (mode === 'playtest' && playtestState) {
     const p = playtestState.player.position;
     hitboxGroup.add(makeCylinderHitbox(p.x, p.y, p.z, PLAYER_RADIUS, PLAYER_HEIGHT, HB_COLOR.player));
@@ -2302,6 +2372,7 @@ function animate() {
     for (const e of ps.collectibles) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
     for (const e of ps.enemies) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
     for (const e of ps.weaponPickups) if (e.alive) applyObjectAnim(e.mesh, e.obj, t);
+    for (const e of ps.endpoints) applyObjectAnim(e.mesh, e.obj, t);
   }
 
   if (mode === 'editor') {
@@ -2339,7 +2410,8 @@ function animate() {
     updatePlaytest(dt, playtestState);
   }
 
-  updateHitboxVisuals();
+  hitboxFrameCounter = (hitboxFrameCounter + 1) % 3;
+  if (hitboxFrameCounter === 0) updateHitboxVisuals();
   if (renderer) renderer.render(scene, camera);
 }
 
@@ -2424,13 +2496,19 @@ function openHostModal() {
   setTimeout(() => hostNameInput.focus(), 30);
 }
 hostRoomBtn.addEventListener('click', openHostModal);
-hostCancel.addEventListener('click', () => hostModal.classList.add('hidden'));
+function mpAbortPending() {
+  if (mp && !mp.active && !mp.code) { // a host/join request is in flight but no room confirmed yet
+    try { mp.ws && mp.ws.close(); } catch (e) {}
+    mp = null;
+  }
+}
+hostCancel.addEventListener('click', () => { mpAbortPending(); hostModal.classList.add('hidden'); });
 joinRoomBtn.addEventListener('click', () => {
   joinCodeInput.value = ''; joinNameInput.value = ''; joinWarn.textContent = '';
   joinModal.classList.remove('hidden');
   setTimeout(() => joinCodeInput.focus(), 30);
 });
-joinCancel.addEventListener('click', () => joinModal.classList.add('hidden'));
+joinCancel.addEventListener('click', () => { mpAbortPending(); joinModal.classList.add('hidden'); });
 
 function mpConnect(initMsg, errEl) {
   let ws;
@@ -2439,7 +2517,11 @@ function mpConnect(initMsg, errEl) {
   ws.addEventListener('open', () => ws.send(JSON.stringify(initMsg)));
   ws.addEventListener('error', () => { errEl.textContent = 'Could not reach the multiplayer server. Is it running?'; });
   ws.addEventListener('message', mpHandleMessage);
-  ws.addEventListener('close', () => { if (mp && mp.ws === ws && !mp.active) errEl.textContent = 'Connection closed.'; });
+  ws.addEventListener('close', () => {
+    if (!mp || mp.ws !== ws) return;
+    if (mp.active) mpTeardown('Lost connection to the multiplayer server.');
+    else errEl.textContent = 'Connection closed.';
+  });
   return ws;
 }
 hostGoBtn.addEventListener('click', () => {
@@ -2504,7 +2586,8 @@ function mpHandleMessage(ev) {
     renderLobby();
     lobbyScreen.classList.remove('hidden');
   } else if (msg.type === 'error') {
-    (hostModal.classList.contains('hidden') ? joinWarn : hostWarn).textContent = msg.message;
+    (mp.isHost ? hostWarn : joinWarn).textContent = msg.message;
+    try { mp.ws.close(); } catch (e) {}
     mp = null;
   } else if (msg.type === 'playerJoined') {
     mp.playersMeta.set(msg.playerId, { name: msg.name, color: msg.color || DEFAULT_PLAYER.color, isHost: false });
