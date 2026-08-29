@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stickture</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #0b1120;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: default; }
+  #hint {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    color: rgba(255,255,255,0.55); font-size: 12px; letter-spacing: 0.5px;
+    pointer-events: none; user-select: none; text-align: center;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hint">W / Space / ↑ / Click to jump (double jump!) &nbsp;•&nbsp; A/D or ←/→ move &nbsp;•&nbsp; S / ↓ fast-fall</div>
+<script>
+(function(){
+"use strict";
+
+// ---------------------------------------------------------------------------
+// Setup
+// ---------------------------------------------------------------------------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------------------------------------------------------------------------
+// Tiny WebAudio SFX (no assets)
+// ---------------------------------------------------------------------------
+let actx = null;
+function audio(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function beep(freq, dur, type, vol, glideTo){
+  const a = audio(); if(!a) return;
+  const t0 = a.currentTime;
+  const osc = a.createOscillator();
+  const gain = a.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t0);
+  if (glideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(glideTo,1), t0+dur);
+  gain.gain.setValueAtTime(vol||0.15, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+  osc.connect(gain); gain.connect(a.destination);
+  osc.start(t0); osc.stop(t0+dur+0.02);
+}
+const sfx = {
+  jump: (air) => beep(air?560:420, 0.14, 'square', 0.10, air?950:700),
+  land: (heavy) => beep(heavy?90:130, 0.12, 'sine', heavy?0.18:0.08, 60),
+  coin: () => { beep(880,0.09,'triangle',0.12,1400); setTimeout(()=>beep(1320,0.11,'triangle',0.10),55); },
+  death: () => beep(300, 0.5, 'sawtooth', 0.12, 40),
+  step: () => beep(150, 0.03, 'square', 0.02, 100),
+  win: () => {
+    beep(660, 0.12, 'triangle', 0.14, 880);
+    setTimeout(() => beep(880, 0.12, 'triangle', 0.14, 1200), 90);
+    setTimeout(() => beep(1100, 0.22, 'triangle', 0.16, 1500), 180);
+  },
+  trampoline: () => beep(300, 0.22, 'sine', 0.16, 1100),
+  portal: () => { beep(500, 0.1, 'triangle', 0.12, 200); setTimeout(()=>beep(900,0.18,'triangle',0.14,1600),70); },
+  buy: () => { beep(700,0.08,'triangle',0.12,1000); setTimeout(()=>beep(1000,0.14,'triangle',0.13,1400),70); },
+  denied: () => beep(160, 0.15, 'square', 0.08, 100),
+};
+
+// ---------------------------------------------------------------------------
+// Persistence
+// ---------------------------------------------------------------------------
+const SAVE_KEY = 'stickture_save_v2';
+let saveData = { best: {}, bestTime: {}, coins: 0, ownedSkins: ['classic'], equippedSkin: 'classic' };
+try {
+  // v1 saves stored a single number; migrate it into the classic-level slot.
+  const legacy = localStorage.getItem('stickture_save_v1');
+  if (legacy) {
+    const p = JSON.parse(legacy);
+    if (typeof p.best === 'number' && p.best > 0) saveData.best.classic = p.best;
+    if (typeof p.coins === 'number') saveData.coins = p.coins;
+  }
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (raw) {
+    const p = JSON.parse(raw);
+    saveData.best = Object.assign({}, saveData.best, p.best);
+    saveData.bestTime = Object.assign({}, saveData.bestTime, p.bestTime);
+    saveData.coins = typeof p.coins === 'number' ? p.coins : saveData.coins;
+    if (Array.isArray(p.ownedSkins)) saveData.ownedSkins = Array.from(new Set(['classic', ...p.ownedSkins]));
+    if (typeof p.equippedSkin === 'string') saveData.equippedSkin = p.equippedSkin;
+  }
+} catch(e){}
+
+let saveFlashTimer = 0;
+function doSave(showFlash){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch(e){}
+  if (showFlash) saveFlashTimer = 1.6;
+}
+setInterval(() => doSave(true), 30000);
+window.addEventListener('beforeunload', () => doSave(false));
+
+// ---------------------------------------------------------------------------
+// Input
+// ---------------------------------------------------------------------------
+const keys = { w:false, a:false, s:false, d:false };
+let jumpPressedEdge = false;
+
+// map every physical key to a logical action — jump can be W, Space, or ↑;
+// left/right/down each accept WASD or the matching arrow key.
+const KEY_MAP = {
+  'w':'w', 'arrowup':'w', ' ':'w', 'spacebar':'w',
+  'a':'a', 'arrowleft':'a',
+  'd':'d', 'arrowright':'d',
+  's':'s', 'arrowdown':'s',
+};
+const downKeys = new Set();
+function recomputeKeys(){
+  keys.w = keys.a = keys.s = keys.d = false;
+  for (const k of downKeys) {
+    const action = KEY_MAP[k];
+    if (action) keys[action] = true;
+  }
+}
+
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  const action = KEY_MAP[k];
+  if (action) e.preventDefault();
+  if (action) {
+    const alreadyHeld = keys[action];
+    downKeys.add(k);
+    recomputeKeys();
+    if (action === 'w' && !alreadyHeld) jumpPressedEdge = true;
+  }
+  if (k === 'enter' || k === ' ' || k === 'spacebar') {
+    e.preventDefault();
+    if (game.state === 'title') game.state = 'levelselect';
+    else if (game.state === 'levelselect') startGame(LEVELS[game.levelIndex]);
+    else if (game.state === 'gameover' || game.state === 'levelcomplete') startGame(game.currentLevel);
+  }
+  if (k === 'e') {
+    if (game.state === 'title' || game.state === 'levelselect') { shopReturnState = game.state; game.state = 'shop'; }
+  }
+  if (k === 'escape') {
+    if (game.state === 'playing' || game.state === 'gameover' || game.state === 'levelcomplete') game.state = 'levelselect';
+    else if (game.state === 'shop') game.state = shopReturnState;
+  }
+  audio(); // unlock audio on first gesture
+});
+window.addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (KEY_MAP[k]) { downKeys.delete(k); recomputeKeys(); }
+});
+let mouseHeld = false;
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return; // left click only
+  audio();
+  const hitRect = (r) => r && e.offsetX>=r.x && e.offsetX<=r.x+r.w && e.offsetY>=r.y && e.offsetY<=r.y+r.h;
+  if (game.state === 'title') {
+    if (hitRect(shopButtonRect)) { shopReturnState = 'title'; game.state = 'shop'; return; }
+    game.state = 'levelselect';
+    return;
+  }
+  if (game.state === 'levelselect') {
+    if (hitRect(shopButtonRect)) { shopReturnState = 'levelselect'; game.state = 'shop'; return; }
+    const hit = levelCardRects.find(hitRect);
+    if (hit) { game.levelIndex = hit.index; startGame(LEVELS[hit.index]); }
+    return;
+  }
+  if (game.state === 'shop') {
+    if (hitRect(shopBackRect)) { game.state = shopReturnState; return; }
+    const hit = skinCardRects.find(hitRect);
+    if (hit) buySkin(hit.skinId);
+    return;
+  }
+  if (game.state === 'gameover' || game.state === 'levelcomplete') { startGame(game.currentLevel); return; }
+  if (game.state === 'playing' && !mouseHeld) jumpPressedEdge = true;
+  mouseHeld = true;
+});
+window.addEventListener('mouseup', (e) => { if (e.button === 0) mouseHeld = false; });
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+const GRAVITY = 2200;
+const FAST_FALL_MULT = 2.6;
+const MAX_FALL = 1100;
+const MAX_FALL_FAST = 2300;
+const JUMP_VELOCITY = -820;
+const MOVE_ACCEL = 3400;
+const AIR_ACCEL_MULT = 0.6;
+const MAX_SPEED = 340;
+const GROUND_FRICTION = 3000;
+const AIR_FRICTION = 900;
+const COYOTE_TIME = 0.09;
+const JUMP_BUFFER = 0.12;
+
+const GROUND_BASE_Y = 0; // world-space baseline; camera handles screen placement
+
+// every level is a fixed 1000m course with a finish line, not an endless runner
+const LEVEL_LENGTH_M = 1000;
+const LEVEL_LENGTH = LEVEL_LENGTH_M * 10; // world units (distance display is player.x/10)
+
+// jetpack flight mode: hold jump to thrust, gravity always pulling you back down
+const JET_GRAVITY = 950;
+const JET_THRUST_ACCEL = 2050;   // net upward accel while thrusting (combined with gravity = climb)
+const JET_DIVE_ACCEL = 1500;     // extra downward accel while S/↓ is held
+const JET_MAX_UP = 620;
+const JET_MAX_DOWN = 900;
+const JET_MAX_DOWN_DIVE = 1500;
+const JET_MAX_SPEED = 320;       // manual A/D control — full stop and reverse, no auto-scroll
+const JET_H_ACCEL = 3000;
+const JET_H_FRICTION = 2400;     // deceleration back to a stop when A/D are released
+const JET_CEIL = -230;           // world y of the cave ceiling
+const JET_FLOOR = 230;           // world y of the cave floor
+// the drawn stick figure (feet to top-of-head) is ~77px tall, noticeably more than the
+// platformer's 62px collision box — using that box in flight left ~15px of head sticking
+// through the ceiling rock before a hit registered, so ceiling deaths felt like they never
+// happened while floor deaths (which happen to line up with the feet) felt instant. This
+// half-height keeps the flight hitbox matched to what's actually drawn, both edges.
+const JET_HALF_H = 38;
+
+// trampolines: platformer-only bounce platforms, much stronger than a normal jump
+const TRAMPOLINE_VELOCITY = -1500;
+
+// unlockable color skins, bought with the coins you collect across every run
+const SKINS = [
+  { id:'classic', name:'Classic',  cost:0,   line:'#141414', shoe:'#d1453b', band:'#3aa0ff' },
+  { id:'neon',    name:'Neon',     cost:20,  line:'#123a2c', shoe:'#ff2fd6', band:'#39ff9d' },
+  { id:'shadow',  name:'Shadow',   cost:35,  line:'#1c1c26', shoe:'#7b2ff7', band:'#b98bff' },
+  { id:'candy',   name:'Candy',    cost:50,  line:'#5a2340', shoe:'#ffd23f', band:'#ff6f91' },
+  { id:'inferno', name:'Inferno',  cost:80,  line:'#3a0f0f', shoe:'#ffcf40', band:'#ff7a00' },
+  { id:'gold',    name:'Golden',   cost:120, line:'#5a4310', shoe:'#fff3c4', band:'#ffd23f' },
+];
+function currentSkin(){ return SKINS.find(s => s.id === saveData.equippedSkin) || SKINS[0]; }
+
+// 30 fixed-length (1000m) levels, generated rather than hand-authored: mostly platformer
+// runs with occasional gravity variants and rising trampoline density, a jetpack flight
+// level every 5th slot, and a handful of portals cross-linking a platformer level to a
+// jetpack level (and back) so touching one mid-run warps you straight into the other.
+const LEVEL_COUNT = 30;
+const LEVELS = [];
+for (let n = 1; n <= LEVEL_COUNT; n++) {
+  const id = 'lvl' + n;
+  if (n % 5 === 0) {
+    LEVELS.push({ id, name: 'Level ' + n + ': Jetpack Flight', type:'jetpack', icon:'🚀',
+      tagline: 'Fly 1000m through the cave — dodge the spikes.' });
+    continue;
+  }
+  let gravityMult = 1, jumpMult = 1, icon = '🏃', flavor = '';
+  if (n % 7 === 0) { gravityMult = 0.42; jumpMult = 0.8; icon = '🌙'; flavor = 'Low gravity — huge floaty jumps. '; }
+  else if (n % 11 === 0) { gravityMult = 1.35; jumpMult = 1.1; icon = '🪨'; flavor = 'Heavy gravity — short, sharp jumps. '; }
+  const trampolineChance = Math.min(0.35, 0.06 + n*0.008);
+  LEVELS.push({ id, name: 'Level ' + n, type:'platformer', icon,
+    tagline: flavor + 'Run, jump, and bounce across 1000m of gaps.',
+    gravityMult, jumpMult, trampolineChance });
+}
+// cross-link a handful of platformer levels to jetpack levels with a two-way portal
+const PORTAL_LINKS = [[3,5], [8,10], [14,15], [19,20], [24,25], [27,30]];
+for (const [pNum, jNum] of PORTAL_LINKS) {
+  const pLvl = LEVELS[pNum-1], jLvl = LEVELS[jNum-1];
+  pLvl.portalTo = jLvl.id;
+  jLvl.portalTo = pLvl.id;
+}
+
+// portal: touching it mid-run instantly warps you into a different level (cross-linked
+// platformer <-> jetpack pairs, see PORTAL_LINKS). Placed lazily during generation once
+// the world has actually been built out to where it belongs.
+const PORTAL_TARGET_X = LEVEL_LENGTH * 0.55;
+let portal = null;              // {x, y, r, targetId} once generated, else null
+let pendingPortalTarget = null; // level id to warp to once the portal gets placed
+
+function warpThroughPortal(){
+  const target = LEVELS.find(l => l.id === portal.targetId);
+  if (!target) return;
+  sfx.portal();
+  shake(6, 0.3);
+  for (let i=0;i<20;i++) spawnSpark(portal.x, portal.y, 'rgba(' + (i%2?'160,110,255':'110,200,255') + ',ALPHA)');
+  startGame(target);
+}
+function checkPortal(){
+  if (!portal || portal.y === null || game.finished || player.dead) return;
+  const box = currentPlayerBox();
+  const cx = (box.l+box.r)/2, cy = (box.t+box.b)/2;
+  if (Math.hypot(cx-portal.x, cy-portal.y) < portal.r + 20) warpThroughPortal();
+}
+function drawPortal(){
+  if (!portal || portal.y === null) return;
+  const sx = portal.x - camX, sy = portal.y - camY;
+  if (sx < -60 || sx > W+60) return;
+  const t = performance.now()/1000;
+  ctx.save();
+  ctx.translate(sx, sy);
+  for (let i=0;i<3;i++){
+    ctx.strokeStyle = `hsla(${260+i*30}, 90%, 65%, ${0.8-i*0.2})`;
+    ctx.lineWidth = 4-i;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, portal.r*(1-i*0.15), portal.r*(1-i*0.15)*1.3, t*2+i, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(160,110,255,0.25)';
+  ctx.beginPath(); ctx.arc(0, 0, portal.r*0.7, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  const target = LEVELS.find(l => l.id === portal.targetId);
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3;
+  ctx.font = '700 13px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  const label = '→ ' + (target ? target.name : '?');
+  ctx.strokeText(label, sx, sy-portal.r-14);
+  ctx.fillText(label, sx, sy-portal.r-14);
+}
+
+// ---------------------------------------------------------------------------
+// Level generation (procedural, endless to the right)
+// ---------------------------------------------------------------------------
+let solids = [];    // full AABB (ground segments) {x1,x2,y}  (y = top surface, extends far down)
+let plats  = [];    // one-way platforms {x,y,w,h}
+let coins  = [];    // {x,y,r,taken}
+let genX = 0;       // world x generated up to
+let lastGroundY = 0;
+let lastGroundEnd = 0;
+
+function rand(a,b){ return a + Math.random()*(b-a); }
+
+function resetLevel(){
+  solids = []; plats = []; coins = [];
+  genX = -200;
+  lastGroundY = 0;
+  // starting safe platform
+  solids.push({x1:-200, x2:260, y:0});
+  genX = 260;
+  lastGroundEnd = 260;
+  lastGroundY = 0;
+}
+
+function genChunk(targetX, difficulty){
+  while (genX < targetX) {
+    const gapChance = Math.min(0.15 + difficulty*0.10, 0.55);
+    let gap = 0;
+    if (Math.random() < gapChance) {
+      gap = rand(70, 110 + Math.min(difficulty*14, 80));
+    }
+    const segStart = genX + gap;
+    const segLen = rand(140, 300);
+    let dy = rand(-70, 70) * Math.min(1, 0.4 + difficulty*0.2);
+    let ny = lastGroundY + dy;
+    ny = Math.max(-220, Math.min(220, ny));
+    solids.push({x1: segStart, x2: segStart+segLen, y: ny});
+
+    if (pendingPortalTarget && !portal && segStart+segLen*0.5 >= PORTAL_TARGET_X) {
+      portal = { x: segStart+segLen*0.5, y: ny-50, r: 26, targetId: pendingPortalTarget };
+    }
+
+    // trampoline: a thin bouncy pad sitting right on the ground — launches you sky-high
+    const trampolineChance = (game.currentLevel && game.currentLevel.trampolineChance) || 0;
+    if (segLen > 90 && Math.random() < trampolineChance) {
+      const tw = 46;
+      const tx = segStart + rand(20, Math.max(20, segLen-tw-20));
+      plats.push({x:tx, y:ny-8, w:tw, h:10, trampoline:true});
+    }
+
+    // occasional floating bonus platform with coins above a segment
+    if (Math.random() < 0.35) {
+      const pw = rand(80, 150);
+      const px = segStart + rand(0, Math.max(0, segLen-pw));
+      const py = ny - rand(110, 170);
+      plats.push({x:px, y:py, w:pw, h:14});
+      const cCount = 1 + Math.floor(Math.random()*3);
+      for (let i=0;i<cCount;i++){
+        coins.push({x: px + pw*0.5 + (i-(cCount-1)/2)*26, y: py-26, r:9, taken:false});
+      }
+    } else if (Math.random() < 0.5) {
+      // arc of coins over the ground segment
+      const cCount = 2 + Math.floor(Math.random()*3);
+      const cy = ny - rand(60,100);
+      for (let i=0;i<cCount;i++){
+        coins.push({x: segStart + segLen*0.5 + (i-(cCount-1)/2)*30, y: cy, r:9, taken:false});
+      }
+    }
+    // coin(s) floating over a gap as a risk/reward line
+    if (gap > 90 && Math.random() < 0.6) {
+      const cy = Math.min(lastGroundY, ny) - rand(20,60);
+      coins.push({x: genX + gap*0.5, y: cy, r:9, taken:false});
+    }
+
+    genX = segStart + segLen;
+    lastGroundY = ny;
+    lastGroundEnd = genX;
+  }
+  // prune far-behind geometry to keep arrays small
+  const cutoff = targetX - 4000;
+  solids = solids.filter(s => s.x2 > cutoff);
+  plats = plats.filter(p => p.x+p.w > cutoff);
+  coins = coins.filter(c => c.x > cutoff);
+}
+
+// ---------------------------------------------------------------------------
+// Jetpack level generation — a gap-in-the-rock gauntlet, Flappy-Bird style
+// ---------------------------------------------------------------------------
+let jetObstacles = []; // {x, w, gapTop, gapBottom}
+let jetCoins = [];     // {x,y,r,taken}
+let jetGenX = 0;
+
+function resetJetLevel(){
+  jetObstacles = [];
+  jetCoins = [];
+  jetGenX = 550; // safe runway to get a feel for thrust before the first rock
+}
+
+function genJetChunk(targetX, difficulty){
+  while (jetGenX < targetX) {
+    const spacing = Math.max(230, rand(300, 380) - difficulty*70);
+    const gapH = Math.max(130, rand(150, 195) - difficulty*35);
+    const margin = gapH/2 + 40;
+    const gapCenter = rand(JET_CEIL + margin, JET_FLOOR - margin);
+    const w = rand(46, 64);
+    jetObstacles.push({ x: jetGenX, w, gapTop: gapCenter - gapH/2, gapBottom: gapCenter + gapH/2 });
+
+    if (pendingPortalTarget && !portal && jetGenX >= PORTAL_TARGET_X) {
+      portal = { x: jetGenX + w + 60, y: gapCenter, r: 26, targetId: pendingPortalTarget };
+    }
+
+    if (Math.random() < 0.8) {
+      const cCount = 1 + Math.floor(Math.random()*3);
+      for (let i=0;i<cCount;i++){
+        jetCoins.push({ x: jetGenX + w*0.5, y: gapCenter + (i-(cCount-1)/2)*26, r:9, taken:false });
+      }
+    }
+    jetGenX += spacing;
+  }
+  const cutoff = targetX - 3000;
+  jetObstacles = jetObstacles.filter(o => o.x+o.w > cutoff);
+  jetCoins = jetCoins.filter(c => c.x > cutoff);
+}
+
+// ---------------------------------------------------------------------------
+// Particles
+// ---------------------------------------------------------------------------
+let particles = [];
+function spawnDust(x,y,n,opts){
+  opts = opts || {};
+  for (let i=0;i<n;i++){
+    particles.push({
+      x: x + rand(-6,6), y: y + rand(-2,2),
+      vx: rand(opts.vx0||-60, opts.vx1||60),
+      vy: rand(opts.vy0||-120, opts.vy1||-20),
+      life: 0, maxLife: rand(0.3,0.6),
+      size: rand(2,4.5),
+      color: opts.color || 'rgba(230,230,235,ALPHA)'
+    });
+  }
+}
+function spawnSpark(x,y,color){
+  particles.push({x,y, vx: rand(-40,40), vy: rand(-40,10), life:0, maxLife: rand(0.35,0.55), size: rand(2,3.5), color: color || 'rgba(255,215,80,ALPHA)'});
+}
+function updateParticles(dt){
+  for (let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.life += dt;
+    if (p.life >= p.maxLife) { particles.splice(i,1); continue; }
+    p.vy += 500*dt;
+    p.x += p.vx*dt; p.y += p.vy*dt;
+  }
+}
+function drawParticles(camX, camY){
+  for (const p of particles){
+    const a = 1 - p.life/p.maxLife;
+    ctx.fillStyle = p.color.replace('ALPHA', a.toFixed(3));
+    ctx.beginPath();
+    ctx.arc(p.x-camX, p.y-camY, p.size*(1-p.life/p.maxLife*0.4), 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Player
+// ---------------------------------------------------------------------------
+function makePlayer(){
+  return {
+    x: 40, y: 0, vx: 0, vy: 0,
+    w: 26, h: 62,
+    facing: 1,
+    grounded: false,
+    coyote: 0, jumpBuf: 0,
+    jumpHeld: false,
+    airJumps: 1, airSpinTimer: 0, jetGrounded: false, bounceTimer: 0,
+    landTimer: 0, landAmt: 0,
+    squashX: 1, squashY: 1,
+    runPhase: 0, idleT: 0,
+    stepCross: 0,
+    wasAirborne: false,
+    dead: false,
+  };
+}
+let player = makePlayer();
+
+// AABB helpers (feet-based: player.y is FEET/bottom, box top = y-h)
+function playerBox(px, py){ return { l: px-player.w/2, r: px+player.w/2, t: py-player.h, b: py }; }
+// jetpack mode treats player.y as the body's vertical CENTER instead of its feet
+function jetBox(px, py){ return { l: px-player.w/2, r: px+player.w/2, t: py-JET_HALF_H, b: py+JET_HALF_H }; }
+function currentPlayerBox(){
+  return (game.currentLevel && game.currentLevel.type === 'jetpack') ? jetBox(player.x, player.y) : playerBox(player.x, player.y);
+}
+
+function resolvePhysics(dt){
+  const lvl = game.currentLevel || LEVELS[0];
+  const gravMult = lvl.gravityMult || 1;
+  const prevBottom = player.y;
+
+  // --- horizontal ---
+  const accel = MOVE_ACCEL * (player.grounded ? 1 : AIR_ACCEL_MULT);
+  const fric = (player.grounded ? GROUND_FRICTION : AIR_FRICTION);
+  let input = 0;
+  if (!player.dead) {
+    if (keys.a) input -= 1;
+    if (keys.d) input += 1;
+  }
+
+  if (input !== 0) {
+    player.vx += input*accel*dt;
+    player.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.vx));
+    player.facing = input > 0 ? 1 : -1;
+  } else {
+    const decel = fric*dt;
+    if (Math.abs(player.vx) <= decel) player.vx = 0;
+    else player.vx -= Math.sign(player.vx)*decel;
+  }
+
+  let nx = player.x + player.vx*dt;
+  let box = playerBox(nx, player.y);
+  for (const s of solids) {
+    // only a wall if the player is currently below the solid's top surface
+    // (feet above the surface just means "over it" — handled by vertical landing instead)
+    if (box.r > s.x1 && box.l < s.x2 && box.b > s.y + 1) {
+      if (player.vx > 0) { nx = s.x1 - player.w/2; player.vx = 0; }
+      else if (player.vx < 0) { nx = s.x2 + player.w/2; player.vx = 0; }
+      box = playerBox(nx, player.y);
+    }
+  }
+  player.x = nx;
+
+  // --- vertical ---
+  const fastFall = !player.grounded && keys.s;
+  const grav = GRAVITY * gravMult * (fastFall ? FAST_FALL_MULT : 1);
+  const cap = (fastFall ? MAX_FALL_FAST : MAX_FALL) * gravMult;
+  player.vy += grav*dt;
+  if (player.vy > cap) player.vy = cap;
+
+  let ny = player.y + player.vy*dt;
+  let grounded = false;
+  box = playerBox(player.x, ny);
+
+  // ground solids (full block, land on top only when falling from above)
+  for (const s of solids) {
+    if (box.r > s.x1 && box.l < s.x2) {
+      if (player.vy >= 0 && prevBottom <= s.y + 0.5 && box.b >= s.y) {
+        ny = s.y; player.vy = 0; grounded = true;
+      }
+    }
+  }
+  // one-way platforms (some are trampolines — bounce instead of landing)
+  let bounced = false;
+  for (const p of plats) {
+    if (box.r > p.x && box.l < p.x+p.w) {
+      if (player.vy >= 0 && prevBottom <= p.y + 0.5 && box.b >= p.y) {
+        if (p.trampoline) {
+          ny = p.y;
+          player.vy = TRAMPOLINE_VELOCITY;
+          player.airJumps = 1; // fresh double-jump off the top of a big bounce
+          player.bounceTimer = 0.22;
+          bounced = true;
+          grounded = false;
+          spawnDust(player.x, player.y, 14, {vx0:-110,vx1:110,vy0:-180,vy1:-40,color:'rgba(255,120,190,ALPHA)'});
+          sfx.trampoline();
+          shake(3, 0.15);
+        } else {
+          ny = p.y; player.vy = 0; grounded = true;
+        }
+      }
+    }
+  }
+  player.y = ny;
+
+  // landing detection (wasAirborne is set at the end of the previous frame)
+  const justLanded = grounded && player.wasAirborne && !bounced;
+  if (justLanded) {
+    const impactSpeed = player.lastFallSpeed || 0;
+    const amt = Math.max(0.15, Math.min(1, impactSpeed / 1000));
+    player.landTimer = 0.16;
+    player.landAmt = amt;
+    spawnDust(player.x, player.y, 6 + Math.floor(amt*10), {vx0:-90,vx1:90,vy0:-160,vy1:-30});
+    sfx.land(amt > 0.5);
+    if (amt > 0.55) shake(amt*7, 0.22);
+  }
+  player.lastFallSpeed = player.vy > 0 ? player.vy : (grounded ? 0 : player.lastFallSpeed);
+  player.wasAirborne = !grounded;
+  player.grounded = grounded;
+
+  // death: fell into a pit
+  if (player.y > 900) {
+    killPlayer();
+  }
+}
+
+function killPlayer(){
+  if (player.dead || game.finished) return;
+  player.dead = true;
+  // stop dead on impact instead of coasting through the thing that just killed you —
+  // gravity still takes over from here so the body still drops/settles, it just doesn't
+  // keep cruising forward at travel speed and look like it passed clean through the hazard
+  player.vx = 0;
+  player.vy = 0;
+  sfx.death();
+  shake(10, 0.4);
+  spawnDust(player.x, player.y, 16, {vx0:-140,vx1:140,vy0:-140,vy1:60,color:'rgba(255,90,70,ALPHA)'});
+  const id = game.currentLevel.id;
+  const dist = Math.max(0, Math.min(LEVEL_LENGTH_M, Math.floor(player.x/10)));
+  if (dist > (saveData.best[id]||0)) saveData.best[id] = dist;
+  doSave(false);
+  game.finalDistance = dist;
+  game.finalCoins = game.runCoins;
+  setTimeout(() => { game.state = 'gameover'; }, 550);
+}
+
+function completeLevel(){
+  if (game.finished || player.dead) return;
+  game.finished = true;
+  const id = game.currentLevel.id;
+  const time = game.raceTime;
+  const isNewBest = !saveData.bestTime[id] || time < saveData.bestTime[id];
+  if (isNewBest) saveData.bestTime[id] = time;
+  if (LEVEL_LENGTH_M > (saveData.best[id]||0)) saveData.best[id] = LEVEL_LENGTH_M;
+  doSave(false);
+  game.finalTime = time;
+  game.finalCoins = game.runCoins;
+  game.finalIsNewBest = isNewBest;
+  sfx.win();
+  shake(4, 0.3);
+  for (let i=0;i<24;i++) spawnSpark(player.x + rand(-20,20), player.y - rand(0,40), 'rgba(' + (Math.random()<0.5?'255,215,80':'120,220,255') + ',ALPHA)');
+  setTimeout(() => { game.state = 'levelcomplete'; }, 700);
+}
+
+// jump handling (coyote + buffer + variable height + one double-jump in the air)
+function doJump(vy, air){
+  player.vy = vy;
+  player.grounded = false;
+  player.coyote = 0;
+  player.jumpBuf = 0;
+  player.wasAirborne = true;
+  spawnDust(player.x, player.y, air ? 12 : 8, {vx0:-100,vx1:100,vy0:-60,vy1:20});
+  if (air) player.airSpinTimer = 0.4; // little flip for the double-jump
+  sfx.jump(air);
+}
+
+function handleJump(dt){
+  if (player.dead) return; // no post-mortem jumping during the brief death-freeze before gameover shows
+  const jumpMult = (game.currentLevel && game.currentLevel.jumpMult) || 1;
+  if (player.grounded) { player.coyote = COYOTE_TIME; player.airJumps = 1; }
+  else player.coyote = Math.max(0, player.coyote - dt);
+
+  if (jumpPressedEdge) { player.jumpBuf = JUMP_BUFFER; jumpPressedEdge = false; }
+  else player.jumpBuf = Math.max(0, player.jumpBuf - dt);
+
+  if (player.jumpBuf > 0) {
+    if (player.coyote > 0) {
+      doJump(JUMP_VELOCITY * jumpMult, false);
+    } else if (player.airJumps > 0) {
+      player.airJumps--;
+      doJump(JUMP_VELOCITY * jumpMult * 0.88, true); // double jump: slightly weaker than the ground jump
+    }
+  }
+  if (!keys.w && !mouseHeld && player.vy < -260) {
+    player.vy *= 0.55; // short-hop: release the jump input to cut it short
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Jetpack flight physics — thrust to climb, gravity to fall, dodge the gaps
+// ---------------------------------------------------------------------------
+function resolveJetpackPhysics(dt){
+  // no post-mortem flying during the brief death-freeze before gameover shows —
+  // gravity still applies below so the crash visibly plays out
+  const controllable = !player.dead;
+  const thrust = controllable && (keys.w || mouseHeld);
+  const dive = controllable && keys.s;
+
+  const half = JET_HALF_H, halfW = player.w/2;
+
+  // horizontal: fully manual, same feel as the platformer — full stop and reverse, no auto-scroll
+  let input = 0;
+  if (controllable) {
+    if (keys.a) input -= 1;
+    if (keys.d) input += 1;
+  }
+  if (input !== 0) {
+    player.vx += input*JET_H_ACCEL*dt;
+    player.vx = Math.max(-JET_MAX_SPEED, Math.min(JET_MAX_SPEED, player.vx));
+    player.facing = input > 0 ? 1 : -1;
+  } else {
+    const decel = JET_H_FRICTION*dt;
+    if (Math.abs(player.vx) <= decel) player.vx = 0;
+    else player.vx -= Math.sign(player.vx)*decel;
+  }
+  let nx = player.x + player.vx*dt;
+  // wall-block a pillar's solid base — without this, drifting sideways underneath a
+  // landable pillar top puts you "inside" it, and the landing check next frame snaps you
+  // straight up onto the surface (looks like teleporting into the dirt)
+  if (player.y + half > 0) { // cheap pre-filter: only matters when low enough to matter at all
+    for (const o of jetObstacles) {
+      if (player.y + half <= o.gapBottom) continue; // still above this pillar's surface — free to fly through the gap
+      if (nx+halfW > o.x && nx-halfW < o.x+o.w) {
+        nx = player.vx > 0 ? o.x - halfW : o.x+o.w + halfW;
+        player.vx = 0;
+      }
+    }
+  }
+  player.x = nx;
+
+  // vertical: gravity vs. thrust vs. dive
+  let ay = JET_GRAVITY;
+  if (thrust) ay -= JET_THRUST_ACCEL;
+  if (dive) ay += JET_DIVE_ACCEL;
+  player.vy += ay*dt;
+  const maxDown = dive ? JET_MAX_DOWN_DIVE : JET_MAX_DOWN;
+  player.vy = Math.max(-JET_MAX_UP, Math.min(maxDown, player.vy));
+  player.y += player.vy*dt;
+
+  // thrust flame puffs
+  if (thrust) {
+    player.jetFlameTimer = (player.jetFlameTimer||0) - dt;
+    if (player.jetFlameTimer <= 0) {
+      player.jetFlameTimer = 0.035;
+      spawnDust(player.x-12, player.y+10, 2, {vx0:-160,vx1:-70,vy0:10,vy1:70,color:'rgba(255,160,50,ALPHA)'});
+    }
+  }
+
+  // the floor and the tops of rock pillars are solid, landable ground — only the ceiling
+  // and the spiked underside of a pillar's top rock (both drawn with spikes) are deadly
+  let floorHere = JET_FLOOR;
+  for (const o of jetObstacles) {
+    if (player.x+halfW > o.x && player.x-halfW < o.x+o.w) floorHere = Math.min(floorHere, o.gapBottom);
+  }
+  player.jetGrounded = false;
+  if (player.y + half >= floorHere) {
+    player.y = floorHere - half;
+    if (player.vy > 0) player.vy = 0;
+    player.jetGrounded = true;
+  }
+
+  // flew into the cave ceiling
+  if (player.y - half < JET_CEIL) { killPlayer(); return; }
+
+  // flew into the spiked underside of a pillar's top rock
+  for (const o of jetObstacles) {
+    if (player.x+halfW > o.x && player.x-halfW < o.x+o.w && player.y-half < o.gapTop) { killPlayer(); return; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Camera / shake
+// ---------------------------------------------------------------------------
+const CAM_Y_ANCHOR = 0.68; // fraction of screen height where ground level sits (lower = more sky/room above the player)
+let camX = 0, camY = -H*CAM_Y_ANCHOR;
+let shakeMag = 0, shakeTime = 0;
+function shake(mag, time){ shakeMag = Math.max(shakeMag, mag); shakeTime = Math.max(shakeTime, time); }
+function updateShake(dt){
+  if (shakeTime > 0) { shakeTime -= dt; if (shakeTime <= 0) { shakeTime=0; shakeMag=0; } }
+}
+
+// ---------------------------------------------------------------------------
+// Pose / animation (forward kinematics stick figure)
+// ---------------------------------------------------------------------------
+function limbPoints(ox, oy, a1, l1, a2, l2){
+  const jx = ox + Math.sin(a1)*l1, jy = oy + Math.cos(a1)*l1;
+  const ex = jx + Math.sin(a1+a2)*l2, ey = jy + Math.cos(a1+a2)*l2;
+  return [{x:ox,y:oy},{x:jx,y:jy},{x:ex,y:ey}];
+}
+
+function computePose(dt){
+  const speedRatio = Math.min(1, Math.abs(player.vx)/MAX_SPEED);
+  const moving = Math.abs(player.vx) > 12 && player.grounded;
+
+  player.idleT += dt;
+  if (moving) player.runPhase += dt * (7 + speedRatio*9);
+
+  let thighL, shinL, thighR, shinR, shL, elL, shR, elR, torsoLean, hipBob, headBob;
+
+  if (!player.grounded) {
+    const fastFalling = keys.s && player.vy > 40;
+    if (player.vy < -40) {
+      // ascending: tuck
+      const k = Math.min(1, -player.vy/700);
+      thighL = -0.55 - 0.15*k; shinL = 1.05 + 0.2*k;
+      thighR = -0.45 - 0.15*k; shinR = 0.95 + 0.2*k;
+      shL = -1.4; elL = -0.5;
+      shR = -1.15; elR = -0.4;
+      torsoLean = -0.08;
+      hipBob = 0; headBob = 0;
+    } else if (fastFalling) {
+      // dive pose, streamlined
+      thighL = -0.12; shinL = 0.10;
+      thighR = -0.05; shinR = 0.15;
+      shL = 0.95; elL = 0.25;
+      shR = 1.05; elR = 0.3;
+      torsoLean = 0.5;
+      hipBob = 0; headBob = 0;
+    } else {
+      // normal fall: legs spread for balance
+      thighL = 0.35; shinL = 0.35;
+      thighR = -0.2; shinR = 0.15;
+      shL = -0.5; elL = -0.35;
+      shR = -0.15; elR = -0.25;
+      torsoLean = 0.12;
+      hipBob = 0; headBob = 0;
+    }
+  } else if (moving) {
+    const ph = player.runPhase;
+    thighL = Math.sin(ph) * 0.95;
+    thighR = Math.sin(ph+Math.PI) * 0.95;
+    shinL = Math.max(0, Math.sin(ph - 0.7)) * 1.3;
+    shinR = Math.max(0, Math.sin(ph + Math.PI - 0.7)) * 1.3;
+    shL = -thighR*0.85; elL = Math.max(0, -Math.sin(ph+Math.PI-0.6))*0.9;
+    shR = -thighL*0.85; elR = Math.max(0, -Math.sin(ph-0.6))*0.9;
+    torsoLean = 0.10 + speedRatio*0.14;
+    hipBob = Math.abs(Math.sin(ph*2)) * -5 * (0.4+speedRatio*0.6);
+    headBob = Math.abs(Math.sin(ph*2+0.3)) * -2;
+
+    // footstep dust
+    const crossing = Math.floor(ph/Math.PI);
+    if (crossing !== player.stepCross) {
+      player.stepCross = crossing;
+      spawnDust(player.x + (Math.sin(ph)>0?6:-6)*player.facing, player.y, 3, {vx0:-30,vx1:30,vy0:-40,vy1:-5});
+    }
+  } else {
+    const t = player.idleT;
+    thighL = Math.sin(t*1.6)*0.05;
+    thighR = Math.sin(t*1.6+Math.PI)*0.05;
+    shinL = 0.08 + Math.sin(t*1.6)*0.02;
+    shinR = 0.08 + Math.sin(t*1.6+Math.PI)*0.02;
+    shL = Math.sin(t*1.3)*0.08;
+    shR = Math.sin(t*1.3+Math.PI)*0.08;
+    elL = 0.12; elR = 0.12;
+    torsoLean = Math.sin(t*1.1)*0.02;
+    hipBob = Math.sin(t*1.6)*1.4;
+    headBob = Math.sin(t*1.6+0.4)*0.8;
+  }
+
+  // landing squash easing
+  let squashTX = 1, squashTY = 1;
+  if (player.landTimer > 0) {
+    const k = player.landTimer/0.16;
+    squashTX = 1 + k*0.28*player.landAmt;
+    squashTY = 1 - k*0.30*player.landAmt;
+    thighL += k*0.3; thighR += k*0.3;
+    shinL += k*0.5; shinR += k*0.5;
+    player.landTimer = Math.max(0, player.landTimer - dt);
+  }
+  // trampoline launch: the opposite of a landing squash — a quick vertical stretch
+  if (player.bounceTimer > 0) {
+    const k = player.bounceTimer/0.22;
+    squashTY = 1 + k*0.4;
+    squashTX = 1 - k*0.22;
+    player.bounceTimer = Math.max(0, player.bounceTimer - dt);
+  }
+  player.squashX += (squashTX - player.squashX) * Math.min(1, dt*14);
+  player.squashY += (squashTY - player.squashY) * Math.min(1, dt*14);
+
+  // double-jump flip, spins out over its duration then hands back to the normal air pose
+  let spin = 0;
+  if (player.airSpinTimer > 0) {
+    spin = (1 - player.airSpinTimer/0.4) * Math.PI*2;
+    player.airSpinTimer = Math.max(0, player.airSpinTimer - dt);
+  }
+
+  return { thighL, shinL, thighR, shinR, shL, elL, shR, elR, torsoLean, hipBob: hipBob||0, headBob: headBob||0, spin };
+}
+
+// flight pose: gentle dangling kick, torso pitches with vertical speed (nose down when
+// falling, nose up when thrusting hard), jetpack + flame are drawn separately in drawStickman
+function computeJetpackPose(dt){
+  player.idleT += dt;
+  const t = player.idleT;
+  const vyRatio = Math.max(-1, Math.min(1, player.vy/600));
+  const thrust = keys.w || mouseHeld;
+  // landed on the ground/a pillar top: settle into a calm stand instead of the flight dangle-kick
+  const kick = player.jetGrounded ? 0.12 : 1;
+
+  const thighL = -0.1 + Math.sin(t*5)*0.18*kick;
+  const thighR = -0.1 + Math.sin(t*5+Math.PI)*0.18*kick;
+  const shinL = (player.jetGrounded ? 0.15 : 0.5) + Math.sin(t*5)*0.15*kick;
+  const shinR = (player.jetGrounded ? 0.15 : 0.5) + Math.sin(t*5+Math.PI)*0.15*kick;
+  const shL = 0.7 + Math.sin(t*3)*0.06;
+  const shR = 0.7 + Math.sin(t*3+Math.PI)*0.06;
+  const elL = 1.15, elR = 1.15;
+  const torsoLean = player.jetGrounded ? 0 : vyRatio*0.45;
+  const hipBob = Math.sin(t*5)*2*kick;
+  const headBob = Math.sin(t*5+0.5)*1.2*kick;
+
+  // mild squash/stretch for a bit of thrust "oomph"
+  const targetSquashY = 1 + (thrust?0.06:0) - (keys.s?0.08:0);
+  const targetSquashX = 1 - (targetSquashY-1)*0.6;
+  player.squashX += (targetSquashX-player.squashX)*Math.min(1,dt*10);
+  player.squashY += (targetSquashY-player.squashY)*Math.min(1,dt*10);
+
+  return { thighL, shinL, thighR, shinR, shL, elL, shR, elR, torsoLean, hipBob, headBob, spin:0, thrust };
+}
+
+// ---------------------------------------------------------------------------
+// Drawing
+// ---------------------------------------------------------------------------
+function drawBackground(t){
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, '#12213f');
+  g.addColorStop(0.55, '#1c3462');
+  g.addColorStop(1, '#2d4d7a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  // sun/moon glow
+  ctx.save();
+  const sunX = W*0.8, sunY = H*0.22;
+  const glow = ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,140);
+  glow.addColorStop(0,'rgba(255,244,214,0.55)');
+  glow.addColorStop(1,'rgba(255,244,214,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(sunX-140,sunY-140,280,280);
+  ctx.fillStyle = '#fff6e0';
+  ctx.beginPath(); ctx.arc(sunX,sunY,28,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // parallax hills
+  drawHillLayer(camX*0.15, H*0.62, 90, 'rgba(30,55,95,0.55)', 340);
+  drawHillLayer(camX*0.3,  H*0.72, 70, 'rgba(24,44,80,0.7)', 260);
+  drawHillLayer(camX*0.5,  H*0.82, 50, 'rgba(18,32,60,0.85)', 200);
+}
+
+function drawHillLayer(offset, baseY, amp, color, wavelen){
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let sx=0; sx<=W; sx+=20) {
+    const wx = sx + offset;
+    const y = baseY - Math.sin(wx/wavelen)*amp*0.5 - Math.sin(wx/(wavelen*0.37)+1.3)*amp*0.25;
+    ctx.lineTo(sx, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function worldToScreen(x,y){ return { x: x - camX, y: y - camY }; }
+
+function drawLevel(){
+  // ground segments
+  for (const s of solids) {
+    const sx1 = s.x1 - camX, sx2 = s.x2 - camX;
+    if (sx2 < -50 || sx1 > W+50) continue;
+    const sy = s.y - camY;
+    // dirt body
+    ctx.fillStyle = '#5b4630';
+    ctx.fillRect(sx1, sy, sx2-sx1, H - sy + 200);
+    // grass top
+    const gtop = ctx.createLinearGradient(0, sy-6, 0, sy+10);
+    gtop.addColorStop(0, '#7fd858');
+    gtop.addColorStop(1, '#4fae3d');
+    ctx.fillStyle = gtop;
+    ctx.fillRect(sx1, sy-6, sx2-sx1, 12);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(sx1, sy+6, sx2-sx1, 4);
+  }
+  // floating platforms (trampolines get a distinct bouncy-pink pad with springs)
+  for (const p of plats) {
+    const sx = p.x - camX, sy = p.y - camY;
+    if (sx+p.w < -50 || sx > W+50) continue;
+    if (p.trampoline) {
+      const bulge = Math.sin(performance.now()/1000*3 + p.x*0.1) * 1.5;
+      ctx.strokeStyle = '#c9c9c9'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(sx+4, sy+p.h); ctx.lineTo(sx+4, sy+p.h+8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx+p.w-4, sy+p.h); ctx.lineTo(sx+p.w-4, sy+p.h+8); ctx.stroke();
+      ctx.fillStyle = '#ff5fa8';
+      ctx.beginPath();
+      ctx.ellipse(sx+p.w/2, sy+p.h/2+bulge, p.w/2, p.h/2+2, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#c9247b'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.fillStyle = '#8a6a45';
+      ctx.fillRect(sx, sy, p.w, p.h);
+      ctx.fillStyle = '#a9835a';
+      ctx.fillRect(sx, sy, p.w, 4);
+    }
+  }
+  drawCoinList(coins);
+  drawPortal();
+  drawFinishMarker();
+}
+
+function drawCoinList(list){
+  const t = performance.now()/1000;
+  for (const c of list) {
+    if (c.taken) continue;
+    const sx = c.x - camX, sy = c.y - camY;
+    if (sx < -30 || sx > W+30) continue;
+    const spin = Math.cos(t*4 + c.x*0.05);
+    ctx.save();
+    ctx.translate(sx, sy + Math.sin(t*3+c.x*0.1)*4);
+    ctx.scale(Math.max(0.15, Math.abs(spin)), 1);
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(0,0,c.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e8a90f';
+    ctx.beginPath(); ctx.arc(0,0,c.r*0.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// checkered finish ribbon at the 1000m mark — every level is this exact length
+function drawFinishMarker(){
+  const sx = LEVEL_LENGTH - camX;
+  if (sx < -60 || sx > W+60) return;
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  const stripeH = 18;
+  for (let y=0, i=0; y<H; y+=stripeH, i++){
+    ctx.fillStyle = i%2===0 ? '#fff' : '#222';
+    ctx.fillRect(sx-4, y, 8, stripeH);
+  }
+  ctx.restore();
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 3;
+  ctx.font = '700 16px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.strokeText('FINISH', sx, 30);
+  ctx.fillText('FINISH', sx, 30);
+}
+
+// a repeating row of triangle spikes anchored to WORLD x (so they scroll with the level
+// instead of swimming), tips pointing into the play area — makes every hazard edge read
+// unmistakably as "this kills you" instead of just a plain rock wall.
+function drawSpikeRow(worldX0, worldX1, edgeY, len, pointInto, color){
+  const spacing = 22;
+  const start = Math.floor(worldX0/spacing) * spacing;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1;
+  for (let wx = start; wx < worldX1; wx += spacing) {
+    const sx = wx - camX;
+    if (sx+spacing < -20 || sx > W+20) continue;
+    const tipY = pointInto === 'down' ? edgeY+len : edgeY-len;
+    ctx.beginPath();
+    ctx.moveTo(sx, edgeY);
+    ctx.lineTo(sx+spacing/2, tipY);
+    ctx.lineTo(sx+spacing, edgeY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+
+// cave gauntlet for jetpack mode: spiked (deadly) ceiling + pillar undersides, vs. a plain
+// safe/landable floor and pillar tops you can rest on
+function drawJetLevel(){
+  const ceilY = JET_CEIL - camY, floorY = JET_FLOOR - camY;
+  ctx.fillStyle = '#3d3550';
+  ctx.fillRect(0, 0, W, Math.max(0, ceilY));
+  // solid, landable ground — grass-topped like the platformer levels, no spikes
+  ctx.fillStyle = '#5b4630';
+  ctx.fillRect(0, floorY, W, H - floorY);
+  const gtop = ctx.createLinearGradient(0, floorY-6, 0, floorY+10);
+  gtop.addColorStop(0, '#7fd858'); gtop.addColorStop(1, '#4fae3d');
+  ctx.fillStyle = gtop;
+  ctx.fillRect(0, floorY-6, W, 12);
+
+  const viewL = camX - 20, viewR = camX + W + 20;
+  drawSpikeRow(viewL, viewR, ceilY, 20, 'down', '#c94f4f'); // ceiling stays deadly
+
+  for (const o of jetObstacles) {
+    const sx = o.x - camX;
+    if (sx+o.w < -50 || sx > W+50) continue;
+    const gapTopY = o.gapTop - camY, gapBotY = o.gapBottom - camY;
+    // deadly top rock (hangs from the ceiling, spiked underside)
+    const gradTop = ctx.createLinearGradient(sx, 0, sx+o.w, 0);
+    gradTop.addColorStop(0, '#6b5a46'); gradTop.addColorStop(1, '#8a7457');
+    ctx.fillStyle = gradTop;
+    ctx.fillRect(sx, ceilY, o.w, gapTopY-ceilY);
+    drawSpikeRow(o.x, o.x+o.w, gapTopY, 14, 'down', '#d66a4f');
+    // safe, landable pillar top — grass-capped like the ground
+    ctx.fillStyle = '#5b4630';
+    ctx.fillRect(sx, gapBotY, o.w, floorY-gapBotY);
+    const gradCap = ctx.createLinearGradient(0, gapBotY-6, 0, gapBotY+10);
+    gradCap.addColorStop(0, '#7fd858'); gradCap.addColorStop(1, '#4fae3d');
+    ctx.fillStyle = gradCap;
+    ctx.fillRect(sx, gapBotY-6, o.w, 12);
+  }
+
+  drawCoinList(jetCoins);
+  drawPortal();
+  drawFinishMarker();
+}
+
+// picks the right static-scene renderer for whatever level is currently active
+function drawLevelForCurrent(){
+  if (game.currentLevel && game.currentLevel.type === 'jetpack') drawJetLevel();
+  else drawLevel();
+}
+
+function drawStickman(){
+  const pose = player.pose;
+  const skin = currentSkin();
+  const isJet = game.currentLevel && game.currentLevel.type === 'jetpack';
+  const sx = player.x - camX;
+  // jetpack physics anchors player.y at the body's CENTER; the FK rig below draws
+  // upward from a "feet" origin, so shift the origin down by JET_HALF_H (matched to the
+  // actual drawn rig height — see JET_HALF_H) to keep the figure aligned with its hitbox.
+  const sy = (player.y + (isJet ? JET_HALF_H : 0)) - camY;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(player.facing * player.squashX, player.squashY);
+  if (pose.spin) {
+    // flip around the body's center, not the feet, so it reads as a tumble not a pivot
+    ctx.translate(0, -32);
+    ctx.rotate(pose.spin * player.facing);
+    ctx.translate(0, 32);
+  }
+
+  const hipH = 34, torsoLen = 22, headR = 9;
+  const upperLeg = 17, lowerLeg = 17, upperArm = 14, lowerArm = 14;
+
+  const hipY = -hipH + pose.hipBob;
+  const shoulderX = Math.sin(pose.torsoLean) * torsoLen;
+  const shoulderY = hipY - Math.cos(pose.torsoLean) * torsoLen;
+  const headX = shoulderX + Math.sin(pose.torsoLean)*(headR+2);
+  const headY = shoulderY - (headR+3) + pose.headBob;
+
+  ctx.lineWidth = 4.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = skin.line;
+  ctx.fillStyle = skin.line;
+
+  // back leg first (visually behind) — draw right leg then left for facing consistency
+  const legR = limbPoints(0, hipY, pose.thighR, upperLeg, pose.shinR, lowerLeg);
+  const legL = limbPoints(0, hipY, pose.thighL, upperLeg, pose.shinL, lowerLeg);
+  const armR = limbPoints(shoulderX, shoulderY, pose.shR, upperArm, pose.elR, lowerArm);
+  const armL = limbPoints(shoulderX, shoulderY, pose.shL, upperArm, pose.elL, lowerArm);
+
+  function strokeLimb(pts, shoeColor){
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(pts[1].x,pts[1].y,2.6,0,Math.PI*2); ctx.fill();
+    if (shoeColor) {
+      ctx.fillStyle = shoeColor;
+      ctx.beginPath(); ctx.arc(pts[2].x,pts[2].y,4.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = skin.line;
+    }
+  }
+
+  // far leg/arm (slightly muted)
+  ctx.globalAlpha = 0.55;
+  strokeLimb(legR, skin.shoe);
+  strokeLimb(armR);
+  ctx.globalAlpha = 1;
+
+  // jetpack, worn on the back, with a flame while thrusting
+  if (isJet) {
+    const packTop = shoulderY+2, packBot = hipY-4, packX = -9;
+    ctx.fillStyle = '#4a4f5c';
+    roundRect(packX-6, packTop, 12, Math.max(4,packBot-packTop), 3);
+    ctx.fill();
+    ctx.strokeStyle = '#2c2f38'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (pose.thrust) {
+      const len = 12 + Math.random()*10;
+      ctx.fillStyle = 'rgba(255,150,40,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(packX-6, packBot); ctx.lineTo(packX, packBot+len); ctx.lineTo(packX+6, packBot);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,235,150,0.9)';
+      ctx.beginPath();
+      ctx.moveTo(packX-3, packBot); ctx.lineTo(packX, packBot+len*0.6); ctx.lineTo(packX+3, packBot);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // torso
+  ctx.beginPath();
+  ctx.moveTo(0, hipY);
+  ctx.lineTo(shoulderX, shoulderY);
+  ctx.stroke();
+
+  // near leg/arm
+  strokeLimb(legL, skin.shoe);
+  strokeLimb(armL);
+
+  // head
+  ctx.fillStyle = skin.line;
+  ctx.beginPath();
+  ctx.arc(headX, headY, headR, 0, Math.PI*2);
+  ctx.fill();
+  // headband accent
+  ctx.strokeStyle = skin.band;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(headX, headY, headR-1, -2.5, -0.6);
+  ctx.stroke();
+
+  // face (simple eye dot in facing direction)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(headX+3, headY-1, 1.6, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// HUD
+// ---------------------------------------------------------------------------
+function formatTime(s){
+  if (s == null) return '';
+  s = Math.max(0, s);
+  const m = Math.floor(s/60);
+  const rem = s - m*60;
+  return m > 0 ? (m + ':' + rem.toFixed(1).padStart(4,'0')) : (rem.toFixed(1) + 's');
+}
+
+function drawHUD(){
+  const lvl = game.currentLevel || LEVELS[0];
+  const dist = Math.max(0, Math.min(LEVEL_LENGTH_M, Math.floor(player.x/10)));
+
+  ctx.save();
+  ctx.font = '600 20px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.textAlign = 'left';
+  ctx.fillText(dist + ' / ' + LEVEL_LENGTH_M + 'm', 20, 34);
+
+  // progress bar toward the finish line
+  const barW = 200, barX = 20, barY = 42;
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  roundRect(barX, barY, barW, 6, 3); ctx.fill();
+  ctx.fillStyle = '#3aa0ff';
+  roundRect(barX, barY, barW*Math.min(1, dist/LEVEL_LENGTH_M), 6, 3); ctx.fill();
+
+  ctx.font = '500 13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  const bestDist = saveData.best[lvl.id] || 0;
+  const bestTime = saveData.bestTime[lvl.id];
+  ctx.fillText('Best: ' + bestDist + 'm' + (bestTime ? '  •  ' + formatTime(bestTime) : ''), 20, 68);
+
+  ctx.font = '600 18px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(formatTime(game.raceTime), 20, 92);
+
+  ctx.textAlign = 'right';
+  ctx.font = '600 20px Segoe UI, sans-serif';
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillText('● ' + (game.runCoins) + '  (' + saveData.coins + ' total)', W-20, 34);
+  ctx.font = '500 13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText(lvl.icon + ' ' + lvl.name, W-20, 56);
+  ctx.restore();
+
+  drawKeyIndicators();
+
+  if (saveFlashTimer > 0) {
+    ctx.save();
+    const a = Math.min(1, saveFlashTimer);
+    ctx.globalAlpha = a;
+    ctx.font = '600 13px Segoe UI, sans-serif';
+    ctx.fillStyle = '#8fffb0';
+    ctx.textAlign = 'left';
+    ctx.fillText('✓ SAVED', 20, 78);
+    ctx.restore();
+    saveFlashTimer -= 1/60;
+  }
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// Shows every input bound to jump/move/fast-fall so it's obvious WASD, the
+// arrow keys, Space, and a mouse click are all equivalent.
+function drawKeyIndicators(){
+  const capW = 26, capH = 26, gap = 5;
+  const clusterW = capW*3 + gap*2, clusterH = capH*2 + gap;
+  const barH = 22, gapY = 8;
+  const totalW = clusterW*2 + 16;
+  const originX = W - 20 - totalW, originY = H - 20 - (clusterH + gapY + barH);
+
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  function cap(x, y, w, label, active, font){
+    ctx.fillStyle = active ? 'rgba(58,160,255,0.85)' : 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    roundRect(x, y, w, capH, 6);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = active ? '#fff' : 'rgba(255,255,255,0.7)';
+    ctx.font = font || '700 13px Segoe UI, sans-serif';
+    ctx.fillText(label, x + w/2, y + capH/2 + 1);
+  }
+
+  // arrow cluster (left)
+  const ax = originX, ay = originY;
+  cap(ax+capW+gap, ay, capW, '↑', keys.w);
+  cap(ax, ay+capH+gap, capW, '←', keys.a);
+  cap(ax+capW+gap, ay+capH+gap, capW, '↓', keys.s);
+  cap(ax+2*(capW+gap), ay+capH+gap, capW, '→', keys.d);
+
+  // WASD cluster (right)
+  const wx = originX + clusterW + 16, wy = originY;
+  cap(wx+capW+gap, wy, capW, 'W', keys.w);
+  cap(wx, wy+capH+gap, capW, 'A', keys.a);
+  cap(wx+capW+gap, wy+capH+gap, capW, 'S', keys.s);
+  cap(wx+2*(capW+gap), wy+capH+gap, capW, 'D', keys.d);
+
+  // spacebar, spanning both clusters, plus a click hint
+  const barY = originY + clusterH + gapY;
+  cap(originX, barY, totalW, 'SPACE / CLICK to jump', keys.w || mouseHeld, '700 11px Segoe UI, sans-serif');
+
+  ctx.restore();
+}
+
+// shared top-right "🛍 SHOP" button, drawn on both the title and level-select screens
+let shopReturnState = 'title';
+let shopButtonRect = null;
+function drawShopButton(){
+  const r = { x: W-176, y: 16, w: 156, h: 38 };
+  shopButtonRect = r;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,215,80,0.15)';
+  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2;
+  roundRect(r.x, r.y, r.w, r.h, 10);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffd23f';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '700 14px Segoe UI, sans-serif';
+  ctx.fillText('🛍 SHOP  ● ' + saveData.coins, r.x+r.w/2, r.y+r.h/2+1);
+  ctx.restore();
+}
+
+function drawTitle(){
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 64px Segoe UI, sans-serif';
+  ctx.fillText('STICKTURE', W/2, H/2 - 60);
+  ctx.font = '500 18px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText('a little stick figure, a long way to fall', W/2, H/2 - 22);
+
+  ctx.font = '600 17px Segoe UI, sans-serif';
+  ctx.fillStyle = '#3aa0ff';
+  const pulse = 0.75 + Math.sin(performance.now()/300)*0.25;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press ENTER / SPACE / CLICK to continue', W/2, H/2 + 40);
+  ctx.globalAlpha = 1;
+
+  ctx.font = '400 14px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('30 levels, each a 1000m course — trampolines, portals, and Jetpack Flight', W/2, H/2 + 74);
+  ctx.fillText('Press E or click 🛍 SHOP to spend coins on skins', W/2, H/2 + 96);
+  ctx.restore();
+  drawShopButton();
+}
+
+// ---------------------------------------------------------------------------
+// Level select
+// ---------------------------------------------------------------------------
+let levelCardRects = [];
+let levelSelectCooldown = 0;
+
+function wrapText(text, cx, y, maxW, lineH){
+  const words = text.split(' ');
+  let line = '', yy = y;
+  for (const w of words) {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line.trim(), cx, yy);
+      line = w + ' ';
+      yy += lineH;
+    } else line = test;
+  }
+  ctx.fillText(line.trim(), cx, yy);
+}
+
+function drawLevelSelect(){
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,10,20,0.35)';
+  ctx.fillRect(0,0,W,H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 32px Segoe UI, sans-serif';
+  ctx.fillText('SELECT A LEVEL', W/2, H*0.10);
+  ctx.font = '400 13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText('WASD or arrows to browse   •   Enter / Space / Click to play   •   🌀 = hides a portal', W/2, H*0.10 + 24);
+
+  const cols = 6, rows = Math.ceil(LEVELS.length/cols);
+  const tile = Math.max(44, Math.min(58, (W*0.5-40)/cols - 8));
+  const gap = 9;
+  const gridW = cols*tile + (cols-1)*gap;
+  const gridH = rows*tile + (rows-1)*gap;
+  const gridX = W/2 - gridW - 24;
+  const gridY = H/2 - gridH/2 + 14;
+  levelCardRects = [];
+
+  LEVELS.forEach((lvl, i) => {
+    const col = i % cols, row = Math.floor(i/cols);
+    const tx = gridX + col*(tile+gap), ty = gridY + row*(tile+gap);
+    const selected = i === game.levelIndex;
+    const played = (saveData.best[lvl.id]||0) > 0 || saveData.bestTime[lvl.id];
+    levelCardRects.push({ x:tx, y:ty, w:tile, h:tile, index:i });
+
+    ctx.fillStyle = selected ? 'rgba(58,160,255,0.3)' : (played ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.04)');
+    ctx.strokeStyle = selected ? '#3aa0ff' : (lvl.portalTo ? 'rgba(170,120,255,0.7)' : 'rgba(255,255,255,0.18)');
+    ctx.lineWidth = selected ? 3 : (lvl.portalTo ? 2 : 1);
+    roundRect(tx, ty, tile, tile, 8);
+    ctx.fill(); ctx.stroke();
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = Math.round(tile*0.38) + 'px Segoe UI, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(lvl.icon, tx+tile/2, ty+tile*0.56);
+    ctx.font = '700 ' + Math.round(tile*0.19) + 'px Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(String(i+1), tx+tile/2, ty+tile*0.86);
+
+    if (lvl.portalTo) {
+      ctx.font = Math.round(tile*0.24) + 'px Segoe UI, sans-serif';
+      ctx.fillText('🌀', tx+tile-tile*0.16, ty+tile*0.22);
+    }
+  });
+
+  // detail panel for the selected level
+  const sel = LEVELS[game.levelIndex];
+  const panelX = W/2 + 24, panelW = Math.min(280, W-panelX-24), panelY = gridY, panelH = gridH;
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = '#3aa0ff'; ctx.lineWidth = 2;
+  roundRect(panelX, panelY, panelW, panelH, 14);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 20px Segoe UI, sans-serif';
+  ctx.fillText(sel.name, panelX+panelW/2, panelY+36);
+  ctx.font = '44px Segoe UI, sans-serif';
+  ctx.fillText(sel.icon, panelX+panelW/2, panelY+94);
+  ctx.font = '400 13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  wrapText(sel.tagline, panelX+panelW/2, panelY+130, panelW-30, 17);
+
+  let y = panelY+170;
+  if (sel.portalTo) {
+    const t = LEVELS.find(l => l.id === sel.portalTo);
+    ctx.fillStyle = '#c9a8ff';
+    ctx.font = '600 12px Segoe UI, sans-serif';
+    wrapText('🌀 hides a portal to ' + (t?t.name:'?'), panelX+panelW/2, y, panelW-30, 16);
+    y += 34;
+  }
+
+  const bd = saveData.best[sel.id]||0, bt = saveData.bestTime[sel.id];
+  ctx.font = '600 13px Segoe UI, sans-serif';
+  ctx.fillStyle = '#8fffb0';
+  ctx.fillText(bt ? ('Best time: '+formatTime(bt)) : (bd>0 ? ('Best: '+bd+'m') : 'Not played yet'), panelX+panelW/2, panelY+panelH-40);
+
+  const pulse = 0.75 + Math.sin(performance.now()/300)*0.25;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = '#3aa0ff';
+  ctx.font = '600 14px Segoe UI, sans-serif';
+  ctx.fillText('Press ENTER to play', panelX+panelW/2, panelY+panelH-14);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+  drawShopButton();
+}
+
+// ---------------------------------------------------------------------------
+// Shop: spend accumulated coins on color skins
+// ---------------------------------------------------------------------------
+let skinCardRects = [];
+let shopBackRect = null;
+
+function buySkin(id){
+  const skin = SKINS.find(s => s.id === id);
+  if (!skin) return;
+  if (saveData.ownedSkins.includes(id)) {
+    if (saveData.equippedSkin !== id) { saveData.equippedSkin = id; doSave(false); sfx.buy(); }
+    return;
+  }
+  if (saveData.coins >= skin.cost) {
+    saveData.coins -= skin.cost;
+    saveData.ownedSkins.push(id);
+    saveData.equippedSkin = id;
+    doSave(false);
+    sfx.buy();
+  } else {
+    sfx.denied();
+  }
+}
+
+// small standing stickman silhouette, used as a skin preview swatch
+function drawSkinPreview(cx, cy, skin){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = skin.line; ctx.fillStyle = skin.line;
+  ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(0,14); ctx.stroke(); // torso
+  ctx.beginPath(); ctx.moveTo(0,14); ctx.lineTo(-9,32); ctx.stroke(); // legs
+  ctx.beginPath(); ctx.moveTo(0,14); ctx.lineTo(9,32); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(-11,4); ctx.stroke(); // arms
+  ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(11,4); ctx.stroke();
+  ctx.fillStyle = skin.shoe;
+  ctx.beginPath(); ctx.arc(-9,32,3.6,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9,32,3.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = skin.line;
+  ctx.beginPath(); ctx.arc(0,-20,9,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = skin.band; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0,-20,8,-2.5,-0.6); ctx.stroke();
+  ctx.restore();
+}
+
+function drawShop(){
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,10,20,0.4)';
+  ctx.fillRect(0,0,W,H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 34px Segoe UI, sans-serif';
+  ctx.fillText('SKIN SHOP', W/2, H*0.14);
+  ctx.font = '600 16px Segoe UI, sans-serif';
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillText('● ' + saveData.coins + ' coins', W/2, H*0.14+28);
+  ctx.font = '400 13px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText('Click a skin to buy or equip it', W/2, H*0.14+50);
+
+  const cardW = Math.max(110, Math.min(140, W*0.13));
+  const cardH = Math.min(190, H*0.4);
+  const gap = 14;
+  const totalW = SKINS.length*cardW + (SKINS.length-1)*gap;
+  const startX = W/2 - totalW/2;
+  const cardY = H/2 - cardH/2 + 10;
+  skinCardRects = [];
+
+  SKINS.forEach((skin, i) => {
+    const cx = startX + i*(cardW+gap);
+    const owned = saveData.ownedSkins.includes(skin.id);
+    const equipped = saveData.equippedSkin === skin.id;
+    skinCardRects.push({ x:cx, y:cardY, w:cardW, h:cardH, skinId: skin.id });
+
+    ctx.fillStyle = equipped ? 'rgba(58,160,255,0.25)' : (owned ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)');
+    ctx.strokeStyle = equipped ? '#3aa0ff' : 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = equipped ? 3 : 1.5;
+    roundRect(cx, cardY, cardW, cardH, 12);
+    ctx.fill(); ctx.stroke();
+
+    drawSkinPreview(cx+cardW/2, cardY+66, skin);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 14px Segoe UI, sans-serif';
+    ctx.fillText(skin.name, cx+cardW/2, cardY+120);
+
+    ctx.font = '600 12px Segoe UI, sans-serif';
+    if (equipped) { ctx.fillStyle = '#8fffb0'; ctx.fillText('EQUIPPED', cx+cardW/2, cardY+cardH-16); }
+    else if (owned) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillText('Click to equip', cx+cardW/2, cardY+cardH-16); }
+    else {
+      ctx.fillStyle = saveData.coins >= skin.cost ? '#ffd23f' : 'rgba(255,110,110,0.9)';
+      ctx.fillText('● ' + skin.cost, cx+cardW/2, cardY+cardH-16);
+    }
+  });
+
+  const back = { x: 24, y: 24, w: 96, h: 36 };
+  shopBackRect = back;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
+  roundRect(back.x, back.y, back.w, back.h, 10);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = '600 14px Segoe UI, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('← Back', back.x+back.w/2, back.y+back.h/2+1);
+
+  ctx.restore();
+}
+
+function drawGameOver(){
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,8,18,0.55)';
+  ctx.fillRect(0,0,W,H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 46px Segoe UI, sans-serif';
+  ctx.fillText(game.currentLevel.type === 'jetpack' ? 'YOU CRASHED' : 'YOU FELL', W/2, H/2 - 40);
+  ctx.font = '600 20px Segoe UI, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText('Distance: ' + game.finalDistance + 'm / ' + LEVEL_LENGTH_M + 'm    Coins: ' + game.finalCoins, W/2, H/2 + 2);
+  const id = game.currentLevel.id, bestDist = saveData.best[id]||0;
+  ctx.font = '500 15px Segoe UI, sans-serif';
+  ctx.fillStyle = bestDist === game.finalDistance && game.finalDistance>0 ? '#8fffb0' : 'rgba(255,255,255,0.65)';
+  ctx.fillText((bestDist === game.finalDistance && game.finalDistance>0 ? 'NEW BEST! ' : 'Best: ') + bestDist + 'm', W/2, H/2 + 28);
+
+  const pulse = 0.75 + Math.sin(performance.now()/300)*0.25;
+  ctx.globalAlpha = pulse;
+  ctx.font = '600 16px Segoe UI, sans-serif';
+  ctx.fillStyle = '#3aa0ff';
+  ctx.fillText('Press ENTER / SPACE / CLICK to try again   •   ESC for level select', W/2, H/2 + 68);
+  ctx.restore();
+}
+
+function drawLevelComplete(){
+  ctx.save();
+  ctx.fillStyle = 'rgba(5,18,10,0.55)';
+  ctx.fillRect(0,0,W,H);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8fffb0';
+  ctx.font = '800 44px Segoe UI, sans-serif';
+  ctx.fillText('LEVEL COMPLETE!', W/2, H/2 - 40);
+  ctx.font = '600 20px Segoe UI, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Time: ' + formatTime(game.finalTime) + '    Coins: ' + game.finalCoins, W/2, H/2 + 2);
+  ctx.font = '500 15px Segoe UI, sans-serif';
+  ctx.fillStyle = game.finalIsNewBest ? '#8fffb0' : 'rgba(255,255,255,0.65)';
+  ctx.fillText(game.finalIsNewBest ? 'NEW BEST TIME!' : ('Best: ' + formatTime(saveData.bestTime[game.currentLevel.id])), W/2, H/2 + 28);
+
+  const pulse = 0.75 + Math.sin(performance.now()/300)*0.25;
+  ctx.globalAlpha = pulse;
+  ctx.font = '600 16px Segoe UI, sans-serif';
+  ctx.fillStyle = '#3aa0ff';
+  ctx.fillText('Press ENTER / SPACE / CLICK to retry   •   ESC for level select', W/2, H/2 + 68);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Game state / loop
+// ---------------------------------------------------------------------------
+const game = {
+  state: 'title', currentLevel: LEVELS[0], levelIndex: 0,
+  runCoins: 0, raceTime: 0, finished: false,
+  finalDistance: 0, finalCoins: 0, finalTime: 0, finalIsNewBest: false,
+};
+
+function startGame(level){
+  level = level || game.currentLevel || LEVELS[0];
+  game.currentLevel = level;
+  player = makePlayer();
+  particles = [];
+  game.raceTime = 0;
+  game.finished = false;
+  game.runCoins = 0;
+  game.state = 'playing';
+  pendingPortalTarget = level.portalTo || null;
+  portal = null;
+
+  if (level.type === 'jetpack') {
+    resetJetLevel();
+    genJetChunk(1800, 0);
+    player.y = 0; // center of the flight band
+    camX = 0; camY = -H/2;
+  } else {
+    resetLevel();
+    genChunk(1800, 0);
+    player.y = 0; // feet on the starting platform
+    camX = 0; camY = -H*CAM_Y_ANCHOR;
+  }
+}
+
+function checkCoinsIn(list){
+  const box = currentPlayerBox();
+  const cx = (box.l+box.r)/2, cy = (box.t+box.b)/2;
+  for (const c of list) {
+    if (c.taken) continue;
+    if (Math.hypot(cx-c.x, cy-c.y) < c.r + 22) {
+      c.taken = true;
+      game.runCoins++;
+      saveData.coins++;
+      doSave(false);
+      sfx.coin();
+      spawnSpark(c.x, c.y, 'rgba(255,215,80,ALPHA)');
+      spawnSpark(c.x, c.y, 'rgba(255,215,80,ALPHA)');
+    }
+  }
+}
+
+function updatePlatformerFrame(dt){
+  handleJump(dt);
+  resolvePhysics(dt);
+  checkCoinsIn(coins);
+  player.pose = computePose(dt);
+  genChunk(Math.min(player.x+1800, LEVEL_LENGTH+400), player.x/6000);
+  if (!game.finished && !player.dead && player.x >= LEVEL_LENGTH) completeLevel();
+
+  const targetCamX = player.x - W*0.35;
+  camX += (targetCamX - camX) * Math.min(1, dt*6);
+  // keep ground anchored low on screen; only let big jumps/falls tug the camera a little
+  const followY = Math.max(-160, Math.min(220, player.y));
+  const targetCamY = followY - H*CAM_Y_ANCHOR;
+  camY += (targetCamY - camY) * Math.min(1, dt*4);
+
+  drawBackground();
+  drawLevel();
+  drawParticles(camX, camY);
+  drawStickman();
+  checkPortal(); // after drawing, so a warp takes effect cleanly starting next frame
+}
+
+function updateJetpackFrame(dt){
+  resolveJetpackPhysics(dt);
+  checkCoinsIn(jetCoins);
+  player.pose = computeJetpackPose(dt);
+  genJetChunk(Math.min(player.x+1800, LEVEL_LENGTH+400), player.x/6000);
+  if (!game.finished && !player.dead && player.x >= LEVEL_LENGTH) completeLevel();
+
+  const targetCamX = player.x - W*0.35;
+  camX += (targetCamX - camX) * Math.min(1, dt*6);
+  camY += (-H/2 - camY) * Math.min(1, dt*4); // fixed, centered flight band
+
+  drawBackground();
+  drawJetLevel();
+  drawParticles(camX, camY);
+  drawStickman();
+  checkPortal();
+}
+
+let lastT = performance.now();
+function loop(now){
+  let dt = (now - lastT) / 1000;
+  lastT = now;
+  dt = Math.min(dt, 1/30);
+
+  ctx.clearRect(0,0,W,H);
+
+  if (game.state === 'playing') {
+    if (!player.dead && !game.finished) game.raceTime += dt;
+    updateParticles(dt);
+    updateShake(dt);
+
+    let shx=0, shy=0;
+    if (shakeTime > 0) { shx = rand(-shakeMag,shakeMag); shy = rand(-shakeMag,shakeMag); }
+
+    ctx.save();
+    ctx.translate(shx, shy);
+    if (game.currentLevel.type === 'jetpack') updateJetpackFrame(dt);
+    else updatePlatformerFrame(dt);
+    ctx.restore();
+    drawHUD();
+  } else if (game.state === 'title') {
+    updateParticles(dt);
+    drawBackground();
+    drawLevel();
+    drawTitle();
+  } else if (game.state === 'levelselect') {
+    const LS_COLS = 6;
+    levelSelectCooldown = Math.max(0, levelSelectCooldown - dt);
+    if (levelSelectCooldown <= 0) {
+      let moved = 0;
+      if (keys.a) moved = -1;
+      else if (keys.d) moved = 1;
+      else if (keys.w) moved = -LS_COLS;
+      else if (keys.s) moved = LS_COLS;
+      if (moved) {
+        game.levelIndex = Math.max(0, Math.min(LEVELS.length-1, game.levelIndex+moved));
+        levelSelectCooldown = 0.18;
+      }
+    }
+    updateParticles(dt);
+    drawBackground();
+    drawLevel();
+    drawLevelSelect();
+  } else if (game.state === 'shop') {
+    updateParticles(dt);
+    drawBackground();
+    drawLevel();
+    drawShop();
+  } else if (game.state === 'gameover') {
+    updateParticles(dt);
+    drawBackground();
+    drawLevelForCurrent();
+    drawParticles(camX,camY);
+    drawStickman();
+    drawHUD();
+    drawGameOver();
+  } else if (game.state === 'levelcomplete') {
+    updateParticles(dt);
+    drawBackground();
+    drawLevelForCurrent();
+    drawParticles(camX,camY);
+    drawStickman();
+    drawHUD();
+    drawLevelComplete();
+  }
+
+  jumpPressedEdge = false; // consumed each frame if not used
+  requestAnimationFrame(loop);
+}
+
+// init title-screen level preview
+resetLevel();
+genChunk(1800, 0);
+player.pose = computePose(0);
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
