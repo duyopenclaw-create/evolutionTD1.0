@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RAGE</title>
+<style>
+  :root{
+    --accent:#ff4d4d; --accent2:#7dd3fc; --ok:#5cf29a;
+    --text:#eef0f7; --dim:#9198b3; --panel-border:#2a2f45;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    background:#0a0a0d;color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  }
+  #c3d{position:fixed;inset:0;display:block;outline:none;}
+
+  /* ---------------- HUD ---------------- */
+  #hud{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 18px;pointer-events:none;font-size:13px;color:var(--dim);
+    text-shadow:0 1px 3px rgba(0,0,0,.8);
+  }
+  #hud.hidden{display:none;}
+  #hud .grp{display:flex;gap:14px;align-items:center;pointer-events:auto;}
+  #hud b{color:var(--text);}
+  #hud .pill{
+    background:rgba(20,22,31,.7);border:1px solid var(--panel-border);
+    border-radius:20px;padding:5px 12px;backdrop-filter:blur(4px);
+  }
+  #muteBtn{cursor:pointer;background:rgba(20,22,31,.7);border:1px solid var(--panel-border);
+    border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+    font-size:16px;pointer-events:auto;}
+  #savedFlash{
+    position:fixed;top:52px;right:18px;z-index:60;
+    background:rgba(92,242,154,.15);border:1px solid var(--ok);color:var(--ok);
+    padding:4px 10px;border-radius:8px;font-size:11px;letter-spacing:1px;
+    opacity:0;transition:opacity .4s ease;pointer-events:none;
+  }
+  #savedFlash.show{opacity:1;}
+
+  /* ---------------- TITLE / GAME OVER (flat overlays, like any 3D game's menu) ---------------- */
+  .fullOverlay{
+    position:fixed;inset:0;z-index:40;display:none;
+    flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;
+    background:radial-gradient(circle at 50% 30%, rgba(36,18,20,.6) 0%, rgba(8,8,11,.86) 72%);
+  }
+  .fullOverlay.active{display:flex;}
+  #titleLogo{
+    font-size:min(18vw,140px);font-weight:900;letter-spacing:6px;
+    background:linear-gradient(180deg,#ff8080 0%,var(--accent) 45%,#8a0000 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 60px rgba(255,60,60,.35);
+    animation:titleShake 3.2s ease-in-out infinite;
+  }
+  @keyframes titleShake{
+    0%,92%,100%{transform:translate(0,0) rotate(0deg);}
+    93%{transform:translate(-3px,1px) rotate(-1deg);}
+    94%{transform:translate(4px,-1px) rotate(1deg);}
+    95%{transform:translate(-2px,2px) rotate(0deg);}
+    96%{transform:translate(3px,0) rotate(1deg);}
+    97%{transform:translate(0,0) rotate(0deg);}
+  }
+  #titleSub{color:var(--dim);font-size:14px;letter-spacing:3px;margin-bottom:14px;}
+  .bigBtn{
+    padding:16px 46px;font-size:20px;font-weight:700;letter-spacing:2px;
+    background:linear-gradient(135deg,var(--accent),#c62828);color:#fff;border:none;
+    border-radius:10px;cursor:pointer;box-shadow:0 8px 24px rgba(255,60,60,.35);
+    transition:transform .15s ease;
+  }
+  .bigBtn:hover{transform:scale(1.05);}
+  .bigBtn:active{transform:scale(.97);}
+  .bigBtn.blue{background:linear-gradient(135deg,var(--accent2),#3b82c4);color:#04141f;box-shadow:0 8px 20px rgba(125,211,252,.3);}
+  #titleHelp{margin-top:22px;color:var(--dim);font-size:12px;line-height:1.8;max-width:360px;}
+  #titleHelp b{color:var(--accent2);}
+  #titleStats{margin-top:14px;color:var(--dim);font-size:11px;letter-spacing:1px;}
+  #scene-gameover h1{font-size:clamp(30px,7vw,60px);color:var(--accent);margin:0;letter-spacing:2px;}
+  #goStats{color:var(--dim);font-size:14px;line-height:2;margin:14px 0 22px;}
+  #goStats b{color:var(--text);}
+
+  /* ---------------- invisible click hit-regions over 3D world objects ---------------- */
+  #hitLayer{position:fixed;inset:0;z-index:30;pointer-events:none;}
+  .hitRegion{position:absolute;pointer-events:auto;cursor:pointer;background:transparent;border:none;padding:0;}
+
+  /* ---------------- contextual caption + single CTA button (kept flat, like any game's prompt UI) ---------------- */
+  #caption{
+    position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:35;
+    text-align:center;color:#fff;font-size:14px;font-weight:600;
+    text-shadow:0 2px 8px rgba(0,0,0,.9);pointer-events:none;max-width:80vw;
+  }
+  #ctaWrap{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:36;display:none;}
+  #ctaWrap.show{display:block;}
+
+  /* ---------------- speech bubbles (positioned via 3D->2D projection each frame) ---------------- */
+  .bubble{
+    position:fixed;z-index:37;background:#fff;color:#111;padding:12px 16px;border-radius:14px;
+    font-size:14px;font-weight:600;max-width:220px;box-shadow:0 8px 20px rgba(0,0,0,.4);
+    opacity:0;transform:translateY(8px) scale(.9);transition:opacity .3s ease,transform .3s ease;
+    pointer-events:none;
+  }
+  .bubble.show{opacity:1;transform:translateY(0) scale(1);}
+  .bubble::after{content:'';position:absolute;bottom:-9px;left:26px;border-width:10px 10px 0 0;border-style:solid;border-color:#fff transparent transparent transparent;}
+  .bubble.reply{background:var(--accent2);color:#04141f;}
+  .bubble.reply::after{border-color:var(--accent2) transparent transparent transparent;left:auto;right:26px;}
+
+  #glitchText{
+    position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:38;
+    font-size:clamp(20px,6vw,40px);font-weight:900;color:var(--accent);letter-spacing:3px;
+    text-shadow:2px 0 #7dd3fc,-2px 0 #ff00de;opacity:0;pointer-events:none;
+  }
+  #glitchText.show{animation:glitchPop .6s ease both;}
+  @keyframes glitchPop{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.7);}
+    15%{opacity:1;transform:translate(-52%,-48%) scale(1.05);}
+    30%{transform:translate(-48%,-52%) scale(1);}
+    85%{opacity:1;}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1.1);}
+  }
+
+  #touchControls{position:fixed;bottom:14px;left:0;right:0;display:none;justify-content:space-between;padding:0 18px;z-index:40;}
+  #touchControls.show{display:flex;}
+  .tbtn{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25);
+    display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;pointer-events:auto;}
+  #tJump{width:74px;height:74px;background:rgba(255,77,77,.25);border-color:rgba(255,77,77,.5);}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:4px;}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="grp">
+    <span class="pill">💰 <b id="hudBalance">$0</b></span>
+    <span class="pill">🖥️ PCs destroyed: <b id="hudPcs">0</b></span>
+    <span class="pill">🏔️ Best height: <b id="hudBest">0</b>m</span>
+  </div>
+  <div class="grp"><div id="muteBtn">🔊</div></div>
+</div>
+<div id="savedFlash">SAVED</div>
+
+<div id="titleScreen" class="fullOverlay active">
+  <div id="titleLogo">RAGE</div>
+  <div id="titleSub">a game about a game that will ruin your day</div>
+  <button id="startBtn" class="bigBtn">START</button>
+  <div id="titleHelp"><b>WASD / Arrows</b> to move &nbsp;•&nbsp; <b>SPACE / W / ↑</b> to jump<br>Climb as high as you can. Try not to break anything.</div>
+  <div id="titleStats"></div>
+</div>
+
+<div id="scene-gameover" class="fullOverlay">
+  <h1>YOU'RE BROKE</h1>
+  <div id="goStats"></div>
+  <button class="bigBtn" id="restartBtn">START OVER</button>
+</div>
+
+<div id="hitLayer"></div>
+<div id="caption"></div>
+<div id="ctaWrap"></div>
+<div id="glitchText"></div>
+<div id="touchControls">
+  <div class="tbtn" id="tLeft">◀</div>
+  <div class="tbtn" id="tRight">▶</div>
+  <div class="tbtn" id="tJump">▲</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+"use strict";
+/* =========================================================================
+   UTIL
+   ========================================================================= */
+const rand = (a,b)=>a+Math.random()*(b-a);
+const randInt = (a,b)=>Math.floor(rand(a,b+1));
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const easeOutCubic = t=>1-Math.pow(1-t,3);
+const easeInOutQuad = t=> t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const choose = arr=>arr[randInt(0,arr.length-1)];
+const $ = id=>document.getElementById(id);
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function waitForEvent(el,ev){ return new Promise(res=>{ function h(e){ el.removeEventListener(ev,h); res(e); } el.addEventListener(ev,h); }); }
+function fmtMoney(n){ return '$'+Math.round(n).toLocaleString('en-US'); }
+
+/* =========================================================================
+   AUDIO ENGINE  (fully synthesized, no external files -- unchanged by the 3D pass)
+   ========================================================================= */
+const AudioEngine = (()=>{
+  let ctx=null, muted=false;
+  let musicOn=false, musicTimer=null, musicIntensity=0, musicNodes=null;
+  function getCtx(){
+    if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function master(){ return getCtx().destination; }
+  function noiseBuffer(dur){
+    const c = getCtx();
+    const buf = c.createBuffer(1, Math.max(1,Math.floor(c.sampleRate*dur)), c.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    return buf;
+  }
+  function tone({freq=440,type='sine',dur=.2,vol=.3,freqEnd=null,delay=0,detune=0}={}){
+    if(muted) return;
+    const c=getCtx(); const t0=c.currentTime+delay;
+    const osc=c.createOscillator(); osc.type=type; osc.frequency.setValueAtTime(freq,t0); osc.detune.value=detune;
+    if(freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd,1),t0+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(vol,t0+Math.min(.02,dur*.2));
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    osc.connect(g).connect(master());
+    osc.start(t0); osc.stop(t0+dur+.05);
+    return osc;
+  }
+  function noiseBurst({dur=.3,vol=.4,freq=2000,type='bandpass',Q=1,delay=0,freqEnd=null}={}){
+    if(muted) return;
+    const c=getCtx(); const t0=c.currentTime+delay;
+    const src=c.createBufferSource(); src.buffer=noiseBuffer(dur);
+    const filt=c.createBiquadFilter(); filt.type=type; filt.frequency.setValueAtTime(freq,t0); filt.Q.value=Q;
+    if(freqEnd) filt.frequency.exponentialRampToValueAtTime(Math.max(freqEnd,10),t0+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    src.connect(filt).connect(g).connect(master());
+    src.start(t0); src.stop(t0+dur+.02);
+  }
+  function thud({vol=.5,delay=0,dur=.22}={}){
+    if(muted) return;
+    tone({freq:120,freqEnd:40,type:'sine',dur,vol,delay});
+    noiseBurst({dur:dur*.8,vol:vol*.5,freq:400,type:'lowpass',delay});
+  }
+  function sUiClick(){ tone({freq:900,type:'square',dur:.05,vol:.08}); }
+  function sJump(){ tone({freq:300,freqEnd:520,type:'triangle',dur:.12,vol:.18}); noiseBurst({dur:.04,vol:.05,freq:1800,delay:0}); }
+  function sLand(intensity=0.5){
+    const v=clamp(intensity,0,1);
+    noiseBurst({dur:.09,vol:.06+v*.2,freq:1000-v*400,type:'lowpass'});
+    thud({vol:.08+v*.3,dur:.1+v*.1});
+  }
+  function sStepClimb(pitch=1){ tone({freq:220*pitch,type:'square',dur:.06,vol:.06}); }
+  function sDeathFall(){ tone({freq:500,freqEnd:60,type:'sawtooth',dur:.9,vol:.22}); noiseBurst({dur:.3,vol:.1,freq:400,type:'lowpass',delay:.6}); }
+  function sKeySmash(){
+    thud({vol:.7,dur:.3});
+    noiseBurst({dur:.16,vol:.3,freq:500,type:'lowpass',delay:.02});
+    for(let i=0;i<16;i++){
+      const d=rand(0,.42);
+      tone({freq:rand(300,900),type:'square',dur:.03,vol:.06,delay:d});
+      noiseBurst({dur:.03,vol:.1,freq:rand(2000,5000),delay:d});
+    }
+    thud({vol:.3,delay:.48,dur:.28});
+  }
+  function sKeyPop(){
+    tone({freq:rand(700,1100),type:'square',dur:.04,vol:.1});
+    noiseBurst({dur:.03,vol:.12,freq:rand(3000,6000)});
+    tone({freq:rand(1400,1800),type:'sine',dur:.06,vol:.03,delay:.02});
+  }
+  function sGlassCrack(){
+    thud({vol:.55,dur:.18});
+    noiseBurst({dur:.05,vol:.45,freq:6000,type:'highpass'});
+    noiseBurst({dur:.25,vol:.3,freq:3500,type:'bandpass',Q:2,delay:.02});
+    [3200,4800,6400].forEach((f,i)=>tone({freq:f,type:'sine',dur:.3,vol:.05,delay:.03+i*.015}));
+    for(let i=0;i<6;i++) noiseBurst({dur:.02,vol:.05,freq:rand(2000,5000),delay:.08+i*.03});
+  }
+  function sGlassShatter(){
+    thud({vol:.85,dur:.28});
+    noiseBurst({dur:.08,vol:.55,freq:7000,type:'highpass'});
+    noiseBurst({dur:.35,vol:.4,freq:2200,type:'bandpass',Q:1.4,delay:.02});
+    noiseBurst({dur:.2,vol:.3,freq:500,type:'lowpass',delay:.05});
+    [2600,3800,5200,6600].forEach((f,i)=>tone({freq:f,type:'sine',dur:.35,vol:.045,delay:.04+i*.02}));
+    for(let i=0;i<12;i++){
+      const d=.15+i*rand(.03,.07);
+      tone({freq:rand(2500,6000),type:'sine',dur:.09,vol:.035,delay:d});
+      noiseBurst({dur:.02,vol:.04,freq:rand(4000,8000),delay:d});
+    }
+    thud({vol:.3,delay:.5,dur:.3});
+  }
+  function sSpark(){ for(let i=0;i<3;i++) noiseBurst({dur:.03,vol:.1,freq:rand(4000,8000),delay:i*.08}); }
+  function sDoorCreak(){
+    tone({freq:170,freqEnd:280,type:'sawtooth',dur:.5,vol:.05});
+    tone({freq:280,freqEnd:190,type:'sawtooth',dur:.55,vol:.045,delay:.45});
+    noiseBurst({dur:.04,vol:.08,freq:2000,delay:.95});
+  }
+  function sDoorClose(){
+    tone({freq:200,freqEnd:150,type:'sawtooth',dur:.3,vol:.05});
+    thud({vol:.2,delay:.28,dur:.12});
+    noiseBurst({dur:.03,vol:.06,freq:2500,delay:.32});
+  }
+  function sFootstep(delay=0,foot=0){
+    noiseBurst({dur:.09,vol:.16,freq:foot?260:220,type:'lowpass',delay});
+    tone({freq:foot?90:75,type:'sine',dur:.08,vol:.05,delay});
+  }
+  function sSigh(){ noiseBurst({dur:.5,vol:.06,freq:800,freqEnd:300,type:'lowpass'}); }
+  function sPop(){ tone({freq:700,freqEnd:1200,type:'sine',dur:.08,vol:.1}); }
+  function sPhoneChime(){ tone({freq:880,type:'sine',dur:.15,vol:.15}); tone({freq:1320,type:'sine',dur:.2,vol:.12,delay:.1}); }
+  function sCashRegister(){ tone({freq:660,type:'square',dur:.08,vol:.12}); tone({freq:990,type:'square',dur:.1,vol:.12,delay:.09}); tone({freq:1320,type:'square',dur:.16,vol:.14,delay:.18}); }
+  function sDeny(){ tone({freq:220,freqEnd:120,type:'sawtooth',dur:.4,vol:.2}); }
+  function sCardboardRip(){
+    for(let i=0;i<6;i++){
+      const d=i*0.09+rand(0,.03);
+      noiseBurst({dur:.12,vol:.28,freq:rand(500,1400),type:'bandpass',Q:.6,delay:d});
+    }
+    thud({vol:.25,delay:.6,dur:.2});
+  }
+  function sSnap(){ tone({freq:600,type:'square',dur:.03,vol:.12}); noiseBurst({dur:.02,vol:.12,freq:3000}); tone({freq:1800,type:'sine',dur:.05,vol:.03,delay:.02}); }
+  function sPowerOn(){
+    tone({freq:1400,type:'square',dur:.02,vol:.08});
+    noiseBurst({dur:.02,vol:.1,freq:5000,delay:.01});
+    noiseBurst({dur:1.1,vol:.16,freq:200,freqEnd:900,type:'bandpass',Q:.8,delay:.05});
+    tone({freq:2000,freqEnd:3200,type:'sine',dur:.5,vol:.02,delay:.1});
+    tone({freq:80,freqEnd:120,type:'sine',dur:1,vol:.15,delay:.15});
+    tone({freq:1046,type:'square',dur:.12,vol:.06,delay:.9});
+  }
+  function sPowerOff(){ tone({freq:220,freqEnd:40,type:'sine',dur:.5,vol:.2}); noiseBurst({dur:.15,vol:.12,freq:150,type:'lowpass',delay:.02}); }
+  function sWhoosh(){ noiseBurst({dur:.6,vol:.3,freq:1200,freqEnd:120,type:'lowpass'}); }
+  function sRiggedSting(){
+    noiseBurst({dur:.15,vol:.3,freq:1200,freqEnd:80,type:'lowpass',delay:0});
+    tone({freq:200,freqEnd:50,type:'sawtooth',dur:1.1,vol:.28,delay:.1});
+    noiseBurst({dur:.8,vol:.35,freq:3000,freqEnd:200,type:'bandpass',delay:.15});
+  }
+  function sDing(){ tone({freq:1046,type:'sine',dur:.4,vol:.12}); }
+  function startAmbient(){
+    if(musicOn||muted) return;
+    musicOn=true;
+    const c=getCtx();
+    const master_ = c.createGain(); master_.gain.value=.5; master_.connect(master());
+    const o1=c.createOscillator(); o1.type='sawtooth'; o1.frequency.value=55;
+    const o2=c.createOscillator(); o2.type='sawtooth'; o2.frequency.value=55.6;
+    const filt=c.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=300;
+    const g=c.createGain(); g.gain.value=.05;
+    o1.connect(filt); o2.connect(filt); filt.connect(g).connect(master_);
+    o1.start(); o2.start();
+    musicNodes={master_,o1,o2,filt,g};
+    scheduleMusicPulse();
+  }
+  function scheduleMusicPulse(){
+    if(!musicOn) return;
+    const interval = lerp(900,320,musicIntensity);
+    if(!muted){
+      if(musicIntensity>.75){
+        tone({freq:52,type:'sine',dur:.14,vol:.1});
+        tone({freq:52,type:'sine',dur:.14,vol:.07,delay:.16});
+      }else{
+        tone({freq:55*2,type:'sine',dur:.3,vol:.05+musicIntensity*.05});
+        if(musicIntensity>.5) tone({freq:55*3,type:'triangle',dur:.15,vol:.03,delay:.15});
+      }
+    }
+    if(musicNodes) musicNodes.filt.frequency.setTargetAtTime(300+musicIntensity*1400, getCtx().currentTime, .3);
+    musicTimer = setTimeout(scheduleMusicPulse, interval);
+  }
+  function setMusicIntensity(v){ musicIntensity = clamp(v,0,1); }
+  function stopAmbient(){
+    musicOn=false;
+    clearTimeout(musicTimer);
+    if(musicNodes){
+      try{
+        musicNodes.g.gain.setTargetAtTime(0,getCtx().currentTime,.2);
+        setTimeout(()=>{ try{musicNodes.o1.stop(); musicNodes.o2.stop();}catch(e){} },400);
+      }catch(e){}
+      musicNodes=null;
+    }
+  }
+  function setMuted(v){ muted=v; if(v) stopAmbient(); }
+  return {
+    ensure:getCtx, sUiClick,sJump,sLand,sStepClimb,sDeathFall,sKeySmash,sKeyPop,sGlassCrack,sGlassShatter,
+    sSpark,sDoorCreak,sDoorClose,sFootstep,sSigh,sPop,sPhoneChime,sCashRegister,sDeny,sCardboardRip,sSnap,sPowerOn,sPowerOff,
+    sWhoosh,sRiggedSting,sDing,startAmbient,stopAmbient,setMusicIntensity,setMuted,
+    get muted(){return muted;}
+  };
+})();
+
+/* =========================================================================
+   PERSISTENT STATE
+   ========================================================================= */
+const SAVE_KEY = 'rage_save_v2_3d';
+const state = { balance:1500, pcCost:650, pcsDestroyed:0, totalDeaths:0, bestHeight:0, muted:false, attempt:0 };
+function loadState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw) Object.assign(state, JSON.parse(raw));
+  }catch(e){}
+}
+function saveState(flash=true){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      balance:state.balance, pcCost:state.pcCost, pcsDestroyed:state.pcsDestroyed,
+      totalDeaths:state.totalDeaths, bestHeight:state.bestHeight, muted:state.muted
+    }));
+    if(flash) flashSaved();
+  }catch(e){}
+}
+function flashSaved(){
+  const el = $('savedFlash');
+  el.classList.add('show');
+  clearTimeout(flashSaved._t);
+  flashSaved._t = setTimeout(()=>el.classList.remove('show'), 1200);
+}
+setInterval(()=>saveState(true), 30000);
+function updateHud(){
+  $('hudBalance').textContent = fmtMoney(state.balance);
+  $('hudPcs').textContent = state.pcsDestroyed;
+  $('hudBest').textContent = Math.floor(state.bestHeight);
+}
+function showGlitch(text){
+  const el=$('glitchText');
+  el.textContent=text;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function setCaption(text){ $('caption').textContent = text || ''; }
+function setCta(label, onClick, cls){
+  const wrap = $('ctaWrap');
+  wrap.innerHTML='';
+  if(!label){ wrap.classList.remove('show'); return; }
+  const btn=document.createElement('button');
+  btn.className='bigBtn'+(cls?' '+cls:'');
+  btn.textContent=label;
+  btn.addEventListener('click', onClick);
+  wrap.appendChild(btn);
+  wrap.classList.add('show');
+}
+function clearCta(){ $('ctaWrap').classList.remove('show'); $('ctaWrap').innerHTML=''; }
+
+/* =========================================================================
+   THREE.JS WORLD SETUP
+   ========================================================================= */
+const canvas3d = $('c3d');
+const renderer = new THREE.WebGLRenderer({canvas:canvas3d, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161d);
+scene.fog = new THREE.Fog(0x14161d, 6, 16);
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.05, 100);
+function resize3D(){
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize3D);
+resize3D();
+
+// -- lighting (no realtime shadow maps -- kept simple/robust; depth read via gradient materials) --
+scene.add(new THREE.AmbientLight(0x8896b8, 0.55));
+const moonLight = new THREE.DirectionalLight(0x8fb0e0, 0.35);
+moonLight.position.set(3, 6, 4);
+scene.add(moonLight);
+const lampLight = new THREE.PointLight(0xffd9a0, 1.4, 5.5, 2.1);
+scene.add(lampLight);
+const screenLight = new THREE.PointLight(0x7dd3fc, 0.35, 2.4, 2);
+scene.add(screenLight);
+
+function makeCanvasTexture(w,h,draw){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  draw(c.getContext('2d'), w, h);
+  const tex=new THREE.CanvasTexture(c);
+  return tex;
+}
+const woodTex = makeCanvasTexture(128,128,(ctx,w,h)=>{
+  ctx.fillStyle='#6b4426'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1;
+  for(let y=4;y<h;y+=9){ ctx.beginPath(); ctx.moveTo(0,y+rand(-2,2)); ctx.lineTo(w,y+rand(-2,2)); ctx.stroke(); }
+});
+woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping;
+woodTex.repeat.set(3,1);
+
+const floorTex = makeCanvasTexture(64,64,(ctx,w,h)=>{
+  ctx.fillStyle='#171310'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='rgba(255,255,255,0.02)';
+  for(let i=0;i<40;i++) ctx.fillRect(rand(0,w),rand(0,h),rand(1,3),rand(1,3));
+});
+floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+floorTex.repeat.set(6,6);
+
+// -------- room shell --------
+const room = new THREE.Group();
+scene.add(room);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(12,10), new THREE.MeshStandardMaterial({map:floorTex, roughness:0.95}));
+floor.rotation.x = -Math.PI/2;
+room.add(floor);
+const backWall = new THREE.Mesh(new THREE.PlaneGeometry(12,5), new THREE.MeshStandardMaterial({color:0x23262f, roughness:1}));
+backWall.position.set(0,2.5,-3);
+room.add(backWall);
+const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6,5), new THREE.MeshStandardMaterial({color:0x1e2028, roughness:1}));
+leftWall.position.set(-4,2.5,0);
+leftWall.rotation.y = Math.PI/2;
+room.add(leftWall);
+
+// window (back wall, right side)
+const windowGroup = new THREE.Group();
+windowGroup.position.set(2.3, 2.6, -2.98);
+room.add(windowGroup);
+const windowGlassMat = new THREE.MeshBasicMaterial({color:0x142544});
+const windowGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.6), windowGlassMat);
+windowGroup.add(windowGlass);
+const windowFrameMat = new THREE.MeshStandardMaterial({color:0x2c2f3a});
+[[0,0.8,0],[0,-0.8,0]].forEach(p=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(1.36,0.05,0.05), windowFrameMat); m.position.set(...p); m.position.z=0.02; windowGroup.add(m); });
+[[0.65,0,0],[-0.65,0,0]].forEach(p=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(0.05,1.6,0.05), windowFrameMat); m.position.set(...p); m.position.z=0.02; windowGroup.add(m); });
+const sunMoon = new THREE.Mesh(new THREE.CircleGeometry(0.14,16), new THREE.MeshBasicMaterial({color:0xfff6c8}));
+sunMoon.position.set(-2, -2, 0.03); // parked off to the side/below when idle
+windowGroup.add(sunMoon);
+
+// door (left wall)
+const doorPivot = new THREE.Group();
+doorPivot.position.set(-3.98, 0, -1.15); // hinge edge
+room.add(doorPivot);
+const doorSlab = new THREE.Mesh(new THREE.BoxGeometry(0.06,2.15,1.0), new THREE.MeshStandardMaterial({color:0x4a2c16, roughness:0.8}));
+doorSlab.position.set(0, 1.075, 0.5);
+doorPivot.add(doorSlab);
+const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8), new THREE.MeshStandardMaterial({color:0xe8c873, metalness:0.6, roughness:0.3}));
+knob.position.set(0.04, 1.0, 0.92);
+doorPivot.add(knob);
+
+// -------- desk + PC (the "current" set that gets damaged/rebuilt) --------
+const DESK_TOP_Y = 0.78;
+const desk = new THREE.Group();
+desk.position.set(0,0,-1.5);
+room.add(desk);
+const deskTop = new THREE.Mesh(new THREE.BoxGeometry(2.7,0.07,0.9), new THREE.MeshStandardMaterial({map:woodTex, roughness:0.75}));
+deskTop.position.set(0, DESK_TOP_Y, 0);
+desk.add(deskTop);
+const legMat = new THREE.MeshStandardMaterial({color:0x2c1c10, roughness:0.9});
+[[-1.25,-0.35],[1.25,-0.35],[-1.25,0.35],[1.25,0.35]].forEach(([x,z])=>{
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(0.08,DESK_TOP_Y-0.04,0.08), legMat);
+  leg.position.set(x, (DESK_TOP_Y-0.04)/2, z);
+  desk.add(leg);
+});
+
+// lamp
+const lamp = new THREE.Group();
+lamp.position.set(-1.0, DESK_TOP_Y+0.035, 0.28);
+desk.add(lamp);
+const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.1,0.03,12), new THREE.MeshStandardMaterial({color:0x2b2d33}));
+lamp.add(lampBase);
+const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.5,8), new THREE.MeshStandardMaterial({color:0x2b2d33}));
+lampArm.position.set(0,0.25,0); lampArm.rotation.z = -0.35;
+lamp.add(lampArm);
+const lampHead = new THREE.Mesh(new THREE.ConeGeometry(0.09,0.14,12,1,true), new THREE.MeshStandardMaterial({color:0xe0b25a, side:THREE.DoubleSide, emissive:0x553a10}));
+lampHead.position.set(0.19,0.47,0); lampHead.rotation.z = Math.PI*0.62;
+lamp.add(lampHead);
+lampLight.position.set(-1.0+0.19, DESK_TOP_Y+0.035+0.47, 0.28);
+lampLight.target = deskTop;
+
+// monitor
+const monitor = new THREE.Group();
+monitor.position.set(0, DESK_TOP_Y+0.035, -0.15);
+desk.add(monitor);
+const monitorStand = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.07,0.18,10), new THREE.MeshStandardMaterial({color:0x8d919c}));
+monitorStand.position.set(0,0.09,0);
+monitor.add(monitorStand);
+const bezelMat = new THREE.MeshStandardMaterial({color:0xd7d9de, roughness:0.55});
+const monitorBezel = new THREE.Mesh(new THREE.BoxGeometry(1.34,0.86,0.05), bezelMat);
+monitorBezel.position.set(0,0.62,0);
+monitor.add(monitorBezel);
+
+// the screen -- a canvas texture that BOTH the 2D climbing game and all "on-screen" UI
+// (start/retry prompt, crack/hole damage, static) get drawn into every frame.
+const SCREEN_W=480, SCREEN_H=380;
+const gameCanvas = document.createElement('canvas');
+gameCanvas.width=SCREEN_W; gameCanvas.height=SCREEN_H;
+const gctx = gameCanvas.getContext('2d');
+const screenTexture = new THREE.CanvasTexture(gameCanvas);
+screenTexture.minFilter = THREE.LinearFilter;
+const screenMat = new THREE.MeshBasicMaterial({map:screenTexture});
+const screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.95), screenMat);
+screenPlane.position.set(0,0.62,0.027);
+monitor.add(screenPlane);
+screenLight.position.set(0, DESK_TOP_Y+0.035+0.62, -0.15+0.15);
+
+// keyboard: one textured slab (draws the full QWERTY layout) + a handful of real,
+// physically-poppable "hint" keys (the ones the game actually uses) sitting on top.
+const KB_LAYOUT = [
+  [{l:'esc'},{l:'1'},{l:'2'},{l:'3'},{l:'4'},{l:'5'},{l:'6'},{l:'7'},{l:'8'},{l:'9'},{l:'0'},{l:'-'},{l:'='},{l:'del',w:1.6}],
+  [{l:'tab',w:1.4},{l:'Q'},{l:'W',c:'KeyW'},{l:'E'},{l:'R'},{l:'T'},{l:'Y'},{l:'U'},{l:'I'},{l:'O'},{l:'P'},{l:'['},{l:']'},{l:'\\',w:1.2}],
+  [{l:'caps',w:1.7},{l:'A',c:'KeyA'},{l:'S'},{l:'D',c:'KeyD'},{l:'F'},{l:'G'},{l:'H'},{l:'J'},{l:'K'},{l:'L'},{l:';'},{l:"'"},{l:'enter',w:1.9}],
+  [{l:'shift',w:2.2},{l:'Z'},{l:'X'},{l:'C'},{l:'V'},{l:'B'},{l:'N'},{l:'M'},{l:','},{l:'.'},{l:'/'},{l:'shift',w:1.9}],
+  [{l:'ctrl',w:1.3},{l:'win',w:1.1},{l:'alt',w:1.1},{l:'space',w:6,c:'Space'},{l:'alt',w:1.1},{l:'ctrl',w:1.1},{l:'◀',c:'ArrowLeft'},{l:'▲',c:'ArrowUp'},{l:'▶',c:'ArrowRight'}]
+];
+function drawKeyboardTexture(ctx,w,h,damage){
+  ctx.fillStyle='#aeb2ba'; ctx.fillRect(0,0,w,h);
+  const rows=KB_LAYOUT.length, padX=8, padY=6, rowH=(h-padY*2)/rows;
+  let dmgSeed=0;
+  KB_LAYOUT.forEach((row,ri)=>{
+    const totalW = row.reduce((s,k)=>s+(k.w||1),0);
+    let x=padX;
+    const usableW = w-padX*2;
+    row.forEach(spec=>{
+      const kw = (spec.w||1)/totalW*usableW - 3;
+      const y = padY + ri*rowH;
+      const isDamaged = damage>0 && pseudoRand(dmgSeed++ + damage*97) < damage*0.13;
+      if(isDamaged){
+        ctx.fillStyle='#3a3d44';
+        ctx.fillRect(x,y,kw,rowH-4);
+      }else{
+        const grad=ctx.createLinearGradient(x,y,x,y+rowH-4);
+        grad.addColorStop(0,'#fbfcfe'); grad.addColorStop(1,'#d5d8de');
+        ctx.fillStyle=grad;
+        ctx.fillRect(x,y,kw,rowH-4);
+        ctx.fillStyle='#565a63'; ctx.font='bold 9px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+        ctx.fillText(spec.l.toUpperCase(), x+3, y+rowH-8);
+      }
+      x += kw+3;
+    });
+  });
+}
+function pseudoRand(seed){ const x=Math.sin(seed)*10000; return x-Math.floor(x); }
+const kbCanvas = document.createElement('canvas'); kbCanvas.width=512; kbCanvas.height=180;
+const kbCtx = kbCanvas.getContext('2d');
+const kbTexture = new THREE.CanvasTexture(kbCanvas);
+let keyboardDamageLevel = 0;
+function refreshKeyboardTexture(){ drawKeyboardTexture(kbCtx,kbCanvas.width,kbCanvas.height,keyboardDamageLevel); kbTexture.needsUpdate=true; }
+refreshKeyboardTexture();
+
+const keyboardGroup = new THREE.Group();
+keyboardGroup.position.set(0, DESK_TOP_Y+0.02, 0.28);
+desk.add(keyboardGroup);
+const kbSlab = new THREE.Mesh(new THREE.BoxGeometry(0.85,0.03,0.28), new THREE.MeshStandardMaterial({color:0x9a9ea8}));
+keyboardGroup.add(kbSlab);
+const kbTopMat = new THREE.MeshStandardMaterial({map:kbTexture});
+const kbTop = new THREE.Mesh(new THREE.PlaneGeometry(0.85,0.28), kbTopMat);
+kbTop.rotation.x = -Math.PI/2;
+kbTop.position.y = 0.0151;
+keyboardGroup.add(kbTop);
+
+// physically real hint keys (WASD/space/arrows) positioned approximately over their texture cell
+const hintKeyMeshes = {};
+const hintKeyBaseY = 0.0151+0.006;
+function addHintKey(code, ri, rowIndexFromStart, totalInRow, wFactor){
+  const rows=KB_LAYOUT.length;
+  const rowFrac = (ri+0.5)/rows;
+  const z = -0.14 + rowFrac*0.28;
+  const x = -0.42 + (rowIndexFromStart/totalInRow)*0.85;
+  const mat = new THREE.MeshStandardMaterial({color:0xf2f4f8});
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.045*wFactor,0.012,0.045), mat);
+  mesh.position.set(x, hintKeyBaseY, z);
+  mesh.userData.baseY = hintKeyBaseY;
+  keyboardGroup.add(mesh);
+  hintKeyMeshes[code]=mesh;
+}
+// approximate positions (row index, fractional x position 0..1 within its row, row length, width factor)
+addHintKey('KeyW', 1, 2, 14, 1);
+addHintKey('KeyA', 2, 1, 13, 1);
+addHintKey('KeyD', 2, 3, 13, 1);
+addHintKey('Space', 4, 3, 9, 5);
+addHintKey('ArrowLeft', 4, 6, 9, 1);
+addHintKey('ArrowUp', 4, 7, 9, 1);
+addHintKey('ArrowRight', 4, 8, 9, 1);
+
+// mouse + tower
+const mouseDevice = new THREE.Mesh(new THREE.SphereGeometry(0.06,10,8), new THREE.MeshStandardMaterial({color:0xd7d9de}));
+mouseDevice.scale.set(1,0.55,1.4);
+mouseDevice.position.set(0.52, DESK_TOP_Y+0.045, 0.3);
+desk.add(mouseDevice);
+
+const towerGroup = new THREE.Group();
+towerGroup.position.set(-1.55, 0, -1.5);
+room.add(towerGroup);
+const towerBody = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.5,0.42), new THREE.MeshStandardMaterial({color:0xc7cad1}));
+towerBody.position.set(0,0.25,0);
+towerGroup.add(towerBody);
+const towerLed = new THREE.Mesh(new THREE.SphereGeometry(0.012,6,6), new THREE.MeshBasicMaterial({color:0x2c5c2c}));
+towerLed.position.set(0,0.4,0.22);
+towerGroup.add(towerLed);
+
+// screen damage overlay (crack/hole) + dead-screen static: composited onto gameCanvas by the game loop
+const crackLayer = document.createElement('canvas'); crackLayer.width=SCREEN_W; crackLayer.height=SCREEN_H;
+const cctx = crackLayer.getContext('2d');
+let crackLayerActive = false;
+
+/* =========================================================================
+   MOM (3D low-poly character)
+   ========================================================================= */
+const mom = new THREE.Group();
+const momBob = new THREE.Group(); // idle bob lives on its own group so it never fights position tweens
+mom.add(momBob);
+room.add(mom);
+const skin = new THREE.MeshStandardMaterial({color:0xe9b98c});
+const purple = new THREE.MeshStandardMaterial({color:0x7a5ea8});
+const dark = new THREE.MeshStandardMaterial({color:0x2c2233});
+const hairMat = new THREE.MeshStandardMaterial({color:0x3a2418});
+const momHead = new THREE.Mesh(new THREE.SphereGeometry(0.11,12,10), skin);
+momHead.position.set(0,1.55,0);
+momBob.add(momHead);
+const momHair = new THREE.Mesh(new THREE.SphereGeometry(0.115,12,10,0,Math.PI*2,0,Math.PI*0.55), hairMat);
+momHair.position.set(0,1.6,0);
+momBob.add(momHair);
+[-0.04,0.04].forEach(dx=>{
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(0.012,6,6), dark);
+  eye.position.set(dx,1.56,0.1);
+  momBob.add(eye);
+});
+const momTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.16,0.42,10), purple);
+momTorso.position.set(0,1.22,0);
+momBob.add(momTorso);
+[[-0.16,1.3,0.35,0.3],[0.16,1.3,-0.35,-0.3]].forEach(([x,y,rot])=>{
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.35,8), purple);
+  arm.position.set(x,y,0); arm.rotation.z=rot;
+  momBob.add(arm);
+});
+const momLegs = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.13,0.36,10), dark);
+momLegs.position.set(0,0.83,0);
+momBob.add(momLegs);
+mom.visible = false;
+let momBaseY = 0;
+
+/* =========================================================================
+   PHONE (3D prop with its own canvas-texture screen, shown for the store scene)
+   ========================================================================= */
+const PHONE_W=300, PHONE_H=580;
+const phoneCanvas = document.createElement('canvas'); phoneCanvas.width=PHONE_W; phoneCanvas.height=PHONE_H;
+const pctx = phoneCanvas.getContext('2d');
+const phoneTexture = new THREE.CanvasTexture(phoneCanvas);
+const phoneGroup = new THREE.Group();
+phoneGroup.visible = false;
+scene.add(phoneGroup);
+const phoneBody = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.58,0.02), new THREE.MeshStandardMaterial({color:0x14161d}));
+phoneGroup.add(phoneBody);
+const phoneScreenMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.27,0.55), new THREE.MeshBasicMaterial({map:phoneTexture}));
+phoneScreenMesh.position.z = 0.011;
+phoneGroup.add(phoneScreenMesh);
+function drawPhoneScreen({price, balance, disabled, toast}){
+  const ctx=pctx, w=PHONE_W, h=PHONE_H;
+  ctx.fillStyle='#0c0d12'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#7dd3fc'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('BUY-IT-NOW', w/2, 46);
+  ctx.strokeStyle='#1e2130'; ctx.beginPath(); ctx.moveTo(0,60); ctx.lineTo(w,60); ctx.stroke();
+  // product card
+  const cardY=90, cardH=230;
+  ctx.fillStyle='#161822'; roundRect(ctx,16,cardY,w-32,cardH,14); ctx.fill();
+  ctx.strokeStyle='#262a3d'; roundRect(ctx,16,cardY,w-32,cardH,14); ctx.stroke();
+  const imgGrad=ctx.createLinearGradient(0,cardY+20,0,cardY+150);
+  imgGrad.addColorStop(0,'#e7e9ee'); imgGrad.addColorStop(1,'#8d919c');
+  ctx.fillStyle=imgGrad; roundRect(ctx,w/2-70,cardY+20,140,110,10); ctx.fill();
+  ctx.font='40px sans-serif'; ctx.fillText('🖥️', w/2, cardY+90);
+  ctx.fillStyle='#eef0f7'; ctx.font='bold 14px sans-serif'; ctx.fillText('ZENTEK 480X Desktop PC', w/2, cardY+155);
+  ctx.fillStyle='#5cf29a'; ctx.font='bold 26px sans-serif'; ctx.fillText(fmtMoney(price), w/2, cardY+192);
+  ctx.fillStyle='#9198b3'; ctx.font='10px sans-serif';
+  ctx.fillText('"broke on day one, ordering another" – you', w/2, cardY+214);
+  // footer
+  ctx.textAlign='left'; ctx.fillStyle='#9198b3'; ctx.font='11px sans-serif';
+  ctx.fillText('Balance', 24, h-96);
+  ctx.textAlign='right'; ctx.fillStyle='#eef0f7'; ctx.font='bold 12px sans-serif';
+  ctx.fillText(fmtMoney(balance), w-24, h-96);
+  ctx.fillStyle = disabled? '#3a3d44' : '#5cf29a';
+  roundRect(ctx,20,h-80,w-40,46,10); ctx.fill();
+  ctx.fillStyle = disabled? '#888' : '#04140b';
+  ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(disabled? "CAN'T AFFORD" : 'BUY NOW', w/2, h-51);
+  if(toast){
+    ctx.fillStyle='rgba(30,33,48,0.95)'; roundRect(ctx,20,h-28,w-40,20,10); ctx.fill();
+    ctx.fillStyle='#eef0f7'; ctx.font='11px sans-serif'; ctx.fillText(toast, w/2, h-14);
+  }
+  phoneTexture.needsUpdate = true;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* =========================================================================
+   DELIVERY BOX (3D, opens via hinge)
+   ========================================================================= */
+const boxGroup = new THREE.Group();
+boxGroup.visible = false;
+room.add(boxGroup);
+const boxMat = new THREE.MeshStandardMaterial({color:0xa9773f});
+const boxBody = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.42,0.4), boxMat);
+boxBody.position.y = 0.21;
+boxGroup.add(boxBody);
+const lidPivotL = new THREE.Group(); lidPivotL.position.set(-0.25,0.42,0); boxGroup.add(lidPivotL);
+const lidPivotR = new THREE.Group(); lidPivotR.position.set(0.25,0.42,0); boxGroup.add(lidPivotR);
+const flapMat = new THREE.MeshStandardMaterial({color:0xc99358, side:THREE.DoubleSide});
+const lidL = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.02,0.4), flapMat); lidL.position.x=0.125; lidPivotL.add(lidL);
+const lidR = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.02,0.4), flapMat); lidR.position.x=-0.125; lidPivotR.add(lidR);
+
+/* =========================================================================
+   ASSEMBLY PARTS (floating 3D props you click to install)
+   ========================================================================= */
+const PARTS_DEF = [
+  {id:'tower', icon:'🖥️', build:()=>{ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.18,0.4,0.34), new THREE.MeshStandardMaterial({color:0xc7cad1}))); return g; }},
+  {id:'monitor', icon:'🖼️', build:()=>{ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.34,0.24,0.03), new THREE.MeshStandardMaterial({color:0xd7d9de}))); return g; }},
+  {id:'keyboard', icon:'⌨️', build:()=>{ const g=new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.32,0.03,0.12), new THREE.MeshStandardMaterial({color:0x9a9ea8}))); return g; }},
+  {id:'mouse', icon:'🖱️', build:()=>{ const g=new THREE.Group(); const m=new THREE.Mesh(new THREE.SphereGeometry(0.05,10,8), new THREE.MeshStandardMaterial({color:0xd7d9de})); m.scale.set(1,0.6,1.3); g.add(m); return g; }},
+];
+let partMeshes = []; // active floating part objects during assembly
+
+/* =========================================================================
+   DEBRIS SYSTEM (keycaps / shards / sparks / dust -- unified physics pool)
+   ========================================================================= */
+const debris = [];
+const keycapDebrisGeo = new THREE.BoxGeometry(0.045,0.02,0.045);
+const keycapDebrisMat = new THREE.MeshStandardMaterial({color:0xd7d9de});
+const shardGeo = new THREE.BoxGeometry(0.05,0.004,0.08);
+const shardMat = new THREE.MeshStandardMaterial({color:0xcfe8ff, roughness:0.1, metalness:0.2});
+const sparkGeo = new THREE.SphereGeometry(0.012,5,5);
+const dustGeo = new THREE.SphereGeometry(0.02,5,5);
+
+function spawnDebris(position, kind, count){
+  for(let i=0;i<count;i++){
+    let geo, mat, gravity=2.4, life=rand(0.9,1.5);
+    const vel = new THREE.Vector3(rand(-0.9,0.9), rand(0.6,1.8), rand(-0.5,0.9));
+    if(kind==='keycap'){ geo=keycapDebrisGeo; mat=keycapDebrisMat; }
+    else if(kind==='shard'){ geo=shardGeo; mat=shardMat; gravity=1.8; }
+    else if(kind==='spark'){ geo=sparkGeo; mat=new THREE.MeshBasicMaterial({color:0xffb347,transparent:true}); gravity=1.2; life=rand(0.3,0.7); vel.multiplyScalar(1.6); }
+    else { geo=dustGeo; mat=new THREE.MeshBasicMaterial({color:0xaaaaaa,transparent:true,opacity:0.6}); gravity=0.6; life=rand(0.35,0.6); vel.set(rand(-0.4,0.4),rand(0.2,0.7),rand(-0.4,0.4)); }
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(position);
+    scene.add(mesh);
+    debris.push({mesh, vel, angVel:new THREE.Vector3(rand(-8,8),rand(-8,8),rand(-8,8)), life, maxLife:life, gravity, fade: kind==='spark'||kind==='dust'});
+  }
+}
+function updateDebris(dtMs){
+  const dt = dtMs/1000;
+  for(let i=debris.length-1;i>=0;i--){
+    const d=debris[i];
+    d.vel.y -= d.gravity*dt;
+    d.mesh.position.addScaledVector(d.vel, dt);
+    d.mesh.rotation.x += d.angVel.x*dt;
+    d.mesh.rotation.y += d.angVel.y*dt;
+    d.life -= dt;
+    if(d.fade) d.mesh.material.opacity = clamp(d.life/d.maxLife,0,1)*0.7;
+    if(d.life<=0 || d.mesh.position.y < -0.3){
+      scene.remove(d.mesh);
+      debris.splice(i,1);
+    }
+  }
+}
+
+/* =========================================================================
+   CAMERA CHOREOGRAPHY
+   ========================================================================= */
+const CAM = {
+  desk:   { pos:[0, 1.32, 1.55],  look:[0, 1.05, -1.7] },
+  wide:   { pos:[0.5, 1.5, 2.5],  look:[-1.2, 1.0, -1.3] },
+  window: { pos:[1.1, 1.7, 0.6],  look:[2.3, 2.4, -3] },
+  phone:  { pos:[0, 1.25, 1.55],  look:[0, 1.18, 0.75] },
+};
+camera.position.set(...CAM.desk.pos);
+camera.lookAt(...CAM.desk.look);
+let cameraAnim = null; // {startPos,startQuat,endPos,endQuat,t0,dur,resolve}
+const _lookAtHelperCam = new THREE.PerspectiveCamera(); // a plain Object3D.lookAt() reverses eye/target vs. Camera.lookAt() -- use a real camera to get correct orientation math
+function flyCameraTo(preset, dur=1100){
+  return new Promise(resolve=>{
+    const tmp = _lookAtHelperCam;
+    tmp.position.set(...preset.pos);
+    tmp.lookAt(new THREE.Vector3(...preset.look));
+    const endPos = new THREE.Vector3(...preset.pos);
+    if(camera.position.distanceToSquared(endPos) < 0.0004 && camera.quaternion.angleTo(tmp.quaternion) < 0.01){
+      resolve(); // already there (e.g. two scenes in a row share a camera preset) -- skip the pointless tween
+      return;
+    }
+    cameraAnim = {
+      startPos: camera.position.clone(), startQuat: camera.quaternion.clone(),
+      endPos, endQuat: tmp.quaternion.clone(),
+      t0: performance.now(), dur, resolve
+    };
+  });
+}
+function tickCamera(now){
+  if(!cameraAnim) return;
+  const t = clamp((now-cameraAnim.t0)/cameraAnim.dur, 0, 1);
+  const e = easeInOutQuad(t);
+  camera.position.lerpVectors(cameraAnim.startPos, cameraAnim.endPos, e);
+  camera.quaternion.slerpQuaternions(cameraAnim.startQuat, cameraAnim.endQuat, e);
+  if(t>=1){ const r=cameraAnim.resolve; cameraAnim=null; r(); }
+}
+let camShakeUntil = 0, camShakeMag = 0;
+function shakeCamera(mag=0.03, durMs=350){ camShakeMag=mag; camShakeUntil = performance.now()+durMs; }
+
+/* =========================================================================
+   PROJECTION-BASED HIT REGIONS + SPEECH BUBBLES (HTML overlays tracking 3D objects)
+   ========================================================================= */
+function worldToScreen(v3){
+  const v = v3.clone().project(camera);
+  return { x:(v.x*0.5+0.5)*innerWidth, y:(-v.y*0.5+0.5)*innerHeight, behind: v.z>1 };
+}
+const activeHitRegions = []; // {el, getPos():Vector3, sizePx}
+function addHitRegion(getPos, sizePx, onClick){
+  const el=document.createElement('button');
+  el.className='hitRegion';
+  el.addEventListener('click', onClick);
+  $('hitLayer').appendChild(el);
+  const entry = {el, getPos, sizePx};
+  activeHitRegions.push(entry);
+  return entry;
+}
+function removeHitRegion(entry){
+  const i=activeHitRegions.indexOf(entry);
+  if(i>=0) activeHitRegions.splice(i,1);
+  entry.el.remove();
+}
+function clearHitRegions(){ while(activeHitRegions.length) removeHitRegion(activeHitRegions[0]); }
+function updateHitRegions(){
+  activeHitRegions.forEach(({el,getPos,sizePx})=>{
+    const p = worldToScreen(getPos());
+    el.style.left=(p.x-sizePx/2)+'px'; el.style.top=(p.y-sizePx/2)+'px';
+    el.style.width=sizePx+'px'; el.style.height=sizePx+'px';
+    el.style.display = p.behind? 'none':'block';
+  });
+}
+const activeBubbles = []; // {el, getPos()}
+function showBubble(text, getPos, cls, offsetY=0.35){
+  const el=document.createElement('div');
+  el.className='bubble'+(cls?' '+cls:'');
+  el.textContent=text;
+  document.body.appendChild(el);
+  const entry={el, getPos:()=>getPos().clone().add(new THREE.Vector3(0.16,offsetY,0))};
+  activeBubbles.push(entry);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  return entry;
+}
+function hideBubble(entry){
+  entry.el.classList.remove('show');
+  setTimeout(()=>{
+    const i=activeBubbles.indexOf(entry); if(i>=0) activeBubbles.splice(i,1);
+    entry.el.remove();
+  }, 320);
+}
+function updateBubbles(){
+  activeBubbles.forEach(({el,getPos})=>{
+    const p = worldToScreen(getPos());
+    el.style.left=p.x+'px'; el.style.top=p.y+'px';
+  });
+}
+
+/* =========================================================================
+   THE RAGE MINI-GAME  (unchanged 2D physics/render -- drawn onto the monitor's canvas texture)
+   ========================================================================= */
+const CW=SCREEN_W, CH=SCREEN_H;
+const TARGET_HEIGHT=4200;
+const RIG_THRESHOLD=TARGET_HEIGHT*0.9;
+
+const Climber = (()=>{
+  let player, platforms, cameraY, height, running, rigged, riggedTimer, particles, keys, lastTime;
+  let onDeathCb=null;
+  const GRAV=0.55, JUMP_V=-11.4, MOVE_SPEED=4.2;
+
+  function resetWorld(){
+    player = {x:CW/2-12,y:CH-60,vx:0,vy:0,w:24,h:26,onGround:false};
+    platforms = [{x:CW/2-60,y:CH-30,w:120,h:14,type:'normal'}];
+    let y=CH-30;
+    while(y>-TARGET_HEIGHT){ y -= rand(60,95); platforms.push(genPlatform(y)); }
+    cameraY=0; height=0; running=false; rigged=false; riggedTimer=0; particles=[];
+    keys={left:false,right:false,jump:false};
+  }
+  function genPlatform(y){
+    const h = CH-1-y;
+    const w = clamp(110-h*0.012, 46, 110);
+    const x = rand(10,CW-10-w);
+    let type='normal';
+    const r=Math.random();
+    if(h>500 && r<0.18) type='moving';
+    else if(h>900 && r<0.30) type='crumble';
+    return {x,y,w,h:14,type,phase:rand(0,Math.PI*2),dead:false,timer:0};
+  }
+  function start(cb){
+    onDeathCb=cb;
+    resetWorld();
+    running=true;
+    lastTime=performance.now();
+  }
+  function stop(){ running=false; }
+  function setKey(k,v){ keys[k]=v; }
+  function isRunning(){ return running; }
+
+  function tick(now){
+    if(!running) return;
+    const dt=Math.min(32,now-lastTime)/16.67;
+    lastTime=now;
+    update(dt);
+    render();
+  }
+
+  function update(dt){
+    updateParticles(dt); // always ages/removes particles, whether rigged or not
+    if(rigged){
+      riggedTimer+=dt;
+      player.vy += 1.6*dt;
+      player.y += player.vy*dt;
+      cameraY = lerp(cameraY, player.y-CH*0.35, 0.12);
+      if(player.y - cameraY > CH+120){
+        running=false;
+        AudioEngine.sDeathFall();
+        setTimeout(()=>{ if(onDeathCb) onDeathCb(Math.floor(height)); }, 250);
+      }
+      return;
+    }
+    player.vx = (keys.right?MOVE_SPEED:0) - (keys.left?MOVE_SPEED:0);
+    if(keys.jump && player.onGround){ player.vy=JUMP_V; player.onGround=false; AudioEngine.sJump(); }
+    player.vy += GRAV*dt;
+    player.x += player.vx*dt;
+    player.y += player.vy*dt;
+    player.x = clamp(player.x,0,CW-player.w);
+
+    const wasOnGround = player.onGround;
+    player.onGround=false;
+    for(const p of platforms){
+      if(p.dead) continue;
+      if(p.type==='moving'){ p.phase+=0.03*dt; p.x=clamp(p.x+Math.sin(p.phase)*1.4*dt,0,CW-p.w); }
+      if(p.type==='crumble' && p.timer>0){ p.timer-=dt; if(p.timer<=0) p.dead=true; }
+      const px=player.x,py=player.y,pw=player.w,ph=player.h;
+      if(player.vy>0 && px+pw>p.x+4 && px<p.x+p.w-4 && py+ph>p.y && py+ph<p.y+p.h+14){
+        const impactSpeed = player.vy;
+        player.y = p.y-ph; player.vy=0; player.onGround=true;
+        if(p.type==='crumble' && p.timer===0){ p.timer=26; }
+        if(!wasOnGround){
+          const intensity = clamp(impactSpeed/14,0,1);
+          AudioEngine.sLand(intensity);
+          spawnDust(player.x+player.w/2, player.y+player.h);
+          if(intensity>0.7) shakeCamera(0.015,180);
+        }
+      }
+    }
+
+    height = Math.max(height, (CH-30) - player.y);
+    cameraY = lerp(cameraY, player.y-CH*0.55, 0.12);
+
+    for(const p of platforms){ if(!p.dead && p.y > cameraY+CH+40) p.dead=true; }
+    platforms = platforms.filter(p=>!p.dead || p.y>cameraY-40);
+    let minY=Math.min(...platforms.map(p=>p.y));
+    while(minY > cameraY-TARGET_HEIGHT*2 && minY > -TARGET_HEIGHT*1.2){ minY -= rand(60,95); platforms.push(genPlatform(minY)); }
+
+    AudioEngine.setMusicIntensity(clamp(height/TARGET_HEIGHT,0,1));
+
+    if(player.y - cameraY > CH+60){
+      running=false;
+      AudioEngine.sDeathFall();
+      setTimeout(()=>{ if(onDeathCb) onDeathCb(Math.floor(height)); }, 200);
+      return;
+    }
+    if(height >= RIG_THRESHOLD && !rigged) triggerRig();
+  }
+
+  function triggerRig(){
+    rigged=true;
+    platforms.forEach(p=>p.dead=true);
+    player.vy = 6; player.vx = 0;
+    AudioEngine.sRiggedSting();
+    showGlitch(choose(['NICE TRY.','SO CLOSE.','ALMOST.','NOT TODAY.','LOL NO.']));
+    shakeCamera(0.05, 500);
+    for(let i=0;i<40;i++) particles.push({x:player.x+player.w/2,y:player.y,vx:rand(-3,3),vy:rand(-6,-1),life:1});
+  }
+  function updateParticles(dt){
+    particles.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=0.3*dt; p.life-=0.015*dt; });
+    particles = particles.filter(p=>p.life>0);
+  }
+  function spawnDust(x,y){
+    for(let i=0;i<6;i++) particles.push({x,y,vx:rand(-1.5,1.5),vy:rand(-1.8,-0.2),life:rand(.35,.6),type:'dust'});
+  }
+  function drawParallax(){
+    gctx.save();
+    gctx.translate(0,-cameraY*0.4);
+    const spacing=52, cols=9;
+    const startRow=Math.floor((cameraY*0.4-CH)/spacing)-2;
+    const endRow=Math.floor((cameraY*0.4+CH)/spacing)+2;
+    for(let row=startRow;row<=endRow;row++){
+      for(let col=0;col<cols;col++){
+        const wx=col*56+16, wy=row*spacing;
+        const lit=pseudoRand(row*31.7+col*17.3)>0.72;
+        gctx.fillStyle= lit? 'rgba(255,214,140,0.32)' : 'rgba(255,255,255,0.045)';
+        gctx.fillRect(wx,wy,24,32);
+      }
+    }
+    gctx.restore();
+  }
+  function roundRectPath(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function drawPlayer(){
+    const cx=player.x+player.w/2, topY=player.y;
+    const running_=Math.abs(player.vx)>0.4 && player.onGround;
+    const t=performance.now()/100;
+    const swing = running_? Math.sin(t)*7 : (player.onGround? 0 : 5);
+    gctx.save();
+    gctx.strokeStyle='#7a1f1f'; gctx.lineWidth=4; gctx.lineCap='round';
+    gctx.beginPath(); gctx.moveTo(cx-4,topY+18); gctx.lineTo(cx-4+swing*0.35,topY+27); gctx.stroke();
+    gctx.beginPath(); gctx.moveTo(cx+4,topY+18); gctx.lineTo(cx+4-swing*0.35,topY+27); gctx.stroke();
+    gctx.fillStyle='#ff4d4d';
+    roundRectPath(gctx,cx-8,topY+3,16,17,4); gctx.fill();
+    gctx.strokeStyle='#c93a3a'; gctx.lineWidth=3.4;
+    const armSwing = running_? Math.sin(t+Math.PI)*6 : (player.onGround?0:-7);
+    gctx.beginPath(); gctx.moveTo(cx-8,topY+7); gctx.lineTo(cx-13,topY+7+armSwing*0.4); gctx.stroke();
+    gctx.beginPath(); gctx.moveTo(cx+8,topY+7); gctx.lineTo(cx+13,topY+7-armSwing*0.4); gctx.stroke();
+    gctx.fillStyle='#f2c9a0';
+    gctx.beginPath(); gctx.arc(cx,topY,6,0,Math.PI*2); gctx.fill();
+    gctx.fillStyle='#2a2a2a';
+    gctx.fillRect(cx-3,topY-1,1.6,1.6); gctx.fillRect(cx+1.4,topY-1,1.6,1.6);
+    gctx.restore();
+  }
+  function render(){
+    gctx.clearRect(0,0,CW,CH);
+    const t=clamp(height/TARGET_HEIGHT,0,1);
+    const grad=gctx.createLinearGradient(0,0,0,CH);
+    grad.addColorStop(0, lerpColor('#0d1b3a','#3a0d1b',t));
+    grad.addColorStop(1, lerpColor('#1c2b52','#210a12',t));
+    gctx.fillStyle=grad; gctx.fillRect(0,0,CW,CH);
+    drawParallax();
+    gctx.save();
+    gctx.translate(0,-cameraY);
+    gctx.strokeStyle='rgba(255,255,255,.15)';
+    for(let i=0;i<3;i++){ gctx.beginPath(); gctx.moveTo(0,(CH-30)-TARGET_HEIGHT+i*4); gctx.lineTo(CW,(CH-30)-TARGET_HEIGHT+i*4); gctx.stroke(); }
+    gctx.fillStyle='#ffd76b'; gctx.font='bold 16px sans-serif'; gctx.textAlign='center';
+    gctx.fillText('🏁 FINISH', CW/2, (CH-30)-TARGET_HEIGHT-10);
+    platforms.forEach(p=>{
+      if(p.dead && p.type!=='crumble') return;
+      let color = '#7dd3fc';
+      if(p.type==='moving') color='#f472b6';
+      if(p.type==='crumble') color = p.timer>0? '#ff9d4d':'#c9853a';
+      gctx.fillStyle=color; gctx.fillRect(p.x,p.y,p.w,p.h);
+      gctx.fillStyle='rgba(255,255,255,.28)'; gctx.fillRect(p.x,p.y,p.w,3);
+      gctx.fillStyle='rgba(0,0,0,.18)'; gctx.fillRect(p.x,p.y+p.h-2,p.w,2);
+    });
+    drawPlayer();
+    particles.forEach(p=>{
+      gctx.globalAlpha=clamp(p.life,0,1);
+      if(p.type==='dust'){ gctx.fillStyle='rgba(205,205,212,0.75)'; gctx.beginPath(); gctx.arc(p.x,p.y,2.4,0,Math.PI*2); gctx.fill(); }
+      else{ gctx.fillStyle='#ffd76b'; gctx.fillRect(p.x,p.y,3,3); }
+    });
+    gctx.globalAlpha=1;
+    gctx.restore();
+    gctx.fillStyle='rgba(0,0,0,.35)'; gctx.fillRect(0,0,CW,26);
+    gctx.fillStyle='#fff'; gctx.font='bold 13px sans-serif'; gctx.textAlign='left';
+    gctx.fillText('HEIGHT: '+Math.floor(height)+'m', 10,18);
+    gctx.textAlign='right';
+    gctx.fillText('BEST: '+Math.floor(Math.max(state.bestHeight,height))+'m', CW-10,18);
+    if(crackLayerActive) gctx.drawImage(crackLayer,0,0);
+  }
+  function lerpColor(c1,c2,t){
+    const a=hexToRgb(c1), b=hexToRgb(c2);
+    return `rgb(${Math.round(lerp(a.r,b.r,t))},${Math.round(lerp(a.g,b.g,t))},${Math.round(lerp(a.b,b.b,t))})`;
+  }
+  function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+  return {start,stop,setKey,isRunning,tick};
+})();
+
+const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump'};
+window.addEventListener('keydown',e=>{
+  const k=keyMap[e.code];
+  if(k){ Climber.setKey(k,true); e.preventDefault(); }
+  const mesh=hintKeyMeshes[e.code];
+  if(mesh && mesh.visible!==false){ mesh.position.y = mesh.userData.baseY - 0.004; mesh.material.emissive && mesh.material.emissive.setHex(0x1a4a5c); mesh.material.color.setHex(0xcdeeff); }
+});
+window.addEventListener('keyup',e=>{
+  const k=keyMap[e.code];
+  if(k){ Climber.setKey(k,false); e.preventDefault(); }
+  const mesh=hintKeyMeshes[e.code];
+  if(mesh){ mesh.position.y = mesh.userData.baseY; mesh.material.color.setHex(0xf2f4f8); }
+});
+const touchCodeMap={tLeft:'ArrowLeft',tRight:'ArrowRight',tJump:'ArrowUp'};
+if('ontouchstart' in window){
+  $('touchControls').classList.add('show');
+  const bind=(id,k)=>{
+    const el=$(id);
+    el.addEventListener('touchstart',e=>{e.preventDefault();Climber.setKey(k,true);});
+    el.addEventListener('touchend',e=>{e.preventDefault();Climber.setKey(k,false);});
+  };
+  bind('tLeft','left'); bind('tRight','right'); bind('tJump','jump');
+}
+
+/* =========================================================================
+   MONITOR "start / retry" PROMPT drawn directly onto the same screen texture
+   ========================================================================= */
+let awaitingStartResolve = null;
+function drawStartPrompt(isRetry){
+  gctx.clearRect(0,0,CW,CH);
+  const grad=gctx.createLinearGradient(0,0,0,CH);
+  grad.addColorStop(0,'#0d1b3a'); grad.addColorStop(1,'#1c2b52');
+  gctx.fillStyle=grad; gctx.fillRect(0,0,CW,CH);
+  gctx.fillStyle='rgba(3,4,8,.5)'; gctx.fillRect(0,0,CW,CH);
+  gctx.textAlign='center';
+  gctx.fillStyle='#fff'; gctx.font='bold 30px sans-serif';
+  gctx.fillText(isRetry? 'TRY AGAIN?' : 'RAGE™', CW/2, CH/2-40);
+  gctx.fillStyle='#9198b3'; gctx.font='13px sans-serif';
+  gctx.fillText(isRetry? 'Your PC has seen better days. Climb anyway?' : 'Climb to the top. Simple, right?', CW/2, CH/2-10);
+  gctx.fillStyle='#7dd3fc'; roundRectPathStandalone(gctx, CW/2-70, CH/2+20, 140, 42, 8); gctx.fill();
+  gctx.fillStyle='#04141f'; gctx.font='bold 16px sans-serif';
+  gctx.fillText(isRetry? 'RETRY':'START', CW/2, CH/2+47);
+  if(crackLayerActive) gctx.drawImage(crackLayer,0,0);
+}
+function roundRectPathStandalone(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function promptStart(isRetry){
+  drawStartPrompt(isRetry);
+  const region = addHitRegion(()=>screenPlane.getWorldPosition(new THREE.Vector3()), 220, ()=>{
+    removeHitRegion(region);
+    AudioEngine.sUiClick();
+    if(awaitingStartResolve){ const r=awaitingStartResolve; awaitingStartResolve=null; r(); }
+  });
+  return new Promise(resolve=>{ awaitingStartResolve = resolve; });
+}
+function runRageGame(){
+  return new Promise(resolve=>{
+    Climber.start(finalHeight=>{
+      state.totalDeaths++;
+      state.bestHeight = Math.max(state.bestHeight, finalHeight);
+      updateHud();
+      resolve(finalHeight);
+    });
+  });
+}
+
+/* =========================================================================
+   CRACK / HOLE RENDERING (draws into crackLayer, composited onto the screen each frame)
+   ========================================================================= */
+function clearCracks(){ cctx.clearRect(0,0,crackLayer.width,crackLayer.height); crackLayerActive=false; }
+function drawCrackBranch(ctx,x,y,angle,length,depth){
+  if(depth<=0||length<5) return;
+  const segs=randInt(3,6);
+  let cx=x, cy=y, a=angle;
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  for(let i=0;i<segs;i++){
+    a += rand(-.4,.4);
+    const segLen = length/segs;
+    cx += Math.cos(a)*segLen; cy += Math.sin(a)*segLen;
+    ctx.lineTo(cx,cy);
+    if(Math.random()<0.35) drawCrackBranch(ctx,cx,cy,a+rand(-1.1,1.1),length*.45,depth-1);
+  }
+  ctx.stroke();
+}
+function drawGlassCrack(ox,oy,radius,mainLines){
+  crackLayerActive = true;
+  cctx.save();
+  cctx.strokeStyle='rgba(255,255,255,0.82)'; cctx.lineWidth=1.1;
+  cctx.shadowColor='rgba(0,0,0,0.5)'; cctx.shadowBlur=2.5; cctx.shadowOffsetX=1; cctx.shadowOffsetY=1.5;
+  for(let i=0;i<mainLines;i++){ const angle=(Math.PI*2/mainLines)*i+rand(-.35,.35); drawCrackBranch(cctx,ox,oy,angle,radius*rand(.7,1.15),3); }
+  cctx.shadowBlur=1.5; cctx.shadowOffsetX=0; cctx.shadowOffsetY=0; cctx.shadowColor='rgba(180,220,255,0.5)';
+  for(let r=6;r<34;r+=rand(7,12)){
+    cctx.beginPath();
+    for(let a=0;a<=Math.PI*2+0.25;a+=0.35){ const rr=r+rand(-2,2); const x=ox+Math.cos(a)*rr, y=oy+Math.sin(a)*rr; if(a===0) cctx.moveTo(x,y); else cctx.lineTo(x,y); }
+    cctx.stroke();
+  }
+  cctx.shadowBlur=0; cctx.strokeStyle='rgba(255,255,255,0.95)'; cctx.lineWidth=1.8; cctx.lineCap='round';
+  for(let i=0;i<mainLines;i++){
+    const a=rand(0,Math.PI*2), r=rand(8,radius*0.45);
+    const x=ox+Math.cos(a)*r, y=oy+Math.sin(a)*r;
+    cctx.beginPath(); cctx.moveTo(x-4*Math.cos(a+1.3), y-4*Math.sin(a+1.3)); cctx.lineTo(x+4*Math.cos(a+1.3), y+4*Math.sin(a+1.3)); cctx.stroke();
+  }
+  cctx.restore();
+}
+function drawHole(ox,oy){
+  crackLayerActive = true;
+  cctx.save();
+  cctx.globalCompositeOperation='source-over';
+  cctx.fillStyle='rgba(4,4,6,0.92)'; cctx.fillRect(0,0,crackLayer.width,crackLayer.height);
+  cctx.globalCompositeOperation='destination-out';
+  cctx.beginPath();
+  const pts=14;
+  for(let i=0;i<=pts;i++){ const a=(Math.PI*2/pts)*i; const r=rand(34,58); const x=ox+Math.cos(a)*r, y=oy+Math.sin(a)*r; if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y); }
+  cctx.closePath(); cctx.fill();
+  cctx.restore();
+  drawGlassCrack(ox,oy,140,10);
+  cctx.save();
+  cctx.globalCompositeOperation='source-over';
+  const grad=cctx.createRadialGradient(ox,oy,10,ox,oy,70);
+  grad.addColorStop(0,'rgba(0,0,0,0.9)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+  cctx.fillStyle=grad; cctx.beginPath(); cctx.arc(ox,oy,70,0,Math.PI*2); cctx.fill();
+  cctx.restore();
+}
+let deadScreenActive = false;
+function startDeadScreen(){
+  deadScreenActive = true;
+  screenLight.intensity = 0;
+}
+function stopDeadScreen(){ deadScreenActive = false; screenLight.intensity = 0.35; }
+function tickDeadScreen(){
+  if(!deadScreenActive) return;
+  const img=gctx.createImageData(CW,CH);
+  for(let i=0;i<img.data.length;i+=4){ const v=Math.random()*255; img.data[i]=v;img.data[i+1]=v;img.data[i+2]=v;img.data[i+3]=255; }
+  gctx.putImageData(img,0,0);
+}
+
+/* =========================================================================
+   CUTSCENES: keyboard smash / screen crack / screen hole (real 3D debris + fist)
+   ========================================================================= */
+function keycapWorldPos(mesh){ return mesh.getWorldPosition(new THREE.Vector3()); }
+async function cutsceneKeyboardSmash(){
+  await wait(300);
+  AudioEngine.sKeySmash();
+  shakeCamera(0.02, 500);
+  lampLight.intensity = 0.15; setTimeout(()=>lampLight.intensity=0.9,80); setTimeout(()=>lampLight.intensity=0.2,160); setTimeout(()=>lampLight.intensity=1.4,260);
+  // pop a few of the real hint keys
+  const codes = Object.keys(hintKeyMeshes).sort(()=>Math.random()-0.5).slice(0,4);
+  codes.forEach((code,i)=>{
+    setTimeout(()=>{
+      const mesh=hintKeyMeshes[code];
+      spawnDebris(keycapWorldPos(mesh), 'keycap', 1);
+      mesh.visible=false;
+      AudioEngine.sKeyPop();
+    }, i*70);
+  });
+  // plus generic loose-key debris across the keyboard for visual density
+  for(let i=0;i<7;i++){
+    setTimeout(()=>{
+      const p = keyboardGroup.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(rand(-0.35,0.35),0.02,rand(-0.12,0.12)));
+      spawnDebris(p, 'keycap', 1);
+      AudioEngine.sKeyPop();
+    }, i*55+40);
+  }
+  keyboardDamageLevel = 1; refreshKeyboardTexture();
+  showGlitch(choose(['RAGE QUIT','ARE YOU KIDDING ME','UNPLAYABLE']));
+  await wait(1400);
+}
+function spawnFist3D(fromLocal, toWorld, onImpact){
+  return new Promise(resolve=>{
+    const fistMat = new THREE.MeshStandardMaterial({color:0xf2c9a0});
+    function makeFist(ghost, delayMs){
+      setTimeout(()=>{
+        const grp = new THREE.Group();
+        const m = ghost? fistMat.clone() : fistMat;
+        if(ghost){ m.transparent=true; m.opacity=0.3; }
+        grp.add(new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8), m));
+        grp.position.copy(fromLocal);
+        scene.add(grp);
+        const t0=performance.now(); const dur=260;
+        function step(now){
+          const t=clamp((now-t0)/dur,0,1);
+          grp.position.lerpVectors(fromLocal, toWorld, easeOutCubic(t));
+          if(t<1) requestAnimationFrame(step);
+          else{
+            scene.remove(grp);
+            if(!ghost){ onImpact&&onImpact(); resolve(); }
+          }
+        }
+        requestAnimationFrame(step);
+      }, delayMs);
+    }
+    makeFist(true,0); makeFist(true,25); makeFist(true,45);
+    makeFist(false,0);
+  });
+}
+async function cutsceneScreenCrack(){
+  await wait(300);
+  const screenWorld = screenPlane.getWorldPosition(new THREE.Vector3());
+  const fromPos = keyboardGroup.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(-0.5,0.3,0.3));
+  await spawnFist3D(fromPos, screenWorld, ()=>{
+    AudioEngine.sGlassCrack();
+    shakeCamera(0.025, 400);
+    const ox=CW*rand(.35,.65), oy=CH*rand(.35,.65);
+    drawGlassCrack(ox,oy,110,8);
+  });
+  await wait(1200);
+}
+async function cutsceneScreenHole(){
+  await wait(300);
+  const screenWorld = screenPlane.getWorldPosition(new THREE.Vector3());
+  const fromPos = keyboardGroup.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0.5,0.3,0.3));
+  await spawnFist3D(fromPos, screenWorld, ()=>{
+    AudioEngine.sGlassShatter();
+    shakeCamera(0.04, 450);
+    const ox=CW*rand(.4,.6), oy=CH*rand(.4,.6);
+    drawHole(ox,oy);
+    spawnDebris(screenWorld, 'shard', 12);
+    spawnDebris(screenWorld, 'spark', 10);
+    startDeadScreen();
+  });
+  await wait(300);
+  AudioEngine.sPowerOff();
+  await wait(1400);
+}
+
+/* =========================================================================
+   MOM DIALOGUE SCENE (3D walk-in + projected speech bubbles)
+   ========================================================================= */
+const momOpeners = ["Why'd you break it?!","There's a HOLE in the monitor?!","Not ANOTHER one!","Do you know how much these cost?!","I just bought that one!","We JUST talked about this!"];
+const momClosers = ["Unbelievable.","We are not buying another one... fine, ONE more.","This is coming out of your allowance.","I'm telling your father.","You're paying for this one yourself.","This is the last time. I mean it."];
+function tweenVec3(obj, from, to, dur){
+  return new Promise(resolve=>{
+    const t0=performance.now();
+    function step(now){
+      const t=clamp((now-t0)/dur,0,1);
+      obj.position.lerpVectors(from, to, easeOutCubic(t));
+      if(t<1) requestAnimationFrame(step); else resolve();
+    }
+    requestAnimationFrame(step);
+  });
+}
+async function momScene(){
+  await flyCameraTo(CAM.wide, 900);
+  await wait(300);
+  AudioEngine.sDoorCreak();
+  const t0=performance.now(); const dur=650;
+  await new Promise(res=>{ function step(now){ const t=clamp((now-t0)/dur,0,1); doorPivot.rotation.y = -1.1*easeOutCubic(t); if(t<1) requestAnimationFrame(step); else res(); } requestAnimationFrame(step); });
+  await wait(200);
+  AudioEngine.sFootstep(0,0); AudioEngine.sFootstep(.32,1); AudioEngine.sFootstep(.64,0); AudioEngine.sFootstep(.96,1);
+  mom.visible = true;
+  const doorPos = new THREE.Vector3(-3.6, 0, -0.65);
+  const deskSidePos = new THREE.Vector3(-2.0, 0, -0.9);
+  mom.position.copy(doorPos);
+  momBaseY = 0;
+  await tweenVec3(mom, doorPos, deskSidePos, 1100);
+  await wait(150);
+
+  const headPos = ()=>mom.position.clone().add(new THREE.Vector3(0,1.55,0));
+  const b1 = showBubble(choose(momOpeners), headPos);
+  await wait(1900);
+  const screenPos = ()=>screenPlane.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,0.3,0));
+  const b2 = showBubble('...', screenPos, 'reply', 0);
+  await wait(1600);
+  hideBubble(b1);
+  AudioEngine.sSigh();
+  await wait(300);
+  const b3 = showBubble(choose(momClosers), headPos);
+  await wait(1900);
+  hideBubble(b2); hideBubble(b3);
+  await wait(350);
+  await tweenVec3(mom, deskSidePos, doorPos, 900);
+  await wait(200);
+  const t1=performance.now();
+  await new Promise(res=>{ function step(now){ const t=clamp((now-t1)/500,0,1); doorPivot.rotation.y = -1.1*(1-easeOutCubic(t)); if(t<1) requestAnimationFrame(step); else res(); } requestAnimationFrame(step); });
+  AudioEngine.sDoorClose();
+  mom.visible = false;
+  await wait(300);
+}
+
+/* =========================================================================
+   PHONE / STORE SCENE
+   ========================================================================= */
+class Bankrupt extends Error{}
+async function phoneStoreScene(){
+  await flyCameraTo(CAM.phone, 900);
+  phoneGroup.position.set(0, 1.18, 0.85);
+  phoneGroup.rotation.set(-0.08, 0, 0.04);
+  phoneGroup.visible = true;
+  const disabled = state.balance < state.pcCost;
+  drawPhoneScreen({price:state.pcCost, balance:state.balance, disabled});
+  AudioEngine.sPhoneChime();
+
+  if(disabled){
+    drawPhoneScreen({price:state.pcCost, balance:state.balance, disabled, toast:'Insufficient funds'});
+    AudioEngine.sDeny();
+    await wait(1800);
+    phoneGroup.visible = false;
+    throw new Bankrupt();
+  }
+
+  await new Promise(resolve=>{
+    const region = addHitRegion(()=>phoneGroup.getWorldPosition(new THREE.Vector3()), 180, ()=>{
+      removeHitRegion(region);
+      resolve();
+    });
+  });
+  AudioEngine.sCashRegister();
+  state.balance -= state.pcCost;
+  updateHud();
+  drawPhoneScreen({price:state.pcCost, balance:state.balance, disabled:false, toast:'Order confirmed! Arriving in 2 days 📦'});
+  saveState();
+  await wait(1800);
+  phoneGroup.visible = false;
+}
+
+/* =========================================================================
+   WAITING SCENE (2 days -- real sun/moon crossing the 3D window)
+   ========================================================================= */
+async function waitingScene(){
+  await flyCameraTo(CAM.window, 1000);
+  setCaption('Estimated delivery: 2 days');
+  for(let day=1; day<=2; day++){
+    await new Promise(resolve=>{ setCta('Wait a day', ()=>{ clearCta(); resolve(); }); });
+    AudioEngine.sUiClick();
+    await animateDayNightCycle();
+    setCaption(day<2 ? `DAY ${day} OF 2 — Almost there...` : `DAY ${day} OF 2 — It should arrive today!`);
+  }
+  await wait(500);
+  setCaption('');
+}
+function animateDayNightCycle(){
+  return new Promise(resolve=>{
+    const t0=performance.now(); const dur=1400;
+    function step(now){
+      const t=clamp((now-t0)/dur,0,1);
+      // sun rises left->right then a moon falls right->left (compressed day+night in one window pass)
+      if(t<0.5){
+        const tt=t/0.5;
+        sunMoon.material.color.setHex(0xfff6c8);
+        sunMoon.position.set(lerp(-0.7,0.7,tt), lerp(-0.5,0.6,Math.sin(tt*Math.PI)), 0.03);
+        windowGlassMat.color.setHex(lerpHex(0x142544,0x6fa8d8,Math.sin(tt*Math.PI)));
+      }else{
+        const tt=(t-0.5)/0.5;
+        sunMoon.material.color.setHex(0xdfe6ff);
+        sunMoon.position.set(lerp(-0.7,0.7,tt), lerp(-0.5,0.5,Math.sin(tt*Math.PI)), 0.03);
+        windowGlassMat.color.setHex(lerpHex(0x142544,0x24345c,Math.sin(tt*Math.PI)));
+      }
+      if(t<1) requestAnimationFrame(step);
+      else{ sunMoon.position.set(-2,-2,0.03); windowGlassMat.color.setHex(0x142544); resolve(); }
+    }
+    requestAnimationFrame(step);
+  });
+}
+function lerpHex(c1,c2,t){
+  const a={r:(c1>>16)&255,g:(c1>>8)&255,b:c1&255}, b={r:(c2>>16)&255,g:(c2>>8)&255,b:c2&255};
+  return (Math.round(lerp(a.r,b.r,t))<<16)|(Math.round(lerp(a.g,b.g,t))<<8)|Math.round(lerp(a.b,b.b,t));
+}
+
+/* =========================================================================
+   DELIVERY SCENE (3D box by the door)
+   ========================================================================= */
+async function deliveryScene(){
+  await flyCameraTo(CAM.wide, 900);
+  boxGroup.position.set(-3.3, 0, -0.5);
+  lidPivotL.rotation.z = 0; lidPivotR.rotation.z = 0;
+  boxGroup.visible = true;
+  setCaption("📦 It's here! Click the box to open it.");
+  await new Promise(resolve=>{
+    const region = addHitRegion(()=>boxGroup.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,0.2,0)), 160, ()=>{
+      removeHitRegion(region);
+      resolve();
+    });
+  });
+  AudioEngine.sCardboardRip();
+  const t0=performance.now();
+  await new Promise(res=>{ function step(now){ const t=clamp((now-t0)/500,0,1); lidPivotL.rotation.z = 2.4*easeOutCubic(t); lidPivotR.rotation.z = -2.4*easeOutCubic(t); if(t<1) requestAnimationFrame(step); else res(); } requestAnimationFrame(step); });
+  setCaption('');
+  await wait(900);
+}
+
+/* =========================================================================
+   ASSEMBLY SCENE (floating 3D parts you click to install)
+   ========================================================================= */
+async function assemblyScene(){
+  await flyCameraTo(CAM.desk, 900);
+  boxGroup.visible = false;
+  monitor.visible = false; keyboardGroup.visible = false; mouseDevice.visible = false; towerGroup.visible = false;
+  partMeshes.forEach(p=>scene.remove(p.mesh));
+  partMeshes = [];
+  const slots = [
+    {id:'tower', pos:new THREE.Vector3(-1.55, 0.5, -1.5)},
+    {id:'monitor', pos:new THREE.Vector3(0, DESK_TOP_Y+0.035+0.4, -0.15)},
+    {id:'keyboard', pos:new THREE.Vector3(0, DESK_TOP_Y+0.06, 0.28)},
+    {id:'mouse', pos:new THREE.Vector3(0.52, DESK_TOP_Y+0.08, 0.3)},
+  ];
+  let placed = 0;
+  setCaption(`Click each part to install it — 0/${slots.length}`);
+  await new Promise(resolveAll=>{
+    PARTS_DEF.forEach((def,i)=>{
+      const mesh = def.build();
+      const floatPos = new THREE.Vector3(-0.66+i*0.44, 1.38+Math.sin(i*1.7)*0.05, 0.1);
+      mesh.position.copy(floatPos);
+      scene.add(mesh);
+      const entry = {mesh, def, floatPos, region:null};
+      partMeshes.push(entry);
+      entry.region = addHitRegion(()=>mesh.position.clone(), 100, async ()=>{
+        removeHitRegion(entry.region); entry.region=null;
+        const idx=partMeshes.indexOf(entry); if(idx>=0) partMeshes.splice(idx,1); // stop idle-bob touching it once it starts flying to its slot
+        AudioEngine.sSnap();
+        const slot = slots.find(s=>s.id===def.id);
+        await tweenVec3(mesh, mesh.position.clone(), slot.pos, 450);
+        scene.remove(mesh);
+        if(def.id==='tower') towerGroup.visible = true;
+        if(def.id==='monitor') monitor.visible = true;
+        if(def.id==='keyboard') keyboardGroup.visible = true;
+        if(def.id==='mouse') mouseDevice.visible = true;
+        placed++;
+        setCaption(`Click each part to install it — ${placed}/${slots.length}`);
+        if(placed>=slots.length) resolveAll();
+      });
+    });
+  });
+  await wait(300);
+  setCaption('');
+  await new Promise(resolve=>{ setCta('POWER ON', ()=>{ clearCta(); resolve(); }, 'blue'); });
+  AudioEngine.sPowerOn();
+  screenLight.intensity = 0.35;
+  await wait(900);
+}
+
+/* =========================================================================
+   ROOM RESET / FRESH PC
+   ========================================================================= */
+function resetMonitorFresh(){
+  clearCracks();
+  stopDeadScreen();
+  keyboardDamageLevel = 0; refreshKeyboardTexture();
+  Object.values(hintKeyMeshes).forEach(m=>{ m.visible=true; });
+  towerLed.material.color.setHex(0x4dff4d);
+  monitor.visible = true; keyboardGroup.visible = true; mouseDevice.visible = true; towerGroup.visible = true;
+  screenLight.intensity = 0.35;
+}
+
+/* =========================================================================
+   MAIN FLOW
+   ========================================================================= */
+async function playPcLifecycle(){
+  await flyCameraTo(CAM.desk, 900);
+  resetMonitorFresh();
+  state.attempt=0;
+  updateHud();
+
+  while(state.attempt < 3){
+    await promptStart(state.attempt>0);
+    AudioEngine.startAmbient();
+    await runRageGame();
+    AudioEngine.stopAmbient();
+    state.attempt++;
+    saveState(false);
+    if(state.attempt===1) await cutsceneKeyboardSmash();
+    else if(state.attempt===2) await cutsceneScreenCrack();
+    else if(state.attempt===3) await cutsceneScreenHole();
+  }
+
+  await momScene();
+  await phoneStoreScene();
+  await waitingScene();
+  await deliveryScene();
+  await assemblyScene();
+
+  state.pcsDestroyed++;
+  state.pcCost = Math.round(state.pcCost*1.22/10)*10;
+  saveState();
+  updateHud();
+  // no need to fly the camera back / reset the monitor here -- assemblyScene already
+  // left the camera at CAM.desk, and the next loop iteration does both of those anyway.
+}
+async function gameOverBankrupt(){
+  $('scene-gameover').classList.add('active');
+  $('goStats').innerHTML =
+    `You destroyed <b>${state.pcsDestroyed}</b> PC${state.pcsDestroyed===1?'':'s'}<br>`+
+    `Total rage-quits: <b>${state.totalDeaths}</b><br>`+
+    `Best height reached: <b>${Math.floor(state.bestHeight)}m</b><br>`+
+    `Final balance: <b>${fmtMoney(state.balance)}</b> (not enough for another PC)`;
+  await waitForEvent($('restartBtn'),'click');
+  AudioEngine.sUiClick();
+  Object.assign(state,{balance:1500,pcCost:650,pcsDestroyed:0,totalDeaths:0,bestHeight:0,attempt:0});
+  saveState();
+  updateHud();
+  $('scene-gameover').classList.remove('active');
+  $('titleScreen').classList.add('active');
+  $('hud').classList.add('hidden');
+}
+async function mainLoop(){
+  while(true){
+    try{ await playPcLifecycle(); }
+    catch(e){
+      if(e instanceof Bankrupt) await gameOverBankrupt();
+      else{ console.error(e); await wait(500); }
+    }
+  }
+}
+
+/* =========================================================================
+   MAIN RENDER LOOP
+   ========================================================================= */
+let lastFrame = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = now-lastFrame; lastFrame = now;
+
+  if(mom.visible) momBob.position.y = Math.sin(now/650)*0.01;
+  partMeshes.forEach((p,i)=>{ p.mesh.position.y = p.floatPos.y + Math.sin(now/500+i*1.7)*0.04; p.mesh.rotation.y = now/1400+i; });
+  tickCamera(now);
+  updateDebris(dt);
+  updateHitRegions();
+  updateBubbles();
+
+  if(Climber.isRunning()) Climber.tick(now);
+  if(deadScreenActive) tickDeadScreen();
+  screenTexture.needsUpdate = true;
+
+  let px=0, py=0;
+  if(now < camShakeUntil){ px = rand(-1,1)*camShakeMag; py = rand(-1,1)*camShakeMag; }
+  camera.position.x += px*0.02; camera.position.y += py*0.02;
+  renderer.render(scene, camera);
+  camera.position.x -= px*0.02; camera.position.y -= py*0.02;
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+$('startBtn').addEventListener('click', async ()=>{
+  AudioEngine.ensure();
+  AudioEngine.sUiClick();
+  $('titleScreen').classList.remove('active');
+  $('hud').classList.remove('hidden');
+  updateHud();
+  mainLoop();
+},{once:true});
+
+try{
+  loadState();
+  updateHud();
+  $('muteBtn').addEventListener('click',()=>{
+    state.muted=!state.muted;
+    AudioEngine.setMuted(state.muted);
+    $('muteBtn').textContent = state.muted ? '🔇' : '🔊';
+    saveState(false);
+  });
+  if(state.muted){ AudioEngine.setMuted(true); $('muteBtn').textContent='🔇'; }
+  if(state.pcsDestroyed>0){
+    $('titleStats').textContent = `Last time: ${state.pcsDestroyed} PC${state.pcsDestroyed===1?'':'s'} destroyed, best height ${Math.floor(state.bestHeight)}m`;
+  }
+}catch(e){ console.error('boot init error (non-fatal):', e); }
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
