@@ -1439,7 +1439,9 @@ async function phoneStoreScene(){
   }
 
   await new Promise(resolve=>{
-    const region = addHitRegion(()=>phoneGroup.getWorldPosition(new THREE.Vector3()), 180, ()=>{
+    // target the BUY NOW button itself (drawn near the bottom of the phone screen), not the phone's
+    // geometric center -- a hit-region centered on the whole phone missed the actual button entirely.
+    const region = addHitRegion(()=>phoneGroup.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,-0.18,0)), 170, ()=>{
       removeHitRegion(region);
       resolve();
     });
