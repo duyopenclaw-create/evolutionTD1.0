@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoD{r+</title>
+<style>
+  :root{
+    --bg:#060a06;
+    --panel:#0c130c;
+    --panel-2:#02170a;
+    --fg:#39ff6a;
+    --fg-dim:#1f8f3f;
+    --accent:#7dffb0;
+    --danger:#ff4d4d;
+    --gold:#ffd24d;
+    --border:#1f8f3f;
+  }
+  *{box-sizing:border-box;}
+  /* Nothing in the UI is drag-selectable, so rapid tapping never highlights text.
+     Fields and the values worth copying stay selectable. */
+  body{-webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;}
+  input, textarea, .binary-display, .tool-output, .ref-wrap, .target-phrase, .output-line{
+    -webkit-user-select:text; user-select:text;
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--fg);
+    font-family:'Courier New', ui-monospace, Menlo, Consolas, monospace;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  #bg-canvas{
+    position:fixed; inset:0; z-index:0; opacity:.5; pointer-events:none;
+  }
+  #scanlines{
+    position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.35;
+    background:repeating-linear-gradient(rgba(0,0,0,0) 0px, rgba(0,0,0,0) 1px, rgba(0,0,0,.18) 2px);
+    mix-blend-mode:overlay;
+  }
+  #bits-layer{ position:fixed; inset:0; z-index:1; pointer-events:none; }
+  .flying-bit{
+    position:fixed; top:0; left:0; z-index:1; width:2.6rem; height:2.6rem; border-radius:6px; padding:0;
+    display:flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:bold;
+    font-family:'Courier New', ui-monospace, monospace;
+    cursor:pointer; border:2px solid var(--fg); background:rgba(6,19,10,.9); color:var(--fg);
+    box-shadow:0 0 12px rgba(57,255,106,.6), inset 0 0 0 3px rgba(6,19,10,.9), inset 0 0 6px rgba(57,255,106,.35);
+    pointer-events:auto; touch-action:manipulation;
+  }
+  .flying-bit::before{
+    content:""; position:absolute; inset:-5px; border:1px solid currentColor; border-radius:9px; opacity:.35;
+  }
+  .flying-bit:hover{ filter:brightness(1.3); }
+  .bit-golden{ border-color:var(--gold); color:var(--gold); box-shadow:0 0 16px rgba(255,210,77,.8); }
+  .bit-hacker{ border-color:var(--danger); color:var(--danger); box-shadow:0 0 16px rgba(255,77,77,.8); }
+
+  .bit-toast{
+    position:fixed; top:5rem; left:50%; transform:translate(-50%,-10px); z-index:30;
+    background:var(--panel); border:1px solid var(--fg); color:var(--fg); padding:.5rem 1rem; border-radius:6px;
+    font-size:.9rem; opacity:0; transition:opacity .3s, transform .3s; pointer-events:none;
+    box-shadow:0 0 15px rgba(57,255,106,.5); text-align:center; max-width:80vw;
+  }
+  .bit-toast.show{opacity:1; transform:translate(-50%,0);}
+  .bit-toast.gold{border-color:var(--gold); color:var(--gold); box-shadow:0 0 15px rgba(255,210,77,.6);}
+  .bit-toast.danger{border-color:var(--danger); color:var(--danger); box-shadow:0 0 15px rgba(255,77,77,.6);}
+
+  /* Bits drift behind the UI (z-index 1 vs 3), so they can never swallow a click
+     meant for a control. Empty page area is click-through so bits stay catchable;
+     every real control and card re-enables pointer events. */
+  .screen{display:none; position:relative; z-index:3; pointer-events:none;}
+  .screen.active{display:block;}
+  .start-box > *, .tab-btn, .mission-box, .tool-box, .ref-wrap{pointer-events:auto;}
+
+  .music-toggle{
+    position:fixed; top:1rem; right:1rem; z-index:15;
+    background:var(--panel); border:1px solid var(--border); color:var(--fg);
+    width:2.6rem; height:2.6rem; border-radius:50%; cursor:pointer; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .music-toggle:hover{border-color:var(--fg);}
+
+  /* ---------- start screen ---------- */
+  .start-box{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:2rem; gap:1rem;
+  }
+  h1.glitch{
+    font-size:clamp(2.5rem,9vw,5rem); margin:0; letter-spacing:.1em;
+    text-shadow:0 0 8px var(--fg), 0 0 20px rgba(57,255,106,.5);
+    animation:flicker 4s infinite;
+  }
+  @keyframes flicker{
+    0%,19%,21%,23%,25%,54%,56%,100%{opacity:1;}
+    20%,24%,55%{opacity:.45;}
+  }
+  .tagline{color:var(--accent); letter-spacing:.2em; text-transform:uppercase; font-size:.85rem;}
+  .desc{max-width:520px; line-height:1.6; color:var(--fg-dim);}
+  .desc em{color:var(--fg); font-style:normal;}
+  .start-actions{display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-top:.5rem;}
+  .slot-list{display:flex; flex-direction:column; gap:.6rem; width:100%; max-width:420px; margin-top:.5rem; pointer-events:auto;}
+  .slot-row{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    border:1px solid var(--border); border-radius:6px; background:var(--panel);
+    padding:.7rem .9rem; text-align:left;
+  }
+  .slot-row.empty{border-style:dashed; background:transparent;}
+  .slot-info{display:flex; flex-direction:column; gap:.15rem; min-width:0;}
+  .slot-info b{letter-spacing:.1em; font-size:.85rem;}
+  .slot-info span{color:var(--fg-dim); font-size:.75rem;}
+  .slot-actions{display:flex; gap:.4rem; flex:none;}
+  .slot-row{position:relative; overflow:hidden;}
+  .slot-fx{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(4,8,4,.96); color:var(--fg); font-size:.8rem; letter-spacing:.22em;
+    white-space:nowrap; overflow:hidden; text-shadow:0 0 8px var(--fg);
+  }
+  .slot-fx.verdict{
+    background:#040804;
+    font-size:1.15rem; font-weight:bold; letter-spacing:.3em;
+    color:var(--danger); text-shadow:0 0 12px var(--danger);
+  }
+
+  /* ---------- loading screen ---------- */
+  .loading-box{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:1rem; padding:2rem; text-align:center;
+  }
+  .loading-title{
+    color:var(--accent); letter-spacing:.25em; text-transform:uppercase; font-size:.9rem;
+  }
+  .loading-bar{
+    width:min(520px, 82vw); height:1.4rem; border:1px solid var(--border); border-radius:3px;
+    background:var(--panel-2); overflow:hidden; box-shadow:0 0 14px rgba(57,255,106,.25);
+  }
+  .loading-fill{
+    height:100%; width:0%; background:var(--fg);
+    box-shadow:0 0 14px rgba(57,255,106,.8); transition:width .12s linear;
+  }
+  .loading-pct{font-size:1.6rem; font-weight:bold; letter-spacing:.1em;}
+  .loading-tip{
+    color:var(--fg-dim); font-size:.85rem; line-height:1.6; max-width:min(520px, 82vw); min-height:3.2em;
+  }
+  .loading-tip b{color:var(--fg);}
+  .loading-dots{color:var(--fg); letter-spacing:.15em; text-transform:uppercase;}
+  .loading-dots::after{content:""; animation:loadingDots 1s steps(4,end) infinite;}
+  @keyframes loadingDots{
+    0%{content:"";} 25%{content:".";} 50%{content:"..";} 75%,100%{content:"...";}
+  }
+  .start-actions.secondary{margin-top:.25rem;}
+  .hiscore{color:var(--fg-dim); font-size:.9rem;}
+
+  .btn{
+    background:transparent; border:2px solid var(--fg); color:var(--fg);
+    padding:.7em 1.6em; font-family:inherit; font-size:1rem; text-transform:uppercase;
+    letter-spacing:.1em; cursor:pointer; transition:.15s;
+  }
+  .btn:hover{background:var(--fg); color:#02170a;}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn:disabled:hover{background:transparent; color:var(--fg);}
+  .btn-primary{box-shadow:0 0 12px var(--fg);}
+  .btn-small{padding:.4em .8em; font-size:.8rem;}
+
+  /* ---------- game screen ---------- */
+  .statbar{
+    display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; align-items:center; justify-content:space-between;
+    padding:.75rem 4rem .75rem 1rem; border-bottom:1px solid var(--border); position:relative;
+  }
+  .statbar .stat{font-size:.85rem; color:var(--fg-dim); text-transform:uppercase; letter-spacing:.05em;}
+  .statbar .stat b{color:var(--fg); font-size:1rem; margin-left:.35em;}
+  .stat-time.urgent, .stat-time.urgent b{color:var(--danger);}
+  .stat.boost, .stat.boost b{color:var(--gold);}
+  .save-flash{
+    color:var(--accent); font-weight:bold; letter-spacing:.15em; opacity:0; transition:opacity .35s;
+    font-size:.8rem;
+  }
+  .save-flash.show{opacity:1;}
+
+  .tabs{display:flex; border-bottom:1px solid var(--border); align-items:stretch;}
+  .tab-btn{
+    flex:1; background:none; border:none; color:var(--fg-dim); padding:.75rem .5rem;
+    font-family:inherit; cursor:pointer; border-bottom:3px solid transparent;
+    text-transform:uppercase; letter-spacing:.08em; font-size:.85rem;
+  }
+  .tab-btn.active{color:var(--fg); border-bottom-color:var(--fg);}
+  .help-btn{width:3rem; flex:none; color:var(--accent); font-weight:bold;}
+
+  main{padding:1.25rem 1rem 3rem; max-width:920px; margin:0 auto;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .mission-box{
+    border:1px solid var(--border); border-radius:6px; background:var(--panel);
+    padding:1.5rem; transition:box-shadow .2s, border-color .2s;
+  }
+  .mission-label-row{display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.75rem; flex-wrap:wrap;}
+  .mission-label{color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.85rem;}
+  .copy-btn{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--fg-dim);
+    padding:.35em .7em; font-family:inherit; font-size:.75rem; cursor:pointer; border-radius:4px;
+    text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; transition:.15s;
+  }
+  .copy-btn:hover{border-color:var(--fg); color:var(--fg);}
+  .copy-btn.copied{color:var(--accent); border-color:var(--accent);}
+  .mission-label-row .tool-label{margin-bottom:0;}
+  .binary-display{
+    font-size:clamp(1.05rem,3vw,1.5rem); letter-spacing:.12em; word-break:break-all;
+    background:var(--panel-2); padding:1rem; border-radius:4px; border:1px dashed var(--border); margin:.75rem 0;
+  }
+  .mission-hint{color:var(--fg-dim); font-size:.8rem; margin-bottom:1rem;}
+  .answer-row{display:flex; gap:.6rem; flex-wrap:wrap;}
+  .answer-row input{flex:1; min-width:180px;}
+
+  input[type="text"], textarea{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--fg);
+    padding:.65rem .75rem; font-family:inherit; font-size:1rem; width:100%; border-radius:4px;
+  }
+  input[type="text"]:focus, textarea:focus{outline:none; border-color:var(--fg);}
+  textarea{resize:vertical; min-height:5rem; word-break:break-all;}
+
+  .target-phrase{
+    font-size:clamp(1.3rem,4vw,2rem); letter-spacing:.15em; margin:1rem 0; word-break:break-word; line-height:1.5;
+  }
+  .char-done{color:var(--fg-dim);}
+  .char-current{color:var(--accent); text-decoration:underline; font-weight:bold; padding:0 .05em;}
+  .char-pending{color:var(--fg);}
+  .output-line{margin:.75rem 0; color:var(--accent); font-size:1.1rem; word-break:break-word;}
+  .cursor{animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .byte-buffer{font-size:1.8rem; letter-spacing:.35rem; text-align:center; margin:1rem 0;}
+  .bit-filled{color:var(--accent); font-weight:bold;}
+  .bit-empty{color:var(--fg-dim);}
+  .keypad{display:flex; gap:.75rem; justify-content:center; margin-top:1rem;}
+  .key-btn{
+    min-width:4.5rem; min-height:3.2rem; font-size:1.4rem; background:var(--panel-2);
+    border:1px solid var(--border); color:var(--fg); cursor:pointer; border-radius:4px;
+  }
+  .key-btn:hover{background:var(--fg); color:#02170a;}
+  .key-back{font-size:1.2rem; color:var(--danger); border-color:var(--danger);}
+  .key-back:hover{background:var(--danger); color:#1a0000;}
+
+  .flash-good{animation:pulseGood .4s ease;}
+  @keyframes pulseGood{
+    0%{box-shadow:0 0 0 rgba(57,255,106,0); border-color:var(--border);}
+    50%{box-shadow:0 0 25px rgba(57,255,106,.9); border-color:var(--fg);}
+    100%{box-shadow:0 0 0 rgba(57,255,106,0); border-color:var(--border);}
+  }
+  .flash-bad{animation:pulseBad .4s ease;}
+  @keyframes pulseBad{
+    0%{box-shadow:0 0 0 rgba(255,77,77,0); border-color:var(--border);}
+    50%{box-shadow:0 0 25px rgba(255,77,77,.9); border-color:var(--danger);}
+    100%{box-shadow:0 0 0 rgba(255,77,77,0); border-color:var(--border);}
+  }
+
+  .tool-box{border:1px solid var(--border); border-radius:6px; background:var(--panel); padding:1.5rem; margin-bottom:1.25rem;}
+  .tool-label{color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.85rem; margin-bottom:.5rem;}
+  .tool-output{
+    background:var(--panel-2); border:1px dashed var(--border); border-radius:4px; padding:.75rem;
+    margin-top:.5rem; min-height:1.5rem; word-break:break-all; font-size:1.1rem;
+  }
+  .tool-output .val-label{color:var(--fg-dim); font-size:.75rem; display:block; margin-bottom:.15rem;}
+
+  table.ref-table{width:100%; border-collapse:collapse; font-size:.9rem;}
+  table.ref-table th, table.ref-table td{
+    border:1px solid var(--border); padding:.4rem .5rem; text-align:center;
+  }
+  table.ref-table th{color:var(--accent); text-transform:uppercase; letter-spacing:.05em;}
+  .ref-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:6px;}
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.88); display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:1.5rem;
+  }
+  .overlay[hidden]{display:none;}
+  .overlay-box{
+    border:1px solid var(--fg); background:var(--panel); padding:2rem; text-align:center; max-width:460px;
+    box-shadow:0 0 30px rgba(57,255,106,.5); border-radius:6px;
+  }
+  .overlay-box h2{margin-top:0; letter-spacing:.08em;}
+  .overlay-box p{line-height:1.6; color:var(--fg-dim);}
+  .overlay-box .btn{margin-top:1rem;}
+  .overlay-box.confirm-box{
+    background:#2b2f2b; border-color:var(--fg); color:var(--fg);
+    box-shadow:0 0 30px rgba(0,0,0,.65);
+  }
+  .overlay-box.confirm-box h2, .overlay-box.confirm-box p{color:var(--fg);}
+  .confirm-actions{display:flex; gap:1rem; justify-content:center; margin-top:1rem;}
+  .confirm-actions .btn{margin-top:0;}
+  .overlay-box input[type="text"]{margin-top:.5rem;}
+
+  @media (max-width:520px){
+    .statbar{gap:.4rem 1rem; font-size:.8rem; padding-right:3.2rem;}
+    .keypad .key-btn{min-width:4rem;}
+    .music-toggle{width:2.2rem; height:2.2rem; font-size:.95rem; top:.6rem; right:.6rem;}
+  }
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="scanlines"></div>
+<div id="bits-layer"></div>
+<button id="btn-music-toggle" class="music-toggle" title="Toggle music">🔊</button>
+
+<section id="screen-start" class="screen active">
+  <div class="start-box">
+    <h1 class="glitch">CoD{r+</h1>
+    <p class="tagline">// binary literacy protocol //</p>
+    <p class="desc">
+      Type any binary and the decoder will translate it for you.<br>
+      Then prove you understand it — decode numbers, decode words —<br>
+      and finally learn to <em>type words using nothing but binary</em>.
+    </p>
+    <div class="slot-list" id="slot-list"></div>
+    <div class="start-actions secondary">
+      <button id="btn-help-start" class="btn btn-small">HOW TO PLAY</button>
+      <button id="btn-stats" class="btn btn-small">STATS</button>
+      <button id="btn-about" class="btn btn-small">ABOUT</button>
+    </div>
+    <p class="hiscore">HIGH SCORE: <span id="start-hiscore">0</span></p>
+  </div>
+</section>
+
+<section id="screen-loading" class="screen">
+  <div class="loading-box">
+    <div class="loading-title" id="loading-title">LOADING</div>
+    <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+    <div class="loading-pct" id="loading-pct">0%</div>
+    <div class="loading-tip" id="loading-tip"></div>
+  </div>
+</section>
+
+<section id="screen-game" class="screen">
+  <header class="statbar">
+    <div class="stat">SCORE<b id="stat-score">0</b></div>
+    <div class="stat">LEVEL<b id="stat-level">1</b></div>
+    <div class="stat">STAGE<b id="stat-stage">1/3 · DECODE NUMBERS</b></div>
+    <div class="stat stat-time" id="stat-time">TIME<b id="stat-time-val">30:00</b></div>
+    <div class="stat boost" id="stat-multiplier" hidden>BOOST<b id="stat-multiplier-val">×2</b></div>
+    <div id="save-flash" class="save-flash">● SAVED</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="mission">Mission</button>
+    <button class="tab-btn" data-tab="translator">Translator</button>
+    <button class="tab-btn" data-tab="reference">ASCII Table</button>
+    <button class="tab-btn help-btn" id="btn-restart-game" title="Restart your run">⟲</button>
+    <button class="tab-btn help-btn" id="btn-help-game" title="How to play">?</button>
+  </nav>
+
+  <main>
+    <section id="panel-mission" class="panel active"></section>
+
+    <section id="panel-translator" class="panel">
+      <div class="tool-box">
+        <div class="mission-label-row">
+          <div class="tool-label">Binary → Text / Number</div>
+          <button class="copy-btn paste-btn" id="paste-bin-btn" data-paste-target="trans-bin-input" title="Paste (P)">⎘ paste</button>
+        </div>
+        <textarea id="trans-bin-input" placeholder="type or paste binary here, e.g. 01001000 01001001"></textarea>
+        <div class="tool-output"><span class="val-label">as text</span><span id="trans-out-text">—</span></div>
+        <div class="tool-output"><span class="val-label">as number</span><span id="trans-out-num">—</span></div>
+      </div>
+      <div class="tool-box">
+        <div class="mission-label-row">
+          <div class="tool-label">Text → Binary</div>
+          <button class="copy-btn paste-btn" id="paste-text-btn" data-paste-target="trans-text-input" title="Paste (P)">⎘ paste</button>
+        </div>
+        <input id="trans-text-input" type="text" placeholder="type any text here">
+        <div class="tool-output"><span class="val-label">binary</span><span id="trans-out-bin">—</span></div>
+      </div>
+    </section>
+
+    <section id="panel-reference" class="panel">
+      <div class="tool-box">
+        <div class="tool-label">Quick reference — 8 bits = 1 byte = 1 character</div>
+        <p style="color:var(--fg-dim); font-size:.85rem; line-height:1.6;">
+          Every character has a number (its ASCII code). That number, written in base 2, is its binary code.
+          Decode a byte by reading it as a binary number, then find the matching character below.
+        </p>
+      </div>
+      <div class="ref-wrap">
+        <table class="ref-table" id="ref-table">
+          <thead><tr><th>Char</th><th>Decimal</th><th>Binary</th></tr></thead>
+          <tbody id="ref-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</section>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="overlay-box"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SAVE_KEY = "codr_save_v1";        // legacy single-slot key, migrated on load
+  var SAVES_KEY = "codr_saves_v2";
+  var SLOT_COUNT = 3;
+  var STATS_KEY = "codr_stats_v1";
+  var MUSIC_PREF_KEY = "codr_music_pref";
+  var STAGE_GOALS = {1:5, 2:5, 3:4};
+  var STAGE_NAMES = {1:"DECODE NUMBERS", 2:"DECODE WORDS", 3:"ENCODE IN BINARY"};
+  var GOAL_SCORE = 1000;
+  var SESSION_MS = 30 * 60 * 1000;
+  var SESSION_MINUTES = SESSION_MS / 60000;
+
+  var WORD_BANK = ["cat","dog","sun","run","big","hat","pig","fox","owl","bee",
+    "code","byte","wifi","game","zero","chip","data","wave","node","port","loop","disk",
+    "pixel","robot","laser","magic","ghost","tiger","storm","cyber",
+    "matrix","cipher","signal","vector","random","packet","router","server","kernel"];
+
+  var PHRASE_BANK = ["HI","YES","WIN","GO","CODE","BYTE",
+    "GOOD JOB","YOU WIN","GAME OVER","WELL DONE",
+    "BINARY KING","YOU DID IT","HACK THE PLANET"];
+
+  var state = {
+    screen: "start",
+    tab: "mission",
+    stage: 1,
+    level: 1,
+    stageProgress: 0,
+    score: 0,
+    highScore: 0,
+    current: null,
+    timeLeftMs: SESSION_MS,
+    goalReached: false,
+    concluded: false,
+    slot: null
+  };
+
+  var statsData = { gamesPlayed: 0, bitsCollected: 0, hackerWins: 0, hackerLosses: 0, highScore: 0 };
+  var saves = { 1: null, 2: null, 3: null };
+  var lastFocusedInputId = null;
+  var internalClip = "";   // last value copied with the in-game ⧉ button
+  var hackerChallengeActive = false;
+  var activeHackerTimer = null;
+  var scoreMultiplier = 1;
+  var multiplierTimer = null;
+  var multiplierInterval = null;
+
+  // ---------- binary helpers ----------
+  function chunk(str, size){
+    var out = [];
+    for (var i = 0; i < str.length; i += size) out.push(str.slice(i, i + size));
+    return out;
+  }
+  function textToBinary(text){
+    var chars = text.split("");
+    var bytes = [];
+    for (var i = 0; i < chars.length; i++) bytes.push(chars[i].charCodeAt(0).toString(2).padStart(8, "0"));
+    return bytes.join(" ");
+  }
+  function bytesToText(bitString){
+    var bytes = chunk(bitString, 8).filter(function(b){ return b.length === 8; });
+    return bytes.map(function(b){
+      var code = parseInt(b, 2);
+      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : "·";
+    }).join("");
+  }
+
+  // ---------- misc helpers ----------
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function pickWord(level){
+    var targetLen = Math.min(3 + (level - 1), 9);
+    var candidates = WORD_BANK.filter(function(w){
+      return w.length <= targetLen + 1 && w.length >= Math.max(3, targetLen - 2);
+    });
+    if (!candidates.length) candidates = WORD_BANK;
+    return pick(candidates);
+  }
+  function pickPhrase(level){
+    var targetLen = Math.min(2 + level * 2, 18);
+    var candidates = PHRASE_BANK.filter(function(p){ return p.length <= targetLen + 3; });
+    if (!candidates.length) candidates = PHRASE_BANK;
+    candidates.sort(function(a, b){ return b.length - a.length; });
+    var pool = candidates.slice(0, Math.max(3, Math.ceil(candidates.length / 2)));
+    return pick(pool);
+  }
+  function renderByteBuffer(buf){
+    var bits = buf.padEnd(8, "_").split("");
+    return bits.map(function(b, i){
+      return "<span class=\"" + (i < buf.length ? "bit-filled" : "bit-empty") + "\">" + b + "</span>";
+    }).join("");
+  }
+  function renderPhraseTarget(cur){
+    return cur.value.split("").map(function(ch, i){
+      var display = ch === " " ? "␣" : ch;
+      var cls = i < cur.index ? "char-done" : (i === cur.index ? "char-current" : "char-pending");
+      return "<span class=\"" + cls + "\">" + display + "</span>";
+    }).join("");
+  }
+
+  // ---------- clipboard (copy mission binary, paste via P shortcut only) ----------
+  function legacyCopy(text){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }catch(e){ /* clipboard unavailable, ignore */ }
+  }
+  function copyToClipboard(text){
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).catch(function(){ legacyCopy(text); });
+      } else {
+        legacyCopy(text);
+      }
+    }catch(e){ legacyCopy(text); }
+  }
+  function copyMissionBinary(){
+    var cur = state.current;
+    if (!cur || (cur.type !== "number" && cur.type !== "word")) return;
+    internalClip = cur.binary;   // in-game buffer: lets paste work in one press
+    copyToClipboard(cur.binary); // and the real clipboard, for pasting outside the game
+    flashCopyBtn();
+  }
+  function flashCopyBtn(){
+    var btn = document.getElementById("copy-btn");
+    if (!btn) return;
+    btn.textContent = "✓ copied";
+    btn.classList.add("copied");
+    setTimeout(function(){
+      btn.textContent = "⧉ copy";
+      btn.classList.remove("copied");
+    }, 1000);
+  }
+  function pasteInto(targetId, btn){
+    var target = document.getElementById(targetId);
+    if (!target) return;
+    function flash(ok){
+      target.classList.add("flash-good");
+      setTimeout(function(){ target.classList.remove("flash-good"); }, 400);
+      if (!btn) return;
+      var label = btn.getAttribute("data-label") || btn.textContent;
+      btn.setAttribute("data-label", label);
+      btn.textContent = ok ? "✓ pasted" : label;
+      btn.classList.toggle("copied", ok);
+      setTimeout(function(){
+        btn.textContent = label;
+        btn.classList.remove("copied");
+      }, 1000);
+    }
+    // Anything copied with the ⧉ button is kept in an in-game buffer, so pasting it back
+    // is a single press. Reading the real clipboard is avoided on purpose: Chrome makes
+    // the user approve that with its own "Paste" button, which turns this into two clicks.
+    if (internalClip){
+      target.value = internalClip;
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.focus();
+      flash(true);
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.readText){
+      // Nothing copied in-game yet: fall back to the system clipboard. This is the only
+      // path that can raise the browser's own confirmation.
+      target.focus();
+      navigator.clipboard.readText().then(function(text){
+        if (text != null && text !== ""){
+          target.value = text;
+          target.dispatchEvent(new Event("input", { bubbles: true }));
+          target.focus();
+          flash(true);
+        }
+      }).catch(function(){
+        flash(false);
+        showBitToast("Nothing copied in-game yet &mdash; use ⧉ copy, or press " +
+          (/Mac|iPhone|iPad/.test(navigator.platform) ? "&#8984;V" : "Ctrl+V") + " to paste from outside", "danger");
+      });
+    } else {
+      target.focus();
+    }
+  }
+  function getPasteBtnFor(targetId){
+    return document.querySelector('.paste-btn[data-paste-target="' + targetId + '"]');
+  }
+  function pasteIntoFocusedInput(){
+    var id = lastFocusedInputId;
+    if (!id){
+      if (state.tab === "mission") id = "answer-input";
+      else if (state.tab === "translator") id = "trans-bin-input";
+    }
+    if (id) pasteInto(id, getPasteBtnFor(id));
+  }
+  document.addEventListener("focusin", function(e){
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) lastFocusedInputId = e.target.id;
+  });
+  document.addEventListener("keydown", function(e){
+    if (hackerChallengeActive) return; // no copy/paste shortcuts during the hacker challenge
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return; // never hijack normal typing
+    // preventDefault matters for P: pasting focuses the field, and without it the
+    // keystroke itself then lands in that field as a stray "p".
+    if (e.key === "c" || e.key === "C"){ e.preventDefault(); copyMissionBinary(); }
+    else if (e.key === "p" || e.key === "P"){ e.preventDefault(); pasteIntoFocusedInput(); }
+  });
+
+  // ---------- audio ----------
+  var audioCtx = null;
+  var musicEnabled = true;
+  var musicTimer = null;
+  var musicStep = 0;
+  var STEP_SEC = 60 / 132 / 2;
+  var BASS_PATTERN = [110, 110, 130.81, 110, 146.83, 110, 130.81, 98];
+  var ARP_PATTERN = [null, 220, 277.18, 330, null, 196, 246.94, 293.66];
+
+  function ensureAudio(){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }catch(e){ /* audio unavailable, ignore */ }
+  }
+  function playTone(success){
+    ensureAudio();
+    if (!audioCtx) return;
+    try{
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = "square";
+      o.frequency.value = success ? 880 : 200;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.12);
+    }catch(e){ /* ignore */ }
+  }
+  function playNote(freq, startTime, dur, type, vol){
+    try{
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, startTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(startTime); o.stop(startTime + dur + 0.02);
+    }catch(e){ /* ignore */ }
+  }
+  function scheduleMusic(){
+    if (!musicEnabled || !audioCtx) return;
+    var t = audioCtx.currentTime;
+    playNote(BASS_PATTERN[musicStep % BASS_PATTERN.length], t, STEP_SEC * 0.9, "triangle", 0.05);
+    var arp = ARP_PATTERN[musicStep % ARP_PATTERN.length];
+    if (arp) playNote(arp, t, STEP_SEC * 0.4, "square", 0.02);
+    musicStep++;
+    musicTimer = setTimeout(scheduleMusic, STEP_SEC * 1000);
+  }
+  // ---------- ambient typing ----------
+  // Someone is working the keyboard on the other side of the connection: short noise
+  // clicks in bursts, with pauses between them, mixed well under the music.
+  var typingTimer = null;
+  var noiseBuffer = null;
+  function getNoiseBuffer(){
+    if (noiseBuffer || !audioCtx) return noiseBuffer;
+    var len = Math.floor(audioCtx.sampleRate * 0.012); // 12ms — a contact tick, not a hiss
+    noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    var d = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    return noiseBuffer;
+  }
+  // A keystroke is two things at once: a tiny bandpassed tick as the switch closes,
+  // and a low wooden "thock" as the keycap bottoms out. Noise alone just sounds electric.
+  function playKeyClick(){
+    if (!audioCtx) return;
+    try{
+      var now = audioCtx.currentTime;
+
+      var src = audioCtx.createBufferSource();
+      src.buffer = getNoiseBuffer();
+      var bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 800 + Math.random() * 600;
+      bp.Q.value = 0.7;
+      var ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.035 + Math.random() * 0.015, now);
+      ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.014);
+      src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+      src.start(now);
+
+      var o = audioCtx.createOscillator();
+      o.type = "triangle";
+      var f = 145 + Math.random() * 75;
+      o.frequency.setValueAtTime(f, now);
+      o.frequency.exponentialRampToValueAtTime(f * 0.62, now + 0.045);
+      var og = audioCtx.createGain();
+      og.gain.setValueAtTime(0.04 + Math.random() * 0.02, now);
+      og.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      o.connect(og); og.connect(audioCtx.destination);
+      o.start(now); o.stop(now + 0.06);
+    }catch(e){ /* ignore */ }
+  }
+  function scheduleTyping(){
+    if (!musicEnabled || !audioCtx){ typingTimer = null; return; }
+    playKeyClick();
+    // mostly quick strokes within a burst, occasionally a longer think-pause
+    var gap = Math.random() < 0.14 ? 600 + Math.random() * 2200 : 65 + Math.random() * 115;
+    typingTimer = setTimeout(scheduleTyping, gap);
+  }
+  function startTyping(){
+    if (typingTimer || !audioCtx || !musicEnabled) return;
+    scheduleTyping();
+  }
+  function stopTyping(){
+    if (typingTimer){ clearTimeout(typingTimer); typingTimer = null; }
+  }
+
+  function startMusic(){
+    ensureAudio();
+    if (!audioCtx) return;
+    startTyping();
+    if (musicTimer) return;
+    musicStep = 0;
+    scheduleMusic();
+  }
+  function stopMusic(){
+    if (musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
+    stopTyping();
+  }
+  function setMusicEnabled(on){
+    musicEnabled = on;
+    try{ localStorage.setItem(MUSIC_PREF_KEY, on ? "on" : "off"); }catch(e){ /* ignore */ }
+    var btn = document.getElementById("btn-music-toggle");
+    if (btn) btn.textContent = on ? "🔊" : "🔇";
+    if (on){ ensureAudio(); startMusic(); } else { stopMusic(); }
+  }
+
+  // ---------- background code rain ----------
+  function initBgRain(){
+    var canvas = document.getElementById("bg-canvas");
+    if (!canvas || !canvas.getContext) return;
+    var ctx = canvas.getContext("2d");
+    var w, h, cols, drops;
+    function resize(){
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      cols = Math.max(1, Math.floor(w / 20));
+      drops = [];
+      for (var i = 0; i < cols; i++) drops.push(Math.random() * h / 20);
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    function draw(){
+      if (!document.hidden){
+        ctx.fillStyle = "rgba(6,10,6,0.08)";
+        ctx.fillRect(0, 0, w, h);
+        ctx.font = "14px monospace";
+        ctx.fillStyle = "rgba(57,255,106,0.28)";
+        for (var i = 0; i < cols; i++){
+          var char = Math.random() > 0.5 ? "1" : "0";
+          ctx.fillText(char, i * 20, drops[i] * 20);
+          if (drops[i] * 20 > h && Math.random() > 0.975) drops[i] = 0;
+          drops[i]++;
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
+  // ---------- flying bits ----------
+  // Bits render behind the UI cards, so a bit crossing the mission panel would be both
+  // invisible and uncatchable. Pick a height in the open space above or below the card.
+  function pickBitLane(vh){
+    var card = document.querySelector(".panel.active .mission-box, .panel.active .tool-box, .panel.active .ref-wrap");
+    var top = 60, bottom = vh - 100;
+    if (card){
+      var r = card.getBoundingClientRect();
+      var above = { from: top, to: Math.min(bottom, r.top - 50) };
+      var below = { from: Math.max(top, r.bottom + 10), to: bottom };
+      var lanes = [above, below].filter(function(l){ return l.to - l.from >= 70; });
+      if (lanes.length){
+        var lane = lanes[Math.floor(Math.random() * lanes.length)];
+        return lane.from + Math.random() * (lane.to - lane.from);
+      }
+    }
+    return top + Math.random() * Math.max(1, bottom - top);
+  }
+  function spawnBit(){
+    var overlayOpen = !document.getElementById("overlay").hidden;
+    if (state.screen !== "game" || overlayOpen || state.concluded){ scheduleNextBit(); return; }
+    if (document.querySelectorAll(".flying-bit").length >= 2){ scheduleNextBit(); return; }
+
+    var roll = Math.random();
+    var type = roll < 0.10 ? "hacker" : (roll < 0.30 ? "golden" : "regular");
+    var el = document.createElement("button");
+    el.type = "button";
+    el.className = "flying-bit" + (type === "golden" ? " bit-golden" : type === "hacker" ? " bit-hacker" : "");
+    el.textContent = type === "hacker" ? "!" : (Math.random() > 0.5 ? "1" : "0");
+    el.title = type === "hacker" ? "unknown signal" : (type === "golden" ? "golden bit" : "bit");
+
+    var layer = document.getElementById("bits-layer");
+    layer.appendChild(el);
+
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var fromLeft = Math.random() > 0.5;
+    var startY = pickBitLane(vh);
+    var endY = pickBitLane(vh);
+    var startX = fromLeft ? -60 : vw + 60;
+    var endX = fromLeft ? vw + 60 : -60;
+    var duration = 6000 + Math.random() * 4000;
+
+    var anim;
+    try{
+      anim = el.animate([
+        { transform: "translate(" + startX + "px," + startY + "px)" },
+        { transform: "translate(" + endX + "px," + endY + "px)" }
+      ], { duration: duration, easing: "linear" });
+    }catch(e){ anim = null; }
+
+    var settled = false;
+    function cleanup(){
+      if (settled) return;
+      settled = true;
+      if (anim){ try{ anim.cancel(); }catch(e){ /* ignore */ } }
+      if (el.parentNode) el.parentNode.removeChild(el);
+      scheduleNextBit();
+    }
+    if (anim) anim.onfinish = cleanup;
+    else setTimeout(cleanup, duration);
+    el.addEventListener("click", function(){
+      if (settled) return;
+      settled = true;
+      if (anim){ try{ anim.cancel(); }catch(e){ /* ignore */ } }
+      if (el.parentNode) el.parentNode.removeChild(el);
+      handleBitClick(type);
+      scheduleNextBit();
+    });
+  }
+  function scheduleNextBit(){
+    setTimeout(spawnBit, 60000);
+  }
+  function handleBitClick(type){
+    statsData.bitsCollected++;
+    saveStats();
+    if (type === "regular"){
+      var pts = 10 + Math.floor(Math.random() * 91);
+      var applied = addScore(pts);
+      showBitToast("+" + applied + " pts");
+    } else if (type === "golden"){
+      var pts2 = 10 + Math.floor(Math.random() * 41);
+      var applied2 = addScore(pts2);
+      activateDoubleScore(60000);
+      showBitToast("+" + applied2 + " pts &middot; 2&times; score for 60s!", "gold");
+    } else {
+      startHackerPrompt();
+    }
+  }
+  function showBitToast(html, cls){
+    var el = document.createElement("div");
+    el.className = "bit-toast" + (cls ? " " + cls : "");
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    requestAnimationFrame(function(){ el.classList.add("show"); });
+    setTimeout(function(){
+      el.classList.remove("show");
+      setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+    }, 1600);
+  }
+  function activateDoubleScore(durationMs){
+    scoreMultiplier = 2;
+    var endsAtBoost = Date.now() + durationMs;
+    if (multiplierTimer) clearTimeout(multiplierTimer);
+    if (multiplierInterval) clearInterval(multiplierInterval);
+    var wrap = document.getElementById("stat-multiplier");
+    var val = document.getElementById("stat-multiplier-val");
+    if (wrap) wrap.hidden = false;
+    function tick(){
+      var msLeft = endsAtBoost - Date.now();
+      if (msLeft <= 0){
+        scoreMultiplier = 1;
+        if (wrap) wrap.hidden = true;
+        clearInterval(multiplierInterval);
+        multiplierInterval = null;
+        return;
+      }
+      if (val) val.textContent = "×2 (" + Math.ceil(msLeft / 1000) + "s)";
+    }
+    tick();
+    multiplierInterval = setInterval(tick, 250);
+  }
+
+  // ---------- hacker challenge ----------
+  function startHackerPrompt(){
+    var box = document.querySelector(".overlay-box");
+    box.innerHTML =
+      '<h2>⚠ UNKNOWN SIGNAL</h2>' +
+      '<p>A hacker wants to test you. Accept the challenge?</p>' +
+      '<div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem;">' +
+        '<button id="hacker-yes" class="btn btn-primary">YES</button>' +
+        '<button id="hacker-no" class="btn btn-small">NO</button>' +
+      '</div>';
+    document.getElementById("overlay").hidden = false;
+    document.getElementById("hacker-yes").addEventListener("click", startHackerChallenge);
+    document.getElementById("hacker-no").addEventListener("click", hideOverlay);
+  }
+  function startHackerChallenge(){
+    var target = state.score;
+    var box = document.querySelector(".overlay-box");
+    box.innerHTML =
+      '<h2>⚠ PROVE IT</h2>' +
+      '<p>Your score is <b>' + target + '</b>. Type it in binary before the clock runs out.<br>No copying. No pasting.</p>' +
+      '<div style="font-size:2rem; margin:.5rem 0;"><b id="hacker-timer">30</b>s</div>' +
+      '<input id="hacker-input" type="text" autocomplete="off" spellcheck="false" inputmode="numeric" placeholder="binary only" style="text-align:center; font-size:1.2rem; letter-spacing:.15em;">' +
+      '<button id="hacker-submit" class="btn btn-primary" style="margin-top:1rem;">SUBMIT</button>';
+    document.getElementById("overlay").hidden = false;
+
+    hackerChallengeActive = true;
+    var input = document.getElementById("hacker-input");
+    var timerEl = document.getElementById("hacker-timer");
+    var timeLeft = 30;
+    var hackerTimer = null;
+
+    function finish(){
+      clearInterval(hackerTimer);
+      activeHackerTimer = null;
+      hackerChallengeActive = false;
+    }
+    function check(){
+      var clean = input.value.replace(/[^01]/g, "");
+      if (clean.length && parseInt(clean, 2) === target){
+        finish();
+        succeedHackerChallenge(target);
+      } else {
+        input.classList.add("flash-bad");
+        setTimeout(function(){ input.classList.remove("flash-bad"); }, 300);
+      }
+    }
+
+    input.focus();
+    input.addEventListener("paste", function(e){ e.preventDefault(); });
+    input.addEventListener("copy", function(e){ e.preventDefault(); });
+    input.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+    input.addEventListener("keydown", function(e){ if (e.key === "Enter") check(); });
+    document.getElementById("hacker-submit").addEventListener("click", check);
+
+    hackerTimer = setInterval(function(){
+      timeLeft--;
+      if (timerEl) timerEl.textContent = timeLeft;
+      if (timeLeft <= 0){
+        finish();
+        failHackerChallenge();
+      }
+    }, 1000);
+    activeHackerTimer = hackerTimer;
+  }
+  function succeedHackerChallenge(target){
+    statsData.hackerWins++; saveStats();
+    showOverlay("ACCESS DENIED", "You entered " + target + " in binary before time ran out. The hacker backs off &mdash; your score is untouched.", "NICE", function(){});
+  }
+  function failHackerChallenge(){
+    var lost = Math.round(state.score / 2);
+    state.score -= lost;
+    if (state.score < 0) state.score = 0;
+    updateStatBar();
+    saveGame();
+    statsData.hackerLosses++; saveStats();
+    showOverlay("BREACHED", "Too slow. The hacker took " + lost + " pts &mdash; half your score.", "OW", function(){});
+  }
+
+  // ---------- persistence (3 independent save slots) ----------
+  function saveGame(){
+    if (!state.slot) return;
+    saves[state.slot] = {
+      score: state.score, level: state.level, stage: state.stage,
+      stageProgress: state.stageProgress, highScore: state.highScore,
+      timeLeftMs: state.timeLeftMs, goalReached: state.goalReached,
+      savedAt: Date.now()
+    };
+    persistSaves();
+    flashSaved();
+  }
+  function persistSaves(){
+    try{ localStorage.setItem(SAVES_KEY, JSON.stringify(saves)); }catch(e){ /* storage unavailable, ignore */ }
+  }
+  function flashSaved(){
+    var el = document.getElementById("save-flash");
+    el.classList.add("show");
+    setTimeout(function(){ el.classList.remove("show"); }, 1200);
+  }
+  function loadGame(){
+    try{
+      var raw = localStorage.getItem(SAVES_KEY);
+      if (raw){
+        var parsed = JSON.parse(raw);
+        for (var i = 1; i <= SLOT_COUNT; i++) saves[i] = parsed[i] || null;
+      } else {
+        // migrate a single-slot save from an older version into slot 1
+        var legacy = localStorage.getItem(SAVE_KEY);
+        if (legacy){
+          var old = JSON.parse(legacy);
+          if (old && old.score !== undefined){
+            if (old.timeLeftMs == null) old.timeLeftMs = SESSION_MS;
+            saves[1] = old;
+            persistSaves();
+          }
+          localStorage.removeItem(SAVE_KEY);
+        }
+      }
+    }catch(e){ /* ignore unreadable saves */ }
+  }
+  function clearSave(){
+    if (!state.slot) return;
+    saves[state.slot] = null;
+    persistSaves();
+  }
+  function loadStats(){
+    try{
+      var raw = localStorage.getItem(STATS_KEY);
+      if (raw){
+        var parsed = JSON.parse(raw);
+        for (var k in parsed) statsData[k] = parsed[k];
+      }
+    }catch(e){ /* ignore */ }
+  }
+  function saveStats(){
+    try{ localStorage.setItem(STATS_KEY, JSON.stringify(statsData)); }catch(e){ /* ignore */ }
+  }
+  setInterval(function(){ if (state.screen === "game") saveGame(); }, 30000);
+
+  // ---------- score ----------
+  function addScore(n){
+    var applied = Math.round(n * scoreMultiplier);
+    state.score += applied;
+    if (state.score > state.highScore){
+      state.highScore = state.score;
+      statsData.highScore = state.score; // lifetime best, shared across slots
+      saveStats();
+    }
+    updateStatBar();
+    if (!state.goalReached && state.score >= GOAL_SCORE){
+      state.goalReached = true;
+      showBitToast(GOAL_SCORE + " points reached &mdash; hold on till the clock runs out!", "gold");
+    }
+    // every point earned — bits, decodes, transmissions — is written to the slot at once,
+    // so nothing is lost between the 30-second autosaves
+    if (applied > 0 && state.screen === "game" && !state.concluded) saveGame();
+    return applied;
+  }
+  function updateStatBar(){
+    document.getElementById("stat-score").textContent = state.score;
+    document.getElementById("stat-level").textContent = state.level;
+    document.getElementById("stat-stage").textContent = state.stage + "/3 · " + STAGE_NAMES[state.stage];
+  }
+
+  // ---------- session clock ----------
+  function updateTimeDisplay(remainingMs){
+    var totalSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    var el = document.getElementById("stat-time-val");
+    if (el) el.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+    var wrap = document.getElementById("stat-time");
+    if (wrap) wrap.classList.toggle("urgent", remainingMs <= 60000);
+  }
+  // The clock counts time spent playing, not wall-clock time: it only runs while
+  // you are actually on the game screen, and pauses on the menu or once concluded.
+  var lastTickAt = null;
+  function tickClock(){
+    if (state.screen !== "game" || state.concluded || state.timeLeftMs == null){
+      lastTickAt = null; // paused — time spent away is never charged
+      return;
+    }
+    var now = Date.now();
+    if (lastTickAt === null) lastTickAt = now;
+    state.timeLeftMs -= (now - lastTickAt);
+    lastTickAt = now;
+    if (state.timeLeftMs <= 0){
+      state.timeLeftMs = 0;
+      updateTimeDisplay(0);
+      if (state.score >= GOAL_SCORE) triggerWin(); else triggerLoss();
+      return;
+    }
+    updateTimeDisplay(state.timeLeftMs);
+  }
+  setInterval(tickClock, 1000);
+
+  // ---------- win / loss (decided only once the 30-minute clock runs out) ----------
+  function triggerWin(){
+    if (state.concluded) return;
+    state.concluded = true;
+    if (activeHackerTimer){ clearInterval(activeHackerTimer); activeHackerTimer = null; }
+    hackerChallengeActive = false;
+    clearSave();
+    showOverlay(
+      "SIGNAL SECURED",
+      "Thirty minutes are up and you held the line with " + state.score + " points.<br>You survived. You'll be fine.",
+      "BACK TO MENU",
+      returnToMenu
+    );
+  }
+  function triggerLoss(){
+    if (state.concluded) return;
+    state.concluded = true;
+    if (activeHackerTimer){ clearInterval(activeHackerTimer); activeHackerTimer = null; }
+    hackerChallengeActive = false;
+    clearSave();
+    showOverlay(
+      "CONNECTION LOST",
+      "Time's up. You reached " + state.score + " of " + GOAL_SCORE + " points and the hacker locked you out.",
+      "BACK TO MENU",
+      returnToMenu
+    );
+  }
+  function returnToMenu(){
+    showScreen("start");
+    document.getElementById("start-hiscore").textContent = statsData.highScore || 0;
+    refreshStartButtons();
+  }
+
+  // ---------- mission flow ----------
+  function newMission(){
+    if (state.stage === 1){
+      var bits = Math.min(6 + state.level * 2, 16);
+      var max = Math.pow(2, bits) - 1;
+      var num = Math.floor(Math.random() * (max + 1));
+      state.current = { type: "number", bits: bits, value: num, binary: num.toString(2).padStart(bits, "0") };
+    } else if (state.stage === 2){
+      var word = pickWord(state.level);
+      state.current = { type: "word", value: word.toUpperCase(), binary: textToBinary(word.toUpperCase()) };
+    } else {
+      var phrase = pickPhrase(state.level);
+      state.current = { type: "phrase", value: phrase, index: 0, bitBuffer: "" };
+    }
+    renderMission();
+  }
+
+  function renderMission(){
+    var panel = document.getElementById("panel-mission");
+    var cur = state.current;
+    if (!cur){ panel.innerHTML = ""; return; }
+
+    if (cur.type === "number"){
+      panel.innerHTML =
+        '<div class="mission-box" id="mission-box">' +
+          '<div class="mission-label-row">' +
+            '<span class="mission-label">Signal received &mdash; decode the number</span>' +
+            '<button class="copy-btn" id="copy-btn" title="Copy binary (C)">⧉ copy</button>' +
+          '</div>' +
+          '<div class="binary-display">' + chunk(cur.binary, 4).join(" ") + '</div>' +
+          '<div class="mission-hint">' + cur.bits + '-bit value &middot; paste it into the Translator tab if you need help &middot; press C to copy, P to paste</div>' +
+          '<div class="answer-row">' +
+            '<input id="answer-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="enter the decimal number">' +
+            '<button class="copy-btn paste-btn" id="paste-answer-btn" data-paste-target="answer-input" title="Paste (P)">⎘ paste</button>' +
+            '<button id="submit-btn" class="btn btn-primary">SUBMIT</button>' +
+          '</div>' +
+        '</div>';
+    } else if (cur.type === "word"){
+      panel.innerHTML =
+        '<div class="mission-box" id="mission-box">' +
+          '<div class="mission-label-row">' +
+            '<span class="mission-label">Signal received &mdash; decode the word</span>' +
+            '<button class="copy-btn" id="copy-btn" title="Copy binary (C)">⧉ copy</button>' +
+          '</div>' +
+          '<div class="binary-display">' + cur.binary + '</div>' +
+          '<div class="mission-hint">' + cur.value.length + ' letters &middot; paste it into the Translator tab if you need help &middot; press C to copy, P to paste</div>' +
+          '<div class="answer-row">' +
+            '<input id="answer-input" type="text" autocomplete="off" spellcheck="false" placeholder="enter the word">' +
+            '<button class="copy-btn paste-btn" id="paste-answer-btn" data-paste-target="answer-input" title="Paste (P)">⎘ paste</button>' +
+            '<button id="submit-btn" class="btn btn-primary">SUBMIT</button>' +
+          '</div>' +
+        '</div>';
+    } else {
+      var remaining = cur.value.length - cur.index;
+      var output = cur.value.slice(0, cur.index);
+      var currentChar = cur.index < cur.value.length ? cur.value[cur.index] : null;
+      var currentLabel = currentChar === null ? "" :
+        (currentChar === " " ? "now encoding SPACE (ASCII 32)" : "now encoding '" + currentChar + "' (ASCII " + currentChar.charCodeAt(0) + ")");
+      panel.innerHTML =
+        '<div class="mission-box" id="mission-box">' +
+          '<div class="mission-label">Transmit this phrase in binary</div>' +
+          '<div class="target-phrase">' + renderPhraseTarget(cur) + '</div>' +
+          '<div class="mission-hint">' + remaining + ' character' + (remaining === 1 ? "" : "s") + ' left &middot; ' + currentLabel + ' &middot; not sure of the binary? check the ASCII Table tab</div>' +
+          '<div class="output-line">OUTPUT: <span class="output-text">' + (output.replace(/ /g, "&nbsp;")) + '</span><span class="cursor">_</span></div>' +
+          '<div class="byte-buffer">' + renderByteBuffer(cur.bitBuffer) + '</div>' +
+          '<div class="keypad">' +
+            '<button class="key-btn" data-bit="0">0</button>' +
+            '<button class="key-btn" data-bit="1">1</button>' +
+            '<button class="key-btn key-back" id="bit-backspace">&#9003;</button>' +
+          '</div>' +
+        '</div>';
+      panel.querySelectorAll(".key-btn[data-bit]").forEach(function(b){
+        b.addEventListener("click", function(){ stage3HandleBit(b.getAttribute("data-bit")); });
+      });
+      document.getElementById("bit-backspace").addEventListener("click", stage3Backspace);
+    }
+
+    if (cur.type !== "phrase"){
+      var input = document.getElementById("answer-input");
+      input.focus();
+      input.addEventListener("keydown", function(e){ if (e.key === "Enter") submitAnswer(); });
+      document.getElementById("submit-btn").addEventListener("click", submitAnswer);
+      document.getElementById("copy-btn").addEventListener("click", copyMissionBinary);
+      document.getElementById("paste-answer-btn").addEventListener("click", function(e){ pasteInto("answer-input", e.currentTarget); });
+    }
+  }
+
+  function flashMissionResult(success){
+    var box = document.getElementById("mission-box");
+    if (!box) return;
+    var cls = success ? "flash-good" : "flash-bad";
+    box.classList.add(cls);
+    setTimeout(function(){ box.classList.remove(cls); }, 400);
+  }
+
+  function submitAnswer(){
+    var input = document.getElementById("answer-input");
+    if (!input || !state.current) return;
+    var cur = state.current;
+    var val = input.value;
+    var correct = false;
+    if (cur.type === "number") correct = parseInt(val, 10) === cur.value;
+    else if (cur.type === "word") correct = val.trim().toUpperCase() === cur.value.toUpperCase();
+
+    if (correct){
+      playTone(true);
+      flashMissionResult(true);
+      addScore(cur.type === "number" ? 10 : 20);
+      state.stageProgress++;
+      input.disabled = true;
+      var btn = document.getElementById("submit-btn");
+      if (btn) btn.disabled = true;
+      setTimeout(function(){
+        if (state.concluded) return;
+        if (state.stageProgress >= STAGE_GOALS[state.stage]) stageComplete();
+        else { state.level++; newMission(); }
+      }, 500);
+    } else {
+      playTone(false);
+      flashMissionResult(false);
+      input.select();
+    }
+  }
+
+  function stage3HandleBit(bit){
+    var cur = state.current;
+    if (!cur || cur.bitBuffer.length >= 8) return;
+    cur.bitBuffer += bit;
+    if (cur.bitBuffer.length === 8){
+      var expected = cur.value.charCodeAt(cur.index).toString(2).padStart(8, "0");
+      if (cur.bitBuffer === expected){
+        cur.index++;
+        cur.bitBuffer = "";
+        var done = cur.index >= cur.value.length;
+        playTone(true);
+        addScore(done ? 20 : 5);
+        if (done){
+          state.stageProgress++;
+          renderMission();
+          flashMissionResult(true);
+          setTimeout(function(){
+            if (state.concluded) return;
+            if (state.stageProgress >= STAGE_GOALS[state.stage]) stageComplete();
+            else { state.level++; newMission(); }
+          }, 600);
+          return;
+        }
+      } else {
+        cur.bitBuffer = "";
+        playTone(false);
+        renderMission();
+        flashMissionResult(false);
+        return;
+      }
+    }
+    renderMission();
+  }
+  function stage3Backspace(){
+    var cur = state.current;
+    if (!cur) return;
+    cur.bitBuffer = cur.bitBuffer.slice(0, -1);
+    renderMission();
+  }
+
+  function stageComplete(){
+    saveGame();
+    var justFinished = state.stage;
+    if (state.stage < 3){
+      showOverlay(
+        "STAGE " + justFinished + " COMPLETE",
+        "You cracked " + STAGE_GOALS[justFinished] + " transmissions.<br>Stage " + (justFinished + 1) + ": " + STAGE_NAMES[justFinished + 1] + " unlocked.",
+        "CONTINUE",
+        function(){
+          state.stage++; state.stageProgress = 0; state.level = 1;
+          updateStatBar(); newMission(); saveGame();
+        }
+      );
+    } else {
+      showOverlay(
+        "ALL STAGES CLEARED",
+        "Transmissions keep coming. Stage 1 repeats at full difficulty &mdash; keep decoding to reach " + GOAL_SCORE + " points before time runs out.",
+        "CONTINUE",
+        function(){
+          state.stage = 1; state.stageProgress = 0; state.level = 1;
+          updateStatBar(); newMission(); saveGame();
+        }
+      );
+    }
+  }
+
+  // ---------- overlay ----------
+  function showOverlay(title, html, btnLabel, onClick){
+    var box = document.querySelector(".overlay-box");
+    box.classList.remove("confirm-box");
+    box.innerHTML =
+      '<h2 id="overlay-title"></h2>' +
+      '<p id="overlay-text"></p>' +
+      '<button id="overlay-btn" class="btn btn-primary"></button>';
+    document.getElementById("overlay-title").textContent = title;
+    document.getElementById("overlay-text").innerHTML = html;
+    var btn = document.getElementById("overlay-btn");
+    btn.textContent = btnLabel;
+    btn.onclick = function(){ hideOverlay(); onClick(); };
+    document.getElementById("overlay").hidden = false;
+  }
+  function hideOverlay(){
+    document.getElementById("overlay").hidden = true;
+    var box = document.querySelector(".overlay-box");
+    if (box) box.classList.remove("confirm-box");
+  }
+  // In-theme replacement for window.confirm(): grey panel, green text.
+  function showConfirm(message, onYes){
+    var box = document.querySelector(".overlay-box");
+    box.classList.add("confirm-box");
+    box.innerHTML =
+      '<h2>CONFIRM</h2>' +
+      '<p id="confirm-text"></p>' +
+      '<div class="confirm-actions">' +
+        '<button id="confirm-yes" class="btn btn-primary">YES</button>' +
+        '<button id="confirm-no" class="btn btn-small">NO</button>' +
+      '</div>';
+    document.getElementById("confirm-text").textContent = message;
+    document.getElementById("overlay").hidden = false;
+    document.getElementById("confirm-yes").addEventListener("click", function(){ hideOverlay(); onYes(); });
+    document.getElementById("confirm-no").addEventListener("click", hideOverlay);
+  }
+
+  var HELP_HTML =
+    "<b>1. Translator</b> &mdash; type or paste any binary and it's decoded for you as text and as a number. Type any text to see its binary.<br><br>" +
+    "<b>2. Decode missions</b> &mdash; a binary transmission arrives. Figure out the number, then the word, it represents.<br><br>" +
+    "<b>3. Encode missions</b> &mdash; a word is shown in plain text. Type its binary yourself, one byte (8 bits) per letter, using the on-screen keys or your keyboard.<br><br>" +
+    "<b>4. Flying bits</b> &mdash; click the bits drifting across the screen. Green ones are worth 10&ndash;100 points. Gold ones are worth a little less but double all your score gains for the next minute. The red one challenges you: accept, and you must type your exact score in binary within 30 seconds &mdash; no copying, no pasting &mdash; or lose half your points. You can always say no.<br><br>" +
+    "Reach " + GOAL_SCORE + " points within " + SESSION_MINUTES + " minutes to survive the hack.<br><br>" +
+    "Use the ⧉ button (or press C) to copy a mission's binary, and the ⎘ paste button (or press P) to drop it into a field. Mute or unmute the soundtrack with the button in the top-right corner, and use ⟲ any time to restart your run (your high score is always kept).";
+
+  var ABOUT_HTML =
+    "A hacker has slipped into your machine. The interface has fallen back to raw binary while your system fights them off from the inside.<br><br>" +
+    "Every point you earn &mdash; from cracking transmissions or catching stray bits of data drifting past &mdash; pushes them back out.<br><br>" +
+    "Reach <b>" + GOAL_SCORE + " points within " + SESSION_MINUTES + " minutes</b>, and you'll be fine.";
+
+  function showStats(){
+    var html =
+      "High score: <b>" + (statsData.highScore || 0) + "</b><br>" +
+      "Games played: <b>" + statsData.gamesPlayed + "</b><br>" +
+      "Bits collected: <b>" + statsData.bitsCollected + "</b><br>" +
+      "Hacker challenges: <b>" + statsData.hackerWins + " won / " + statsData.hackerLosses + " lost</b>";
+    showOverlay("YOUR STATS", html, "CLOSE", function(){});
+  }
+
+  // ---------- screens / tabs ----------
+  function showScreen(name){
+    state.screen = name;
+    document.getElementById("screen-start").classList.toggle("active", name === "start");
+    document.getElementById("screen-game").classList.toggle("active", name === "game");
+    document.getElementById("screen-loading").classList.toggle("active", name === "loading");
+  }
+
+  // ---------- slot loading screen ----------
+  var LOADING_TIPS = [
+    "8 bits make 1 byte, and 1 byte is exactly 1 character.",
+    "A space is a character too &mdash; its code is 32, or <b>00100000</b>.",
+    "Capital <b>A</b> is 65. Lowercase <b>a</b> is 97. Everything else follows in order.",
+    "Press <b>C</b> to copy a transmission, then <b>P</b> to paste it into the Translator.",
+    "Gold bits double every point you earn for a full minute. Grab them first.",
+    "The red bit can be refused with no penalty. Accept only if you can do the maths fast.",
+    "Reach <b>" + GOAL_SCORE + " points</b> before the clock runs out to survive the hack.",
+    "The ASCII Table tab stays open while a mission is running &mdash; your progress is kept.",
+    "Your run saves itself every 30 seconds, and the clock only ticks while you're playing.",
+    "A bit drifts past about once a minute. Don't let it leave the screen.",
+    "Reading right to left, each binary place is worth 1, 2, 4, 8, 16, 32, 64, 128."
+  ];
+  var loadingTimer = null;
+  // The bar fills in uneven bursts: each segment gets its own slice of the bar and its
+  // own slice of the clock, so some crawl and some surge. It still lands on 100% at the
+  // end of the chosen duration.
+  function buildProgressCurve(duration){
+    var segs = 6 + Math.floor(Math.random() * 5); // 6-10 bursts
+    var pW = [], tW = [], i, pSum = 0, tSum = 0;
+    for (i = 0; i < segs; i++){
+      var slow = Math.random() < 0.35;
+      pW.push(slow ? 0.15 + Math.random() * 0.35 : 0.6 + Math.random() * 1.4);
+      tW.push(slow ? 0.9 + Math.random() * 1.5 : 0.15 + Math.random() * 0.6);
+      pSum += pW[i]; tSum += tW[i];
+    }
+    var curve = [], pAcc = 0, tAcc = 0;
+    for (i = 0; i < segs; i++){
+      pAcc += (pW[i] / pSum) * 100;
+      tAcc += (tW[i] / tSum) * duration;
+      curve.push({ t: tAcc, p: pAcc });
+    }
+    return curve;
+  }
+  function progressAt(curve, elapsed){
+    var prevT = 0, prevP = 0;
+    for (var i = 0; i < curve.length; i++){
+      var seg = curve[i];
+      if (elapsed <= seg.t){
+        var span = seg.t - prevT;
+        var f = span <= 0 ? 1 : (elapsed - prevT) / span;
+        return prevP + (seg.p - prevP) * f;
+      }
+      prevT = seg.t; prevP = seg.p;
+    }
+    return 100;
+  }
+  function enterSlot(slot, isNew){
+    if (loadingTimer) return; // already loading
+    showScreen("loading");
+    document.getElementById("loading-title").textContent = (isNew ? "INITIALISING SLOT " : "LOADING SLOT ") + slot;
+    var fill = document.getElementById("loading-fill");
+    var pctEl = document.getElementById("loading-pct");
+    var tipEl = document.getElementById("loading-tip");
+    fill.style.width = "0%";
+    pctEl.textContent = "0%";
+
+    var tipIdx = Math.floor(Math.random() * LOADING_TIPS.length);
+    function showTip(){
+      tipEl.innerHTML = "TIP &middot; " + LOADING_TIPS[tipIdx % LOADING_TIPS.length];
+      tipIdx++;
+    }
+    showTip();
+    var tipTimer = setInterval(showTip, 3500);
+
+    var duration = 15000 + Math.random() * 5000; // 15-20s
+    var curve = buildProgressCurve(duration);
+    var started = Date.now();
+    loadingTimer = setInterval(function(){
+      var elapsed = Date.now() - started;
+      var p = Math.min(1, progressAt(curve, elapsed) / 100);
+      var shown = Math.floor(p * 100);
+      fill.style.width = shown + "%";
+      pctEl.textContent = shown + "%";
+      if (p >= 1){
+        clearInterval(loadingTimer); loadingTimer = null;
+        clearInterval(tipTimer);
+        // bar is full: hold for 3s on "loading..." before handing over to the game
+        tipEl.innerHTML = '<span class="loading-dots">loading</span>';
+        setTimeout(function(){
+          if (isNew) initFreshGame(slot); else continueGame(slot);
+        }, 3000);
+      }
+    }, 100);
+  }
+  function setTab(name){
+    state.tab = name;
+    document.querySelectorAll(".tab-btn[data-tab]").forEach(function(b){
+      b.classList.toggle("active", b.getAttribute("data-tab") === name);
+    });
+    document.querySelectorAll(".panel").forEach(function(p){
+      p.classList.toggle("active", p.id === "panel-" + name);
+    });
+  }
+
+  function resetBoost(){
+    scoreMultiplier = 1;
+    if (multiplierInterval){ clearInterval(multiplierInterval); multiplierInterval = null; }
+    var wrap = document.getElementById("stat-multiplier");
+    if (wrap) wrap.hidden = true;
+  }
+  function initFreshGame(slot){
+    state.slot = slot || state.slot || 1;
+    state.score = 0;
+    state.stage = 1;
+    state.level = 1;
+    state.stageProgress = 0;
+    state.timeLeftMs = SESSION_MS;
+    state.goalReached = false;
+    state.concluded = false;
+    state.highScore = statsData.highScore || 0;
+    lastTickAt = null;
+    resetBoost();
+    statsData.gamesPlayed++;
+    saveStats();
+    updateStatBar();
+    setTab("mission");
+    showScreen("game");
+    newMission();
+    saveGame();
+    tickClock();
+  }
+  function continueGame(slot){
+    var data = saves[slot];
+    if (!data) return initFreshGame(slot);
+    state.slot = slot;
+    state.score = data.score || 0;
+    state.stage = data.stage || 1;
+    state.level = data.level || 1;
+    state.stageProgress = data.stageProgress || 0;
+    state.highScore = Math.max(statsData.highScore || 0, data.highScore || 0);
+    state.timeLeftMs = data.timeLeftMs == null ? SESSION_MS : data.timeLeftMs;
+    state.goalReached = !!data.goalReached;
+    state.concluded = false;
+    lastTickAt = null;
+    resetBoost();
+    updateStatBar();
+    updateTimeDisplay(state.timeLeftMs);
+    setTab("mission");
+    showScreen("game");
+    if (state.timeLeftMs <= 0){ if (state.score >= GOAL_SCORE) triggerWin(); else triggerLoss(); return; }
+    newMission();
+    tickClock();
+  }
+  function restartGame(){
+    showConfirm("Restart this run? Progress in this slot will be reset (your high score is kept).", function(){
+      initFreshGame(state.slot);
+    });
+  }
+  function randomBitString(){
+    var groups = 5 + Math.floor(Math.random() * 4);
+    var out = [];
+    for (var g = 0; g < groups; g++){
+      var len = 2 + Math.floor(Math.random() * 4);
+      var bits = "";
+      for (var b = 0; b < len; b++) bits += (Math.random() > 0.5 ? "1" : "0");
+      out.push(bits);
+    }
+    return out.join(" ");
+  }
+  // Wiping a slot plays out on the row itself: binary noise for 2s, then the verdict.
+  function wipeSlotWithEffect(slot){
+    var row = document.querySelector('.slot-row[data-slot="' + slot + '"]');
+    if (!row || row.querySelector(".slot-fx")){
+      saves[slot] = null; persistSaves(); refreshStartButtons(); return;
+    }
+    var fx = document.createElement("div");
+    fx.className = "slot-fx";
+    fx.textContent = randomBitString();
+    row.appendChild(fx);
+    playTone(false);
+    var noise = setInterval(function(){ fx.textContent = randomBitString(); }, 70);
+    setTimeout(function(){
+      clearInterval(noise);
+      var hacked = Math.random() < 0.5;
+      fx.textContent = hacked ? "HACKED" : "-1 GAME";
+      fx.classList.add("verdict");
+      if (!hacked && statsData.gamesPlayed > 0){
+        statsData.gamesPlayed--; // the run this slot held no longer counts
+        saveStats();
+      }
+      setTimeout(function(){
+        saves[slot] = null;
+        persistSaves();
+        refreshStartButtons();
+      }, 1300);
+    }, 2000);
+  }
+  function formatSlotTime(ms){
+    var totalSec = Math.max(0, Math.ceil(ms / 1000));
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function refreshStartButtons(){
+    var list = document.getElementById("slot-list");
+    if (!list) return;
+    list.innerHTML = "";
+    for (var i = 1; i <= SLOT_COUNT; i++){
+      (function(slot){
+        var data = saves[slot];
+        var row = document.createElement("div");
+        row.className = "slot-row" + (data ? "" : " empty");
+        row.setAttribute("data-slot", slot);
+
+        var info = document.createElement("div");
+        info.className = "slot-info";
+        info.innerHTML = data
+          ? '<b>SLOT ' + slot + '</b><span>' + data.score + ' pts &middot; stage ' + (data.stage || 1) +
+            ' &middot; ' + formatSlotTime(data.timeLeftMs == null ? SESSION_MS : data.timeLeftMs) + ' left</span>'
+          : '<b>SLOT ' + slot + '</b><span>empty</span>';
+        row.appendChild(info);
+
+        var actions = document.createElement("div");
+        actions.className = "slot-actions";
+        var main = document.createElement("button");
+        main.className = "btn btn-small" + (data ? " btn-primary" : "");
+        main.textContent = data ? "CONTINUE" : "START";
+        main.addEventListener("click", function(){ enterSlot(slot, !data); });
+        actions.appendChild(main);
+
+        if (data){
+          var del = document.createElement("button");
+          del.className = "btn btn-small";
+          del.title = "Restart this slot";
+          del.textContent = "⟲";
+          del.addEventListener("click", function(){
+            showConfirm("Restart slot " + slot + "? Its progress will be erased.", function(){
+              wipeSlotWithEffect(slot);
+            });
+          });
+          actions.appendChild(del);
+        }
+        row.appendChild(actions);
+        list.appendChild(row);
+      })(i);
+    }
+  }
+
+  // ---------- translator wiring ----------
+  function wireTranslator(){
+    var binIn = document.getElementById("trans-bin-input");
+    var outText = document.getElementById("trans-out-text");
+    var outNum = document.getElementById("trans-out-num");
+    binIn.addEventListener("input", function(){
+      var clean = binIn.value.replace(/[^01]/g, "");
+      outText.textContent = clean.length >= 8 ? bytesToText(clean) : "—";
+      outNum.textContent = clean.length ? parseInt(clean, 2).toString() : "—";
+    });
+
+    var textIn = document.getElementById("trans-text-input");
+    var outBin = document.getElementById("trans-out-bin");
+    textIn.addEventListener("input", function(){
+      outBin.textContent = textIn.value.length ? textToBinary(textIn.value) : "—";
+    });
+  }
+
+  function buildReferenceTable(){
+    var tbody = document.getElementById("ref-table-body");
+    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ".split("");
+    var rows = chars.map(function(c){
+      var code = c.charCodeAt(0);
+      var label = c === " " ? "SPACE" : c;
+      return "<tr><td>" + label + "</td><td>" + code + "</td><td>" + code.toString(2).padStart(8, "0") + "</td></tr>";
+    });
+    tbody.innerHTML = rows.join("");
+  }
+
+  // ---------- keyboard input for stage 3 ----------
+  document.addEventListener("keydown", function(e){
+    if (state.screen !== "game" || state.tab !== "mission") return;
+    if (!state.current || state.current.type !== "phrase") return;
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA") return; // e.g. hacker challenge input focused
+    if (e.key === "0" || e.key === "1"){ stage3HandleBit(e.key); }
+    else if (e.key === "Backspace"){ stage3Backspace(); }
+  });
+
+  // ---------- init ----------
+  document.addEventListener("DOMContentLoaded", function(){
+    loadStats();
+    loadGame();
+    // high score is lifetime, shared by every slot
+    for (var s = 1; s <= SLOT_COUNT; s++){
+      if (saves[s] && saves[s].highScore > (statsData.highScore || 0)) statsData.highScore = saves[s].highScore;
+    }
+    state.highScore = statsData.highScore || 0;
+    document.getElementById("start-hiscore").textContent = state.highScore;
+    refreshStartButtons();
+
+    var musicPref = null;
+    try{ musicPref = localStorage.getItem(MUSIC_PREF_KEY); }catch(e){ /* ignore */ }
+    musicEnabled = musicPref !== "off";
+    document.getElementById("btn-music-toggle").textContent = musicEnabled ? "🔊" : "🔇";
+    document.getElementById("btn-music-toggle").addEventListener("click", function(){ setMusicEnabled(!musicEnabled); });
+    // Start the soundtrack on its own. Browsers block audio until the page has been
+    // interacted with, so try immediately and retry on the first gesture of any kind.
+    function autoStartMusic(){
+      if (!musicEnabled) return;
+      ensureAudio();
+      startMusic();
+      if (audioCtx && audioCtx.state === "running"){
+        ["pointerdown", "keydown", "touchstart"].forEach(function(evt){
+          document.removeEventListener(evt, autoStartMusic);
+        });
+      }
+    }
+    autoStartMusic();
+    ["pointerdown", "keydown", "touchstart"].forEach(function(evt){
+      document.addEventListener(evt, autoStartMusic);
+    });
+
+    document.getElementById("btn-restart-game").addEventListener("click", restartGame);
+    document.getElementById("btn-help-start").addEventListener("click", function(){
+      showOverlay("HOW TO PLAY", HELP_HTML, "GOT IT", function(){});
+    });
+    document.getElementById("btn-help-game").addEventListener("click", function(){
+      showOverlay("HOW TO PLAY", HELP_HTML, "GOT IT", function(){});
+    });
+    document.getElementById("paste-bin-btn").addEventListener("click", function(e){ pasteInto("trans-bin-input", e.currentTarget); });
+    document.getElementById("paste-text-btn").addEventListener("click", function(e){ pasteInto("trans-text-input", e.currentTarget); });
+    document.getElementById("btn-stats").addEventListener("click", showStats);
+    document.getElementById("btn-about").addEventListener("click", function(){
+      showOverlay("ABOUT CoD{r+", ABOUT_HTML, "GOT IT", function(){});
+    });
+
+    document.querySelectorAll(".tab-btn[data-tab]").forEach(function(b){
+      b.addEventListener("click", function(){ setTab(b.getAttribute("data-tab")); });
+    });
+
+    wireTranslator();
+    buildReferenceTable();
+    initBgRain();
+    updateStatBar();
+    scheduleNextBit();
+  });
+})();
+</script>
+</body>
+</html>
