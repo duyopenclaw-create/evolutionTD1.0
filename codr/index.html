@@ -644,19 +644,9 @@
       o.start(startTime); o.stop(startTime + dur + 0.02);
     }catch(e){ /* ignore */ }
   }
-  function scheduleMusic(){
-    if (!musicEnabled || !audioCtx) return;
-    var t = audioCtx.currentTime;
-    playNote(BASS_PATTERN[musicStep % BASS_PATTERN.length], t, STEP_SEC * 0.9, "triangle", 0.05);
-    var arp = ARP_PATTERN[musicStep % ARP_PATTERN.length];
-    if (arp) playNote(arp, t, STEP_SEC * 0.4, "square", 0.02);
-    musicStep++;
-    musicTimer = setTimeout(scheduleMusic, STEP_SEC * 1000);
-  }
   // ---------- ambient typing ----------
   // Someone is working the keyboard on the other side of the connection: short noise
   // clicks in bursts, with pauses between them, mixed well under the music.
-  var typingTimer = null;
   var noiseBuffer = null;
   function getNoiseBuffer(){
     if (noiseBuffer || !audioCtx) return noiseBuffer;
@@ -668,10 +658,10 @@
   }
   // A keystroke is two things at once: a tiny bandpassed tick as the switch closes,
   // and a low wooden "thock" as the keycap bottoms out. Noise alone just sounds electric.
-  function playKeyClick(){
+  function playKeyClick(when){
     if (!audioCtx) return;
     try{
-      var now = audioCtx.currentTime;
+      var now = when || audioCtx.currentTime;
 
       var src = audioCtx.createBufferSource();
       src.buffer = getNoiseBuffer();
@@ -697,32 +687,50 @@
       o.start(now); o.stop(now + 0.06);
     }catch(e){ /* ignore */ }
   }
-  function scheduleTyping(){
-    if (!musicEnabled || !audioCtx){ typingTimer = null; return; }
-    playKeyClick();
-    // mostly quick strokes within a burst, occasionally a longer think-pause
-    var gap = Math.random() < 0.14 ? 600 + Math.random() * 2200 : 65 + Math.random() * 115;
-    typingTimer = setTimeout(scheduleTyping, gap);
-  }
-  function startTyping(){
-    if (typingTimer || !audioCtx || !musicEnabled) return;
-    scheduleTyping();
-  }
-  function stopTyping(){
-    if (typingTimer){ clearTimeout(typingTimer); typingTimer = null; }
+  // Everything is scheduled ahead of time against the audio clock rather than played
+  // when a timer happens to fire. Hidden tabs throttle timers to ~1/second while audio
+  // keeps running, which used to drag the tempo down to a crawl when you switched away;
+  // with a 2s lookahead the beat stays exactly the same speed whether the tab is
+  // focused, hidden, or coming back.
+  var LOOKAHEAD = 2.0;   // seconds of audio queued in advance
+  var TICK_MS = 100;     // how often we top the queue up (throttled to ~1000 when hidden)
+  var nextNoteTime = 0;
+  var nextTypeTime = 0;
+
+  function runScheduler(){
+    if (!musicEnabled || !audioCtx){ musicTimer = null; return; }
+    var now = audioCtx.currentTime;
+    var horizon = now + LOOKAHEAD;
+
+    if (nextNoteTime < now) nextNoteTime = now;   // resync after a long freeze
+    while (nextNoteTime < horizon){
+      playNote(BASS_PATTERN[musicStep % BASS_PATTERN.length], nextNoteTime, STEP_SEC * 0.9, "triangle", 0.05);
+      var arp = ARP_PATTERN[musicStep % ARP_PATTERN.length];
+      if (arp) playNote(arp, nextNoteTime, STEP_SEC * 0.4, "square", 0.02);
+      musicStep++;
+      nextNoteTime += STEP_SEC;
+    }
+
+    if (nextTypeTime < now) nextTypeTime = now;
+    while (nextTypeTime < horizon){
+      playKeyClick(nextTypeTime);
+      // mostly quick strokes within a burst, occasionally a longer think-pause
+      nextTypeTime += Math.random() < 0.14 ? 0.6 + Math.random() * 2.2 : 0.065 + Math.random() * 0.115;
+    }
+
+    musicTimer = setTimeout(runScheduler, TICK_MS);
   }
 
   function startMusic(){
     ensureAudio();
-    if (!audioCtx) return;
-    startTyping();
-    if (musicTimer) return;
+    if (!audioCtx || musicTimer) return;
     musicStep = 0;
-    scheduleMusic();
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    nextTypeTime = audioCtx.currentTime + 0.05;
+    runScheduler();
   }
   function stopMusic(){
     if (musicTimer){ clearTimeout(musicTimer); musicTimer = null; }
-    stopTyping();
   }
   function setMusicEnabled(on){
     musicEnabled = on;
