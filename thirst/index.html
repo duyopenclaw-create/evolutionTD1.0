@@ -1,0 +1,3100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>THIRST — 3:07 PM</title>
+<style>
+  :root{
+    --amber:#e8b45a; --ink:#0a0b0d; --paper:#e8e6e1;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:var(--paper);
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;cursor:default}
+  canvas{display:block;position:fixed;inset:0}
+  #gl{z-index:1}
+
+  /* ---------- post overlay: vignette, grain, aberration tint ---------- */
+  #post{position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:
+      radial-gradient(ellipse 120% 90% at 50% 50%, rgba(0,0,0,0) 38%, rgba(0,0,0,.34) 72%, rgba(0,0,0,.72) 100%);
+    mix-blend-mode:multiply;}
+  #grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.055;
+    background-repeat:repeat;background-size:180px 180px;mix-blend-mode:overlay}
+  #dryness{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse 100% 80% at 50% 50%, rgba(120,20,10,0) 30%, rgba(90,18,8,.55) 75%, rgba(50,8,4,.95) 100%);
+    transition:opacity .4s linear}
+  #flash{position:fixed;inset:0;z-index:5;pointer-events:none;background:#fff;opacity:0;
+    transition:opacity .5s ease}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity .5s}
+  #hud.on{opacity:1}
+  #cross{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;
+    border-radius:50%;border:1px solid rgba(255,255,255,.35);
+    transition:border-color .15s,transform .12s,background .15s;will-change:transform}
+  #cross::after{content:'';position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;
+    border-radius:50%;background:rgba(255,255,255,.75);box-shadow:0 0 5px rgba(0,0,0,.9)}
+  #cross.hot{border-color:rgba(255,255,255,.95);background:rgba(255,255,255,.10);transform:scale(1.25)}
+  /* dead-zone ring: inside it the view holds still, outside it you turn */
+  #deadzone{position:absolute;left:50%;top:50%;width:190px;height:190px;margin:-95px 0 0 -95px;
+    border-radius:50%;border:1px dashed rgba(255,255,255,.07);opacity:.9}
+
+  #clock{position:absolute;top:22px;left:50%;transform:translateX(-50%);
+    font-variant-numeric:tabular-nums;font-size:15px;letter-spacing:.22em;
+    color:rgba(255,255,255,.82);text-shadow:0 2px 10px rgba(0,0,0,.9)}
+  #clock small{display:block;text-align:center;font-size:9.5px;letter-spacing:.3em;
+    color:rgba(255,255,255,.4);margin-top:3px}
+
+  #meters{position:absolute;left:26px;bottom:26px;width:210px}
+  .mlabel{font-size:9.5px;letter-spacing:.28em;color:rgba(255,255,255,.5);margin-bottom:6px;
+    text-shadow:0 2px 8px #000}
+  .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;
+    box-shadow:0 1px 6px rgba(0,0,0,.6)}
+  .bar i{display:block;height:100%;width:50%;border-radius:3px;transition:width .2s linear,background .4s}
+  #thirstFill{background:linear-gradient(90deg,#7fd4ff,#bfe9ff)}
+  #bottleWrap{margin-top:14px}
+  #bottleFill{background:linear-gradient(90deg,#63b7e8,#a8e4ff)}
+
+  #prompt{position:absolute;left:50%;bottom:23%;transform:translateX(-50%);
+    text-align:center;font-size:14px;letter-spacing:.06em;color:#fff;
+    text-shadow:0 2px 14px rgba(0,0,0,.95);opacity:0;transition:opacity .16s}
+  #prompt.on{opacity:1}
+  #prompt b{display:inline-block;border:1px solid rgba(255,255,255,.75);border-radius:5px;
+    padding:2px 8px;margin-right:9px;font-size:12px;font-weight:700;letter-spacing:.1em;
+    background:rgba(0,0,0,.35)}
+  #holdring{display:block;width:150px;height:3px;margin:11px auto 0;border-radius:2px;
+    background:rgba(255,255,255,.18);overflow:hidden;opacity:0;transition:opacity .15s}
+  #holdring i{display:block;height:100%;width:0%;background:#bfe9ff}
+  #prompt2{position:absolute;left:50%;bottom:18.5%;transform:translateX(-50%);text-align:center;
+    font-size:12.5px;color:rgba(255,255,255,.78);text-shadow:0 2px 14px rgba(0,0,0,.95);
+    opacity:0;transition:opacity .16s}
+  #prompt2.on{opacity:1}
+  #prompt2 b{display:inline-block;border:1px solid rgba(255,255,255,.55);border-radius:5px;
+    padding:1px 7px;margin-right:8px;font-size:11px;font-weight:700;letter-spacing:.1em;
+    background:rgba(0,0,0,.3)}
+
+  #subs{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);max-width:58vw;
+    text-align:center;font-size:15px;line-height:1.55;color:#f2ede4;
+    text-shadow:0 2px 16px rgba(0,0,0,.98);opacity:0;transition:opacity .3s}
+  #subs.on{opacity:1}
+  #subs em{color:var(--amber);font-style:normal}
+
+  #objective{position:absolute;right:26px;bottom:28px;text-align:right;max-width:280px}
+  #objective .mlabel{margin-bottom:5px}
+  #objective div.t{font-size:13px;color:rgba(255,255,255,.88);text-shadow:0 2px 10px #000;line-height:1.4}
+
+  /* ---- hints, journal, waypoint ---- */
+  #hintbox{position:absolute;left:26px;top:64px;width:292px;padding:12px 15px;border-radius:9px;
+    background:rgba(8,10,12,.58);border:1px solid rgba(255,255,255,.1);
+    opacity:0;transform:translateX(-10px);transition:.25s;pointer-events:none}
+  #hintbox.on{opacity:1;transform:none}
+  #hintbox ul{list-style:none;margin-top:7px}
+  #hintbox li{font-size:11.5px;line-height:1.5;color:rgba(255,255,255,.78);padding:4px 0 4px 13px;
+    position:relative}
+  #hintbox li::before{content:'>';position:absolute;left:0;color:var(--amber);font-size:10px}
+  .hk{display:inline-block;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:0 5px;
+    font-size:8.5px;letter-spacing:.1em;color:rgba(255,255,255,.55);margin-left:6px}
+
+  #journal{position:absolute;inset:9% 11%;padding:28px 34px;border-radius:12px;
+    background:rgba(6,8,10,.9);border:1px solid rgba(255,255,255,.13)}
+  #journal.hide{display:none}
+  .jtitle{font-size:11px;letter-spacing:.34em;color:rgba(255,255,255,.55)}
+  .jcols{display:grid;grid-template-columns:1.1fr 1fr;gap:34px;margin-top:22px}
+  .jh{font-size:9.5px;letter-spacing:.3em;color:var(--amber);margin-bottom:9px}
+  #jnow{font-size:13px;line-height:1.85;color:rgba(255,255,255,.8)}
+  .jctl{font-size:11.5px;line-height:1.95;color:rgba(255,255,255,.55)}
+  .jctl b{color:rgba(255,255,255,.85)}
+  .jends{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10.5px;line-height:1.7;
+    color:rgba(255,255,255,.28)}
+  .jends span.got{color:var(--amber)}
+
+  #waypoint{position:absolute;left:0;top:0;opacity:0;transition:opacity .3s;text-align:center;
+    will-change:transform}
+  #waypoint.on{opacity:.9}
+  #waypoint i{display:block;width:13px;height:13px;margin:0 auto 5px;border:1.5px solid var(--amber);
+    border-radius:50%;box-shadow:0 0 12px rgba(232,180,90,.45);animation:wpp 2.2s ease-in-out infinite}
+  @keyframes wpp{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.55);opacity:.35}}
+  #waypoint span{font-size:9.5px;letter-spacing:.2em;color:var(--amber);
+    text-shadow:0 2px 10px #000;white-space:nowrap}
+
+  #saved{position:absolute;right:26px;top:24px;font-size:9.5px;letter-spacing:.3em;
+    color:rgba(180,255,200,.9);opacity:0;transition:opacity .35s;text-shadow:0 0 12px rgba(0,0,0,.9)}
+
+  /* ---------- screens ---------- */
+  .screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;background:radial-gradient(ellipse at 50% 40%,#14161a 0%,#050506 70%);
+    padding:5vh 6vw;text-align:center}
+  .screen.hide{display:none}
+
+  #title h1{font-size:clamp(52px,12vw,140px);letter-spacing:.24em;font-weight:200;
+    margin-left:.24em;background:linear-gradient(180deg,#fff 20%,#8fb6c9 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+  #title .sub{margin-top:14px;font-size:12.5px;letter-spacing:.42em;color:rgba(255,255,255,.42)}
+  #title .blurb{margin-top:26px;max-width:540px;font-size:14px;line-height:1.7;color:rgba(255,255,255,.62)}
+  .btn{margin-top:30px;pointer-events:auto;cursor:pointer;border:1px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,.05);color:#fff;padding:14px 40px;border-radius:8px;
+    font-size:13px;letter-spacing:.26em;transition:.2s;font-family:inherit}
+  .btn:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.6);transform:translateY(-1px)}
+  .keys{margin-top:26px;font-size:11px;letter-spacing:.14em;color:rgba(255,255,255,.34);line-height:2}
+  .keys b{color:rgba(255,255,255,.7);font-weight:600}
+
+  #gallery{margin-top:26px;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;
+    width:min(840px,93vw)}
+  .slot{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);border-radius:6px;
+    padding:8px 4px;font-size:8.6px;letter-spacing:.06em;color:rgba(255,255,255,.28);min-height:42px;
+    display:flex;align-items:center;justify-content:center;line-height:1.35}
+  .slot.got{border-color:rgba(232,180,90,.5);background:rgba(232,180,90,.08);color:var(--amber)}
+  #count{margin-top:16px;font-size:10.5px;letter-spacing:.3em;color:rgba(255,255,255,.4)}
+
+  #end{background:#000}
+  #end .num{font-size:10.5px;letter-spacing:.42em;color:rgba(255,255,255,.35)}
+  #end h2{margin-top:18px;font-size:clamp(32px,7vw,74px);letter-spacing:.14em;font-weight:200;color:#fff}
+  #end .line{margin-top:8px;width:60px;height:1px;background:var(--amber);opacity:.7}
+  #end p{margin-top:24px;max-width:560px;font-size:15px;line-height:1.8;color:rgba(255,255,255,.66)}
+  #end .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+  #pause .big{font-size:28px;letter-spacing:.3em;font-weight:200}
+  #boot{position:fixed;inset:0;z-index:20;background:#000;display:flex;align-items:center;
+    justify-content:center;font-size:11px;letter-spacing:.35em;color:rgba(255,255,255,.4)}
+  #boot.hide{display:none}
+</style>
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+<div id="post"></div>
+<div id="grain"></div>
+<div id="dryness"></div>
+<div id="flash"></div>
+
+<div id="hud">
+  <div id="deadzone"></div>
+  <div id="cross"></div>
+  <div id="clock">3:07 PM<small>FRIDAY · LAST BELL</small></div>
+
+  <div id="meters">
+    <div class="mlabel">HYDRATION</div>
+    <div class="bar"><i id="thirstFill"></i></div>
+    <div id="bottleWrap">
+      <div class="mlabel">BOTTLE</div>
+      <div class="bar"><i id="bottleFill" style="width:0%"></i></div>
+    </div>
+  </div>
+
+  <div id="objective">
+    <div class="mlabel">RIGHT NOW</div>
+    <div class="t" id="objText">Your mouth is dry. Find water.</div>
+  </div>
+
+  <div id="saved">SAVED</div>
+
+  <div id="waypoint"><i></i><span id="wpLabel"></span></div>
+
+  <div id="hintbox">
+    <div class="mlabel">HINTS <span class="hk">H</span></div>
+    <ul id="hintlist"></ul>
+  </div>
+
+  <div id="journal" class="hide">
+    <div class="jtitle">WHAT YOU KNOW <span class="hk">TAB</span></div>
+    <div class="jcols">
+      <div>
+        <div class="jh">RIGHT NOW</div>
+        <div id="jnow"></div>
+        <div class="jh" style="margin-top:18px">CONTROLS</div>
+        <div class="jctl">
+          <b>WASD</b> walk · <b>SHIFT</b> run · <b>MOUSE</b> point where you want to look<br>
+          <b>E</b> / <b>CLICK</b> use, hold to fill · <b>F</b> the other option · <b>Q</b> drink<br>
+          <b>H</b> hints · <b>TAB</b> this page · <b>V</b> switch view · <b>ESC</b> pause
+        </div>
+      </div>
+      <div>
+        <div class="jh">ENDINGS FOUND</div>
+        <div id="jends" class="jends"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt"><b>E</b><span id="promptText">Use</span>
+    <i id="holdring"><i id="holdbar"></i></i>
+  </div>
+  <div id="prompt2"><b id="prompt2Key">F</b><span id="prompt2Text"></span></div>
+  <div id="subs"><span id="subText"></span></div>
+</div>
+
+<div class="screen" id="title">
+  <h1>THIRST</h1>
+  <div class="sub">TWENTY-FOUR ENDINGS · ONE WATER BOTTLE</div>
+  <div class="blurb">Last period just let out. The hallway smells like floor wax and old radiator heat,
+    and your bottle has been empty since lunch. The doors lock at 4:00 — and the doors are not the end of it.
+    There is a whole afternoon out there: a parking lot, a street, a park, a mini mart, and eventually
+    your own kitchen tap.</div>
+  <button class="btn" id="startBtn">ENTER THE HALLWAY</button>
+  <div class="keys">
+    <b>WASD</b> move &nbsp;·&nbsp; <b>MOUSE</b> point to look (cursor stays on screen) &nbsp;·&nbsp; <b>SHIFT</b> run<br>
+    <b>E</b> or <b>CLICK</b> use / hold &nbsp;·&nbsp; <b>F</b> the other option &nbsp;·&nbsp;
+    <b>H</b> hints &nbsp;·&nbsp; <b>TAB</b> what you know
+    <b>Q</b> drink from your bottle &nbsp;·&nbsp; <b>V</b> switch view &nbsp;·&nbsp; <b>ESC</b> pause
+  </div>
+  <div id="gallery"></div>
+  <div id="count">0 / 24 ENDINGS FOUND</div>
+</div>
+
+<div class="screen hide" id="pause">
+  <div class="big">PAUSED</div>
+  <div class="keys">Click anywhere to go back in.<br>
+    <b>H</b> toggles hints &nbsp;·&nbsp; <b>TAB</b> shows what you know so far.</div>
+  <button class="btn" id="quitBtn">ABANDON · BACK TO TITLE</button>
+</div>
+
+<div class="screen hide" id="end">
+  <div class="num" id="endNum">ENDING 01 / 24</div>
+  <h2 id="endTitle">HYDRATED</h2>
+  <div class="line"></div>
+  <p id="endBody"></p>
+  <div id="endCount" class="num" style="margin-top:28px"></div>
+  <div class="row">
+    <button class="btn" id="againBtn">GO BACK TO 3:07</button>
+    <button class="btn" id="menuBtn">ENDINGS LIST</button>
+  </div>
+</div>
+
+<div id="boot">LOADING THE HALLWAY…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ==========================================================================
+   THIRST — a first-person school hallway, one empty bottle, twelve endings.
+   Everything (textures, audio, geometry) is generated at runtime.
+   ========================================================================== */
+
+/* ----------------------------- endings table ---------------------------- */
+const ENDINGS = [
+  /* --- inside the school (1-12) --- */
+  {id:'filler',  n:1, name:'HYDRATED',        body:"Cold, filtered, faintly metallic. You drink half of it before you reach the doors and the rest on the sidewalk. Nothing else happens. Sometimes a Friday is just a Friday, and the water is just water, and that is the whole ending."},
+  {id:'sink',    n:2, name:'LUKEWARM',        body:"Bathroom water tastes like the pipe it came out of — warm at first, then only barely cold, with a copper edge that sits on the back of your tongue the entire bus ride home. It counted. It shouldn't have, but it counted."},
+  {id:'vending', n:3, name:'TWO DOLLARS',     body:"Eight ounces of branded spring water for two crumpled dollars that had been living in your locker since September. The machine keeps the change. You drink it in four swallows and stay thirsty, which is, you suspect, the business model."},
+  {id:'staff',   n:4, name:'THE STAFF FRIDGE',body:"Marco holds the door with his mop handle and doesn't say anything while you fill up from the cooler nobody told you about. Ice, actual ice. \"Don't tell the office,\" he says. You never do."},
+  {id:'cooler',  n:5, name:'THE TEAM COOLER', body:"Blue. Sugary. Lukewarm at the bottom where the ice gave up an hour ago. You drink from the coach's cooler like a criminal, and for the rest of the year you cannot look at the gym door without tasting it."},
+  {id:'kind',    n:6, name:'KINDNESS',        body:"You hand a full bottle to a crying freshman at locker 214 and walk out into the heat with nothing. Your throat aches the whole way home. On Monday there is a warm Gatorade in your locker and no note, and you know exactly who."},
+  {id:'locked',  n:7, name:'LOCKED IN',       body:"4:00. The magnetic bolts go off down the hall like knuckles cracking. The building exhales, the lights drop to half, and you are inside it. There is water everywhere in here. You have all night to choose."},
+  {id:'flood',   n:8, name:'THE FLOOD',       body:"You held the button. You kept holding it. The basin goes over, the water finds the grout lines, and it travels — past the lockers, under the gym door, all the way to the trophy case. Marco doesn't yell. Marco just looks at you, and that is so much worse."},
+  {id:'dust',    n:9, name:'DUST',            body:"The hallway narrows, the fluorescent hum goes soft and far away, and your knees find the tile before your hands do. Water was everywhere. It was on four walls of this building. You just kept walking past it."},
+  {id:'ten',     n:10,name:'BOTTLE #10,000',  body:"The little green counter rolls over — 10000 — and the filler station chimes a note you have never heard it make. A plastic plaque appears on the wall in September with a date on it. You know the date. You were the date."},
+  {id:'animal',  n:11,name:'THE ANIMAL',      body:"You don't bother with the bottle. You put your mouth in the stream like a dog at a hose, in a public hallway, at 3:40 in the afternoon, and it is the best water of your entire life and someone absolutely filmed it."},
+  {id:'bus',     n:12,name:'THE LAST BUS',    body:"You get on dry. The 4:10 smells like hot vinyl and everyone's whole day. You sit with an empty bottle in your lap for twenty-six minutes, thinking about a fountain you walked past twice, and you will think about it again tonight."},
+
+  /* --- out in the world (13-24) --- */
+  {id:'biggulp', n:13,name:'THE BIG GULP',     body:"Forty-four ounces. A cup the size of your forearm, sweating through its own logo, with ice that cost nothing and is somehow the entire point. You drink it on the curb outside the mini mart and your teeth ache and you are <em>alive</em>."},
+  {id:'clerk',   n:14,name:'KINDNESS OF STRANGERS', body:"You ask for tap water with no money in your pocket, and the clerk fills the biggest cup behind the counter and waves you off when you reach for your backpack. \"Hot day,\" he says. That's the whole transaction. You think about it for years."},
+  {id:'parkfount',n:15,name:'THE PARK FOUNTAIN', body:"The stubby green fountain by the ball field, the one whose arc goes sideways. You fight it for a second, find the angle, and then it is cold and tastes like summer and iron. A dog watches you the entire time."},
+  {id:'sprinkler',n:16,name:'THE SPRINKLER',   body:"You are seventeen years old and you run through a city sprinkler with your backpack on, mouth open, in your school clothes. Someone honks. You do not care. You walk home soaked and grinning and nobody ever hears about it."},
+  {id:'hose',    n:17,name:"SOMEBODY'S HOSE",  body:"The spigot squeaks, the hose coughs out ten seconds of hot rubber water, and then it runs cold and sweet. You drink from a stranger's front yard like a trespasser, watching the window the whole time. The curtain does not move."},
+  {id:'hydrant', n:18,name:'THE HYDRANT',      body:"Somebody's uncle opened it with a wrench and the whole block is in the street. You put your head into a column of water pressurized for burning buildings and come out the other side reborn, half-drowned, shoes squelching, thirst annihilated."},
+  {id:'icecream',n:19,name:'THE ICE CREAM TRUCK', body:"Two dollars gets you a blue freeze pop, which is technically water that has been lied to. It stains your mouth for the rest of the night. Your thirst is gone, replaced by a stickiness you will carry to bed."},
+  {id:'coachtruck',n:20,name:"COACH'S TRUCK",  body:"Coach V is loading cones into a pickup and pours you a paper cone of ice water without breaking his sentence about Tuesday's practice. Then he drives you home. He talks the whole way. You don't mind at all."},
+  {id:'jackpot', n:21,name:'JACKPOT',          body:"The machine out by the buses takes your money, gives nothing, and then, when you rock it exactly once in frustration — <em>thunk. thunk.</em> Two bottles. The universe settling a debt. You drink one and save the other, which is the most adult thing you have ever done."},
+  {id:'rockbottom',n:22,name:'ROCK BOTTOM',    body:"It is standing water at a storm drain on a hot Friday. You know exactly what it is. You do it anyway, once, with your hand cupped, and then you sit on the curb and stare at the street for a while. Your mother asks why you are quiet at dinner."},
+  {id:'rain',    n:23,name:'THE SKY OPENS',    body:"4:35, and the whole afternoon goes purple and lets go at once. You stand in the middle of the sidewalk with your head tipped all the way back and your arms out, catching a thunderstorm in your mouth. Free. Cold. Absolutely free."},
+  {id:'home',    n:24,name:'THE LONG WALK HOME', body:"A hundred meters of hot sidewalk, then the screen door, then the kitchen, then the tap you have drunk from your entire life — run it cold for eight seconds first, everyone knows that. You drink three glasses standing at the counter with the fridge humming behind you. This is the ending."}
+];
+const SAVE_KEY = 'thirst_endings_v1';
+
+/* ------------------------------- helpers -------------------------------- */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp = (a,b,t)=>a+(b-a)*t;
+const rnd = (a,b)=>a+Math.random()*(b-a);
+
+function cvs(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return[c,c.getContext('2d')];}
+function noiseInto(ctx,w,h,amt,alpha){
+  const img=ctx.getImageData(0,0,w,h),d=img.data;
+  for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*amt;
+    d[i]=clamp(d[i]+n,0,255);d[i+1]=clamp(d[i+1]+n,0,255);d[i+2]=clamp(d[i+2]+n,0,255);
+    if(alpha!==undefined)d[i+3]=alpha;}
+  ctx.putImageData(img,0,0);
+}
+function texFrom(c,rx,ry){
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx||1,ry||1);
+  t.anisotropy=8;t.encoding=THREE.sRGBEncoding;return t;
+}
+function greyTex(c,rx,ry){
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx||1,ry||1);t.anisotropy=4;return t;
+}
+
+/* ======================================================================== */
+/*                                 AUDIO                                    */
+/* ======================================================================== */
+const AU = {
+  ctx:null, master:null, musicBus:null, sfxBus:null, started:false,
+  nodes:{}, musicTimer:0, step:0, tension:0,
+
+  init(){
+    if(this.started) return;
+    const C = window.AudioContext||window.webkitAudioContext;
+    const ctx = this.ctx = new C();
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value=-14; comp.knee.value=22; comp.ratio.value=3.4;
+    comp.attack.value=.004; comp.release.value=.25;
+    const master = this.master = ctx.createGain(); master.gain.value=0.9;
+    this.sfxBus = ctx.createGain(); this.sfxBus.gain.value=1;
+    this.musicBus = ctx.createGain(); this.musicBus.gain.value=0.0;
+    this.sfxBus.connect(master); this.musicBus.connect(master);
+    master.connect(comp); comp.connect(ctx.destination);
+
+    // reverb: hallway plate, built from decaying noise
+    const ir = ctx.createBuffer(2, ctx.sampleRate*2.2, ctx.sampleRate);
+    for(let ch=0;ch<2;ch++){
+      const d=ir.getChannelData(ch);
+      for(let i=0;i<d.length;i++){
+        const t=i/d.length;
+        // early reflections give it that hard-tile slap
+        let v=(Math.random()*2-1)*Math.pow(1-t,2.6);
+        if(i<ctx.sampleRate*0.09 && Math.random()<0.0016) v+= (Math.random()*2-1)*0.8;
+        d[i]=v;
+      }
+    }
+    const conv = this.conv = ctx.createConvolver(); conv.buffer=ir;
+    const wet = this.wet = ctx.createGain(); wet.gain.value=0.34;
+    conv.connect(wet); wet.connect(master);
+
+    this.noiseBuf = ctx.createBuffer(1, ctx.sampleRate*3, ctx.sampleRate);
+    const nd = this.noiseBuf.getChannelData(0);
+    for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1;
+
+    this.started = true;
+    this.buildAmbience();
+    this.buildFountainLoop();
+    this.buildOutdoor();
+    this.buildMusic();
+  },
+
+  noise(loop){
+    const s=this.ctx.createBufferSource(); s.buffer=this.noiseBuf; s.loop=!!loop; return s;
+  },
+  env(g, t0, a, d, peak){
+    g.gain.cancelScheduledValues(t0);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak,0.0002), t0+a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+a+d);
+  },
+  out(node, send){
+    node.connect(this.sfxBus);
+    if(send!==0){ const g=this.ctx.createGain(); g.gain.value=send||0.25; node.connect(g); g.connect(this.conv); }
+  },
+
+  /* --- always-on building tone: fluorescent buzz + HVAC + far-off life --- */
+  buildAmbience(){
+    const ctx=this.ctx;
+    const amb = this.nodes.amb = ctx.createGain(); amb.gain.value=0; amb.connect(this.master);
+
+    // HVAC: brown-ish noise through a low shelf
+    const hv=this.noise(true);
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=190; lp.Q.value=.4;
+    const hg=ctx.createGain(); hg.gain.value=.30;
+    hv.connect(lp); lp.connect(hg); hg.connect(amb); hv.start();
+
+    // duct rumble movement
+    const lfo=ctx.createOscillator(); lfo.frequency.value=0.07;
+    const lg=ctx.createGain(); lg.gain.value=40;
+    lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+
+    // fluorescent ballast: 120 Hz + a thin 8k hiss
+    const b1=ctx.createOscillator(); b1.type='sawtooth'; b1.frequency.value=120;
+    const bf=ctx.createBiquadFilter(); bf.type='bandpass'; bf.frequency.value=480; bf.Q.value=5;
+    const bg=this.nodes.buzz=ctx.createGain(); bg.gain.value=.030;
+    b1.connect(bf); bf.connect(bg); bg.connect(amb); b1.start();
+
+    const hs=this.noise(true);
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=6500;
+    const hsg=ctx.createGain(); hsg.gain.value=.012;
+    hs.connect(hp); hp.connect(hsg); hsg.connect(amb); hs.start();
+
+    this.ambGain = amb;
+  },
+  ambienceUp(){ if(!this.started)return; const t=this.ctx.currentTime;
+    this.ambGain.gain.cancelScheduledValues(t);
+    this.ambGain.gain.setTargetAtTime(0.5, t, 1.2); },
+  ambienceDown(){ if(!this.started)return; const t=this.ctx.currentTime;
+    this.ambGain.gain.setTargetAtTime(0.0, t, 0.4); },
+
+  /* --- the fountain's running water, gain driven by distance every frame -- */
+  buildFountainLoop(){
+    const ctx=this.ctx;
+    const g=this.nodes.waterGain=ctx.createGain(); g.gain.value=0;
+    g.connect(this.sfxBus);
+    const sendg=ctx.createGain(); sendg.gain.value=.5; g.connect(sendg); sendg.connect(this.conv);
+
+    const n=this.noise(true);
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1500; bp.Q.value=.75;
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=520;
+    n.connect(bp); bp.connect(hp); hp.connect(g); n.start();
+    this.nodes.waterBP=bp;
+
+    // burble: slow random wobble of the band
+    const w=ctx.createOscillator(); w.type='sine'; w.frequency.value=3.1;
+    const wg=ctx.createGain(); wg.gain.value=330;
+    w.connect(wg); wg.connect(bp.frequency); w.start();
+  },
+  waterLevel(v, pitch){
+    if(!this.started)return;
+    const t=this.ctx.currentTime;
+    this.nodes.waterGain.gain.setTargetAtTime(v, t, .08);
+    if(pitch) this.nodes.waterBP.frequency.setTargetAtTime(pitch, t, .12);
+  },
+
+  /* ---- outdoors: wind, cicadas, far-off traffic, and the weather ------ */
+  buildOutdoor(){
+    const ctx=this.ctx;
+    const out=this.nodes.outdoor=ctx.createGain(); out.gain.value=0; out.connect(this.master);
+
+    // wind through the parking lot
+    const w=this.noise(true);
+    const wf=ctx.createBiquadFilter(); wf.type='bandpass'; wf.frequency.value=540; wf.Q.value=.45;
+    const wg=ctx.createGain(); wg.gain.value=.16;
+    w.connect(wf); wf.connect(wg); wg.connect(out); w.start();
+    const wl=ctx.createOscillator(); wl.frequency.value=.055;
+    const wlg=ctx.createGain(); wlg.gain.value=.10;
+    wl.connect(wlg); wlg.connect(wg.gain); wl.start();
+
+    // traffic on the far road
+    const tr=this.noise(true);
+    const tf=ctx.createBiquadFilter(); tf.type='lowpass'; tf.frequency.value=230;
+    const tg=ctx.createGain(); tg.gain.value=.13;
+    tr.connect(tf); tf.connect(tg); tg.connect(out); tr.start();
+
+    // late-summer cicada shimmer
+    const ci=this.noise(true);
+    const cf=ctx.createBiquadFilter(); cf.type='bandpass'; cf.frequency.value=5200; cf.Q.value=7;
+    const cg=this.nodes.cicada=ctx.createGain(); cg.gain.value=.020;
+    ci.connect(cf); cf.connect(cg); cg.connect(out); ci.start();
+    const cl=ctx.createOscillator(); cl.type='sine'; cl.frequency.value=7.5;
+    const clg=ctx.createGain(); clg.gain.value=.012;
+    cl.connect(clg); clg.connect(cg.gain); cl.start();
+
+    // rain, held at zero until the sky opens
+    const rn=this.noise(true);
+    const rf=ctx.createBiquadFilter(); rf.type='bandpass'; rf.frequency.value=2400; rf.Q.value=.5;
+    const rg=this.nodes.rain=ctx.createGain(); rg.gain.value=0;
+    rn.connect(rf); rf.connect(rg); rg.connect(this.master); rn.start();
+    const rlow=this.noise(true);
+    const rlf=ctx.createBiquadFilter(); rlf.type='lowpass'; rlf.frequency.value=420;
+    const rlg=ctx.createGain(); rlg.gain.value=.5;
+    rlow.connect(rlf); rlf.connect(rlg); rlg.connect(rg); rlow.start();
+
+    // the idling bus, gain driven by distance
+    const bg2=this.nodes.busGain=ctx.createGain(); bg2.gain.value=0; bg2.connect(this.master);
+    const d1=ctx.createOscillator(); d1.type='sawtooth'; d1.frequency.value=41;
+    const d2=ctx.createOscillator(); d2.type='sawtooth'; d2.frequency.value=61.5;
+    const dlp=ctx.createBiquadFilter(); dlp.type='lowpass'; dlp.frequency.value=260;
+    const dg=ctx.createGain(); dg.gain.value=.22;
+    d1.connect(dlp); d2.connect(dlp); dlp.connect(dg); dg.connect(bg2); d1.start(); d2.start();
+    const rough=ctx.createOscillator(); rough.frequency.value=5.7;
+    const roughg=ctx.createGain(); roughg.gain.value=26;
+    rough.connect(roughg); roughg.connect(dlp.frequency); rough.start();
+
+    // sprinkler tick, gain driven by distance
+    const sp=this.nodes.sprinkGain=ctx.createGain(); sp.gain.value=0; sp.connect(this.sfxBus);
+    const spn=this.noise(true);
+    const spf=ctx.createBiquadFilter(); spf.type='bandpass'; spf.frequency.value=3000; spf.Q.value=1.2;
+    spn.connect(spf); spf.connect(sp); spn.start();
+  },
+  outdoorLevel(v){ if(!this.started||!this.nodes.outdoor)return;
+    this.nodes.outdoor.gain.setTargetAtTime(v,this.ctx.currentTime,.9); },
+  rainLevel(v){ if(!this.started||!this.nodes.rain)return;
+    this.nodes.rain.gain.setTargetAtTime(v,this.ctx.currentTime,1.4); },
+  busLevel(v){ if(!this.started||!this.nodes.busGain)return;
+    this.nodes.busGain.gain.setTargetAtTime(v,this.ctx.currentTime,.2); },
+  sprinkLevel(v){ if(!this.started||!this.nodes.sprinkGain)return;
+    this.nodes.sprinkGain.gain.setTargetAtTime(v,this.ctx.currentTime,.2); },
+  bird(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=2+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++){
+      const st=t+i*rnd(.07,.16);
+      const o=ctx.createOscillator(); o.type='sine';
+      const f=rnd(2400,4200);
+      o.frequency.setValueAtTime(f,st);
+      o.frequency.exponentialRampToValueAtTime(f*rnd(.6,1.6),st+.06);
+      const g=ctx.createGain(); o.connect(g); this.out(g,.35);
+      this.env(g,st,.008,.07,.035); o.start(st); o.stop(st+.2);
+    }
+  },
+  carPass(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise();
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(380,t);
+    bp.frequency.exponentialRampToValueAtTime(1400,t+.9);
+    bp.frequency.exponentialRampToValueAtTime(300,t+2.2); bp.Q.value=.8;
+    const g=ctx.createGain(); n.connect(bp); bp.connect(g); this.out(g,.3);
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(.11,t+.9);
+    g.gain.exponentialRampToValueAtTime(.0001,t+2.4);
+    n.start(t); n.stop(t+2.6);
+  },
+  airBrake(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise();
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2600;
+    const g=ctx.createGain(); n.connect(hp); hp.connect(g); this.out(g,.4);
+    this.env(g,t,.01,.75,.22); n.start(t); n.stop(t+1.1);
+  },
+  jingle(){   // the ice cream truck, forever slightly out of tune
+    const ctx=this.ctx,t=ctx.currentTime;
+    const mel=[523,659,784,659,523,587,523,0,392,523,659,523];
+    mel.forEach((f,i)=>{
+      if(!f) return;
+      const st=t+i*.33;
+      const o=ctx.createOscillator(); o.type='triangle';
+      o.frequency.value=f*rnd(.993,1.007);
+      const o2=ctx.createOscillator(); o2.type='sine'; o2.frequency.value=f*2;
+      const g=ctx.createGain(), g2=ctx.createGain();
+      o.connect(g); o2.connect(g2);
+      const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2200;
+      g.connect(lp); g2.connect(lp); this.out(lp,.5);
+      this.env(g,st,.012,.30,.045); this.env(g2,st,.01,.16,.012);
+      o.start(st); o2.start(st); o.stop(st+.5); o2.stop(st+.5);
+    });
+  },
+  storeBell(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    [1860,2480].forEach((f,i)=>{
+      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=ctx.createGain(); o.connect(g); this.out(g,.5);
+      this.env(g,t+i*.06,.004,.55,.06); o.start(t+i*.06); o.stop(t+i*.06+.8);
+    });
+  },
+  gush(){     // a hydrant letting go
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise();
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=900; bp.Q.value=.4;
+    const g=ctx.createGain(); n.connect(bp); bp.connect(g); this.out(g,.7);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.34,t+.25);
+    g.gain.setValueAtTime(.34,t+2.2); g.gain.exponentialRampToValueAtTime(.0001,t+3.4);
+    n.start(t); n.stop(t+3.6);
+  },
+  thunder(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise();
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=180; lp.Q.value=.6;
+    const g=ctx.createGain(); n.connect(lp); lp.connect(g); this.out(g,.9);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.30,t+.35);
+    g.gain.exponentialRampToValueAtTime(.06,t+1.6);
+    g.gain.exponentialRampToValueAtTime(.0001,t+4.2);
+    n.start(t); n.stop(t+4.4);
+  },
+
+  /* ------------------------------- SFX -------------------------------- */
+  step_(surface, run){
+    const ctx=this.ctx, t=ctx.currentTime;
+    const n=this.noise(); const g=ctx.createGain();
+    const bp=ctx.createBiquadFilter();
+    if(surface==='gym'){ bp.type='bandpass'; bp.frequency.value=rnd(420,700); bp.Q.value=1.1; }
+    else { bp.type='bandpass'; bp.frequency.value=rnd(1500,2600); bp.Q.value=1.6; }
+    const peak = (run?0.16:0.085)*rnd(.8,1.2);
+    n.connect(bp); bp.connect(g); this.out(g,.30);
+    this.env(g,t,.002,surface==='gym'?.13:.075,peak);
+    n.start(t); n.stop(t+.3);
+    // heel thud
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(rnd(95,135),t);
+    o.frequency.exponentialRampToValueAtTime(52,t+.09);
+    const og=ctx.createGain(); o.connect(og); this.out(og,.18);
+    this.env(og,t,.003,.10,peak*0.55);
+    o.start(t); o.stop(t+.25);
+  },
+  gulp(i){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sine';
+    const f0=rnd(150,205)-i*8;
+    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f0*.42,t+.14);
+    const g=ctx.createGain(); o.connect(g); this.out(g,.12);
+    this.env(g,t,.012,.16,.30);
+    o.start(t); o.stop(t+.4);
+    const n=this.noise(); const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=900;
+    const ng=ctx.createGain(); n.connect(lp); lp.connect(ng); this.out(ng,.1);
+    this.env(ng,t,.008,.11,.10); n.start(t); n.stop(t+.3);
+  },
+  breath(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise(); const bp=ctx.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(700,t); bp.frequency.exponentialRampToValueAtTime(1500,t+.5); bp.Q.value=.7;
+    const g=ctx.createGain(); n.connect(bp); bp.connect(g); this.out(g,.2);
+    this.env(g,t,.08,.55,.10); n.start(t); n.stop(t+.9);
+  },
+  metal(kind){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise(); const g=ctx.createGain(); n.connect(g);
+    const freqs = kind==='locker'? [330,712,1180,1930,3160] : [520,940,1560,2400];
+    freqs.forEach((f,i)=>{
+      const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f*rnd(.97,1.03);
+      bp.Q.value=rnd(16,34);
+      const bg=ctx.createGain(); bg.gain.value=1/(i+1.4);
+      g.connect(bp); bp.connect(bg); this.out(bg,.45);
+    });
+    this.env(g,t,.001,kind==='locker'?.9:.45,.55);
+    n.start(t); n.stop(t+1.4);
+  },
+  clickSfx(v){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='square'; o.frequency.value=v||1200;
+    const g=ctx.createGain(); o.connect(g); this.out(g,.1);
+    this.env(g,t,.001,.03,.06); o.start(t); o.stop(t+.08);
+  },
+  door(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise(); const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000;
+    const g=ctx.createGain(); n.connect(lp); lp.connect(g); this.out(g,.5);
+    this.env(g,t,.004,.55,.34); n.start(t); n.stop(t+1);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(90,t);
+    o.frequency.exponentialRampToValueAtTime(42,t+.3);
+    const og=ctx.createGain(); o.connect(og); this.out(og,.3);
+    this.env(og,t,.005,.35,.3); o.start(t); o.stop(t+.7);
+  },
+  bell(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const carrier=ctx.createOscillator(), mod=ctx.createOscillator();
+    carrier.frequency.value=622; mod.frequency.value=622*1.41;
+    const mg=ctx.createGain(); mg.gain.setValueAtTime(900,t);
+    mg.gain.exponentialRampToValueAtTime(6,t+1.6);
+    mod.connect(mg); mg.connect(carrier.frequency);
+    const g=ctx.createGain(); carrier.connect(g); this.out(g,.8);
+    this.env(g,t,.004,2.6,.28);
+    carrier.start(t); mod.start(t); carrier.stop(t+3); mod.stop(t+3);
+  },
+  vend(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(58,t);
+    o.frequency.linearRampToValueAtTime(74,t+1.1);
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420;
+    const g=ctx.createGain(); o.connect(lp); lp.connect(g); this.out(g,.25);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.1);
+    g.gain.setValueAtTime(.16,t+1.0); g.gain.exponentialRampToValueAtTime(.0001,t+1.3);
+    o.start(t); o.stop(t+1.4);
+    setTimeout(()=>this.metal('drop'), 1250);
+  },
+  heart(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    [0,.26].forEach((off,i)=>{
+      const o=ctx.createOscillator(); o.type='sine';
+      o.frequency.setValueAtTime(64,t+off); o.frequency.exponentialRampToValueAtTime(34,t+off+.16);
+      const g=ctx.createGain(); o.connect(g); this.out(g,.05);
+      this.env(g,t+off,.012,.17,i?.16:.24); o.start(t+off); o.stop(t+off+.45);
+    });
+  },
+  chime(){ // the 10,000 ending
+    const ctx=this.ctx,t=ctx.currentTime;
+    [784,988,1175,1568].forEach((f,i)=>{
+      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+      const g=ctx.createGain(); o.connect(g); this.out(g,.7);
+      this.env(g,t+i*.11,.01,1.8,.16); o.start(t+i*.11); o.stop(t+i*.11+2.2);
+    });
+  },
+  splash(){
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=this.noise(); const bp=ctx.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(2600,t); bp.frequency.exponentialRampToValueAtTime(700,t+.5); bp.Q.value=.8;
+    const g=ctx.createGain(); n.connect(bp); bp.connect(g); this.out(g,.6);
+    this.env(g,t,.01,.7,.30); n.start(t); n.stop(t+1.1);
+  },
+  voice(pitch){ // muffled "someone said something" — no words, just cadence
+    const ctx=this.ctx,t=ctx.currentTime;
+    const n=Math.floor(rnd(3,7));
+    for(let i=0;i<n;i++){
+      const o=ctx.createOscillator(); o.type='sawtooth';
+      const f=(pitch||150)*rnd(.8,1.25);
+      const st=t+i*rnd(.10,.19);
+      o.frequency.setValueAtTime(f,st); o.frequency.linearRampToValueAtTime(f*rnd(.85,1.15),st+.1);
+      const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=rnd(450,1100); bp.Q.value=4;
+      const g=ctx.createGain(); o.connect(bp); bp.connect(g); this.out(g,.4);
+      this.env(g,st,.02,.10,.055); o.start(st); o.stop(st+.3);
+    }
+  },
+
+  /* ------------------------------ MUSIC -------------------------------- */
+  buildMusic(){
+    const ctx=this.ctx;
+    const g=this.nodes.musicGain=ctx.createGain(); g.gain.value=.0;
+    g.connect(this.musicBus);
+    const send=ctx.createGain(); send.gain.value=.3; g.connect(send); send.connect(this.conv);
+
+    // soft tape hiss under everything
+    const h=this.noise(true); const hp=ctx.createBiquadFilter();
+    hp.type='highpass'; hp.frequency.value=2200;
+    const hg=ctx.createGain(); hg.gain.value=.010;
+    h.connect(hp); hp.connect(hg); hg.connect(g); h.start();
+    this.musicOut=g;
+  },
+  pad(freqs, dur){
+    const ctx=this.ctx, t=ctx.currentTime;
+    freqs.forEach((f,i)=>{
+      [0,-6,7].forEach((det,k)=>{
+        const o=ctx.createOscillator(); o.type= k===2?'triangle':'sawtooth';
+        o.frequency.value=f*Math.pow(2,det/1200);
+        const lp=ctx.createBiquadFilter(); lp.type='lowpass';
+        lp.frequency.setValueAtTime(420,t); lp.Q.value=.8;
+        lp.frequency.linearRampToValueAtTime(900+this.tension*500,t+dur*.5);
+        lp.frequency.linearRampToValueAtTime(380,t+dur);
+        const g=ctx.createGain(); o.connect(lp); lp.connect(g); g.connect(this.musicOut);
+        const peak=(k===2?.028:.020)/(i*.5+1);
+        g.gain.setValueAtTime(.0001,t);
+        g.gain.exponentialRampToValueAtTime(peak,t+dur*.35);
+        g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+        o.start(t); o.stop(t+dur+.1);
+      });
+    });
+  },
+  pluck(f,when,vel){
+    const ctx=this.ctx,t=(when||ctx.currentTime);
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const o2=ctx.createOscillator(); o2.type='sine'; o2.frequency.value=f*2.01;
+    const g=ctx.createGain(), g2=ctx.createGain();
+    o.connect(g); o2.connect(g2); g.connect(this.musicOut); g2.connect(this.musicOut);
+    const sendg=ctx.createGain(); sendg.gain.value=.5; g.connect(sendg); sendg.connect(this.conv);
+    this.env(g,t,.006,1.5,(vel||1)*.055);
+    this.env(g2,t,.004,.5,(vel||1)*.014);
+    o.start(t);o2.start(t);o.stop(t+2);o2.stop(t+2);
+  },
+  musicTick(dt, mode){
+    if(!this.started) return;
+    this.musicTimer -= dt;
+    if(this.musicTimer>0) return;
+    const INSIDE=[
+      [110,164.81,261.63,329.63],   // Am9
+      [87.31,130.81,207.65,261.63], // Fmaj7
+      [130.81,196,246.94,392],      // C
+      [98,146.83,196,293.66]        // Gsus
+    ];
+    const OUTSIDE=[
+      [130.81,196,329.63,392],      // C  — wider, warmer, afternoon
+      [146.83,220,349.23,440],      // Dm7
+      [116.54,174.61,293.66,349.23],// Bb
+      [98,146.83,246.94,392]        // G
+    ];
+    const CH = (mode==='outside')?OUTSIDE:INSIDE;
+    const ch=CH[this.step%4];
+    this.pad(ch, 6.2);
+    // a few sparse notes on top
+    const scale=[329.63,392,440,493.88,587.33,659.25];
+    const now=this.ctx.currentTime;
+    const notes = mode==='menu'?2: (1+Math.floor(Math.random()*3));
+    for(let i=0;i<notes;i++){
+      if(Math.random()<.45) continue;
+      this.pluck(scale[Math.floor(Math.random()*scale.length)], now+rnd(.2,4.6), rnd(.5,1));
+    }
+    if(this.tension>.4 && Math.random()<.7){
+      // low pulse when you're in trouble
+      const t=now;
+      const o=this.ctx.createOscillator(); o.type='sine'; o.frequency.value=55;
+      const g=this.ctx.createGain(); o.connect(g); g.connect(this.musicOut);
+      this.env(g,t,.3,2.6,.06*this.tension); o.start(t); o.stop(t+3.2);
+    }
+    this.step++;
+    this.musicTimer = 5.6;
+  },
+  musicVol(v,time){ if(!this.started)return;
+    this.musicBus.gain.setTargetAtTime(v,this.ctx.currentTime,time||1.5); }
+};
+
+/* ======================================================================== */
+/*                               TEXTURES                                   */
+/* ======================================================================== */
+const TEX = {};
+function buildTextures(){
+  /* --- corridor terrazzo tile: 4 tiles per canvas, grout lines, speckle --- */
+  {
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#8d8579'; x.fillRect(0,0,S,S);
+    const t=S/2;
+    for(let i=0;i<2;i++)for(let j=0;j<2;j++){
+      const base = (i+j)%2? '#a49b8c':'#8e8577';
+      x.fillStyle=base; x.fillRect(i*t+2,j*t+2,t-4,t-4);
+      // speckles
+      for(let k=0;k<2400;k++){
+        const px=i*t+2+Math.random()*(t-4), py=j*t+2+Math.random()*(t-4);
+        const g=Math.random();
+        x.fillStyle = g<.3?'rgba(40,38,34,.55)': g<.6?'rgba(230,226,216,.5)':'rgba(120,110,95,.45)';
+        const r=Math.random()*2.4+.4;
+        x.fillRect(px,py,r,r);
+      }
+      // wax sheen streak
+      const grad=x.createLinearGradient(i*t,j*t,i*t+t,j*t+t);
+      grad.addColorStop(0,'rgba(255,255,255,.05)');grad.addColorStop(.5,'rgba(255,255,255,0)');
+      grad.addColorStop(1,'rgba(0,0,0,.05)');
+      x.fillStyle=grad; x.fillRect(i*t+2,j*t+2,t-4,t-4);
+    }
+    x.strokeStyle='rgba(50,46,40,.85)'; x.lineWidth=3;
+    x.beginPath(); x.moveTo(t,0); x.lineTo(t,S); x.moveTo(0,t); x.lineTo(S,t);
+    x.strokeRect(0,0,S,S); x.stroke();
+    // scuffs
+    for(let k=0;k<26;k++){
+      x.strokeStyle='rgba(60,55,48,'+rnd(.05,.16)+')'; x.lineWidth=rnd(1,4);
+      x.beginPath(); const sx=Math.random()*S, sy=Math.random()*S;
+      x.arc(sx,sy,rnd(8,40),rnd(0,6),rnd(0,6)); x.stroke();
+    }
+    noiseInto(x,S,S,16);
+    TEX.floor = texFrom(c,20,2);
+    // rough map: grout rough, tile smooth-ish
+    const [rc,rx]=cvs(S,S);
+    rx.fillStyle='#4a4a4a'; rx.fillRect(0,0,S,S);
+    rx.strokeStyle='#d8d8d8'; rx.lineWidth=4;
+    rx.beginPath(); rx.moveTo(t,0); rx.lineTo(t,S); rx.moveTo(0,t); rx.lineTo(S,t);
+    rx.strokeRect(0,0,S,S); rx.stroke();
+    noiseInto(rx,S,S,40);
+    TEX.floorRough = greyTex(rc,20,2);
+  }
+
+  /* ------------------ painted cinderblock wall + wainscot ---------------- */
+  {
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#cfc6b4'; x.fillRect(0,0,S,S);
+    const bh=S/8, bw=S/4;
+    for(let r=0;r<8;r++){
+      const off=(r%2)?bw/2:0;
+      for(let i=-1;i<5;i++){
+        const bx=i*bw+off, by=r*bh;
+        const shade = rnd(-10,10);
+        x.fillStyle=`rgb(${207+shade},${198+shade},${180+shade})`;
+        x.fillRect(bx+2,by+2,bw-4,bh-4);
+        // paint roll texture
+        for(let k=0;k<50;k++){
+          x.fillStyle='rgba(255,255,255,'+rnd(.02,.07)+')';
+          x.fillRect(bx+Math.random()*bw, by+Math.random()*bh, rnd(2,14), rnd(1,3));
+        }
+        x.strokeStyle='rgba(150,142,126,.7)'; x.lineWidth=2;
+        x.strokeRect(bx+2,by+2,bw-4,bh-4);
+      }
+    }
+    noiseInto(x,S,S,14);
+    TEX.wall = texFrom(c,8,1.4);
+
+    const [bc,bx2]=cvs(S,S);
+    bx2.fillStyle='#8a8a8a'; bx2.fillRect(0,0,S,S);
+    for(let r=0;r<8;r++){
+      const off=(r%2)?bw/2:0;
+      for(let i=-1;i<5;i++){
+        bx2.strokeStyle='#202020'; bx2.lineWidth=5;
+        bx2.strokeRect(i*bw+off+2,r*bh+2,bw-4,bh-4);
+      }
+    }
+    noiseInto(bx2,S,S,36);
+    TEX.wallBump = greyTex(bc,8,1.4);
+  }
+
+  /* ------------------------------ lockers -------------------------------- */
+  {
+    const S=512,[c,x]=cvs(S,S);   // one locker column, tiled horizontally
+    x.fillStyle='#3f5a6b'; x.fillRect(0,0,S,S);
+    // two doors stacked
+    for(let d=0;d<2;d++){
+      const y0=d*S/2+6, h=S/2-12;
+      const g=x.createLinearGradient(6,0,S-6,0);
+      g.addColorStop(0,'#4a6a7d'); g.addColorStop(.18,'#5d8195');
+      g.addColorStop(.55,'#43606f'); g.addColorStop(1,'#334b58');
+      x.fillStyle=g; x.fillRect(6,y0,S-12,h);
+      x.strokeStyle='rgba(15,25,32,.9)'; x.lineWidth=5; x.strokeRect(6,y0,S-12,h);
+      // vent slits
+      x.fillStyle='rgba(10,18,24,.85)';
+      for(let i=0;i<4;i++) x.fillRect(S*0.3, y0+18+i*13, S*0.4, 5);
+      // handle + latch
+      x.fillStyle='#7d8b93'; x.fillRect(S-72, y0+h*0.42, 26, 62);
+      x.fillStyle='#1b2a33'; x.fillRect(S-66, y0+h*0.42+8, 14, 30);
+      // number plate
+      x.fillStyle='rgba(230,235,238,.9)'; x.fillRect(28,y0+16,74,26);
+      x.fillStyle='#22313a'; x.font='bold 20px monospace';
+      x.fillText(String(100+Math.floor(Math.random()*180)), 36, y0+36);
+      // dents, sticker residue, scuffs
+      for(let k=0;k<30;k++){
+        x.fillStyle='rgba(255,255,255,'+rnd(.02,.09)+')';
+        x.fillRect(10+Math.random()*(S-20), y0+Math.random()*h, rnd(3,40), rnd(1,4));
+      }
+      for(let k=0;k<6;k++){
+        x.fillStyle='rgba(20,30,36,'+rnd(.1,.3)+')';
+        x.beginPath(); x.ellipse(rnd(20,S-20), y0+rnd(10,h), rnd(4,22), rnd(3,14), rnd(0,3),0,7); x.fill();
+      }
+    }
+    noiseInto(x,S,S,12);
+    TEX.locker = texFrom(c,1,1);
+    const [rc,rx]=cvs(64,64); rx.fillStyle='#6b6b6b'; rx.fillRect(0,0,64,64);
+    noiseInto(rx,64,64,70); TEX.lockerRough=greyTex(rc,4,4);
+  }
+
+  /* ---------------------------- ceiling tile ----------------------------- */
+  {
+    const S=256,[c,x]=cvs(S,S);
+    x.fillStyle='#d9d5cb'; x.fillRect(0,0,S,S);
+    for(let i=0;i<5000;i++){
+      x.fillStyle='rgba(150,146,136,'+rnd(.15,.5)+')';
+      x.beginPath(); x.arc(Math.random()*S,Math.random()*S,rnd(.6,1.7),0,7); x.fill();
+    }
+    // water stain, because of course
+    const g=x.createRadialGradient(S*.7,S*.3,3,S*.7,S*.3,60);
+    g.addColorStop(0,'rgba(170,140,95,.5)'); g.addColorStop(1,'rgba(170,140,95,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(S*.7,S*.3,60,0,7); x.fill();
+    x.strokeStyle='rgba(120,116,108,.9)'; x.lineWidth=5; x.strokeRect(0,0,S,S);
+    noiseInto(x,S,S,10);
+    TEX.ceil = texFrom(c,26,3);
+  }
+
+  /* --------------------------- bathroom wall tile ------------------------ */
+  {
+    const S=256,[c,x]=cvs(S,S);
+    x.fillStyle='#6d7d78'; x.fillRect(0,0,S,S);
+    const t=S/4;
+    for(let i=0;i<4;i++)for(let j=0;j<4;j++){
+      const sh=rnd(-12,12);
+      x.fillStyle=`rgb(${168+sh},${180+sh},${174+sh})`;
+      x.fillRect(i*t+2,j*t+2,t-4,t-4);
+      const g=x.createLinearGradient(i*t,j*t,i*t+t,j*t+t);
+      g.addColorStop(0,'rgba(255,255,255,.18)');g.addColorStop(1,'rgba(0,0,0,.06)');
+      x.fillStyle=g; x.fillRect(i*t+2,j*t+2,t-4,t-4);
+    }
+    noiseInto(x,S,S,9);
+    TEX.tileWall=texFrom(c,10,3);
+  }
+
+  /* ------------------------------ gym floor ------------------------------ */
+  {
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#b98c4e'; x.fillRect(0,0,S,S);
+    for(let i=0;i<10;i++){
+      x.fillStyle=`rgba(${120+Math.random()*60|0},${85+Math.random()*40|0},40,.4)`;
+      x.fillRect(0,i*S/10,S,S/10-2);
+      for(let k=0;k<200;k++){
+        x.strokeStyle='rgba(90,60,25,'+rnd(.05,.2)+')'; x.lineWidth=rnd(.5,2);
+        x.beginPath(); const yy=i*S/10+Math.random()*S/10;
+        x.moveTo(Math.random()*S,yy); x.lineTo(Math.random()*S,yy+rnd(-2,2)); x.stroke();
+      }
+    }
+    const g=x.createLinearGradient(0,0,S,S);
+    g.addColorStop(0,'rgba(255,240,200,.14)');g.addColorStop(1,'rgba(0,0,0,.1)');
+    x.fillStyle=g; x.fillRect(0,0,S,S);
+    noiseInto(x,S,S,10);
+    TEX.gymFloor=texFrom(c,8,8);
+  }
+
+  /* ------------------------------ outdoors ------------------------------- */
+  {   // asphalt
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#3b3c3e'; x.fillRect(0,0,S,S);
+    for(let i=0;i<26000;i++){
+      const g=Math.random();
+      x.fillStyle = g<.4?'rgba(24,24,26,.6)': g<.75?'rgba(90,90,94,.4)':'rgba(140,138,134,.25)';
+      x.fillRect(Math.random()*S,Math.random()*S,rnd(.6,2.2),rnd(.6,2.2));
+    }
+    for(let k=0;k<12;k++){   // cracks + patched tar
+      x.strokeStyle='rgba(18,18,20,'+rnd(.3,.7)+')'; x.lineWidth=rnd(1,3.5);
+      x.beginPath(); let cx2=Math.random()*S, cy=Math.random()*S; x.moveTo(cx2,cy);
+      for(let i=0;i<7;i++){ cx2+=rnd(-60,60); cy+=rnd(-60,60); x.lineTo(cx2,cy); }
+      x.stroke();
+    }
+    noiseInto(x,S,S,16);
+    TEX.asphalt=texFrom(c,14,14);
+  }
+  {   // grass
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#4c6b32'; x.fillRect(0,0,S,S);
+    for(let i=0;i<40000;i++){
+      const g=Math.random();
+      x.strokeStyle = g<.35?'rgba(58,88,38,.7)': g<.7?'rgba(104,138,62,.55)':'rgba(140,160,74,.4)';
+      x.lineWidth=rnd(.6,1.6);
+      const sx=Math.random()*S, sy=Math.random()*S;
+      x.beginPath(); x.moveTo(sx,sy); x.lineTo(sx+rnd(-2,2),sy-rnd(2,6)); x.stroke();
+    }
+    for(let k=0;k<14;k++){  // dry patches, it's been a hot month
+      const g2=x.createRadialGradient(Math.random()*S,Math.random()*S,4,Math.random()*S,Math.random()*S,rnd(30,90));
+      g2.addColorStop(0,'rgba(150,140,80,.28)'); g2.addColorStop(1,'rgba(150,140,80,0)');
+      x.fillStyle=g2; x.fillRect(0,0,S,S);
+    }
+    noiseInto(x,S,S,12);
+    TEX.grass=texFrom(c,20,20);
+  }
+  {   // sidewalk slabs
+    const S=256,[c,x]=cvs(S,S);
+    x.fillStyle='#a9a69f'; x.fillRect(0,0,S,S);
+    for(let i=0;i<9000;i++){
+      x.fillStyle='rgba('+(140+Math.random()*80|0)+','+(138+Math.random()*80|0)+',130,.3)';
+      x.fillRect(Math.random()*S,Math.random()*S,rnd(.8,2),rnd(.8,2));
+    }
+    x.strokeStyle='rgba(70,68,64,.8)'; x.lineWidth=4;
+    x.strokeRect(0,0,S,S); x.beginPath(); x.moveTo(0,S/2); x.lineTo(S,S/2); x.stroke();
+    noiseInto(x,S,S,12);
+    TEX.walk=texFrom(c,1,1);
+  }
+  {   // brick
+    const S=512,[c,x]=cvs(S,S);
+    x.fillStyle='#8d5b47'; x.fillRect(0,0,S,S);
+    const bh=S/12, bw=S/6;
+    for(let r=0;r<12;r++){
+      const off=(r%2)?bw/2:0;
+      for(let i=-1;i<7;i++){
+        const sh=rnd(-18,18);
+        x.fillStyle=`rgb(${150+sh},${88+sh},${70+sh})`;
+        x.fillRect(i*bw+off+2,r*bh+2,bw-4,bh-4);
+        for(let k=0;k<20;k++){
+          x.fillStyle='rgba(60,34,26,'+rnd(.03,.12)+')';
+          x.fillRect(i*bw+off+Math.random()*bw, r*bh+Math.random()*bh, rnd(1,6), rnd(1,3));
+        }
+      }
+    }
+    noiseInto(x,S,S,14);
+    TEX.brick=texFrom(c,6,3);
+  }
+  {   // roof shingles
+    const S=256,[c,x]=cvs(S,S);
+    x.fillStyle='#4a4741'; x.fillRect(0,0,S,S);
+    for(let r=0;r<10;r++){
+      const off=(r%2)?16:0;
+      for(let i=-1;i<9;i++){
+        const sh=rnd(-14,14);
+        x.fillStyle=`rgb(${74+sh},${70+sh},${64+sh})`;
+        x.fillRect(i*32+off, r*26, 30, 24);
+      }
+    }
+    noiseInto(x,S,S,20);
+    TEX.shingle=texFrom(c,10,6);
+  }
+  {   // afternoon sky, drawn top-down (canvas top = zenith)
+    const [c,x]=cvs(8,256);
+    const g=x.createLinearGradient(0,0,0,256);
+    g.addColorStop(0,'#2f6ea8'); g.addColorStop(.42,'#79aed2');
+    g.addColorStop(.74,'#c9d9de'); g.addColorStop(1,'#efdcc0');
+    x.fillStyle=g; x.fillRect(0,0,8,256);
+    const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding;
+    TEX.sky=t;
+  }
+
+  /* ------------------------------ grain overlay -------------------------- */
+  {
+    const S=180,[c,x]=cvs(S,S);
+    const img=x.createImageData(S,S);
+    for(let i=0;i<img.data.length;i+=4){
+      const v=Math.random()*255|0;
+      img.data[i]=img.data[i+1]=img.data[i+2]=v; img.data[i+3]=255;
+    }
+    x.putImageData(img,0,0);
+    $('#grain').style.backgroundImage='url('+c.toDataURL()+')';
+  }
+}
+
+/* ======================================================================== */
+/*                               THE WORLD                                  */
+/* ======================================================================== */
+let renderer, scene, camera, tpCamera;
+const colliders = [];       // {x1,z1,x2,z2}
+const interactables = [];   // {mesh,label,key,dist,fn,cond}
+let dustPoints, streamMesh, streamMat, waterPuddles=[], floodPlane;
+let playerBody, bottleVM, bottleWaterVM, counterCanvas, counterCtx, counterTex;
+let sunLight, doorGroup, staffDoor, fountainGroup, person;
+const skyClouds=[];
+let outSun, outSkyLight, skyDome, busGroup, rainPoints, sprinklerPts, hydrantSpray, streetCar,
+    roofGroup, storeLight, jingleT=0;
+const clockObjs = {};
+
+const MAT = {};
+
+function mkMat(o){ return new THREE.MeshStandardMaterial(o); }
+
+function addWall(x1,z1,x2,z2,h,mat,y0,noCollide){
+  const w=Math.abs(x2-x1)||0.2, d=Math.abs(z2-z1)||0.2;
+  const g=new THREE.BoxGeometry(w, h, d);
+  const m=new THREE.Mesh(g, mat);
+  m.position.set((x1+x2)/2, (y0||0)+h/2, (z1+z2)/2);
+  m.castShadow=true; m.receiveShadow=true;
+  scene.add(m);
+  if(!noCollide) colliders.push({x1:Math.min(x1,x2)-.1,x2:Math.max(x1,x2)+.1,
+                                 z1:Math.min(z1,z2)-.1,z2:Math.max(z1,z2)+.1});
+  return m;
+}
+function addBoxCollider(x1,z1,x2,z2){
+  colliders.push({x1:Math.min(x1,x2),x2:Math.max(x1,x2),z1:Math.min(z1,z2),z2:Math.max(z1,z2)});
+}
+
+function buildWorld(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d10);
+  scene.fog = new THREE.FogExp2(0x20232a, 0.013);
+
+  /* -------------------------------- materials -------------------------- */
+  MAT.floor = mkMat({map:TEX.floor, roughnessMap:TEX.floorRough, roughness:.62, metalness:.0,
+                     envMapIntensity:.4});
+  MAT.wall  = mkMat({map:TEX.wall, bumpMap:TEX.wallBump, bumpScale:.04, roughness:.92, metalness:0});
+  MAT.tileWall = mkMat({map:TEX.tileWall, roughness:.3, metalness:.05});
+  MAT.ceil  = mkMat({map:TEX.ceil, roughness:.97, metalness:0});
+  MAT.locker= mkMat({map:TEX.locker, roughnessMap:TEX.lockerRough, roughness:.48, metalness:.68});
+  MAT.gym   = mkMat({map:TEX.gymFloor, roughness:.32, metalness:.02});
+  MAT.steel = mkMat({color:0xa9b2b8, roughness:.28, metalness:.9});
+  MAT.darkSteel = mkMat({color:0x4a5259, roughness:.4, metalness:.85});
+  MAT.paintRed = mkMat({color:0x8c2f2a, roughness:.55, metalness:.1});
+  MAT.glass = new THREE.MeshPhysicalMaterial({color:0xdfeef5, roughness:.05, metalness:0,
+    transmission:.92, transparent:true, opacity:.36, thickness:.3, envMapIntensity:1});
+  MAT.water = new THREE.MeshPhysicalMaterial({color:0x9fd8ef, roughness:.07, metalness:0,
+    transparent:true, opacity:.62, transmission:.6});
+  MAT.plastic = mkMat({color:0x2b2f33, roughness:.6, metalness:.05});
+  MAT.trim = mkMat({color:0x2d3338, roughness:.5, metalness:.3});
+
+  const C=40, HALF=4, H=3.4;
+
+  /* --------------------------------- floor ----------------------------- */
+  const fl=new THREE.Mesh(new THREE.PlaneGeometry(90,8.2), MAT.floor);
+  fl.rotation.x=-Math.PI/2; fl.position.set(0,0,0); fl.receiveShadow=true; scene.add(fl);
+
+  // ceiling + fluorescent fixtures
+  const cl=new THREE.Mesh(new THREE.PlaneGeometry(90,8.2), MAT.ceil);
+  cl.rotation.x=Math.PI/2; cl.position.y=H; scene.add(cl);
+
+  const lampMat=new THREE.MeshBasicMaterial({color:0xfff6e2});
+  for(let x=-36;x<=36;x+=8){
+    const lamp=new THREE.Mesh(new THREE.BoxGeometry(2.4,.08,.8), lampMat);
+    lamp.position.set(x,H-.06,0); scene.add(lamp);
+    const hous=new THREE.Mesh(new THREE.BoxGeometry(2.7,.16,1.0), MAT.trim);
+    hous.position.set(x,H-.02,0); scene.add(hous);
+    if(((x+40)/8|0)%2===0){
+      const pl=new THREE.PointLight(0xffeecc, 0.95, 20, 2);
+      pl.position.set(x,H-.35,0);
+      scene.add(pl); clockObjs['lamp'+x]=pl;
+    }
+  }
+
+  /* ------------------------------ corridor walls ------------------------ */
+  // north (z=-4): gaps for vending alcove (-28..-20) and gym door (14..18)
+  addWall(-C,-HALF,-28,-HALF,H,MAT.wall);
+  addWall(-20,-HALF,14,-HALF,H,MAT.wall);
+  addWall(18,-HALF,C,-HALF,H,MAT.wall);
+  // south (z=4): gaps for bathroom (-16..-12) and staff room (2..6)
+  addWall(-C,HALF,-16,HALF,H,MAT.wall);
+  addWall(-12,HALF,2,HALF,H,MAT.wall);
+  addWall(6,HALF,C,HALF,H,MAT.wall);
+  // west end (the classroom you just left)
+  addWall(-C,-HALF,-C,HALF,H,MAT.wall);
+
+  /* --------------------------- vending alcove --------------------------- */
+  addWall(-28,-10,-20,-10,H,MAT.wall);
+  addWall(-28,-10,-28,-4,H,MAT.wall);
+  addWall(-20,-10,-20,-4,H,MAT.wall);
+  const af=new THREE.Mesh(new THREE.PlaneGeometry(8,6),MAT.floor);
+  af.rotation.x=-Math.PI/2; af.position.set(-24,0.001,-7); af.receiveShadow=true; scene.add(af);
+  const ac=new THREE.Mesh(new THREE.PlaneGeometry(8,6),MAT.ceil);
+  ac.rotation.x=Math.PI/2; ac.position.set(-24,H,-7); scene.add(ac);
+
+  /* ------------------------------ bathroom ------------------------------ */
+  addWall(-20,14,-8,14,H,MAT.tileWall);
+  addWall(-20,4,-20,14,H,MAT.tileWall);
+  addWall(-8,4,-8,14,H,MAT.tileWall);
+  const bf=new THREE.Mesh(new THREE.PlaneGeometry(12,10),MAT.tileWall);
+  bf.rotation.x=-Math.PI/2; bf.position.set(-14,0.002,9); bf.receiveShadow=true; scene.add(bf);
+  const bc2=new THREE.Mesh(new THREE.PlaneGeometry(12,10),MAT.ceil);
+  bc2.rotation.x=Math.PI/2; bc2.position.set(-14,H,9); scene.add(bc2);
+  const bl=new THREE.PointLight(0xdff0ff,.75,14,2); bl.position.set(-14,H-.4,9); scene.add(bl);
+  const bLamp=new THREE.Mesh(new THREE.BoxGeometry(2,.06,.6), new THREE.MeshBasicMaterial({color:0xe8f4ff}));
+  bLamp.position.set(-14,H-.05,9); scene.add(bLamp);
+
+  /* ------------------------------ staff room ---------------------------- */
+  addWall(0,12,10,12,H,MAT.wall);
+  addWall(0,4,0,12,H,MAT.wall);
+  addWall(10,4,10,12,H,MAT.wall);
+  const sf=new THREE.Mesh(new THREE.PlaneGeometry(10,8),MAT.floor);
+  sf.rotation.x=-Math.PI/2; sf.position.set(5,0.002,8); sf.receiveShadow=true; scene.add(sf);
+  const sc=new THREE.Mesh(new THREE.PlaneGeometry(10,8),MAT.ceil);
+  sc.rotation.x=Math.PI/2; sc.position.set(5,H,8); scene.add(sc);
+  const sl=new THREE.PointLight(0xffe0b0,.85,16,2); sl.position.set(5,H-.4,8); scene.add(sl);
+  staffDoor=new THREE.Group();
+  {
+    const d=new THREE.Mesh(new THREE.BoxGeometry(3.9,2.4,.09), mkMat({color:0x5d4230,roughness:.6}));
+    d.position.set(1.95,1.2,0); staffDoor.add(d);
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(.5,.22,.02),
+      new THREE.MeshBasicMaterial({color:0xd8d3c6}));
+    plate.position.set(3.1,1.7,.06); staffDoor.add(plate);
+    staffDoor.position.set(2,0,4);
+    staffDoor.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(staffDoor);
+  }
+
+  /* --------------------------------- gym -------------------------------- */
+  const GH=8;
+  addWall(8,-30,34,-30,GH,MAT.wall);
+  addWall(8,-30,8,-4,GH,MAT.wall);
+  addWall(34,-30,34,-4,GH,MAT.wall);
+  const gf=new THREE.Mesh(new THREE.PlaneGeometry(26,26),MAT.gym);
+  gf.rotation.x=-Math.PI/2; gf.position.set(21,0.002,-17); gf.receiveShadow=true; scene.add(gf);
+  const gc=new THREE.Mesh(new THREE.PlaneGeometry(26,26),mkMat({color:0x23262a,roughness:1}));
+  gc.rotation.x=Math.PI/2; gc.position.set(21,GH,-17); scene.add(gc);
+  // court lines
+  const lineMat=new THREE.MeshBasicMaterial({color:0xf2e6cf,transparent:true,opacity:.55});
+  const centerLine=new THREE.Mesh(new THREE.PlaneGeometry(22,.16),lineMat);
+  centerLine.rotation.x=-Math.PI/2; centerLine.position.set(21,.02,-17); scene.add(centerLine);
+  const circ=new THREE.Mesh(new THREE.RingGeometry(3.3,3.5,48),lineMat);
+  circ.rotation.x=-Math.PI/2; circ.position.set(21,.02,-17); scene.add(circ);
+  // gym high bays
+  for(let i=0;i<4;i++){
+    const gx=13+ (i%2)*16, gz=-11-Math.floor(i/2)*12;
+    if(i%2===0){ const gl2=new THREE.PointLight(0xfff0d8,1.6,34,2);
+      gl2.position.set(gx,GH-1,gz); scene.add(gl2); }
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),new THREE.MeshBasicMaterial({color:0xfff4dd}));
+    bulb.position.set(gx,GH-1,gz); scene.add(bulb);
+  }
+  // bleachers
+  for(let s=0;s<6;s++){
+    const b=new THREE.Mesh(new THREE.BoxGeometry(18,.45,.8), mkMat({color:0x6a4a2c,roughness:.7}));
+    b.position.set(21,.22+s*.42,-28.6+s*.82); b.castShadow=b.receiveShadow=true; scene.add(b);
+  }
+  addBoxCollider(12,-30,30,-24);
+
+  /* ----------------------------- entrance doors -------------------------- */
+  doorGroup=new THREE.Group();
+  const frame=mkMat({color:0x5a6066,roughness:.4,metalness:.7});
+  for(const side of [-1,1]){
+    const d=new THREE.Mesh(new THREE.BoxGeometry(.07,2.9,1.9), MAT.glass);
+    d.position.set(C-.1, 1.45, side*1.0); doorGroup.add(d);
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(.12,3.0,.12), frame);
+    fr.position.set(C-.1,1.5, side*2.0); doorGroup.add(fr);
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,1.5), MAT.steel);
+    bar.position.set(C-.22,1.05,side*1.0); doorGroup.add(bar);
+  }
+  const transom=new THREE.Mesh(new THREE.BoxGeometry(.07,.5,4.2), MAT.glass);
+  transom.position.set(C-.1,3.1,0); doorGroup.add(transom);
+  addWall(C,-HALF,C,-2.1,H,MAT.wall);
+  addWall(C,2.1,C,HALF,H,MAT.wall);
+  scene.add(doorGroup);
+  // the afternoon outside
+  const outside=new THREE.Mesh(new THREE.PlaneGeometry(9,7),
+    new THREE.MeshBasicMaterial({color:0xf7e3bd}));
+  outside.rotation.y=-Math.PI/2; outside.position.set(C+2.4,2.2,0); scene.add(outside);
+
+  sunLight=new THREE.DirectionalLight(0xffdca8, 2.1);
+  sunLight.position.set(C+12,7,2); sunLight.target.position.set(10,0,0);
+  sunLight.castShadow=true;
+  sunLight.shadow.mapSize.set(1024,1024);
+  sunLight.shadow.camera.left=-8; sunLight.shadow.camera.right=8;
+  sunLight.shadow.camera.top=8; sunLight.shadow.camera.bottom=-8;
+  sunLight.shadow.camera.far=70; sunLight.shadow.bias=-0.0015;
+  scene.add(sunLight); scene.add(sunLight.target);
+
+  // fake god-rays near the doors
+  const shaftMat=new THREE.MeshBasicMaterial({color:0xffe9c0,transparent:true,opacity:.055,
+    blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  for(let i=0;i<5;i++){
+    const s=new THREE.Mesh(new THREE.PlaneGeometry(14,3.2),shaftMat);
+    s.position.set(C-7+i*.1, 1.7-i*.06, -1.4+i*.7);
+    s.rotation.y=Math.PI/2; s.rotation.z=-0.12;
+    scene.add(s);
+  }
+
+  scene.add(new THREE.HemisphereLight(0xbcd3e4, 0x2a2622, .34));
+  scene.add(new THREE.AmbientLight(0x404448, .22));
+
+  /* -------------------------------- lockers ------------------------------ */
+  function lockerBank(x0,x1,z,facing){
+    for(let x=x0;x<x1;x+=1.0){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.85,.42), MAT.locker);
+      m.position.set(x+.5, 1.02, z);
+      m.castShadow=m.receiveShadow=true; scene.add(m);
+      // top slope
+      const t=new THREE.Mesh(new THREE.BoxGeometry(1.0,.12,.42), MAT.darkSteel);
+      t.position.set(x+.5,1.98,z); scene.add(t);
+    }
+    addBoxCollider(x0, z-.25, x1, z+.25);
+  }
+  lockerBank(-39,-29,-3.75);
+  lockerBank(-19,-9,-3.75);
+  lockerBank(-2,10,-3.75);
+  lockerBank(19,32,-3.75);
+  lockerBank(-38,-18,3.75);
+  lockerBank(8,34,3.75);
+
+  /* ---------------------- classroom doors along the hall ----------------- */
+  function classDoor(x,z,rot){
+    const g=new THREE.Group();
+    const d=new THREE.Mesh(new THREE.BoxGeometry(1.0,2.15,.08), mkMat({color:0x6b4b2f,roughness:.62}));
+    d.position.y=1.08; g.add(d);
+    const win=new THREE.Mesh(new THREE.BoxGeometry(.3,.5,.1), MAT.glass);
+    win.position.set(0,1.75,.01); g.add(win);
+    const kn=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8), MAT.steel);
+    kn.position.set(.36,1.02,.07); g.add(kn);
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(1.2,2.32,.12), MAT.trim);
+    fr.position.y=1.16; fr.position.z=-.04; g.add(fr);
+    g.position.set(x,0,z); g.rotation.y=rot||0;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(g); return g;
+  }
+  [12, 35].forEach(x=>classDoor(x,-3.95,0));
+  [-6, 0, 36].forEach(x=>classDoor(x,3.95,Math.PI));
+
+  /* ========================= THE BOTTLE FILLER ========================== */
+  fountainGroup=new THREE.Group();
+  {
+    const body=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.45,.42), MAT.darkSteel);
+    body.position.set(0,1.05,0); fountainGroup.add(body);
+    // the bottle-filler bay
+    const bay=new THREE.Mesh(new THREE.BoxGeometry(.7,.55,.34), mkMat({color:0x1a1f22,roughness:.5}));
+    bay.position.set(0,1.42,.08); fountainGroup.add(bay);
+    const grille=new THREE.Mesh(new THREE.BoxGeometry(.5,.02,.28),
+      mkMat({color:0x8d979c,roughness:.35,metalness:.85}));
+    grille.position.set(0,1.18,.12); fountainGroup.add(grille);
+    for(let i=0;i<5;i++){
+      const slat=new THREE.Mesh(new THREE.BoxGeometry(.5,.012,.02),
+        mkMat({color:0x6e787d,roughness:.4,metalness:.8}));
+      slat.position.set(0,1.19,.02+i*.055); fountainGroup.add(slat);
+    }
+    // spout
+    const spout=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.22,10), MAT.steel);
+    spout.position.set(0,1.62,.16); fountainGroup.add(spout);
+    // basin + drinking bubbler below
+    const basin=new THREE.Mesh(new THREE.BoxGeometry(1.0,.14,.46), MAT.steel);
+    basin.position.set(0,.92,.2); fountainGroup.add(basin);
+    const bub=new THREE.Mesh(new THREE.CylinderGeometry(.03,.045,.09,10), MAT.steel);
+    bub.position.set(-.26,1.02,.2); bub.rotation.x=.35; fountainGroup.add(bub);
+    const push=new THREE.Mesh(new THREE.BoxGeometry(.28,.05,.12), MAT.paintRed);
+    push.position.set(.3,1.0,.24); fountainGroup.add(push);
+    // green counter screen
+    const [cc,cx]=cvs(256,96); counterCanvas=cc; counterCtx=cx;
+    counterTex=new THREE.CanvasTexture(cc);
+    const screen=new THREE.Mesh(new THREE.PlaneGeometry(.42,.16),
+      new THREE.MeshBasicMaterial({map:counterTex}));
+    screen.position.set(0,1.78,.215); fountainGroup.add(screen);
+    const screenGlow=new THREE.PointLight(0x66ff99,.25,1.6,2);
+    screenGlow.position.set(0,1.78,.35); fountainGroup.add(screenGlow);
+    // sensor blink
+    const led=new THREE.Mesh(new THREE.SphereGeometry(.018,8,6),
+      new THREE.MeshBasicMaterial({color:0x66ffaa}));
+    led.position.set(0,1.5,.24); fountainGroup.add(led);
+
+    // the stream (hidden until running)
+    streamMat=new THREE.MeshBasicMaterial({color:0xcfeeff,transparent:true,opacity:.55});
+    streamMesh=new THREE.Mesh(new THREE.CylinderGeometry(.018,.03,.55,8,1,true), streamMat);
+    streamMesh.position.set(0,1.28,.16); streamMesh.visible=false; fountainGroup.add(streamMesh);
+
+    fountainGroup.position.set(-4,0,-3.78);
+    fountainGroup.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(fountainGroup);
+    addBoxCollider(-4.6,-4.0,-3.4,-3.4);
+    // sign above
+    const [sc2,sx]=cvs(384,64); sx.fillStyle='#e8e4da'; sx.fillRect(0,0,384,64);
+    sx.fillStyle='#2a3a46'; sx.font='bold 27px sans-serif';
+    sx.textAlign='center'; sx.fillText('FILL · SAVE A BOTTLE',192,42);
+    sx.strokeStyle='#b9b4a6'; sx.lineWidth=4; sx.strokeRect(2,2,380,60);
+    const sgn=new THREE.Mesh(new THREE.PlaneGeometry(1.05,.175), new THREE.MeshBasicMaterial({map:texFrom(sc2)}));
+    sgn.position.set(-4,2.22,-3.76); scene.add(sgn);
+  }
+
+  /* ------------------------- broken old fountain ------------------------- */
+  {
+    const g=new THREE.Group();
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.9,.95,.4), MAT.steel);
+    b.position.y=.62; g.add(b);
+    const basin=new THREE.Mesh(new THREE.BoxGeometry(.86,.1,.42), MAT.steel);
+    basin.position.set(0,1.05,.05); g.add(basin);
+    const [pc,px]=cvs(256,128); px.fillStyle='#d8462f'; px.fillRect(0,0,256,128);
+    px.fillStyle='#fff'; px.font='bold 34px sans-serif';
+    px.fillText('OUT OF',60,52); px.fillText('ORDER',66,96);
+    const sgn=new THREE.Mesh(new THREE.PlaneGeometry(.5,.25),
+      new THREE.MeshBasicMaterial({map:texFrom(pc)}));
+    sgn.position.set(0,1.35,.22); g.add(sgn);
+    g.position.set(-30,0,3.78); g.rotation.y=Math.PI;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(-30.5,3.4,-29.5,4.0);
+    interactables.push({obj:g, label:'Try it anyway', key:'E', dist:2.2, fn:()=>{
+      AU.clickSfx(300); say("Nothing. Not even a gurgle. There's a sticker under the sign from two principals ago.");
+    }});
+  }
+
+  /* ------------------------------ your locker ---------------------------- */
+  {
+    const m=new THREE.Mesh(new THREE.BoxGeometry(1.02,1.87,.44),
+      mkMat({map:TEX.locker, roughness:.45, metalness:.7, color:0xc8d4dc}));
+    m.position.set(-33.5,1.02,-3.72); m.castShadow=m.receiveShadow=true; scene.add(m);
+    interactables.push({obj:m, label:'Open your locker', key:'E', dist:2.2, fn:()=>{
+      AU.metal('locker');
+      if(!S.hasMoney){ S.hasMoney=true;
+        say("Two folded dollars in the bottom of your locker, soft as cloth. September money. <em>You take it.</em>");
+        setObjective("You have $2. There's a vending machine somewhere down the hall.");
+      } else say("Gym shorts. A dead calculator. A permission slip you never handed in.");
+    }});
+  }
+
+  /* ---------------------------- vending machine -------------------------- */
+  {
+    const g=new THREE.Group();
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.0,.85),
+      mkMat({color:0x1b2a3a,roughness:.35,metalness:.4}));
+    cab.position.y=1.0; g.add(cab);
+    const [fc,fx]=cvs(256,384);
+    fx.fillStyle='#0d1b2a'; fx.fillRect(0,0,256,384);
+    for(let r=0;r<5;r++)for(let c2=0;c2<4;c2++){
+      fx.fillStyle=['#3fa7d6','#e0e6ea','#4cc3a5','#d64545'][(r+c2)%4];
+      fx.fillRect(18+c2*58, 24+r*68, 40, 54);
+      fx.fillStyle='rgba(255,255,255,.28)'; fx.fillRect(22+c2*58, 28+r*68, 10, 46);
+    }
+    fx.fillStyle='rgba(180,220,255,.12)'; fx.fillRect(0,0,256,384);
+    fx.fillStyle='#e8f4ff'; fx.font='bold 22px sans-serif'; fx.fillText('$2.00',96,368);
+    const face=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.7),
+      new THREE.MeshStandardMaterial({map:texFrom(fc),roughness:.18,metalness:.1,
+        emissive:0x21384a, emissiveIntensity:.6, emissiveMap:texFrom(fc)}));
+    face.position.set(0,1.1,.43); g.add(face);
+    const vl=new THREE.PointLight(0x9fd8ff,.5,4,2); vl.position.set(0,1.2,.9); g.add(vl);
+    g.position.set(-24,0,-9.5);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(-24.8,-10,-23.2,-9);
+    interactables.push({obj:g, label:'Buy a water — $2', key:'E', dist:2.4, fn:()=>{
+      if(!S.hasMoney){ AU.clickSfx(220);
+        say("The machine wants two dollars. You pat your pockets and find lint and a guitar pick."); return; }
+      if(S.boughtWater){ say("It took your money once already. Once is enough."); return; }
+      S.boughtWater=true; S.hasMoney=false; AU.vend();
+      setTimeout(()=>{ S.source='vending'; drink('vending');
+        say("Twelve ounces of something called <em>Crystal Ridge</em>, at room temperature, for two dollars."); }, 1500);
+    }});
+  }
+
+  /* ------------------------------ bathroom sink -------------------------- */
+  {
+    const g=new THREE.Group();
+    const counter=new THREE.Mesh(new THREE.BoxGeometry(2.4,.12,.62),
+      mkMat({color:0x9a9f9c, roughness:.35, metalness:.1}));
+    counter.position.set(0,.92,0); g.add(counter);
+    for(const off of [-.6,.6]){
+      const bowl=new THREE.Mesh(new THREE.CylinderGeometry(.24,.18,.16,18), MAT.steel);
+      bowl.position.set(off,.88,0); g.add(bowl);
+      const tap=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.28,10), MAT.steel);
+      tap.position.set(off,1.12,-.2); g.add(tap);
+      const nose=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.18,10), MAT.steel);
+      nose.position.set(off,1.24,-.12); nose.rotation.x=Math.PI/2.4; g.add(nose);
+    }
+    const [mc,mx]=cvs(256,128);
+    const mg=mx.createLinearGradient(0,0,256,128);
+    mg.addColorStop(0,'#c9d6da'); mg.addColorStop(.35,'#9fb0b6');
+    mg.addColorStop(.6,'#d7e2e4'); mg.addColorStop(1,'#8d9ea5');
+    mx.fillStyle=mg; mx.fillRect(0,0,256,128);
+    for(let i=0;i<40;i++){ mx.fillStyle='rgba(255,255,255,'+rnd(.02,.09)+')';
+      mx.fillRect(Math.random()*256,Math.random()*128,rnd(6,60),rnd(1,4)); }
+    noiseInto(mx,256,128,7);
+    const mirror=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.1),
+      mkMat({map:texFrom(mc), color:0xffffff, roughness:.14, metalness:.55}));
+    mirror.position.set(0,1.8,-.3); g.add(mirror);
+    g.position.set(-19.4,0,9); g.rotation.y=Math.PI/2;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(-19.8,8,-19.0,10);
+    interactables.push({obj:g, label:'Use the tap', key:'E', hold:true, dist:2.3,
+      onHold:(dt)=>{ S.bottle=clamp(S.bottle+dt*0.34,0,1); S.source='sink';
+        AU.waterLevel(.20, 900+S.bottle*700);
+        return S.bottle>=1; },
+      onDone:()=>{ say("Warm, then almost cold, with a taste like the inside of a pipe."); }
+    });
+    interactables.push({obj:g, label:'Pour out your bottle', key:'F', dist:2.3, cond:()=>S.bottle>0.02,
+      fn:()=>{ S.bottle=0; AU.splash(); say("You pour it down the drain. You're not sure why either."); }});
+  }
+
+  /* ---------------------------- staff room cooler ------------------------ */
+  {
+    const g=new THREE.Group();
+    const jug=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.55,18), MAT.glass);
+    jug.position.y=1.42; g.add(jug);
+    const jw=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.45,18), MAT.water);
+    jw.position.y=1.40; g.add(jw);
+    const bodyc=new THREE.Mesh(new THREE.BoxGeometry(.5,1.15,.5),
+      mkMat({color:0xe8eaec, roughness:.45, metalness:.1}));
+    bodyc.position.y=.58; g.add(bodyc);
+    const tapb=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.12), MAT.plastic);
+    tapb.position.set(0,.95,.3); g.add(tapb);
+    g.position.set(8.2,0,11); scene.add(g);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    addBoxCollider(7.9,10.7,8.5,11.3);
+    interactables.push({obj:g, label:'Fill from the staff cooler', key:'E', hold:true, dist:2.2,
+      onHold:(dt)=>{ S.bottle=clamp(S.bottle+dt*0.5,0,1); S.source='staff';
+        AU.waterLevel(.26, 700+S.bottle*900); return S.bottle>=1; },
+      onDone:()=>{ say("Ice knocks against the inside of the jug. <em>Cold.</em> Actually cold."); }});
+    // a staff-room table so it feels lived in
+    const tbl=new THREE.Mesh(new THREE.BoxGeometry(2.4,.08,1.1), mkMat({color:0x7a6047,roughness:.7}));
+    tbl.position.set(4,.75,8); tbl.castShadow=tbl.receiveShadow=true; scene.add(tbl);
+    for(const [dx,dz] of [[-1.05,-.45],[1.05,-.45],[-1.05,.45],[1.05,.45]]){
+      const lg=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.75,8), MAT.darkSteel);
+      lg.position.set(4+dx,.37,8+dz); scene.add(lg);
+    }
+    addBoxCollider(2.8,7.4,5.2,8.6);
+  }
+
+  /* ------------------------------- gym cooler ---------------------------- */
+  {
+    const g=new THREE.Group();
+    const c2=new THREE.Mesh(new THREE.CylinderGeometry(.3,.26,.72,20),
+      mkMat({color:0xd95f2b, roughness:.55, metalness:.05}));
+    c2.position.y=.36; g.add(c2);
+    const lid=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.09,20),
+      mkMat({color:0xf0f2f4, roughness:.5}));
+    lid.position.y=.76; g.add(lid);
+    const spig=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.14,8), MAT.plastic);
+    spig.position.set(0,.18,.3); spig.rotation.x=Math.PI/2; g.add(spig);
+    const tableg=new THREE.Mesh(new THREE.BoxGeometry(1.6,.07,.7), mkMat({color:0x555b60,roughness:.6}));
+    tableg.position.set(20,.72,-10); tableg.castShadow=tableg.receiveShadow=true; scene.add(tableg);
+    g.position.set(20,.78,-10);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(19.2,-10.4,20.8,-9.6);
+    interactables.push({obj:g, label:"Fill from the team cooler", key:'E', hold:true, dist:2.2,
+      onHold:(dt)=>{ S.bottle=clamp(S.bottle+dt*0.45,0,1); S.source='cooler';
+        AU.waterLevel(.22, 500+S.bottle*600); return S.bottle>=1; },
+      onDone:()=>{ say("Blue. Sweet. A little warm at the bottom. A sign taped to the lid says <em>COACH V — DO NOT TOUCH</em>."); }});
+  }
+
+  /* --------------------------------- NPCs -------------------------------- */
+  person = function(color, x, z, scale){
+    const g=new THREE.Group();
+    const skin=mkMat({color:0xc49a72,roughness:.78});
+    const cloth=mkMat({color:color,roughness:.88});
+    const jeans=mkMat({color:0x2b3440,roughness:.92});
+    // torso tapers at the waist, shoulders sit on top of it
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.175,.145,.56,16), cloth);
+    torso.position.y=1.14; g.add(torso);
+    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.15,.155,.22,14), jeans);
+    hips.position.y=.79; g.add(hips);
+    const shoulders=new THREE.Mesh(new THREE.SphereGeometry(.185,16,12), cloth);
+    shoulders.scale.set(1.5,.62,.85); shoulders.position.y=1.40; g.add(shoulders);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.055,.06,.09,10), skin);
+    neck.position.y=1.50; g.add(neck);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.112,20,16), skin);
+    head.scale.set(.92,1.12,1); head.position.y=1.62; g.add(head);
+    const hair=new THREE.Mesh(new THREE.SphereGeometry(.118,18,14,0,6.3,0,1.35),
+      mkMat({color:0x2a1d16,roughness:1}));
+    hair.scale.set(.95,1.1,1.02); hair.position.y=1.625; g.add(hair);
+    for(const s2 of [-1,1]){
+      const eye=new THREE.Mesh(new THREE.SphereGeometry(.014,8,6),
+        new THREE.MeshBasicMaterial({color:0x14181c}));
+      eye.position.set(s2*.042,1.635,.098); g.add(eye);
+      const arm=new THREE.Mesh(new THREE.CylinderGeometry(.048,.042,.58,10), cloth);
+      arm.position.set(s2*.215,1.13,0); arm.rotation.z=s2*.07;
+      arm.name = s2<0?'armL':'armR'; g.add(arm);
+      const hand=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8), skin);
+      hand.position.set(s2*.235,.83,0); g.add(hand);
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(.072,.058,.72,10), jeans);
+      leg.position.set(s2*.085,.36,0); leg.name = s2<0?'legL':'legR'; g.add(leg);
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(.11,.07,.25),
+        mkMat({color:0x1b1f23,roughness:.8}));
+      shoe.position.set(s2*.085,.035,.03); g.add(shoe);
+    }
+    g.position.set(x,0,z); g.scale.setScalar(scale||1);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(g); return g;
+  }
+
+  // Marco the custodian, with mop and bucket
+  const marco = person(0x2f4f4f, -10.5, 1.4, 1.03);
+  marco.rotation.y=-0.6;
+  {
+    const bucket=new THREE.Mesh(new THREE.CylinderGeometry(.3,.26,.5,14),
+      mkMat({color:0xd8d24a,roughness:.6}));
+    bucket.position.set(-11.6,.25,2.0); bucket.castShadow=true; scene.add(bucket);
+    const mop=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.6,8), mkMat({color:0x9b7b4e}));
+    mop.position.set(-11.2,.9,1.7); mop.rotation.z=.3; scene.add(mop);
+    const head2=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8), mkMat({color:0xbfb9a8,roughness:1}));
+    head2.position.set(-11.45,.16,1.63); scene.add(head2);
+    // wet floor sign
+    const wf=new THREE.Mesh(new THREE.BoxGeometry(.5,.8,.04), MAT.paintRed);
+    wf.position.set(-13,.45,1.2); wf.rotation.y=.4; wf.castShadow=true; scene.add(wf);
+    addBoxCollider(-11.9,1.0,-10.2,2.3);
+  }
+  S.marco = marco;
+  addBoxCollider(-10.8,1.1,-10.2,1.7);
+  interactables.push({obj:marco, label:'Talk to Marco', key:'E', dist:2.6, fn:()=>{
+    S.talkedMarco=true; staffDoorUnlock();
+    AU.voice(130);
+    say("\"That one out front's been dry since Tuesday.\" Marco tips his head toward the staff room. <em>\"Fridge in there's got the cold stuff. Door's open now. Don't tell the office.\"</em>");
+    setObjective("Marco left the staff room door open for you.");
+  }});
+
+  // the kid at locker 214
+  const kid = person(0x7a4b63, 21.5, 3.1, .92);
+  kid.rotation.y=Math.PI*0.96;
+  S.kid=kid;
+  addBoxCollider(21.2,2.8,21.8,3.4);
+  interactables.push({obj:kid, label:'Offer your bottle', key:'E', dist:2.4,
+    cond:()=>S.bottle>0.85,
+    fn:()=>{ S.gaveBottle=true; S.bottle=0; AU.voice(210);
+      say("She takes it with both hands and doesn't say anything, which is its own kind of thank you.");
+      setObjective("You gave away your water. Go home.");
+    }});
+  interactables.push({obj:kid, label:'Ask if she\'s okay', key:'E', dist:2.4,
+    cond:()=>S.bottle<=0.85 && !S.gaveBottle,
+    fn:()=>{ AU.voice(210);
+      say("\"I'm fine.\" She is not fine. She ran the mile today and her bottle is as empty as yours.");
+    }});
+
+  /* ----------------------------- the exit doors --------------------------- */
+  const doorProxy=new THREE.Mesh(new THREE.BoxGeometry(.2,2.6,4),
+    new THREE.MeshBasicMaterial({visible:false}));
+  doorProxy.position.set(39.3,1.5,0); scene.add(doorProxy);
+  interactables.push({obj:doorProxy, label:'Push the doors open', key:'E', dist:3.4,
+    cond:()=>!S.doorsOpen,
+    fn:()=>{
+      if(S.locked){ AU.metal('drop');
+        say("The bolts went off at four. They do not open from the inside until morning."); return; }
+      AU.door(); S.doorsOpen=true;
+      doorGroup.children.forEach((c,i)=>{ if(i%3===0) c.rotation.y = (i<3?-1:1)*0.9; });
+      say("Heat. Actual outdoor heat, and the smell of bus exhaust and cut grass.");
+      setObjective("You're out. The buses are in the loop, the street is past the lot, and you live east.");
+    }});
+
+  /* ---------------------- the filler itself (interactable) ---------------- */
+  interactables.push({obj:fountainGroup, label:'Hold to fill your bottle', key:'E', hold:true, dist:3.0,
+    onHold:(dt)=>{
+      S.fillerRunning=true;
+      if(S.bottle>=1){
+        S.overfill+=dt;
+        AU.waterLevel(.42, 2200);
+        if(S.overfill>1.0 && !S.floodStarted) startFlood();
+        if(S.overfill>5.0){ ending('flood'); }
+        return false;
+      }
+      S.bottle=clamp(S.bottle+dt*0.42,0,1); S.source='filler';
+      AU.waterLevel(.34, 420+S.bottle*1100);
+      return S.bottle>=1;
+    },
+    onDone:()=>{
+      S.counter++; updateCounter();
+      if(S.counter>=10000 && !S.done){ AU.chime(); setTimeout(()=>ending('ten'),1400); return; }
+      say("Cold and filtered and faintly metallic, the way school water always is. <em>Bottle full.</em>");
+      setObjective("Your bottle is full. Press Q to drink, or take it and go.");
+    }
+  });
+  // drink straight from the bubbler
+  interactables.push({obj:fountainGroup, label:'Put your mouth in the stream', key:'F', dist:2.1, fn:()=>{
+    S.drankStream=true; AU.waterLevel(.5,1600);
+    setTimeout(()=>AU.waterLevel(0),1200);
+    drink('animal');
+    say("You bend down and just <em>drink</em>, like an animal, in a public hallway.");
+  }});
+
+  /* --------------------------------- props -------------------------------- */
+  // trash cans, a mop bucket, a stray backpack, radiator, clock, banners
+  function can(x,z){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.26,.22,.75,14),
+      mkMat({color:0x3a4249,roughness:.7,metalness:.2}));
+    m.position.set(x,.38,z); m.castShadow=m.receiveShadow=true; scene.add(m);
+    addBoxCollider(x-.26,z-.26,x+.26,z+.26);
+  }
+  can(-7.6,-3.2); can(16,3.1); can(-27.5,-5.5);
+
+  {
+    const bp=new THREE.Mesh(new THREE.BoxGeometry(.4,.5,.28), mkMat({color:0x30506b,roughness:.9}));
+    bp.position.set(6.5,.25,2.9); bp.rotation.y=.5; bp.castShadow=true; scene.add(bp);
+  }
+  // wall clock
+  {
+    const [cc,cx]=cvs(128,128);
+    cx.fillStyle='#e9e6df'; cx.beginPath(); cx.arc(64,64,60,0,7); cx.fill();
+    cx.strokeStyle='#22262a'; cx.lineWidth=5; cx.beginPath(); cx.arc(64,64,60,0,7); cx.stroke();
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2;
+      cx.beginPath(); cx.lineWidth=3;
+      cx.moveTo(64+Math.sin(a)*50,64-Math.cos(a)*50);
+      cx.lineTo(64+Math.sin(a)*43,64-Math.cos(a)*43); cx.stroke();}
+    cx.lineWidth=5; cx.beginPath(); cx.moveTo(64,64); cx.lineTo(64+26,64-6); cx.stroke();
+    cx.lineWidth=3; cx.beginPath(); cx.moveTo(64,64); cx.lineTo(64+6,64-44); cx.stroke();
+    const cm=new THREE.Mesh(new THREE.CircleGeometry(.24,28),
+      new THREE.MeshBasicMaterial({map:texFrom(cc)}));
+    cm.position.set(2,2.6,-3.94); scene.add(cm);
+  }
+  // banners
+  {
+    const [bc3,bx3]=cvs(512,128);
+    bx3.fillStyle='#1d3a5c'; bx3.fillRect(0,0,512,128);
+    bx3.fillStyle='#e8c15a'; bx3.font='bold 58px sans-serif';
+    bx3.fillText('GO FALCONS', 60, 88);
+    const bm=new THREE.Mesh(new THREE.PlaneGeometry(4,1),
+      new THREE.MeshBasicMaterial({map:texFrom(bc3),side:THREE.DoubleSide}));
+    bm.position.set(24,2.7,-3.9); scene.add(bm);
+    const bm2=bm.clone(); bm2.position.set(21,6.2,-29.9); bm2.scale.setScalar(1.8); scene.add(bm2);
+  }
+  // radiator under a window
+  for(const rx2 of [-16, 33]){
+    const rad=new THREE.Mesh(new THREE.BoxGeometry(2.2,.5,.2), MAT.trim);
+    rad.position.set(rx2,.3,3.85); rad.castShadow=true; scene.add(rad);
+  }
+
+  /* ------------------------------ dust motes ------------------------------ */
+  {
+    const N=900, pos=new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      pos[i*3]=rnd(-40,40); pos[i*3+1]=rnd(.2,3.2); pos[i*3+2]=rnd(-4,4);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    const m=new THREE.PointsMaterial({color:0xffe6bd,size:.0085,transparent:true,opacity:.30,
+      depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true});
+    dustPoints=new THREE.Points(g,m); scene.add(dustPoints);
+  }
+
+  /* ----------------------------- flood plane ------------------------------ */
+  {
+    floodPlane=new THREE.Mesh(new THREE.PlaneGeometry(1,7.6),
+      new THREE.MeshPhysicalMaterial({color:0xaee0f2,roughness:.05,metalness:0,
+        transparent:true,opacity:.42,transmission:.5}));
+    floodPlane.rotation.x=-Math.PI/2; floodPlane.position.set(-4,0.012,0);
+    floodPlane.visible=false; scene.add(floodPlane);
+  }
+
+  buildOutside();
+
+  /* --------------------------- player + viewmodel -------------------------- */
+  camera = new THREE.PerspectiveCamera(66, innerWidth/innerHeight, 0.03, 120);
+  camera.position.set(-36,1.68,0);
+  scene.add(camera);
+
+  // third-person body (only shown in V mode)
+  playerBody = new THREE.Group();
+  {
+    const torso=new THREE.Mesh(new THREE.BoxGeometry(.42,.66,.24), mkMat({color:0x54606b,roughness:.85}));
+    torso.position.y=1.18; playerBody.add(torso);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.155,18,14), mkMat({color:0xc09069,roughness:.75}));
+    head.position.y=1.66; playerBody.add(head);
+    const hair=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12,0,6.3,0,1.6), mkMat({color:0x2b1f17,roughness:1}));
+    hair.position.y=1.68; playerBody.add(hair);
+    const bag=new THREE.Mesh(new THREE.BoxGeometry(.36,.46,.18), mkMat({color:0x2d4a63,roughness:.9}));
+    bag.position.set(0,1.18,-.22); playerBody.add(bag);
+    for(const s of [-1,1]){
+      const arm=new THREE.Mesh(new THREE.CylinderGeometry(.055,.05,.6,8), mkMat({color:0x54606b,roughness:.85}));
+      arm.position.set(s*.27,1.16,0); playerBody.add(arm);
+      arm.name = s<0?'armL':'armR';
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(.075,.065,.84,8), mkMat({color:0x2b3238,roughness:.9}));
+      leg.position.set(s*.11,.43,0); leg.name = s<0?'legL':'legR'; playerBody.add(leg);
+    }
+    playerBody.traverse(o=>{o.castShadow=true;});
+    playerBody.visible=false; scene.add(playerBody);
+  }
+
+  // first-person bottle
+  bottleVM=new THREE.Group();
+  {
+    // frosted plastic reads better than true transmission, and it always renders
+    const shellMat=new THREE.MeshPhysicalMaterial({color:0xe3f1f8,roughness:.16,metalness:0,
+      transparent:true,opacity:.40,clearcoat:.9,clearcoatRoughness:.08,side:THREE.DoubleSide});
+    const shell=new THREE.Mesh(new THREE.CylinderGeometry(.036,.034,.19,20,1,false), shellMat);
+    bottleVM.add(shell);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.018,.03,.05,16), shell.material);
+    neck.position.y=.12; bottleVM.add(neck);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.021,.021,.03,16),
+      mkMat({color:0x2f78a8,roughness:.4}));
+    cap.position.y=.155; bottleVM.add(cap);
+    bottleWaterVM=new THREE.Mesh(new THREE.CylinderGeometry(.032,.030,.17,18),
+      new THREE.MeshPhysicalMaterial({color:0x8fd2ef,roughness:.06,metalness:0,
+        transparent:true,opacity:.80,clearcoat:1}));
+    bottleWaterVM.position.y=-.085; bottleWaterVM.scale.y=0.001; bottleVM.add(bottleWaterVM);
+    const band=new THREE.Mesh(new THREE.CylinderGeometry(.0365,.0345,.05,20),
+      mkMat({color:0xcfd8dd,roughness:.8}));
+    band.position.y=-.01; bottleVM.add(band);
+    bottleVM.scale.setScalar(.46);
+    bottleVM.position.set(.215,-.245,-.42);
+    bottleVM.rotation.set(.18,-.22,-.19);
+    camera.add(bottleVM);
+  }
+
+  updateCounter();
+}
+
+function staffDoorUnlock(){
+  if(S.staffOpen) return;
+  S.staffOpen=true; AU.door();
+  if(staffDoor){ staffDoor.rotation.y = -1.15; }
+}
+
+/* ---------------------------- the LED counter ---------------------------- */
+function updateCounter(){
+  if(!counterCtx) return;
+  const cx=counterCtx;
+  cx.fillStyle='#07160d'; cx.fillRect(0,0,256,96);
+  cx.fillStyle='#57ff9b'; cx.font='bold 54px "Courier New",monospace';
+  cx.fillText(String(S.counter).padStart(5,'0'), 26, 62);
+  cx.fillStyle='rgba(87,255,155,.5)'; cx.font='11px sans-serif';
+  cx.fillText('BOTTLES SAVED', 30, 82);
+  counterTex.needsUpdate=true;
+}
+
+/* ------------------------------- the flood ------------------------------- */
+function startFlood(){
+  S.floodStarted=true; AU.splash();
+  floodPlane.visible=true;
+  say("Water comes over the lip of the basin and starts looking for the grout lines.");
+}
+
+/* ======================================================================== */
+/*                              GAME STATE                                  */
+/* ======================================================================== */
+const S = {
+  running:false, done:false,
+  thirst:0.52, bottle:0, source:null, drank:null,
+  counter:9997, overfill:0, floodStarted:false,
+  hasMoney:false, boughtWater:false, talkedMarco:false, staffOpen:false,
+  gaveBottle:false, drankStream:false, locked:false,
+  clock: 15*60+7,     // minutes since midnight
+  tp:false, fillerRunning:false,
+  vel:new THREE.Vector3(), yaw:0, pitch:0, bob:0, stepPhase:0, lastStep:0,
+  mx:0, my:0, mouseX:0, mouseY:0, mouseDown:false,
+  outside:false, doorsOpen:false, busGone:false, raining:false, machineJammed:false,
+  hydrantOpen:false, hintsOn:true, journalOn:false, parkSip:0, hoseT:0, hoseSaid:false,
+  carT:6, jingleT:14, birdT:3, thunderT:0, _hintKey:null, _wp:null, _outObj:false,
+  found: new Set(), heartT:0, saveT:0, autoT:0, bellDone:false
+};
+
+function loadSave(){
+  try{ const raw=localStorage.getItem(SAVE_KEY);
+    if(raw) JSON.parse(raw).forEach(id=>S.found.add(id)); }catch(e){}
+}
+function writeSave(flash){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify([...S.found])); }catch(e){}
+  if(flash){ const el=$('#saved'); el.style.opacity=1; setTimeout(()=>el.style.opacity=0,900); }
+}
+
+/* --------------------------------- UI ------------------------------------ */
+let subTimer=0;
+function say(html){
+  $('#subText').innerHTML=html; $('#subs').classList.add('on'); subTimer=6.5;
+}
+function setObjective(t){ $('#objText').textContent=t; }
+
+function fmtClock(m){
+  let h=Math.floor(m/60), mm=m%60|0, ap=h>=12?'PM':'AM';
+  h=h%12; if(h===0)h=12;
+  return h+':'+String(mm).padStart(2,'0')+' '+ap;
+}
+
+/* ------------------------------ drinking --------------------------------- */
+const DRINK_AMOUNT={ animal:.50, vending:.34, coach:.55, biggulp:.80, clerk:.55, park:.48,
+  sprinkler:.34, hose:.52, hydrant:.85, icecream:.30, puddle:.26, jackpot:.62, rain:.60 };
+function drink(src){
+  if(DRINK_AMOUNT[src]!==undefined){
+    S.thirst=clamp(S.thirst+DRINK_AMOUNT[src],0,1); S.drank=src;
+    if(src==='vending') S.bottle=0;
+  }
+  else {
+    if(S.bottle<=0.02){ say("Empty. You tip it up and get one cold drop."); return; }
+    const amt=Math.min(S.bottle,0.45);
+    S.bottle-=amt; S.thirst=clamp(S.thirst+amt*1.5,0,1);
+    S.drank=S.source||'filler';
+  }
+  let i=0;
+  const iv=setInterval(()=>{ AU.gulp(i); if(++i>=3){ clearInterval(iv); AU.breath(); } }, 330);
+}
+
+/* ------------------------------- endings --------------------------------- */
+/* Boarding the 4:10 settles the day according to what you actually drank. */
+function resolveBus(){
+  if(S.gaveBottle) return ending('kind');
+  const byDrink={animal:'animal',vending:'vending',sink:'sink',staff:'staff',
+                 cooler:'cooler',filler:'filler'};
+  if(byDrink[S.drank]) return ending(byDrink[S.drank]);
+  if(!S.drank && S.bottle>0.4 && S.source)
+    return ending(byDrink[S.source] || 'bus');
+  return ending('bus');
+}
+
+function ending(id){
+  if(S.done) return;
+  S.done=true; S.running=false; S.mouseDown=false;
+  const e=ENDINGS.find(x=>x.id===id);
+  const isNew=!S.found.has(id);
+  S.found.add(id); writeSave(false);
+  AU.waterLevel(0); AU.musicVol(.55,2);
+  $('#flash').style.opacity= (id==='ten'||id==='filler')?0.9:0.55;
+  setTimeout(()=>{$('#flash').style.opacity=0;},520);
+  setTimeout(()=>{
+    $('#hud').classList.remove('on');
+    $('#endNum').textContent = 'ENDING '+String(e.n).padStart(2,'0')+' / '+ENDINGS.length+(isNew?'  ·  NEW':'');
+    $('#endTitle').textContent = e.name;
+    $('#endBody').innerHTML = e.body;
+    $('#endCount').textContent = S.found.size+' / '+ENDINGS.length+' FOUND';
+    $('#end').classList.remove('hide');
+    AU.ambienceDown();
+  }, 700);
+}
+
+/* ---------------------- inside / outside transition --------------------- */
+function updateZone(){
+  const out = camera.position.x > 41.5;
+  if(out === S.outside) return;
+  S.outside = out;
+  skyDome.visible = out;
+  skyClouds.forEach(c=>c.visible=out);
+  roofGroup.visible = out;
+  if(out){
+    scene.fog.color.set(0xb9c6d2); scene.fog.density=0.0042;
+    scene.background=new THREE.Color(0x9ab4c9);
+    outSun.intensity=2.05; outSkyLight.intensity=.42;
+    sunLight.intensity=0.5;
+    renderer.toneMappingExposure=0.92;
+    AU.outdoorLevel(.55); AU.ambienceDown();
+  } else {
+    scene.fog.color.set(0x20232a); scene.fog.density=0.013;
+    scene.background=new THREE.Color(0x0b0d10);
+    outSun.intensity=0; outSkyLight.intensity=0;
+    sunLight.intensity=2.1;
+    renderer.toneMappingExposure=1.05;
+    AU.outdoorLevel(0); AU.ambienceUp();
+  }
+}
+
+/* ============================== HINTS =================================== */
+const WP = {
+  filler:   [new THREE.Vector3(-4,1.4,-3.4),  'FILLER'],
+  bathroom: [new THREE.Vector3(-14,1.3,9),    'BATHROOM'],
+  locker:   [new THREE.Vector3(-33.5,1.3,-3.4),'YOUR LOCKER'],
+  marco:    [new THREE.Vector3(-10.5,1.4,1.4),'MARCO'],
+  vending:  [new THREE.Vector3(-24,1.2,-9.4), 'MACHINE'],
+  staff:    [new THREE.Vector3(8.2,1.2,11),   'STAFF ROOM'],
+  gym:      [new THREE.Vector3(20,1.2,-10),   'GYM'],
+  kid:      [new THREE.Vector3(21.5,1.3,3.1), 'LOCKER 214'],
+  doors:    [new THREE.Vector3(39.3,1.6,0),   'DOORS'],
+  bus:      [new THREE.Vector3(58,2,15),      'THE 4:10'],
+  truck:    [new THREE.Vector3(62,1.6,-9),    'COACH V'],
+  mart:     [new THREE.Vector3(104,2,14),     'MINI MART'],
+  park:     [new THREE.Vector3(104,1.2,-20),  'PARK'],
+  home:     [new THREE.Vector3(152,1.4,14.9), 'HOME'],
+  machine2: [new THREE.Vector3(45,1.2,21.6),  'THE MACHINE']
+};
+function currentHints(){
+  const H=[];
+  const push=(t,k)=>H.push({t:t, wp:k?WP[k]:null});
+  if(S.raining && S.outside){
+    push('It is pouring. Press <b>R</b> and tip your head back.');
+  }
+  if(S.thirst<0.24) push('You are in real trouble. Drink <em>anything</em>, from anywhere.');
+
+  if(!S.outside){
+    if(S.bottle<.05 && !S.drank){
+      push('The bottle-filler station is on the north wall, middle of the hall.','filler');
+      push('The bathroom is on the south side. Warm water is still water.','bathroom');
+    }
+    if(!S.hasMoney && !S.boughtWater)
+      push('Your locker is the scuffed one at the west end. Something is in it.','locker');
+    if(S.hasMoney) push('Two dollars. The alcove machine wants it — so do three things outside.','vending');
+    if(!S.talkedMarco) push('Marco is mopping mid-hall. People who work in a building know where the water is.','marco');
+    if(S.talkedMarco && S.drank!=='staff') push('The staff room door is open now.','staff');
+    push('There is a cooler in the gym that is not yours.','gym');
+    if(!S.gaveBottle) push('Somebody is crying at the lockers down by the gym doors.','kid');
+    if(S.bottle>.9) push('<b>Q</b> drinks from your bottle. You can also give it away.');
+    push(S.clock>15*60+45 ? 'The doors lock in minutes. Be on the other side of them.'
+                          : 'The doors are at the east end. They lock at 4:00.','doors');
+  } else {
+    if(!S.busGone) push('The 4:10 is idling in the loop. Getting on it ends your afternoon.','bus');
+    else push('The bus is gone. You are walking, then.');
+    push('Coach V is loading cones into a truck in the lot.','truck');
+    push('Across the street: a park with a fountain and a sprinkler.','park');
+    push('Also across the street: a mini mart, and a truck playing a song.','mart');
+    if(S.hasMoney) push('You still have $2. Out here it buys more than eight ounces.');
+    if(S.machineJammed) push('That machine by the buses still owes you.','machine2');
+    push('You live east, down the sidewalk. About a hundred meters.','home');
+    if(S.clock>16*60+8 && !S.raining) push('Those clouds came up fast.');
+  }
+  return H.slice(0,5);
+}
+function renderHints(){
+  const box=$('#hintbox');
+  if(!S.hintsOn || !S.running){ box.classList.remove('on'); $('#waypoint').classList.remove('on'); return; }
+  box.classList.add('on');
+  const H=currentHints();
+  const key=H.map(h=>h.t).join('|');
+  if(key!==S._hintKey){
+    S._hintKey=key;
+    $('#hintlist').innerHTML=H.map(h=>'<li>'+h.t+'</li>').join('');
+  }
+  const first=H.find(h=>h.wp);
+  S._wp = first? first.wp : null;
+}
+function updateWaypoint(){
+  const el=$('#waypoint');
+  if(!S._wp || !S.hintsOn || !S.running){ el.classList.remove('on'); return; }
+  const v=S._wp[0].clone().project(camera);
+  let x=(v.x*.5+.5)*innerWidth, y=(-v.y*.5+.5)*innerHeight;
+  if(v.z>1){ x=innerWidth-x; y=innerHeight-y; }
+  x=clamp(x,50,innerWidth-50); y=clamp(y,80,innerHeight-110);
+  el.style.transform='translate('+x+'px,'+y+'px) translate(-50%,-50%)';
+  $('#wpLabel').textContent=S._wp[1];
+  el.classList.add('on');
+}
+function renderJournal(){
+  $('#jnow').innerHTML =
+    'It is <b>'+fmtClock(S.clock)+'</b>.<br>'+
+    'Hydration: '+Math.round(S.thirst*100)+'%'+(S.thirst<.3?' — bad':'')+'<br>'+
+    'Bottle: '+Math.round(S.bottle*100)+'%'+(S.source?' ('+S.source+')':'')+'<br>'+
+    (S.hasMoney?'You have $2 in your pocket.<br>':'')+
+    (S.outside?'You are outside. The doors locked behind you at 4:00 either way.'
+              :'You are in the hallway. The doors lock at 4:00.');
+  $('#jends').innerHTML = ENDINGS.map(e=>
+    '<span class="'+(S.found.has(e.id)?'got':'')+'">'+
+    String(e.n).padStart(2,'0')+' '+(S.found.has(e.id)?e.name:'?????')+'</span>').join('');
+}
+
+/* ======================================================================== */
+/*                                 INPUT                                    */
+/* ======================================================================== */
+const keys={};
+addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  keys[k]=true;
+  if(k==='escape' && S.running) pause();
+  if(!S.running) return;
+  if(k==='v'){ S.tp=!S.tp; playerBody.visible=S.tp; bottleVM.visible=!S.tp;
+    say(S.tp?"<em>Third person.</em> That's you. Backpack strap is twisted, by the way.":"<em>First person.</em>"); }
+  if(k==='q'){ drink('bottle'); }
+  if(k==='h'){ S.hintsOn=!S.hintsOn; AU.clickSfx(900); S._hintKey=null;
+    say(S.hintsOn?'Hints on.':'Hints off. Good luck.'); }
+  if(k==='tab'){ e.preventDefault(); S.journalOn=!S.journalOn;
+    $('#journal').classList.toggle('hide',!S.journalOn);
+    if(S.journalOn) renderJournal(); AU.clickSfx(620); }
+  if(k==='r' && S.raining && S.outside && !S.done){ drink('rain');
+    say('You tip your head all the way back.');
+    setTimeout(()=>ending('rain'),1700); }
+  if(k===' ') e.preventDefault();
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+/* The mouse is never hidden and never captured. The cursor is the reticle:
+   hold it near the middle and the view sits still, push it toward an edge and
+   you turn that way, faster the further out it goes. */
+document.addEventListener('mousemove', e=>{
+  S.mouseX = e.clientX; S.mouseY = e.clientY;
+  S.mx = (e.clientX/innerWidth)*2-1;
+  S.my = -((e.clientY/innerHeight)*2-1);
+  const c=$('#cross');
+  if(c) c.style.transform = `translate(${e.clientX}px,${e.clientY}px)`+(c.classList.contains('hot')?' scale(1.25)':'');
+});
+document.addEventListener('mousedown', e=>{
+  if(!S.running || e.button!==0) return;
+  S.mouseDown = true;
+  if(hotTarget && !hotTarget.hold && !hotTarget._latch){ hotTarget._latch=true; hotTarget.fn(); }
+});
+document.addEventListener('mouseup', ()=>{ S.mouseDown=false;
+  interactables.forEach(it=>{ if(!it.hold) it._latch=false; }); });
+
+/* ======================================================================== */
+/*                               MOVEMENT                                   */
+/* ======================================================================== */
+const PR=0.36;
+function collide(px,pz){
+  for(const c of colliders){
+    const cx=clamp(px,c.x1,c.x2), cz=clamp(pz,c.z1,c.z2);
+    const dx=px-cx, dz=pz-cz;
+    const d2=dx*dx+dz*dz;
+    if(d2 < PR*PR){
+      const d=Math.sqrt(d2)||0.0001;
+      const push=(PR-d)/d;
+      px+=dx*push; pz+=dz*push;
+    }
+  }
+  // outer bounds so you can't walk off the world
+  const inCorridor = pz>-4.4 && pz<4.4 && px<41.5;
+  if(inCorridor) px=clamp(px, -39.4, S.doorsOpen?60:39.5);
+  if(px>41.5){ px=Math.min(px,178); pz=clamp(pz,-78,78); }
+  return [px,pz];
+}
+
+/* ======================================================================== */
+/*                               MAIN LOOP                                  */
+/* ======================================================================== */
+let last=performance.now(), hotTarget=null;
+const _box=new THREE.Box3();
+/* Aim at the middle of a thing, not at its origin on the floor. */
+function aimPoint(it){
+  if(!it._aim){
+    it._aim=new THREE.Vector3();
+    _box.setFromObject(it.obj);
+    if(_box.isEmpty()) it.obj.getWorldPosition(it._aim);
+    else _box.getCenter(it._aim);
+  }
+  return it._aim;
+}
+
+function tick(){
+  requestAnimationFrame(tick);
+  const now=performance.now();
+  let dt=Math.min(.05,(now-last)/1000); last=now;
+
+  if(S.running) update(dt);
+  else { AU.musicTick(dt,'menu'); dustDrift(dt*.3); }
+
+  renderer.render(scene, camera);
+}
+
+function dustDrift(dt){
+  if(!dustPoints) return;
+  const p=dustPoints.geometry.attributes.position;
+  for(let i=0;i<p.count;i+=3){
+    p.array[i*3+1]+=Math.sin(performance.now()*0.0002+i)*0.0009;
+    p.array[i*3]+=0.002*dt*60*0.02;
+    if(p.array[i*3]>40)p.array[i*3]=-40;
+  }
+  p.needsUpdate=true;
+}
+
+function update(dt){
+  updateZone();
+
+  /* ---- clock: 1 real second ≈ 6 school seconds ---- */
+  S.clock += dt*0.125;   // one school minute per eight real seconds
+  if(!S.bellDone && S.clock>=15*60+55){ S.bellDone=true; AU.bell();
+    say("The 3:55 bell. Five minutes until the doors lock themselves."); }
+  if(S.clock>=16*60 && !S.locked){
+    S.locked=true; AU.metal('drop');
+    if(!S.outside){ setTimeout(()=>ending('locked'), 900); }
+    else say("Behind you, every door in the building bolts itself at once. No going back in.");
+  }
+  $('#clock').firstChild.nodeValue = fmtClock(S.clock);
+
+  /* ---- look: steer from where the cursor is sitting ---- */
+  {
+    const DZ=0.14, YAW_RATE=2.35, PITCH_RATE=1.25;
+    const ax=Math.abs(S.mx)>DZ ? (Math.abs(S.mx)-DZ)/(1-DZ)*Math.sign(S.mx) : 0;
+    const ay=Math.abs(S.my)>DZ ? (Math.abs(S.my)-DZ)/(1-DZ)*Math.sign(S.my) : 0;
+    S.yaw   -= ax*Math.abs(ax)*YAW_RATE*dt;
+    S.pitch += ay*Math.abs(ay)*PITCH_RATE*dt;
+    S.pitch  = clamp(S.pitch,-1.15,1.15);
+  }
+
+  /* ---- movement ---- */
+  const fwd=new THREE.Vector3(-Math.sin(S.yaw),0,-Math.cos(S.yaw));
+  const right=new THREE.Vector3(Math.cos(S.yaw),0,-Math.sin(S.yaw));
+  const wish=new THREE.Vector3();
+  if(keys['w']||keys['arrowup'])wish.add(fwd);
+  if(keys['s']||keys['arrowdown'])wish.sub(fwd);
+  if(keys['d']||keys['arrowright'])wish.add(right);
+  if(keys['a']||keys['arrowleft'])wish.sub(right);
+  const running = (keys['shift'] && wish.lengthSq()>0 && S.thirst>0.1);
+  const spd = running?4.5:2.35;
+  if(wish.lengthSq()>0) wish.normalize().multiplyScalar(spd);
+  S.vel.lerp(wish, 1-Math.pow(0.0015,dt));
+
+  let px=camera.position.x + S.vel.x*dt;
+  let pz=camera.position.z + S.vel.z*dt;
+  // staff door blocks you until Marco opens it
+  if(!S.staffOpen && pz>3.4 && pz<4.6 && px>1.6 && px<6.4){ pz=Math.min(pz,3.6); }
+  [px,pz]=collide(px,pz);
+  camera.position.x=px; camera.position.z=pz;
+
+  /* ---- head bob + footsteps ---- */
+  const moving=S.vel.length()>0.35;
+  if(moving){
+    S.stepPhase += dt * (running?9.4:6.1);
+    if(S.stepPhase - S.lastStep > Math.PI){
+      S.lastStep=S.stepPhase;
+      const inGym = pz<-4.2 && px>8 && px<34;
+      AU.step_(inGym?'gym':'tile', running);
+    }
+  } else { S.stepPhase = lerp(S.stepPhase,0,dt*4); }
+  S.bob = lerp(S.bob, moving?1:0, dt*6);
+  const bobY = Math.sin(S.stepPhase*2)*0.032*S.bob;
+  const bobX = Math.cos(S.stepPhase)*0.022*S.bob;
+
+  const eye = 1.68 - (1-S.thirst)*0.03;
+  camera.position.y = eye + bobY;
+
+  /* ---- camera orientation / view mode ---- */
+  camera.rotation.order='YXZ';
+  camera.rotation.y=S.yaw + bobX*0.06;
+  camera.rotation.x=S.pitch + Math.sin(S.stepPhase)*0.006*S.bob;
+  camera.rotation.z=bobX*0.10*S.bob;
+
+  if(S.tp){
+    // pull the camera back over the shoulder, keeping the body where you "are"
+    playerBody.position.set(px,0,pz);
+    playerBody.rotation.y=S.yaw;
+    const back=new THREE.Vector3(Math.sin(S.yaw),0,Math.cos(S.yaw)).multiplyScalar(2.3);
+    let cx2=px+back.x, cz2=pz+back.z;
+    [cx2,cz2]=collide(cx2,cz2);
+    camera.position.set(cx2, 2.05+bobY*0.5, cz2);
+    // swing arms/legs
+    playerBody.children.forEach(c=>{
+      if(c.name==='legL'||c.name==='armR') c.rotation.x=Math.sin(S.stepPhase)*0.5*S.bob;
+      if(c.name==='legR'||c.name==='armL') c.rotation.x=-Math.sin(S.stepPhase)*0.5*S.bob;
+    });
+  }
+
+  /* ---- the world outside keeps moving ---- */
+  if(S.outside) outdoorTick(dt);
+
+  /* ---- thirst: the sun out there costs you more ---- */
+  const heat = S.outside ? (S.raining?1.0:1.55) : 1.0;
+  const drain = (running?0.0029:0.0013) * heat * dt;
+  S.thirst=clamp(S.thirst-drain,0,1);
+  if(S.thirst<=0 && !S.done) ending('dust');
+
+  const dry = clamp((0.32-S.thirst)/0.32,0,1);
+  $('#dryness').style.opacity = dry*0.85;
+  AU.tension = dry;
+  if(dry>0.25){
+    S.heartT-=dt;
+    if(S.heartT<=0){ AU.heart(); S.heartT = lerp(1.15,0.52,dry); }
+  }
+  renderer.domElement.style.filter = dry>0.5 ? `saturate(${1-dry*0.55}) blur(${(dry-0.5)*1.6}px)` : '';
+
+  /* ---- bottle viewmodel ---- */
+  bottleWaterVM.scale.y = Math.max(0.001, S.bottle);
+  bottleWaterVM.position.y = -0.085 + (S.bottle*0.17)/2;
+  bottleVM.position.y = -0.245 + Math.sin(S.stepPhase*2)*0.010*S.bob;
+  bottleVM.position.x = 0.215 + Math.cos(S.stepPhase)*0.008*S.bob;
+  bottleVM.rotation.z = -0.19 + Math.cos(S.stepPhase)*0.03*S.bob;
+
+  /* ---- fountain audio by distance ---- */
+  if(!S.fillerRunning) AU.waterLevel(0);
+  streamMesh.visible = S.fillerRunning;
+  if(S.fillerRunning){
+    streamMesh.material.opacity = 0.42+Math.random()*0.22;
+    streamMesh.scale.x = streamMesh.scale.z = 0.9+Math.random()*0.25;
+  }
+  S.fillerRunning=false;
+
+  /* ---- flood grows ---- */
+  if(S.floodStarted && floodPlane.visible){
+    floodPlane.scale.x = Math.min(60, floodPlane.scale.x + dt*9);
+    floodPlane.material.opacity=0.30+Math.sin(performance.now()*0.002)*0.06;
+  }
+
+  /* ---- the objective line keeps up with where you are ---- */
+  if(S.outside && !S._outObj){
+    S._outObj=true;
+    setObjective(S.busGone ? "The bus is gone. Walk east — you live about a hundred meters that way."
+                           : "The 4:10 is in the loop. Or keep walking east: you live about a hundred meters away.");
+  }
+
+  /* ---- hints, waypoint, journal ---- */
+  renderHints(); updateWaypoint();
+  if(S.journalOn) renderJournal();
+
+  /* ---- ambient life: a distant door, a shout, a squeak ---- */
+  if(!S.outside && Math.random()<dt*0.08){
+    const r=Math.random();
+    if(r<0.35) AU.voice(rnd(120,240));
+    else if(r<0.6) AU.metal('locker');
+    else AU.door();
+  }
+
+  /* ---- dust ---- */
+  dustDrift(dt);
+
+  /* ---- interaction raycast ---- */
+  doInteract(dt);
+
+  /* ---- subtitles fade ---- */
+  if(subTimer>0){ subTimer-=dt; if(subTimer<=0) $('#subs').classList.remove('on'); }
+
+  /* ---- autosave every 30 s with a SAVED flash ---- */
+  S.autoT+=dt;
+  if(S.autoT>30){ S.autoT=0; writeSave(true); }
+
+  AU.musicTick(dt, S.outside?'outside':'game');
+}
+
+/* Everything that is alive out there: the bus, the weather, the sprinkler,
+   a car on the road, birds, and a truck playing the same twelve notes. */
+function outdoorTick(dt){
+  const px=camera.position.x, pz=camera.position.z;
+
+  /* -- the sun follows you so shadows stay crisp all the way home -- */
+  outSun.position.set(px-26, 34, pz-18);
+  outSun.target.position.set(px, 0, pz);
+  outSun.target.updateMatrixWorld();
+  skyDome.position.set(px,0,pz);
+
+  /* -- the 4:10 actually leaves at 4:10 -- */
+  if(!S.busGone && S.clock>=16*60+10){
+    S.busGone=true; AU.airBrake();
+    say("The 4:10 sighs, folds its door shut and pulls out of the loop without you.");
+  }
+  if(S.busGone && busGroup.visible){
+    busGroup.position.x += dt*10;
+    if(busGroup.position.x>76){ busGroup.position.z -= dt*14; }   // turns north onto the road
+    if(busGroup.position.z<-34) busGroup.visible=false;
+  }
+  const busD=Math.hypot(px-busGroup.position.x, pz-15);
+  AU.busLevel(busGroup.visible ? clamp(1-busD/34,0,1)*0.5 : 0);
+
+  /* -- the sky opens at 4:18 -- */
+  if(!S.raining && S.clock>=16*60+18){
+    S.raining=true; AU.thunder(); AU.rainLevel(.26);
+    scene.fog.color.set(0x76808c); scene.fog.density=0.011;
+    scene.background=new THREE.Color(0x6d7783);
+    outSun.intensity=.85; outSkyLight.intensity=.58;
+    skyDome.material.color.set(0x8e99a6);
+    renderer.toneMappingExposure=0.93;
+    rainPoints.visible=true;
+    say("The light goes green-grey, the temperature drops ten degrees in a minute, and then it just <em>opens</em>.");
+    setObjective("It is pouring. Press R and tip your head back.");
+  }
+  if(S.raining){
+    const pos=rainPoints.geometry.attributes.position;
+    for(let i=0;i<pos.count;i++){
+      let y=pos.array[i*3+1]-dt*17;
+      if(y<0){ y=24;
+        pos.array[i*3]=px+rnd(-22,22); pos.array[i*3+2]=pz+rnd(-22,22); }
+      pos.array[i*3+1]=y;
+    }
+    pos.needsUpdate=true;
+    rainPoints.position.set(0,0,0);
+    S.thunderT-=dt;
+    if(S.thunderT<=0){ S.thunderT=rnd(9,22); AU.thunder(); }
+  }
+
+  /* -- sprinkler: a sweeping arc of water on the park grass -- */
+  if(sprinklerPts){
+    const u=sprinklerPts.userData, pos=sprinklerPts.geometry.attributes.position;
+    const t=performance.now()*0.001;
+    const sweep=Math.sin(t*0.9)*1.25 - 0.4;
+    for(let i=0;i<u.N;i++){
+      const life=((t*0.55+u.ph[i])%1);
+      const r=life*7.2;
+      const a=sweep + (u.ph[i]-.5)*0.22;
+      pos.array[i*3]  = u.x + Math.cos(a)*r;
+      pos.array[i*3+2]= u.z + Math.sin(a)*r;
+      pos.array[i*3+1]= 0.2 + 3.4*life - 4.4*life*life;
+    }
+    pos.needsUpdate=true;
+    const sd=Math.hypot(px-u.x,pz-u.z);
+    AU.sprinkLevel(clamp(1-sd/18,0,1)*0.055);
+  }
+
+  /* -- an open hydrant is a fire hose pointed at a street -- */
+  if(S.hydrantOpen && hydrantSpray.visible){
+    const u=hydrantSpray.userData, pos=hydrantSpray.geometry.attributes.position;
+    for(let i=0;i<u.N;i++){
+      u.vel[i*3+1]-=9.8*dt;
+      pos.array[i*3]  += u.vel[i*3]*dt;
+      pos.array[i*3+1]+= u.vel[i*3+1]*dt;
+      pos.array[i*3+2]+= u.vel[i*3+2]*dt;
+      if(pos.array[i*3+1]<0.05){
+        pos.array[i*3]=126; pos.array[i*3+1]=.5; pos.array[i*3+2]=5.2;
+        u.vel[i*3]=rnd(-1.6,-9); u.vel[i*3+1]=rnd(1.5,5); u.vel[i*3+2]=rnd(-1.2,1.2);
+      }
+    }
+    pos.needsUpdate=true;
+  }
+
+  /* -- traffic, birds, and that truck -- */
+  S.carT-=dt;
+  if(S.carT<=0){ S.carT=rnd(9,20); S.carRunning=true;
+    streetCar.position.set(82,0,-72); AU.carPass(); }
+  if(S.carRunning){
+    streetCar.position.z += dt*16;
+    if(streetCar.position.z>72) S.carRunning=false;
+  }
+  S.birdT-=dt; if(S.birdT<=0){ S.birdT=rnd(3,11); if(!S.raining) AU.bird(); }
+  S.jingleT-=dt;
+  if(S.jingleT<=0){ S.jingleT=rnd(16,26);
+    if(Math.hypot(px-92,pz-11)<46 && !S.raining) AU.jingle(); }
+}
+
+function doInteract(dt){
+  camera.updateMatrixWorld();   // the cursor ray needs this frame's camera, not last frame's
+  const origin=camera.position.clone();
+  const dir=new THREE.Vector3(S.mx, S.my, 0.5).unproject(camera).sub(origin).normalize();
+  let best=null, bestD=1e9;
+  let p=new THREE.Vector3();
+  for(const it of interactables){
+    if(it.cond && !it.cond()) continue;
+    p=aimPoint(it);
+    const d=p.distanceTo(origin);
+    if(d>it.dist) continue;
+    const to=p.clone().sub(origin).normalize();
+    const facing=to.dot(dir);
+    if(facing<0.55) continue;
+    const score=d-(facing-0.55)*2;
+    if(score<bestD){ bestD=score; best=it; }
+  }
+  hotTarget=best;
+  const pr=$('#prompt'), hr=$('#holdring');
+  if(best){
+    pr.classList.add('on'); $('#cross').classList.add('hot');
+    $('#cross').style.transform=`translate(${S.mouseX}px,${S.mouseY}px) scale(1.25)`;
+    pr.querySelector('b').textContent = best.key||'E';
+    $('#promptText').textContent = best.label;
+    hr.style.opacity = best.hold?1:0;
+  } else { pr.classList.remove('on'); $('#cross').classList.remove('hot');
+    $('#cross').style.transform=`translate(${S.mouseX}px,${S.mouseY}px)`; hr.style.opacity=0; }
+
+  let alt=null;
+  for(const it of interactables){
+    if(it.key!=='F') continue;
+    if(it.cond && !it.cond()) continue;
+    p=aimPoint(it);
+    if(p.distanceTo(origin)>it.dist) continue;
+    if(p.clone().sub(origin).normalize().dot(dir)<0.5) continue;
+    alt=it; break;
+  }
+  if(alt){ $('#prompt2').classList.add('on'); $('#prompt2Key').textContent='F';
+    $('#prompt2Text').textContent=alt.label; }
+  else if(S.raining && S.outside && !S.done){
+    $('#prompt2').classList.add('on'); $('#prompt2Key').textContent='R';
+    $('#prompt2Text').textContent='Tilt your head back'; }
+  else $('#prompt2').classList.remove('on');
+
+  // holds
+  if(best && best.hold){
+    const down = keys[(best.key||'e').toLowerCase()] || (S.mouseDown && (best.key||'E')==='E');
+    if(down){
+      const finished = best.onHold(dt);
+      $('#holdbar').style.width = (S.bottle*100)+'%';
+      if(finished && !best._done){ best._done=true; best.onDone && best.onDone(); }
+      if(!finished) best._done=false;
+    } else { best._done=false; S.overfill=Math.max(0,S.overfill-dt*2); }
+  }
+
+  // taps
+  for(const it of interactables){
+    if(it.hold) continue;
+    const k=(it.key||'e').toLowerCase();
+    if(keys[k] && it===best && !it._latch){ it._latch=true; it.fn(); }
+    if(!keys[k]) it._latch=false;
+  }
+  // F-key interactables need their own targeting pass (they share objects with E)
+  if(keys['f']){
+    for(const it of interactables){
+      if(it.key!=='F' || it._latch2) continue;
+      if(it.cond && !it.cond()) continue;
+      const ap=aimPoint(it);
+      if(ap.distanceTo(origin)<=it.dist){
+        const to=ap.clone().sub(origin).normalize();
+        if(to.dot(dir)>0.5){ it._latch2=true; (it.fn||it.onDone)(); }
+      }
+    }
+  } else interactables.forEach(it=>it._latch2=false);
+
+  // hydration bars
+  $('#thirstFill').style.width=(S.thirst*100).toFixed(1)+'%';
+  $('#bottleFill').style.width=(S.bottle*100).toFixed(1)+'%';
+}
+
+
+/* ======================================================================== */
+/*                          OUTSIDE — THE AFTERNOON                         */
+/* ======================================================================== */
+function omat(tex, rx, ry, extra){
+  const t=tex.clone(); t.needsUpdate=true;
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx,ry);
+  return mkMat(Object.assign({map:t, roughness:.95, metalness:0}, extra||{}));
+}
+function slab(w,d,mat,x,y,z,ry){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d), mat);
+  m.rotation.x=-Math.PI/2; m.rotation.z=ry||0;
+  m.position.set(x,y,z); m.receiveShadow=true; scene.add(m); return m;
+}
+function block(w,h,d,mat,x,y,z,ry,noCol){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z); m.rotation.y=ry||0;
+  m.castShadow=m.receiveShadow=true; scene.add(m);
+  if(!noCol) addBoxCollider(x-w/2,z-d/2,x+w/2,z+d/2);
+  return m;
+}
+
+function buildOutside(){
+  /* ------------------------------- sky ---------------------------------- */
+  skyDome=new THREE.Mesh(new THREE.SphereGeometry(420,32,20),
+    new THREE.MeshBasicMaterial({map:TEX.sky, side:THREE.BackSide, fog:false}));
+  skyDome.position.set(90,0,0); scene.add(skyDome);
+  skyDome.visible=false;
+
+  // a couple of flat clouds so the sky isn't a bare gradient
+  for(let i=0;i<7;i++){
+    const [cc,cx]=cvs(256,128);
+    for(let k=0;k<26;k++){
+      const g=cx.createRadialGradient(rnd(40,216),rnd(50,90),4,rnd(40,216),rnd(50,90),rnd(26,62));
+      g.addColorStop(0,'rgba(255,255,255,.5)'); g.addColorStop(1,'rgba(255,255,255,0)');
+      cx.fillStyle=g; cx.fillRect(0,0,256,128);
+    }
+    const cl=new THREE.Mesh(new THREE.PlaneGeometry(rnd(40,90),rnd(16,34)),
+      new THREE.MeshBasicMaterial({map:texFrom(cc),transparent:true,opacity:.85,
+        depthWrite:false,fog:false}));
+    cl.position.set(rnd(60,200), rnd(46,76), rnd(-130,110));
+    cl.rotation.x=-0.35; cl.visible=false; skyClouds.push(cl); scene.add(cl);
+  }
+
+  /* -------------------------- the afternoon sun -------------------------- */
+  outSun=new THREE.DirectionalLight(0xffdca6, 0.0);
+  outSun.castShadow=true;
+  outSun.shadow.mapSize.set(1024,1024);
+  outSun.shadow.camera.left=-34; outSun.shadow.camera.right=34;
+  outSun.shadow.camera.top=34; outSun.shadow.camera.bottom=-34;
+  outSun.shadow.camera.far=160; outSun.shadow.bias=-0.0012;
+  scene.add(outSun); scene.add(outSun.target);
+  outSkyLight = new THREE.HemisphereLight(0x9ec4e8, 0x6a6350, 0.0);
+  scene.add(outSkyLight);
+
+  /* ------------------------------ ground --------------------------------- */
+  const MAsphalt=omat(TEX.asphalt,16,16), MGrass=omat(TEX.grass,18,18),
+        MWalk=omat(TEX.walk,1,1), MBrick=omat(TEX.brick,4,2),
+        MShingle=omat(TEX.shingle,4,3);
+  slab(180,190,omat(TEX.asphalt,44,46,{color:0x8e8e90}),130,0.0,0);   // everything paved
+  slab(34,30,omat(TEX.walk,17,15,{color:0x9b988f}),53,0.012,4);       // apron by the doors
+
+  // the sidewalk you will walk the length of
+  const walkMat=omat(TEX.walk,60,2,{color:0x9b988f});
+  slab(150,4.5,walkMat,110,0.02,7.5);   // the whole walk home
+  slab(16,12,omat(TEX.walk,8,6,{color:0x9b988f}),46,0.02,0);               // the pad outside the doors
+
+  /* ------------------------ school exterior shell ------------------------ */
+  block(1.2,7,30,MBrick, 40.3,3.5,-17);                   // north of the doors
+  block(1.2,7,14,MBrick, 40.3,3.5,9);                     // south of the doors
+  block(1.2,3.6,4.4,MBrick, 40.3,5.2,0, 0, true);         // above the doors
+  roofGroup=new THREE.Group();
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(84,.5,50), MShingle);
+  roof.position.set(-1,7.1,-8); roof.receiveShadow=true; roofGroup.add(roof);
+  const para=new THREE.Mesh(new THREE.BoxGeometry(84.6,.9,50.6),
+    mkMat({color:0x6d5a4c,roughness:.95}));
+  para.position.set(-1,7.5,-8); roofGroup.add(para);
+  const hvac=new THREE.Mesh(new THREE.BoxGeometry(4,1.6,3), MAT.darkSteel);
+  hvac.position.set(10,8.2,-12); roofGroup.add(hvac);
+  scene.add(roofGroup);
+  // lettering over the doors
+  {
+    const [sc,sx]=cvs(512,96);
+    sx.fillStyle='rgba(0,0,0,0)'; sx.fillRect(0,0,512,96);
+    sx.fillStyle='#d9cdb4'; sx.font='bold 54px Georgia,serif'; sx.textAlign='center';
+    sx.fillText('FALCON HIGH', 256, 66);
+    const sg=new THREE.Mesh(new THREE.PlaneGeometry(6.4,1.2),
+      new THREE.MeshBasicMaterial({map:texFrom(sc),transparent:true}));
+    sg.position.set(41.0,5.3,0); sg.rotation.y=-Math.PI/2; scene.add(sg);
+  }
+  // flagpole
+  {
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.07,9,10), MAT.steel);
+    pole.position.set(49,4.5,-2); pole.castShadow=true; scene.add(pole);
+    addBoxCollider(48.8,-2.2,49.2,-1.8);
+    const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),
+      mkMat({color:0x2b4a7a,roughness:.9,side:THREE.DoubleSide}));
+    flag.position.set(49.9,8.0,-2); scene.add(flag);
+  }
+
+  /* ---------------------------- parking lot ------------------------------ */
+  const stripe=new THREE.MeshBasicMaterial({color:0xe8e4d8,transparent:true,opacity:.6});
+  for(let i=0;i<9;i++) slab(5.2,.14,stripe,60,0.03,-26+i*2.6);
+  function car(x,z,color,ry){
+    const g=new THREE.Group();
+    const bodyc=mkMat({color:color,roughness:.34,metalness:.55,
+      emissive:new THREE.Color(color).multiplyScalar(.04)});
+    const b=new THREE.Mesh(new THREE.BoxGeometry(4.3,.85,1.85), bodyc);
+    b.position.y=.72; g.add(b);
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(2.3,.72,1.72),
+      mkMat({color:0x1d2429,roughness:.12,metalness:.4}));
+    cab.position.set(-.2,1.42,0); g.add(cab);
+    for(const [wx,wz] of [[1.4,.96],[1.4,-.96],[-1.4,.96],[-1.4,-.96]]){
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.22,14),
+        mkMat({color:0x141618,roughness:.9}));
+      w.rotation.x=Math.PI/2; w.position.set(wx,.33,wz); g.add(w);
+    }
+    g.position.set(x,0,z); g.rotation.y=ry||0;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(g); addBoxCollider(x-2.2,z-1.1,x+2.2,z+1.1);
+    return g;
+  }
+  car(58,-24,0x8d2f2f); car(58,-19,0xd8d3c8); car(58,-13.8,0x2c4d78);
+  car(66,-24,0x35543c,Math.PI); car(66,-16,0x6d6f74,Math.PI);
+
+  /* --------------------------- Coach V's truck --------------------------- */
+  {
+    const g=new THREE.Group();
+    const cabin=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.25,2.1),
+      mkMat({color:0x2f5d45,roughness:.3,metalness:.6}));
+    cabin.position.set(-1.1,1.25,0); g.add(cabin);
+    const glass2=new THREE.Mesh(new THREE.BoxGeometry(2.0,.62,2.05),
+      mkMat({color:0x18242a,roughness:.1,metalness:.3}));
+    glass2.position.set(-1.1,1.72,0); g.add(glass2);
+    const bed=new THREE.Mesh(new THREE.BoxGeometry(3.0,.75,2.1),
+      mkMat({color:0x2f5d45,roughness:.35,metalness:.6}));
+    bed.position.set(1.4,.92,0); g.add(bed);
+    for(const [wx,wz] of [[1.6,1.02],[1.6,-1.02],[-1.5,1.02],[-1.5,-1.02]]){
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.28,14),
+        mkMat({color:0x131517,roughness:.9}));
+      w.rotation.x=Math.PI/2; w.position.set(wx,.42,wz); g.add(w);
+    }
+    const cooler=new THREE.Mesh(new THREE.BoxGeometry(.85,.6,.55),
+      mkMat({color:0xdb5a2a,roughness:.55}));
+    cooler.position.set(1.6,1.6,0); g.add(cooler);
+    const lid=new THREE.Mesh(new THREE.BoxGeometry(.9,.09,.6),
+      mkMat({color:0xf1f3f4,roughness:.5}));
+    lid.position.set(1.6,1.94,0); g.add(lid);
+    const cones=new THREE.Mesh(new THREE.ConeGeometry(.22,.5,10),
+      mkMat({color:0xe2591f,roughness:.8}));
+    cones.position.set(.6,1.55,.7); g.add(cones);
+    g.position.set(62,0,-9); g.rotation.y=Math.PI;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(g); addBoxCollider(59.4,-10.3,64.6,-7.7);
+
+    const coach=person(0x8a8f95, 64.6, -7.2, 1.06); coach.rotation.y=-1.2;
+    addBoxCollider(64.3,-7.5,64.9,-6.9);
+
+    interactables.push({obj:g, label:"Ask Coach V for water", key:'E', dist:3.6, fn:()=>{
+      AU.voice(115); drink('coach');
+      setTimeout(()=>ending('coachtruck'), 1500);
+    }});
+  }
+
+  /* ------------------------------- the bus -------------------------------- */
+  busGroup=new THREE.Group();
+  {
+    const yellow=mkMat({color:0xe8b528,roughness:.5,metalness:.2});
+    const b=new THREE.Mesh(new THREE.BoxGeometry(11.5,2.5,2.7), yellow);
+    b.position.y=1.85; busGroup.add(b);
+    const hood=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.3,2.5), yellow);
+    hood.position.set(6.4,1.2,0); busGroup.add(hood);
+    const win=new THREE.Mesh(new THREE.BoxGeometry(10.4,.95,2.76),
+      mkMat({color:0x1b2b33,roughness:.12,metalness:.35}));
+    win.position.set(-.2,2.45,0); busGroup.add(win);
+    const strip=new THREE.Mesh(new THREE.BoxGeometry(11.6,.16,2.74),
+      mkMat({color:0x1a1a1c,roughness:.8}));
+    strip.position.set(0,1.0,0); busGroup.add(strip);
+    for(let i=0;i<3;i++){
+      for(const zz of [1.36,-1.36]){
+        const w=new THREE.Mesh(new THREE.CylinderGeometry(.52,.52,.32,16),
+          mkMat({color:0x121416,roughness:.9}));
+        w.rotation.x=Math.PI/2; w.position.set(-4.4+i*4.6,.52,zz); busGroup.add(w);
+      }
+    }
+    const door=new THREE.Mesh(new THREE.BoxGeometry(1.1,2.0,.1),
+      mkMat({color:0x2a3338,roughness:.2,metalness:.3}));
+    door.position.set(4.2,1.3,-1.4); busGroup.add(door);
+    const [nc,nx]=cvs(256,64); nx.fillStyle='#1b1b1b'; nx.fillRect(0,0,256,64);
+    nx.fillStyle='#f2c33a'; nx.font='bold 40px monospace'; nx.textAlign='center';
+    nx.fillText('12 · WESTSIDE',128,46);
+    const num=new THREE.Mesh(new THREE.PlaneGeometry(2.2,.5),
+      new THREE.MeshBasicMaterial({map:texFrom(nc)}));
+    num.position.set(5.6,2.9,-1.36); busGroup.add(num);
+    busGroup.position.set(58,0,15);
+    busGroup.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(busGroup);
+    addBoxCollider(52,13.6,64,16.4);
+    interactables.push({obj:busGroup, label:'Get on the 4:10', key:'E', dist:4.2,
+      cond:()=>!S.busGone,
+      fn:()=>{ AU.airBrake(); resolveBus(); }});
+  }
+  // bus shelter + the machine everybody warns you about
+  {
+    const post=mkMat({color:0x556069,roughness:.5,metalness:.6});
+    for(const px2 of [46,52]) for(const pz of [19.4,22.6])
+      block(.14,2.4,.14,post,px2,1.2,pz,0,true);
+    const rf=new THREE.Mesh(new THREE.BoxGeometry(7,.12,4), mkMat({color:0x3d4750,roughness:.6}));
+    rf.position.set(49,2.45,21); rf.castShadow=true; scene.add(rf);
+    const bench=block(5.4,.12,.5, mkMat({color:0x6a7079,roughness:.7}), 49,.55,22.4);
+
+    const mach=new THREE.Group();
+    const cab2=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.0,.8),
+      mkMat({color:0x2a3d2c,roughness:.45,metalness:.35}));
+    cab2.position.y=1.0; mach.add(cab2);
+    const [fc,fx]=cvs(256,384);
+    fx.fillStyle='#10200f'; fx.fillRect(0,0,256,384);
+    for(let r=0;r<5;r++)for(let c2=0;c2<4;c2++){
+      fx.fillStyle=['#5ec0e8','#e8eef0','#7fd8a8','#d6d24a'][(r+c2)%4];
+      fx.fillRect(18+c2*58,24+r*68,40,54);
+    }
+    fx.fillStyle='rgba(120,200,255,.1)'; fx.fillRect(0,0,256,384);
+    fx.fillStyle='#ff6b6b'; fx.font='bold 20px sans-serif'; fx.fillText('EXACT CHANGE',40,368);
+    const face2=new THREE.Mesh(new THREE.PlaneGeometry(1.2,1.7),
+      mkMat({map:texFrom(fc),roughness:.2,emissive:0x162b1e,emissiveIntensity:.5}));
+    face2.position.set(0,1.05,.41); mach.add(face2);
+    mach.position.set(45,0,21.6); mach.rotation.y=-Math.PI/2;
+    mach.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(mach); addBoxCollider(44.6,21,45.4,22.2);
+    interactables.push({obj:mach, label:'Put your $2 in', key:'E', dist:2.6,
+      cond:()=>S.hasMoney && !S.machineJammed,
+      fn:()=>{ AU.vend(); S.hasMoney=false; S.machineJammed=true;
+        say("The spiral turns, the bottle noses forward — and stops. Hanging there. <em>Of course.</em>");
+        setObjective("The machine has your money and your bottle. It is right there."); }});
+    interactables.push({obj:mach, label:'Shake the machine', key:'E', dist:2.6,
+      cond:()=>S.machineJammed,
+      fn:()=>{ AU.metal('locker');
+        setTimeout(()=>{AU.metal('drop'); AU.metal('drop'); drink('jackpot');
+          setTimeout(()=>ending('jackpot'),1500);}, 700); }});
+    interactables.push({obj:mach, label:'Read the handwritten sign', key:'F', dist:2.6,
+      cond:()=>!S.machineJammed,
+      fn:()=>say("Taped to the glass, in marker: <em>\"TAKES YOUR MONEY. SHAKE IT.\"</em> Somebody underlined SHAKE twice.")});
+  }
+
+  /* -------------------------------- street -------------------------------- */
+  slab(12,190,omat(TEX.asphalt,4,64),82,0.03,0);
+  for(let i=-9;i<10;i++){   // centre line
+    slab(.3,3.2,new THREE.MeshBasicMaterial({color:0xd8c24a}),82,0.05,i*9);
+  }
+  for(let i=0;i<7;i++){     // crosswalk
+    slab(11,.5,new THREE.MeshBasicMaterial({color:0xe6e2d6}),82,0.06,-3.6+i*1.2);
+  }
+  slab(2.2,190,omat(TEX.walk,1,60,{color:0x9b988f}),75.5,0.04,0);   // curbs
+  slab(2.2,190,omat(TEX.walk,1,60,{color:0x9b988f}),88.5,0.04,0);
+  streetCar=car(82,-70,0x9aa0a6,Math.PI/2);
+
+  /* --------------------------------- park --------------------------------- */
+  slab(56,40,omat(TEX.grass,28,20),116,0.015,-28);
+  function tree(x,z,h){
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.22,.34,h,9),
+      mkMat({color:0x4d3a29,roughness:1}));
+    tr.position.set(x,h/2,z); tr.castShadow=true; scene.add(tr);
+    for(let i=0;i<3;i++){
+      const leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(rnd(1.5,2.4),0),
+        mkMat({color:new THREE.Color().setHSL(.26,.42,rnd(.22,.34)),roughness:1,flatShading:true}));
+      leaf.position.set(x+rnd(-1,1), h+rnd(-.3,1.1), z+rnd(-1,1));
+      leaf.castShadow=true; scene.add(leaf);
+    }
+    addBoxCollider(x-.4,z-.4,x+.4,z+.4);
+  }
+  tree(96,-16,4.2); tree(108,-34,5.1); tree(124,-20,4.6); tree(132,-36,5.4); tree(112,-12,3.9);
+
+  /* ------------------------- the park fountain ---------------------------- */
+  {
+    const g=new THREE.Group();
+    const ped=new THREE.Mesh(new THREE.CylinderGeometry(.26,.34,.95,14),
+      mkMat({color:0x2f5540,roughness:.8,metalness:.15}));
+    ped.position.y=.48; g.add(ped);
+    const bowl=new THREE.Mesh(new THREE.CylinderGeometry(.34,.26,.16,16),
+      mkMat({color:0x2f5540,roughness:.6,metalness:.2}));
+    bowl.position.y=1.02; g.add(bowl);
+    const bub=new THREE.Mesh(new THREE.CylinderGeometry(.03,.04,.1,8), MAT.steel);
+    bub.position.set(0,1.12,0); g.add(bub);
+    g.position.set(104,0,-20);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(103.6,-20.4,104.4,-19.6);
+    interactables.push({obj:g, label:'Drink from the park fountain', key:'E', hold:true, dist:3.2,
+      onHold:(dt)=>{ S.parkSip=(S.parkSip||0)+dt; AU.waterLevel(.3,1300+Math.sin(performance.now()*.004)*250);
+        return S.parkSip>1.6; },
+      onDone:()=>{ drink('park'); setTimeout(()=>ending('parkfount'),1400); }});
+    interactables.push({obj:g, label:'Fill your bottle here', key:'F', dist:3.2, fn:()=>{
+      S.bottle=1; S.source='park'; AU.splash();
+      say("You wrestle the sideways arc into the neck of your bottle. Mostly. <em>Bottle full.</em>"); }});
+  }
+
+  /* ------------------------------ sprinkler -------------------------------- */
+  {
+    const head=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,.34,10),
+      mkMat({color:0x2d6b3a,roughness:.8}));
+    head.position.set(118,.17,-16); head.castShadow=true; scene.add(head);
+    const N=700, pos=new Float32Array(N*3), ph=new Float32Array(N);
+    for(let i=0;i<N;i++){ ph[i]=Math.random(); pos[i*3]=118; pos[i*3+1]=.2; pos[i*3+2]=-16; }
+    const gg=new THREE.BufferGeometry();
+    gg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    sprinklerPts=new THREE.Points(gg, new THREE.PointsMaterial({color:0xdbf2ff,size:.075,
+      transparent:true,opacity:.75,depthWrite:false}));
+    sprinklerPts.userData={ph:ph,N:N,x:118,z:-16};
+    scene.add(sprinklerPts);
+    const trig=new THREE.Mesh(new THREE.BoxGeometry(5,2,5), new THREE.MeshBasicMaterial({visible:false}));
+    trig.position.set(118,1,-16); scene.add(trig);
+    interactables.push({obj:trig, label:'Run through the sprinkler', key:'E', dist:4.5, fn:()=>{
+      AU.splash(); drink('sprinkler'); setTimeout(()=>ending('sprinkler'),1500); }});
+  }
+
+  /* -------------------------- storm drain puddle --------------------------- */
+  {
+    const grate=new THREE.Mesh(new THREE.BoxGeometry(1.4,.06,.7),
+      mkMat({color:0x3a3d40,roughness:.7,metalness:.6}));
+    grate.position.set(90,.04,-7); scene.add(grate);
+    const pud=new THREE.Mesh(new THREE.CircleGeometry(1.5,24),
+      new THREE.MeshPhysicalMaterial({color:0x4a5a4c,roughness:.08,metalness:0,
+        transparent:true,opacity:.75}));
+    pud.rotation.x=-Math.PI/2; pud.position.set(90.4,.035,-6.4); scene.add(pud);
+    const trig=new THREE.Mesh(new THREE.BoxGeometry(2,1.6,2), new THREE.MeshBasicMaterial({visible:false}));
+    trig.position.set(90.4,.8,-6.4); scene.add(trig);
+    interactables.push({obj:trig, label:'…drink it', key:'E', dist:2.4,
+      cond:()=>S.thirst<0.14,
+      fn:()=>{ drink('puddle'); setTimeout(()=>ending('rockbottom'),1600); }});
+  }
+
+  /* ------------------------------ the mini mart ---------------------------- */
+  {
+    const MB=omat(TEX.brick,3,1.4);
+    block(16,4.2,.5,MB, 104,2.1,26);      // back
+    block(.5,4.2,14,MB, 96,2.1,19);       // west
+    block(.5,4.2,14,MB, 112,2.1,19);      // east
+    block(4.6,4.2,.5,MB, 98.3,2.1,12);    // front left of door
+    block(4.6,4.2,.5,MB, 109.7,2.1,12);   // front right of door
+    const glassFront=new THREE.Mesh(new THREE.BoxGeometry(2.2,3.0,.1), MAT.glass);
+    glassFront.position.set(100.7,1.6,12); scene.add(glassFront);
+    addBoxCollider(99.6,11.9,101.8,12.1);
+    slab(16,14,omat(TEX.walk,8,7,{color:0xa8a49a}),104,0.05,19);
+    const ceil2=new THREE.Mesh(new THREE.PlaneGeometry(16,14), mkMat({color:0xdedad2,roughness:1}));
+    ceil2.rotation.x=Math.PI/2; ceil2.position.set(104,4.1,19); scene.add(ceil2);
+    storeLight=new THREE.PointLight(0xe9f4ff,1.5,22,2); storeLight.position.set(104,3.6,19);
+    scene.add(storeLight);
+    const roof2=new THREE.Mesh(new THREE.BoxGeometry(17,.4,15), mkMat({color:0x55504a,roughness:1}));
+    roof2.position.set(104,4.4,19); roof2.castShadow=true; scene.add(roof2);
+    {
+      const [sc,sx]=cvs(512,128); sx.fillStyle='#b4271f'; sx.fillRect(0,0,512,128);
+      sx.fillStyle='#fdf6e4'; sx.font='bold 62px sans-serif'; sx.textAlign='center';
+      sx.fillText('MINI MART',256,88);
+      const sg=new THREE.Mesh(new THREE.PlaneGeometry(7,1.7),
+        new THREE.MeshBasicMaterial({map:texFrom(sc)}));
+      sg.position.set(104,5.2,11.7); scene.add(sg);
+    }
+    // the coolers along the back wall, glowing
+    for(let i=0;i<3;i++){
+      const dcase=new THREE.Mesh(new THREE.BoxGeometry(2.4,2.4,.8),
+        mkMat({color:0xdfe4e8,roughness:.4,metalness:.2,emissive:0x2a3f4d,emissiveIntensity:.5}));
+      dcase.position.set(100+i*3.2,1.2,25.2); dcase.castShadow=true; scene.add(dcase);
+      addBoxCollider(98.8+i*3.2,24.8,101.2+i*3.2,25.6);
+      const gl=new THREE.Mesh(new THREE.PlaneGeometry(2.0,2.0), MAT.glass);
+      gl.position.set(100+i*3.2,1.25,24.79); scene.add(gl);
+      const lightc=new THREE.PointLight(0xbfe6ff,.5,5,2);
+      lightc.position.set(100+i*3.2,1.6,24.2); scene.add(lightc);
+    }
+    const counter=block(5,1.1,1.0, mkMat({color:0x6d5b46,roughness:.7}), 107,.55,21);
+    const clerk=person(0x3f5a7a, 107, 22.4, 1.02); clerk.rotation.y=Math.PI;
+    addBoxCollider(106.7,22.1,107.3,22.7);
+    interactables.push({obj:clerk, label:'Buy the 44 oz — $2', key:'E', dist:3.4,
+      cond:()=>S.hasMoney,
+      fn:()=>{ AU.storeBell(); S.hasMoney=false; drink('biggulp');
+        setTimeout(()=>ending('biggulp'),1600); }});
+    interactables.push({obj:clerk, label:'Ask for a cup of tap water', key:'F', dist:3.4,
+      fn:()=>{ AU.voice(140); drink('clerk'); setTimeout(()=>ending('clerk'),1700); }});
+  }
+
+  /* ---------------------------- ice cream truck ----------------------------- */
+  {
+    const g=new THREE.Group();
+    const bodyt=new THREE.Mesh(new THREE.BoxGeometry(5.4,2.3,2.3),
+      mkMat({color:0xf2efe6,roughness:.45,metalness:.2}));
+    bodyt.position.y=1.7; g.add(bodyt);
+    const cabt=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.6,2.2),
+      mkMat({color:0xf2efe6,roughness:.45,metalness:.2}));
+    cabt.position.set(3.4,1.2,0); g.add(cabt);
+    const wint=new THREE.Mesh(new THREE.BoxGeometry(1.7,.8,2.24),
+      mkMat({color:0x1b262c,roughness:.15,metalness:.4}));
+    wint.position.set(3.4,1.6,0); g.add(wint);
+    const serv=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.0,.1),
+      mkMat({color:0x14222b,roughness:.3}));
+    serv.position.set(-.4,1.9,-1.16); g.add(serv);
+    const awn=new THREE.Mesh(new THREE.BoxGeometry(2.6,.08,.9),
+      mkMat({color:0xd94f4f,roughness:.8}));
+    awn.position.set(-.4,2.55,-1.5); awn.rotation.x=.25; g.add(awn);
+    for(const [wx,wz] of [[2.6,1.06],[2.6,-1.06],[-1.8,1.06],[-1.8,-1.06]]){
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.26,14),
+        mkMat({color:0x141618,roughness:.9}));
+      w.rotation.x=Math.PI/2; w.position.set(wx,.42,wz); g.add(w);
+    }
+    g.position.set(92,0,11.2); g.rotation.y=0;
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;});
+    scene.add(g); addBoxCollider(89,10.0,95,12.4);
+    interactables.push({obj:g, label:'Buy a freeze pop — $2', key:'E', dist:4.0,
+      cond:()=>S.hasMoney,
+      fn:()=>{ S.hasMoney=false; AU.jingle(); drink('icecream');
+        setTimeout(()=>ending('icecream'),1700); }});
+    interactables.push({obj:g, label:'Just listen to it for a second', key:'F', dist:4.0, fn:()=>{
+      AU.jingle(); say("Twelve notes, slightly flat, looping forever. The sound of every summer you have had."); }});
+  }
+
+  /* -------------------------------- houses ---------------------------------- */
+  function house(x, color, yours){
+    slab(14,10,omat(TEX.grass,5,4), x, 0.02, 15);          // lawn
+    const w=block(11,3.4,8, omat(TEX.brick,2.5,1.2).clone(), x, 1.7, 19);
+    w.material=mkMat({color:color,roughness:.95});
+    const roof3=new THREE.Mesh(new THREE.ConeGeometry(8.6,2.6,4), omat(TEX.shingle,2,2));
+    roof3.rotation.y=Math.PI/4; roof3.position.set(x,4.7,19); roof3.castShadow=true; scene.add(roof3);
+    const door2=new THREE.Mesh(new THREE.BoxGeometry(1.1,2.2,.12),
+      mkMat({color: yours?0x2f5d7a:0x5a3f2c, roughness:.6}));
+    door2.position.set(x,1.1,14.95); scene.add(door2);
+    const win2=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.1,.1),
+      mkMat({color:0x22313a,roughness:.1,metalness:.4}));
+    win2.position.set(x-3,1.9,14.95); scene.add(win2);
+    const win3=win2.clone(); win3.position.set(x+3,1.9,14.95); scene.add(win3);
+    slab(1.6,7,omat(TEX.walk,1,3), x, .03, 11.5);          // front path
+    return door2;
+  }
+
+  house(120, 0xb8a88f);
+  house(136, 0xa7b0a4);
+  const myDoor = house(152, 0xc6b79b, true);
+  {
+    const mailbox=new THREE.Mesh(new THREE.BoxGeometry(.4,.28,.6),
+      mkMat({color:0x4a5158,roughness:.7,metalness:.3}));
+    mailbox.position.set(149,1.1,10.5); mailbox.castShadow=true; scene.add(mailbox);
+    const mpost=new THREE.Mesh(new THREE.BoxGeometry(.1,1.1,.1), mkMat({color:0x6b5540,roughness:1}));
+    mpost.position.set(149,.55,10.5); scene.add(mpost);
+    interactables.push({obj:myDoor, label:'Go inside — you live here', key:'E', dist:3.8, fn:()=>{
+      AU.door(); setTimeout(()=>ending('home'), 900);
+    }});
+    interactables.push({obj:mailbox, label:'Check the mail', key:'E', dist:2.2, fn:()=>{
+      say("A power bill and a catalogue for a store that closed. You put them back, because that is not your job today."); }});
+  }
+
+  /* --------------------------- somebody's hose ------------------------------ */
+  {
+    const g=new THREE.Group();
+    const spig=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.2,8), MAT.steel);
+    spig.position.set(0,.5,0); spig.rotation.z=Math.PI/2; g.add(g.userData.s=spig);
+    const valve=new THREE.Mesh(new THREE.TorusGeometry(.08,.022,8,14), MAT.paintRed);
+    valve.position.set(.14,.5,0); valve.rotation.y=Math.PI/2; g.add(valve);
+    for(let i=0;i<5;i++){
+      const coil=new THREE.Mesh(new THREE.TorusGeometry(.42-i*.05,.045,8,20),
+        mkMat({color:0x2f6b3c,roughness:.85}));
+      coil.rotation.x=Math.PI/2; coil.position.set(.5,.05+i*.06,.5); g.add(coil);
+    }
+    const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(.03,.05,.28,8), MAT.steel);
+    nozzle.position.set(1.1,.1,.8); nozzle.rotation.z=1.2; g.add(nozzle);
+    g.position.set(131.2,0,14.9);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    const trig=new THREE.Mesh(new THREE.BoxGeometry(2,1.6,2), new THREE.MeshBasicMaterial({visible:false}));
+    trig.position.set(131.4,.9,14.6); scene.add(trig);
+    interactables.push({obj:trig, label:"Turn on somebody's hose", key:'E', hold:true, dist:2.6,
+      onHold:(dt)=>{ S.hoseT=(S.hoseT||0)+dt; AU.waterLevel(.3, 400+S.hoseT*500);
+        if(S.hoseT>0.8 && !S.hoseSaid){ S.hoseSaid=true;
+          say("Ten seconds of water that has been sitting in a black hose in the sun. Then it goes cold."); }
+        return S.hoseT>2.4; },
+      onDone:()=>{ drink('hose'); setTimeout(()=>ending('hose'),1500); }});
+    interactables.push({obj:trig, label:'Fill your bottle from it', key:'F', dist:2.6, fn:()=>{
+      S.bottle=1; S.source='hose'; AU.splash();
+      say("You fill up in a stranger's yard with one eye on the front window. <em>Bottle full.</em>"); }});
+  }
+
+  /* ------------------------------ the hydrant ------------------------------- */
+  {
+    const g=new THREE.Group();
+    const bodyh=new THREE.Mesh(new THREE.CylinderGeometry(.16,.19,.75,12), MAT.paintRed);
+    bodyh.position.y=.38; g.add(bodyh);
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8,0,6.3,0,1.6), MAT.paintRed);
+    dome.position.y=.75; g.add(dome);
+    for(const sx2 of [-1,1]){
+      const cap=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.12,10), MAT.paintRed);
+      cap.rotation.z=Math.PI/2; cap.position.set(sx2*.2,.5,0); g.add(cap);
+    }
+    g.position.set(126,0,5.2);
+    g.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(g);
+    addBoxCollider(125.8,5.0,126.2,5.4);
+
+    const N=900, pos=new Float32Array(N*3), vel=new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      pos[i*3]=126; pos[i*3+1]=.5; pos[i*3+2]=5.2;
+      vel[i*3]=rnd(-1.6,-9); vel[i*3+1]=rnd(1.5,5); vel[i*3+2]=rnd(-1.2,1.2);
+    }
+    const hg=new THREE.BufferGeometry();
+    hg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    hydrantSpray=new THREE.Points(hg,new THREE.PointsMaterial({color:0xe2f4ff,size:.10,
+      transparent:true,opacity:.8,depthWrite:false}));
+    hydrantSpray.userData={vel:vel,N:N}; hydrantSpray.visible=false; scene.add(hydrantSpray);
+
+    const k1=person(0xd06a4e,124.2,7.4,.86); k1.rotation.y=1.2;
+    const k2=person(0x4e7dd0,123.2,4.2,.82); k2.rotation.y=-.4;
+    interactables.push({obj:g, label:'Open it (there is a wrench right there)', key:'E', dist:2.8,
+      cond:()=>!S.hydrantOpen,
+      fn:()=>{ S.hydrantOpen=true; hydrantSpray.visible=true; AU.gush();
+        say("The wrench turns, complains, and then the street gets loud.");
+        setObjective("The hydrant is open. Everyone on the block is about to be in it."); }});
+    interactables.push({obj:g, label:'Get in it', key:'E', dist:3.6,
+      cond:()=>S.hydrantOpen,
+      fn:()=>{ AU.splash(); drink('hydrant'); setTimeout(()=>ending('hydrant'),1700); }});
+  }
+
+  /* --------------------------------- rain ----------------------------------- */
+  {
+    const N=4200, pos=new Float32Array(N*3);
+    for(let i=0;i<N;i++){
+      pos[i*3]=rnd(-26,26); pos[i*3+1]=rnd(0,24); pos[i*3+2]=rnd(-26,26);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const [rc,rx]=cvs(16,64);
+    const rgd=rx.createLinearGradient(0,0,0,64);
+    rgd.addColorStop(0,'rgba(220,235,245,0)'); rgd.addColorStop(.45,'rgba(225,240,250,.95)');
+    rgd.addColorStop(1,'rgba(220,235,245,0)');
+    rx.fillStyle=rgd; rx.fillRect(5,0,6,64);
+    const rtex=new THREE.CanvasTexture(rc);
+    rainPoints=new THREE.Points(g,new THREE.PointsMaterial({map:rtex,color:0xdcebf5,size:.34,
+      transparent:true,opacity:.5,depthWrite:false,sizeAttenuation:true}));
+    rainPoints.visible=false; scene.add(rainPoints);
+  }
+}
+
+
+/* ======================================================================== */
+/*                            FLOW / SCREENS                                */
+/* ======================================================================== */
+function buildGallery(){
+  const g=$('#gallery'); g.innerHTML='';
+  ENDINGS.forEach(e=>{
+    const d=document.createElement('div');
+    const got=S.found.has(e.id);
+    d.className='slot'+(got?' got':'');
+    d.textContent = got? e.name : '?????';
+    g.appendChild(d);
+  });
+  $('#count').textContent = S.found.size+' / '+ENDINGS.length+' ENDINGS FOUND';
+}
+
+function startGame(){
+  AU.init(); AU.ambienceUp(); AU.musicVol(.35,3);
+  // reset run state
+  Object.assign(S,{
+    running:true,done:false,thirst:0.52,bottle:0,source:null,drank:null,
+    overfill:0,floodStarted:false,hasMoney:false,boughtWater:false,talkedMarco:false,
+    staffOpen:false,gaveBottle:false,drankStream:false,locked:false,
+    clock:15*60+7, tp:false, yaw:-Math.PI/2, pitch:0, bob:0, stepPhase:0, lastStep:0,
+    counter:9997, bellDone:false, autoT:0, heartT:0, mx:0, my:0, mouseDown:false,
+    outside:false, doorsOpen:false, busGone:false, raining:false, machineJammed:false,
+    hydrantOpen:false, journalOn:false, parkSip:0, hoseT:0, hoseSaid:false,
+    carT:6, jingleT:14, birdT:3, thunderT:0, _hintKey:null, _wp:null, _outObj:false
+  });
+  S.vel.set(0,0,0);
+  camera.position.set(-36,1.68,0);
+  playerBody.visible=false; bottleVM.visible=true;
+  floodPlane.visible=false; floodPlane.scale.x=1;
+  // put the world back the way it started
+  S.outside=true; updateZone();                    // force a switch back inside
+  if(busGroup){ busGroup.visible=true; busGroup.position.set(58,0,15); }
+  if(rainPoints) rainPoints.visible=false;
+  if(hydrantSpray) hydrantSpray.visible=false;
+  if(doorGroup) doorGroup.children.forEach(c=>c.rotation.y=0);
+  if(staffDoor) staffDoor.rotation.y=0;
+  AU.rainLevel(0); AU.busLevel(0); AU.sprinkLevel(0);
+  $('#journal').classList.add('hide');
+  interactables.forEach(it=>{it._done=false;it._latch=false;it._latch2=false;});
+  updateCounter();
+  $('#title').classList.add('hide'); $('#end').classList.add('hide'); $('#pause').classList.add('hide');
+  $('#hud').classList.add('on');
+  setObjective("Your mouth is dry. Find water before 4:00.");
+  say("Last bell. The hallway smells like floor wax. <em>Your bottle has been empty since lunch.</em>");
+}
+function pause(){
+  if(!S.running) return;
+  S.running=false; S.mouseDown=false; AU.waterLevel(0); AU.musicVol(.2,.6);
+  $('#pause').classList.remove('hide');
+}
+function resume(){
+  $('#pause').classList.add('hide'); S.running=true; AU.musicVol(.35,1);
+}
+function toMenu(){
+  S.running=false; S.done=false;
+  AU.ambienceDown(); AU.musicVol(.5,2); AU.waterLevel(0);
+  $('#end').classList.add('hide'); $('#pause').classList.add('hide');
+  $('#hud').classList.remove('on');
+  $('#dryness').style.opacity=0;
+  renderer.domElement.style.filter='';
+  buildGallery();
+  $('#title').classList.remove('hide');
+}
+
+/* ------------------------------- bootstrap -------------------------------- */
+function init(){
+  renderer=new THREE.WebGLRenderer({canvas:$('#gl'), antialias:true, powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+
+  buildTextures();
+  buildWorld();
+  loadSave();
+  buildGallery();
+
+  addEventListener('resize',()=>{
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+
+  $('#startBtn').onclick=()=>startGame();
+  $('#againBtn').onclick=()=>startGame();
+  $('#menuBtn').onclick=()=>toMenu();
+  $('#quitBtn').onclick=(e)=>{ e.stopPropagation(); toMenu(); };
+  $('#pause').onclick=()=>resume();
+  // menu music on any first interaction
+  const kick=()=>{ AU.init(); AU.musicVol(.5,2); removeEventListener('pointerdown',kick); };
+  addEventListener('pointerdown',kick);
+
+  $('#boot').classList.add('hide');
+  tick();
+}
+init();
+</script>
+</body>
+</html>
