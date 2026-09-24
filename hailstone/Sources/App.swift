@@ -31,7 +31,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if shot != nil {
             view.inputEnabled = false
             game.ignoreInput = true
-            window.orderFrontRegardless()     // test captures never steal keyboard focus
+            // Test captures never steal keyboard focus. They float on every Space so macOS doesn't
+            // throttle an occluded window, since SceneKit only steps the physics when it draws.
+            window.level = .floating
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            window.orderFrontRegardless()
         } else {
             window.makeKeyAndOrderFront(nil)
             window.makeFirstResponder(view)
@@ -48,9 +52,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let s = arg("--pile").flatMap(Int.init) { game.devPile(s) }
         if let s = arg("--drop").flatMap(Int.init) { game.devDrop(s) }
         if args.contains("--slowmo") { game.devSlowmo() }
+        if args.contains("--stress") { game.devStress() }
         if let path = arg("--shot") {
             let delay = Double(arg("--delay") ?? "5") ?? 5
             func attempt(_ n: Int) {
+                if self.args.contains("--stress") || self.args.contains("--measure") {
+                    print("stress: \(self.game.balls.count) balls, \(self.game.escaped) outside the pen, \(self.game.corrections) solver corrections, deepest \(self.game.penetration.0) m into a wall, \(self.game.penetration.1) above the rim, \(self.game.frames) frames, \(String(format: "%.1f", self.game.simTime)) s simulated"); fflush(stdout)
+                }
                 let img = self.view.snapshot()
                 if let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
                    let png = rep.representation(using: .png, properties: [:]),
@@ -67,7 +75,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    // Test captures keep the window unfocused, and AppKit can count it as closed.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { arg("--shot") == nil }
     func applicationWillTerminate(_ notification: Notification) { if !SaveData.disabled { game?.saveNow() } }
     func windowDidResignKey(_ notification: Notification) { view?.input.clear() }
 

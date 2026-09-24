@@ -64,6 +64,7 @@ final class Ball {
 
     var position: SIMD3<Float> { SIMD3(node.presentation.simdWorldPosition) }
     var mass: Float { Float(node.physicsBody?.mass ?? 1) }
+    var volume: Float { 4 / 3 * .pi * radius * radius * radius }
 
     /// Brief glow, used when the ball gives birth or reaches 1.
     func flash(_ c: NSColor, peak: CGFloat, duration: Double) {
@@ -165,7 +166,9 @@ enum BallFactory {
         node.categoryBitMask = 3        // bit 2 = clickable
 
         let body = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(geometry: SCNSphere(radius: CGFloat(r)), options: nil))
-        body.mass = CGFloat(density * 4 / 3 * .pi * r * r * r)
+        // Real resin mass for small balls; the big ones scale with r² rather than r³. At true weight,
+        // a stack of half-tonne balls pushes the solver's contacts into the walls.
+        body.mass = CGFloat(density * 4 / 3 * .pi * 0.1 * r * r)
         body.restitution = 0.9
         body.friction = 0.35
         body.rollingFriction = 0.02

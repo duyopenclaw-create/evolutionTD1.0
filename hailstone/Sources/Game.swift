@@ -41,6 +41,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
     let camNode = SCNNode(), camera = SCNCamera()
 
     static let maxBalls = 420
+    static let volumeBudget: Float = World.penX * World.penZ * 4 * World.penH * 0.33
     private(set) var balls: [Ball] = []
     private var byNode: [ObjectIdentifier: Ball] = [:]
     private var chains: [Int: Chain] = [:]
@@ -50,7 +51,8 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
     private var typing = ""
     var ignoreInput = false
 
-    private var simTime = 0.0, lastTime = 0.0, lastSave = 0.0
+    private(set) var simTime = 0.0, frames = 0
+    private var lastTime = 0.0, lastSave = 0.0
     private struct Contact { let a: SCNNode; let b: SCNNode; let n: SIMD3<Float>; let p: SIMD3<Float> }
     private var contacts: [Contact] = []
     private let contactLock = NSLock()
@@ -145,6 +147,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         let dt = lastTime == 0 ? 1.0 / 60 : min(0.05, time - lastTime)
         lastTime = time
         simTime += dt
+        frames += 1
         soundsThisFrame = 0
         if !ignoreInput { handleInput() }
         updateGantry(Float(dt))
@@ -330,13 +333,10 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         b.node.physicsBody?.velocity = SCNVector3(v.x, v.y, v.z)
         b.node.physicsBody?.angularVelocity = SCNVector4(spin.x, spin.y, spin.z, simd_length(spin))
         b.lastVel = v
-        // grow in over a few frames so a birth reads as a birth, not a teleport
-        b.node.simdScale = SIMD3(repeating: 0.3)
-        b.node.runAction(.customAction(duration: 0.14) { n, t in
-            let k = Float(t / 0.14)
-            let e = 1 - (1 - k) * (1 - k)
-            n.simdScale = SIMD3(repeating: 0.3 + 0.7 * e)
-        })
+        // No scale-in: SceneKit scales the collider with the node, so a growing ball would swell into its
+        // neighbours and the walls. It fades in instead.
+        b.node.opacity = 0.2
+        b.node.runAction(.fadeIn(duration: 0.1))
         balls.append(b)
         byNode[ObjectIdentifier(b.node)] = b
     }
@@ -443,8 +443,23 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         var h = SIMD2<Float>(cosf(ang), sinf(ang)) * rng.range(0.3, 0.9)
         h -= SIMD2(p.x / World.penX, p.z / World.penZ) * 0.9
         if simd_length(h) > 1.2 { h = simd_normalize(h) * 1.2 }
-        let pos = SIMD3<Float>(p.x, p.y + parent.radius + child.radius + 0.03, p.z)
-        add(child, at: pos, velocity: SIMD3(h.x, up, h.y), spin: SIMD3(rng.range(-6, 6), rng.range(-3, 3), rng.range(-6, 6)))
+        // Keep the whole flight inside the pen. Spawn clear of the walls, and cap the launch so the top of
+        // its arc stays under the rail. A birth on a tall pile gets a gentle nudge sideways instead of a pop.
+        let cr = child.radius
+        let apex = World.penH - cr - 0.2
+        var pos = SIMD3<Float>(p.x, p.y + parent.radius + cr + 0.03, p.z)
+        pos.x = clampf(pos.x, -World.penX + cr + 0.02, World.penX - cr - 0.02)
+        pos.z = clampf(pos.z, -World.penZ + cr + 0.02, World.penZ - cr - 0.02)
+        pos.y = min(pos.y, apex)
+        let headroom = max(0, apex - pos.y)
+        var vy = min(up, sqrtf(2 * 9.81 * headroom))
+        if headroom < 0.1 { vy = 0.2 }
+        // horizontal range must also land inside: limit it by the flight time
+        let flight = (vy + sqrtf(vy * vy + 2 * 9.81 * max(0, pos.y - cr))) / 9.81
+        let room = SIMD2<Float>(World.penX - cr - abs(pos.x), World.penZ - cr - abs(pos.z))
+        if h.x * pos.x > 0 { h.x = copysignf(min(abs(h.x), room.x / max(flight, 0.1)), h.x) }
+        if h.y * pos.z > 0 { h.y = copysignf(min(abs(h.y), room.y / max(flight, 0.1)), h.y) }
+        add(child, at: pos, velocity: SIMD3(h.x, vy, h.y), spin: SIMD3(rng.range(-6, 6), rng.range(-3, 3), rng.range(-6, 6)))
         // the parent is shoved down a little by the birth
         if let pb = parent.node.physicsBody {
             let recoil = min(1.0, Double(child.mass / max(parent.mass, 0.01))) * 1.2
@@ -472,9 +487,10 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
             guard let body = b.node.physicsBody else { continue }
             let v = body.velocity
             b.lastVel = SIMD3(Float(v.x), Float(v.y), Float(v.z))
-            let p = b.position
+            var p = b.position
+            if contain(b, &p, body) { corrections += 1 }
             b.updateContact()
-            if p.y < -3 || abs(p.x) > World.halfX + 2 || abs(p.z) > World.halfZ + 2 { stale.append(b); continue }
+            if p.y < -3 { stale.append(b); continue }
             // a ball that landed too softly to count still gets its turn
             if !b.spawned && simTime - b.born > 3.5 { birth(from: b) }
             if abs(p.y - b.radius) < 0.03 && abs(b.lastVel.y) < 0.4 {
@@ -485,16 +501,40 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         }
         for b in stale { remove(b, animated: false) }
         // cull the oldest finished balls once the pen is full
-        if balls.count > Game.maxBalls {
-            var excess = balls.count - Game.maxBalls
-            for b in balls where excess > 0 && b.spawned && b !== focus {
-                remove(b, animated: true)
+        // Keep the pile well under the rim. Cap by count, and by total ball volume (about a third of the
+        // pen), which with random packing keeps the heap under about 1.5 m. Oldest finished balls go first.
+        var vol = balls.reduce(Float(0)) { $0 + $1.volume }
+        var excess = balls.count - Game.maxBalls
+        if excess > 0 || vol > Game.volumeBudget {
+            for b in balls where (excess > 0 || vol > Game.volumeBudget) && b.spawned && b !== focus {
+                vol -= b.volume
                 excess -= 1
+                remove(b, animated: true)
             }
         }
         audio.ambient.roll = min(1, roll * 0.9)
         audio.ambient.rollPitch = rollW > 0 ? clampf((rollR / rollW - 0.07) / 0.4, 0, 1) : 0
         if let f = focus, f.node.parent == nil { focus = nil }
+    }
+
+    /// Safety net for the solver. Bullet can push a ball into the sheet under heavy stacking or a hard hit.
+    /// If that happens, put the ball back on the inner face and reflect its outward velocity.
+    private(set) var corrections = 0
+    private func contain(_ b: Ball, _ p: inout SIMD3<Float>, _ body: SCNPhysicsBody) -> Bool {
+        let lx = World.penX - b.radius, lz = World.penZ - b.radius
+        let tol: Float = 0.05     // Bullet's normal contact slop is ~1–2 cm; only step in on a real failure
+        guard abs(p.x) > lx + tol || abs(p.z) > lz + tol else { return false }
+        if corrections < 25 && CommandLine.arguments.contains("--measure") {
+            print(String(format: "fix n=%d r=%.2f age=%.2f p=(%.3f,%.3f,%.3f) v=(%.2f,%.2f,%.2f) lx=%.3f lz=%.3f", b.value, b.radius, simTime - b.born, p.x, p.y, p.z, b.lastVel.x, b.lastVel.y, b.lastVel.z, lx, lz)); fflush(stdout)
+        }
+        var v = b.lastVel
+        if abs(p.x) > lx { p.x = copysignf(lx, p.x); if v.x * p.x > 0 { v.x = 0 } }
+        if abs(p.z) > lz { p.z = copysignf(lz, p.z); if v.z * p.z > 0 { v.z = 0 } }
+        b.node.simdWorldPosition = p
+        body.velocity = SCNVector3(v.x, v.y, v.z)
+        body.resetTransform()
+        b.lastVel = v
+        return true
     }
 
     // MARK: Camera
@@ -571,6 +611,26 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
     }
 
     func devDrop(_ seed: Int) { queueDrop(seed, at: nil) }
+
+    /// Fills the pen fast (several long chains at once) to try to force balls over or through the walls.
+    func devStress() {
+        for (i, s) in [27, 97, 871, 703, 6171, 9663].enumerated() {
+            queueDrop(s, at: SIMD2(Float(i % 3 - 1) * 3, Float(i / 3) * 3 - 1.5))
+        }
+    }
+    /// Balls whose centres are outside the pen's inner faces right now.
+    var penetration: (Float, Int) {
+        var worst: Float = 0, above = 0
+        for b in balls {
+            let p = b.position
+            worst = max(worst, abs(p.x) - (World.penX - b.radius), abs(p.z) - (World.penZ - b.radius))
+            if p.y - b.radius > World.penH { above += 1 }
+        }
+        return (worst, above)
+    }
+    var escaped: Int {
+        balls.filter { let p = $0.position; return abs(p.x) > World.penX - $0.radius + 0.05 || abs(p.z) > World.penZ - $0.radius + 0.05 }.count
+    }
     func devCamera(yaw y: Float?, pitch p: Float?, dist d: Float?) {
         if let y { yaw = y }
         if let p { pitch = p }

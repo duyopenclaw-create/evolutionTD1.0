@@ -6,9 +6,15 @@ final class World {
     let root = SCNNode()
     static let halfX: Float = 16, halfZ: Float = 10, ceiling: Float = 9
     /// Inner half-size of the acrylic pen.
-    static let penX: Float = 5, penZ: Float = 3.5, penH: Float = 2.2
+    static let penX: Float = 5, penZ: Float = 3.5, penH: Float = 3.0
     static let nozzleY: Float = 3.3
     static let env = Tex.environment()
+    static let invisible: SCNMaterial = {
+        let m = SCNMaterial()
+        m.colorBufferWriteMask = []
+        m.writesToDepthBuffer = false
+        return m
+    }()
 
     let bridge = SCNNode()
     let carriage = SCNNode()
@@ -309,15 +315,21 @@ final class World {
             let panel = box(alongX ? len : th, H, alongX ? th : len, acrylic, at: pos)
             panel.castsShadow = false
             panel.renderingOrder = 10
-            // thicker invisible collider sitting just outside the sheet
-            let coll = SCNNode(geometry: SCNBox(width: CGFloat(alongX ? len + 0.4 : 0.2), height: CGFloat(H + 0.1), length: CGFloat(alongX ? 0.2 : len + 0.4), chamferRadius: 0))
-            coll.simdPosition = alongX ? SIMD3(0, (H + 0.1) / 2, sign * (Z + 0.1)) : SIMD3(sign * (X + 0.1), (H + 0.1) / 2, 0)
-            coll.isHidden = true
+            // Collider: its inner face is exactly the sheet's inner face, and it runs from the floor to
+            // the top of the rail. It is 0.3 m thick outward so fast balls can't tunnel through.
+            let ct: Float = 0.3, top = H + 0.05
+            let coll = SCNNode(geometry: SCNBox(width: CGFloat(alongX ? len + 2 * ct : ct), height: CGFloat(top), length: CGFloat(alongX ? ct : len + 2 * ct), chamferRadius: 0))
+            coll.simdPosition = alongX ? SIMD3(0, top / 2, sign * (Z + ct / 2)) : SIMD3(sign * (X + ct / 2), top / 2, 0)
+            // Invisible but solid. `isHidden` would also take the node out of the physics world.
+            coll.geometry?.materials = [World.invisible]
+            coll.castsShadow = false
             root.addChildNode(coll)
             staticBody(coll, Mask.glass, restitution: 0.75, friction: 0.25)
-            // top rail and floor gasket
-            _ = box(alongX ? len + 0.08 : 0.05, 0.05, alongX ? 0.05 : len + 0.08, alu, at: SIMD3(pos.x, H + 0.025, pos.z))
-            _ = box(alongX ? len : 0.06, 0.04, alongX ? 0.06 : len, rubber, at: SIMD3(pos.x, 0.02, pos.z))
+            // top rail and floor gasket collide with their true shapes (they stand slightly proud of the sheet)
+            let rail = box(alongX ? len + 0.08 : 0.05, 0.05, alongX ? 0.05 : len + 0.08, alu, at: SIMD3(pos.x, H + 0.025, pos.z))
+            staticBody(rail, Mask.glass, restitution: 0.7, friction: 0.3)
+            let gasket = box(alongX ? len : 0.06, 0.04, alongX ? 0.06 : len, rubber, at: SIMD3(pos.x, 0.02, pos.z))
+            staticBody(gasket, Mask.glass, restitution: 0.5, friction: 0.8)
         }
         // posts every 2.5 m
         var posts: [SIMD2<Float>] = []
@@ -326,7 +338,8 @@ final class World {
         var z: Float = -Z + 3.5
         while z < Z - 0.01 { posts.append(SIMD2(-X, z)); posts.append(SIMD2(X, z)); z += 3.5 }
         for p in posts {
-            _ = box(0.06, H + 0.06, 0.06, alu, at: SIMD3(p.x + (p.x < 0 ? -0.02 : 0.02) * (abs(p.x) == X ? 1 : 0), (H + 0.06) / 2, p.y + (p.y < 0 ? -0.02 : 0.02) * (abs(p.y) == Z ? 1 : 0)))
+            let post = box(0.06, H + 0.06, 0.06, alu, at: SIMD3(p.x + (p.x < 0 ? -0.02 : 0.02) * (abs(p.x) == X ? 1 : 0), (H + 0.06) / 2, p.y + (p.y < 0 ? -0.02 : 0.02) * (abs(p.y) == Z ? 1 : 0)))
+            staticBody(post, Mask.glass, restitution: 0.7, friction: 0.3)
             _ = box(0.3, 0.02, 0.3, alu, at: SIMD3(p.x, 0.01, p.y))
         }
     }
