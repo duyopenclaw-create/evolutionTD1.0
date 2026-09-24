@@ -32,6 +32,8 @@ final class Ball {
     var spawned = false
     var lastVel = SIMD3<Float>(repeating: 0)
     var lastSound = -1.0
+    /// Soft ambient-occlusion disc on the floor under the ball.
+    let contact: SCNNode
 
     init(value: Int, chain: Int, step: Int, born: Double) {
         self.value = value
@@ -40,6 +42,24 @@ final class Ball {
         self.born = born
         radius = BallFactory.radius(value)
         (node, material) = BallFactory.make(value, radius: radius)
+        let plane = SCNPlane(width: CGFloat(radius * 3.4), height: CGFloat(radius * 3.4))
+        plane.materials = [BallFactory.contactMaterial]
+        contact = SCNNode(geometry: plane)
+        contact.eulerAngles.x = -.pi / 2
+        contact.castsShadow = false
+        contact.renderingOrder = 5
+        contact.categoryBitMask = 1 << 3      // kept out of the floor's reflection
+    }
+
+    /// Keeps the occlusion disc under the ball; it fades and widens as the ball leaves the floor.
+    func updateContact() {
+        let p = position
+        let h = max(0, p.y - radius)
+        let k = max(0, 1 - h / (radius * 2.5))
+        contact.simdPosition = SIMD3(p.x, 0.003, p.z)
+        contact.opacity = CGFloat(k * k * 0.85)
+        contact.simdScale = SIMD3(repeating: 1 + (1 - k) * 0.6)
+        contact.isHidden = k <= 0.01
     }
 
     var position: SIMD3<Float> { SIMD3(node.presentation.simdWorldPosition) }
@@ -59,6 +79,22 @@ final class Ball {
 
 enum BallFactory {
     static let density: Float = 1150      // cast resin, kg/m³
+
+    static let contactMaterial: SCNMaterial = {
+        let m = SCNMaterial()
+        m.lightingModel = .constant
+        m.diffuse.contents = makePixelImage(128, 128) { x, y in
+            let dx = (Float(x) + 0.5) / 64 - 1, dy = (Float(y) + 0.5) / 64 - 1
+            let d = sqrtf(dx * dx + dy * dy)
+            // tight dark core where the ball touches, long soft falloff around it
+            let a = clampf(expf(-d * d * 7) * 0.9 + expf(-d * d * 2.6) * 0.42 - 0.03, 0, 1) * smoothstep(1, 0.75, d)
+            return CommandLine.arguments.contains("--dbg") ? SIMD4(1, 0, 0, 1) : SIMD4(0, 0, 0, a)
+        }
+        m.blendMode = .alpha
+        m.writesToDepthBuffer = false
+        m.readsFromDepthBuffer = true
+        return m
+    }()
 
     /// Shared clear-coat roughness: mostly glassy, with fine hairline scratches and a few dull scuffs
     /// from rolling on the floor.

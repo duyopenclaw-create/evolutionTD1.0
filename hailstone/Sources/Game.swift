@@ -326,6 +326,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         b.node.simdPosition = p
         b.node.simdOrientation = simd_quatf(angle: rng.range(0, 6.28), axis: simd_normalize(SIMD3(rng.range(-1, 1), rng.range(-1, 1), rng.range(-1, 1)) + SIMD3(0, 0.01, 0)))
         scene.rootNode.addChildNode(b.node)
+        scene.rootNode.addChildNode(b.contact)
         b.node.physicsBody?.velocity = SCNVector3(v.x, v.y, v.z)
         b.node.physicsBody?.angularVelocity = SCNVector4(spin.x, spin.y, spin.z, simd_length(spin))
         b.lastVel = v
@@ -346,6 +347,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         if focus === b { focus = nil; focusPinned = false }
         let node = b.node
         node.physicsBody = nil
+        b.contact.runAction(.sequence([.fadeOut(duration: animated ? 0.6 : 0), .removeFromParentNode()]))
         if animated {
             node.runAction(.sequence([.group([.fadeOut(duration: 0.6), .scale(to: 0.01, duration: 0.6)]), .removeFromParentNode()]))
         } else {
@@ -397,7 +399,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
         soundsThisFrame += 1
         let d = simd_length(p - camPos)
         let v = powf(min(1, speed / 6), 1.1) * weight * 1.25 / (1 + 0.07 * d)
-        audio.play(name, volume: v, pan: pan(of: p))
+        audio.play(name, volume: v, pan: pan(of: p), distance: d)
     }
 
     private func pan(of p: SIMD3<Float>) -> Float {
@@ -471,6 +473,7 @@ final class Game: NSObject, SCNSceneRendererDelegate, SCNPhysicsContactDelegate 
             let v = body.velocity
             b.lastVel = SIMD3(Float(v.x), Float(v.y), Float(v.z))
             let p = b.position
+            b.updateContact()
             if p.y < -3 || abs(p.x) > World.halfX + 2 || abs(p.z) > World.halfZ + 2 { stale.append(b); continue }
             // a ball that landed too softly to count still gets its turn
             if !b.spawned && simTime - b.born > 3.5 { birth(from: b) }

@@ -10,6 +10,8 @@ final class AudioSystem {
     let ambient: AmbientSynth
     let music: MusicSynth
     private var players: [AVAudioPlayerNode] = []
+    private var speeds: [AVAudioUnitVarispeed] = []
+    private var eqs: [AVAudioUnitEQ] = []
     private var nextPlayer = 0
     private var buffers: [String: AVAudioPCMBuffer] = [:]
     private var variants: [String: Int] = [:]
@@ -65,11 +67,17 @@ final class AudioSystem {
         engine.connect(sfxMix, to: slap, format: format)
         engine.connect(slap, to: gym, format: format)
         engine.connect(gym, to: engine.mainMixerNode, format: format)
+        // each voice: player → varispeed (natural pitch scatter) → low-pass (air absorption) → mix
         for _ in 0..<28 {
-            let p = AVAudioPlayerNode()
-            engine.attach(p)
-            engine.connect(p, to: sfxMix, format: format)
-            players.append(p)
+            let p = AVAudioPlayerNode(), vs = AVAudioUnitVarispeed(), eq = AVAudioUnitEQ(numberOfBands: 1)
+            eq.bands[0].filterType = .lowPass
+            eq.bands[0].frequency = 18000
+            eq.bands[0].bypass = false
+            for n in [p, vs, eq] as [AVAudioNode] { engine.attach(n) }
+            engine.connect(p, to: vs, format: format)
+            engine.connect(vs, to: eq, format: format)
+            engine.connect(eq, to: sfxMix, format: format)
+            players.append(p); speeds.append(vs); eqs.append(eq)
         }
         engine.mainMixerNode.outputVolume = muted ? 0 : 0.9
         buildBuffers()
@@ -88,7 +96,8 @@ final class AudioSystem {
     }
 
     /// Plays a one-shot. Names with variants ("bounce_2") pick one at random.
-    func play(_ name: String, volume: Float = 1, pan: Float = 0) {
+    /// `distance` in metres dulls the top end the way air and the room do; `jitter` scatters pitch.
+    func play(_ name: String, volume: Float = 1, pan: Float = 0, distance: Float = 3, jitter: Float = 0.04) {
         guard running, !muted else { return }
         var key = name
         if let n = variants[name] { key = "\(name)_\(Int.random(in: 0..<n))" }
@@ -96,8 +105,11 @@ final class AudioSystem {
         let v = max(0, min(1.4, volume * sfxLevel))
         guard v > 0.004 else { return }
         queue.async {
-            let p = self.players[self.nextPlayer]
+            let i = self.nextPlayer
+            let p = self.players[i]
             self.nextPlayer = (self.nextPlayer + 1) % self.players.count
+            self.speeds[i].rate = 1 + Float.random(in: -jitter...jitter)
+            self.eqs[i].bands[0].frequency = max(2500, 18000 / (1 + max(0, distance - 2) * 0.12))
             p.volume = v
             p.pan = max(-1, min(1, pan))
             p.scheduleBuffer(buf, at: nil, options: .interrupts, completionHandler: nil)

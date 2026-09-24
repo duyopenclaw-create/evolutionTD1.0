@@ -86,7 +86,7 @@ final class World {
         vis.reflectionFalloffStart = 0
         vis.reflectionFalloffEnd = 1.2
         vis.reflectionResolutionScaleFactor = 0.6
-        vis.reflectionCategoryBitMask = 1 | 4
+        vis.reflectionCategoryBitMask = 1 | 2
         vis.materials = [m]
         let visNode = SCNNode(geometry: vis)
         root.addChildNode(visNode)
@@ -293,7 +293,9 @@ final class World {
         acrylic.reflective.contents = World.env
         acrylic.reflective.intensity = 0.55
         acrylic.fresnelExponent = 2.2
-        acrylic.transparency = 0.08
+        acrylic.transparent.contents = World.smudges()
+        acrylic.transparencyMode = .aOne
+        acrylic.transparency = 1
         acrylic.blendMode = .alpha
         acrylic.isDoubleSided = true
         acrylic.writesToDepthBuffer = false
@@ -395,10 +397,102 @@ final class World {
 
     // MARK: Light
 
+    /// Alpha map for the acrylic: almost clear, with hand smears at leaning height, dusty lower edge,
+    /// and the odd ball scuff. Alpha is opacity.
+    static func smudges() -> CGImage {
+        var rng = RNG(777)
+        return makeImage(4096, 1024) { ctx in
+            ctx.setFillColor(CGColor(gray: 1, alpha: 0.055))
+            ctx.fill(CGRect(x: 0, y: 0, width: 4096, height: 1024))
+            ctx.scaleBy(x: 4, y: 4)
+            // dust settling toward the bottom
+            let cs = CGColorSpace(name: CGColorSpace.sRGB)!
+            let g = CGGradient(colorsSpace: cs, colors: [CGColor(gray: 1, alpha: 0.07), CGColor(gray: 1, alpha: 0)] as CFArray, locations: [0, 1])!
+            ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: 40), options: [])
+            // palm and finger smears around 1–1.4 m (upper half of a 2.2 m sheet)
+            for _ in 0..<14 {
+                let x = CGFloat(rng.float()) * 1024, y = CGFloat(rng.range(110, 175))
+                ctx.saveGState(); ctx.translateBy(x: x, y: y); ctx.scaleBy(x: 0.3, y: 0.3); ctx.translateBy(x: -x, y: -y)
+                for f in 0..<4 {
+                    let fx = x + CGFloat(f) * 7 + CGFloat(rng.range(-2, 2)), l = CGFloat(rng.range(14, 40))
+                    ctx.setFillColor(CGColor(gray: 1, alpha: CGFloat(rng.range(0.012, 0.025))))
+                    ctx.fillEllipse(in: CGRect(x: fx, y: y - l, width: 5, height: l))
+                }
+                ctx.setFillColor(CGColor(gray: 1, alpha: 0.02))
+                ctx.fillEllipse(in: CGRect(x: x - 4, y: y - 60, width: 34, height: 30))
+                ctx.restoreGState()
+            }
+            // round scuffs where balls hit, low on the sheet
+            for _ in 0..<40 {
+                let x = CGFloat(rng.float()) * 1024, y = CGFloat(rng.range(5, 90)), r = CGFloat(rng.range(3, 12))
+                ctx.setStrokeColor(CGColor(gray: 1, alpha: CGFloat(rng.range(0.02, 0.05))))
+                ctx.setLineWidth(1)
+                ctx.strokeEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
+            }
+        }
+    }
+
+    /// Overhead high-bay lamps over the pen: each casts its own soft shadow, so balls get the
+    /// overlapping multi-shadow look of a real gym.
+    private func buildLampSpots() {
+        for (i, x) in ([-6, 0, 6] as [Float]).enumerated() {
+            let l = SCNLight()
+            l.type = .spot
+            l.intensity = 150
+            l.color = NSColor(srgbRed: 1, green: 0.95, blue: 0.86, alpha: 1)
+            l.spotInnerAngle = 60
+            l.spotOuterAngle = 120
+            l.castsShadow = true
+            l.shadowMode = .forward
+            l.shadowMapSize = CGSize(width: 2048, height: 2048)
+            l.shadowSampleCount = 8
+            l.shadowRadius = 6
+            l.shadowBias = 1.6
+            l.zNear = 3
+            l.zFar = 12
+            l.shadowColor = NSColor(white: 0, alpha: 0.55)
+            let n = SCNNode()
+            n.light = l
+            n.simdPosition = SIMD3(x, World.ceiling - 1.45, i == 1 ? 0.4 : -0.4)
+            n.simdLook(at: SIMD3(x * 0.5, 0, 0), up: SIMD3(0, 0, -1), localFront: SIMD3(0, 0, -1))
+            root.addChildNode(n)
+        }
+    }
+
+    /// Dust motes drifting in the lamp light over the pen.
+    private func buildDust() {
+        let ps = SCNParticleSystem()
+        ps.particleImage = softDotImage(size: 32)
+        ps.birthRate = 30
+        ps.particleLifeSpan = 16
+        ps.particleLifeSpanVariation = 6
+        ps.particleSize = 0.004
+        ps.particleSizeVariation = 0.003
+        ps.particleColor = NSColor(srgbRed: 1, green: 0.95, blue: 0.85, alpha: 0.5)
+        ps.particleColorVariation = SCNVector4(0, 0, 0, 0.3)
+        ps.blendMode = .additive
+        ps.isLightingEnabled = false
+        ps.speedFactor = 1
+        ps.particleVelocity = 0.03
+        ps.particleVelocityVariation = 0.03
+        ps.acceleration = SCNVector3(0, -0.004, 0)
+        ps.warmupDuration = 16
+        ps.emitterShape = SCNBox(width: 12, height: 5, length: 9, chamferRadius: 0)
+        ps.birthLocation = .volume
+        ps.emittingDirection = SCNVector3(0, 1, 0)
+        ps.spreadingAngle = 180
+        let n = SCNNode()
+        n.simdPosition = SIMD3(0, 3, 0)
+        n.addParticleSystem(ps)
+        root.addChildNode(n)
+    }
+
     private func buildLights() {
+        buildLampSpots()
+        buildDust()
         let k = SCNLight()
         k.type = .directional
-        k.intensity = 1300
+        k.intensity = 650
         k.color = NSColor(srgbRed: 1, green: 0.96, blue: 0.9, alpha: 1)
         k.castsShadow = true
         k.shadowMode = .forward
